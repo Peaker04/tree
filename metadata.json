@@ -1,0 +1,6 @@
+{
+  "name": "NOVYX",
+  "description": "Ứng dụng quản lý chăm sóc cây xanh đô thị, tập trung vào xác minh công việc tại hiện trường (GPS, QR, Camera).",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
