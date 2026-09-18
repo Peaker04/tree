@@ -25,7 +25,20 @@ Toàn bộ biểu đồ được tạo dưới dạng **Standalone HTML (Inline 
 
 ---
 
-## 2. Bảng mã màu trực quan (Visual Palette Profile)
+## 2. Danh mục biểu đồ đề xuất chuẩn hóa quy trình (Proposed Process Recalibration)
+
+Các sơ đồ dưới đây phục vụ đợt đánh giá lại mô hình vận hành tại [`docs/BUSINESS-PROCESS-REVIEW.md`](../BUSINESS-PROCESS-REVIEW.md) nhằm giải quyết tính cứng nhắc ngoài thực địa:
+
+| File                                                                                                   | Tên biểu đồ                               | Loại trực quan    | Trạng thái               | Nội dung đề xuất                                                                                                    |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------- | ----------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| [`proposed-01-current-vs-recommended-workflow.html`](proposed-01-current-vs-recommended-workflow.html) | So sánh Hiện trạng vs Đề xuất             | Comparison / Flow | **PROPOSED — CHỜ DUYỆT** | So sánh trực quan sự khác biệt giữa mô hình 5 chốt cào bằng cứng nhắc và mô hình xác thực linh hoạt theo loại việc. |
+| [`proposed-02-mvp-operational-swimlane.html`](proposed-02-mvp-operational-swimlane.html)               | Luồng Vận hành Liên vai trò Tối ưu        | Swimlane          | **PROPOSED — CHỜ DUYỆT** | Quy trình thực tế MVP với cảnh báo mềm GPS, xử lý mã QR hỏng, báo cáo sự cố hiện trường và duyệt có trọng tâm.      |
+| [`proposed-03-minimal-task-lifecycle.html`](proposed-03-minimal-task-lifecycle.html)                   | Vòng đời Nhiệm vụ Tối giản                | State Machine     | **PROPOSED — CHỜ DUYỆT** | Chu trình chuyển dịch trạng thái tối giản cho MVP kèm trạng thái sự cố `BLOCKED / ISSUE_REPORTED`.                  |
+| [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html)                 | Chính sách Bằng chứng & Làm lại Trọng tâm | Matrix / Flow     | **PROPOSED — CHỜ DUYỆT** | Phân loại hồ sơ Full (Cắt tỉa/Bón phân) vs Light (Tưới nước/Khảo sát) và cơ chế sửa lỗi không xóa bằng chứng cũ.    |
+
+---
+
+## 3. Bảng mã màu trực quan (Visual Palette Profile)
 
 Mọi biểu đồ đều tuân thủ bảng màu Seed/Linear được quy định tại [`DESIGN.md`](../../DESIGN.md):
 
@@ -35,5 +48,5 @@ Mọi biểu đồ đều tuân thủ bảng màu Seed/Linear được quy đị
 - **Muted text & Arrows:** `#68756B` (`pewter`)
 - **Hairline Borders:** `#E2E0D8` hoặc `rgba(17, 33, 22, 0.08)`
 - **Accent / Focal Node:** `#166534` (Forest dark green) & `#84CC16` (`limePulse` - chỉ dùng cho 1–2 điểm nhấn trọng tâm)
-- **Warning / Alert:** `#D97706` (Amber - Rework / Waiting)
-- **Danger / Prohibited:** `#DC2626` (Red - Forbidden / Dead code / Gaps)
+- **Warning / Alert:** `#D97706` (Amber - Rework / Waiting / Proposed badge)
+- **Danger / Prohibited:** `#DC2626` (Red - Forbidden / Dead code / Gaps / Flaws)

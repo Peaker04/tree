@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PROPOSED 01 - So sánh Quy trình Hiện tại vs Đề xuất Chuẩn hóa</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --color-paper: #fbfbf9;
+        --color-paper-2: #f0efea;
+        --color-ink: #112116;
+        --color-muted: #68756b;
+        --color-rule: rgba(17, 33, 22, 0.08);
+        --color-rule-solid: #e2e0d8;
+        --color-accent: #166534;
+        --color-lime: #84cc16;
+        --color-danger: #dc2626;
+        --color-amber: #d97706;
+        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.5rem;
+      }
+
+      .frame {
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .badge-proposed {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: #d97706;
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+      }
+
+      h1 {
+        font-family: var(--font-serif);
+        font-size: 2.1rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+      }
+
+      .desc {
+        font-size: 0.92rem;
+        color: var(--color-muted);
+        line-height: 1.5;
+        margin-bottom: 1.75rem;
+      }
+
+      svg {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--color-rule-solid);
+        border-radius: 8px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="badge-proposed">PROPOSED — CHỜ PHÊ DUYỆT</div>
+      <h1>So sánh Quy trình Hiện tại (Cứng nhắc) vs Đề xuất Chuẩn hóa</h1>
+      <p class="desc">
+        Từ mô hình ép buộc tuần tự 5 chốt sang mô hình Xác thực hiện trường linh hoạt kết hợp Chính sách bằng chứng theo
+        Loại việc và đường hồi phục ngoại lệ.
+      </p>
+
+      <svg viewBox="0 0 1020 620" xmlns="http://www.w3.org/2000/svg" role="img">
+        <defs>
+          <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+            <polygon points="0 0, 7 2.5, 0 5" fill="#166534" />
+          </marker>
+          <marker id="arr-red" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+            <polygon points="0 0, 7 2.5, 0 5" fill="#DC2626" />
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#FBFBF9" />
+
+        <!-- TOP HALF: CURRENT RIGID MODEL -->
+        <g transform="translate(40, 30)">
+          <rect x="0" y="0" width="940" height="240" rx="8" fill="#FFF" stroke="#DC2626" stroke-width="1.5" />
+          <rect x="20" y="-12" width="280" height="24" rx="4" fill="#DC2626" />
+          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            HIỆN TRẠNG (CỨNG NHẮC / CÀO BẰNG)
+          </text>
+
+          <text x="24" y="36" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#DC2626">
+            Tuần tự bắt buộc 5 chốt cho 100% nhiệm vụ
+          </text>
+          <text x="24" y="54" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            GPS trôi thì tắc nghẽn; QR mờ thì dừng việc; Tưới nước cũng bắt chụp Trước/Sau; Rework bắt làm lại từ đầu.
+          </text>
+
+          <!-- Current Flow Boxes -->
+          <g transform="translate(24, 80)">
+            <!-- GPS -->
+            <rect x="0" y="0" width="130" height="90" rx="4" fill="#F0EFEA" stroke="#DC2626" />
+            <text x="12" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600">1. GPS Check</text>
+            <text x="12" y="44" font-family="'Geist Mono', monospace" font-size="9" fill="#DC2626">
+              Khóa cứng &lt;= 10m
+            </text>
+            <text x="12" y="60" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">Lệch 11m -> Chặn</text>
+
+            <line x1="130" y1="45" x2="160" y2="45" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arr-red)" />
+
+            <!-- QR -->
+            <rect x="165" y="0" width="130" height="90" rx="4" fill="#F0EFEA" stroke="#DC2626" />
+            <text x="12" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600">2. QR Scan</text>
+            <text x="12" y="44" font-family="'Geist Mono', monospace" font-size="9" fill="#DC2626">
+              Bắt buộc tuyệt đối
+            </text>
+            <text x="12" y="60" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">Mã rách -> Bế tắc</text>
+
+            <line x1="295" y1="45" x2="325" y2="45" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arr-red)" />
+
+            <!-- Before -->
+            <rect x="330" y="0" width="130" height="90" rx="4" fill="#F0EFEA" stroke="#DC2626" />
+            <text x="12" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600">3. Ảnh Trước</text>
+            <text x="12" y="44" font-family="'Geist Mono', monospace" font-size="9" fill="#DC2626">
+              Bắt buộc mọi việc
+            </text>
+            <text x="12" y="60" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">Tưới nước cũng bắt</text>
+
+            <line x1="460" y1="45" x2="490" y2="45" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arr-red)" />
+
+            <!-- Checklist -->
+            <rect x="495" y="0" width="130" height="90" rx="4" fill="#F0EFEA" stroke="#DC2626" />
+            <text x="12" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600">4. Checklist</text>
+            <text x="12" y="44" font-family="'Geist Mono', monospace" font-size="9" fill="#DC2626">Bắt buộc 100%</text>
+            <text x="12" y="60" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">Không có ngoại lệ</text>
+
+            <line x1="625" y1="45" x2="655" y2="45" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arr-red)" />
+
+            <!-- After -->
+            <rect x="660" y="0" width="130" height="90" rx="4" fill="#F0EFEA" stroke="#DC2626" />
+            <text x="12" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600">5. Ảnh Sau</text>
+            <text x="12" y="44" font-family="'Geist Mono', monospace" font-size="9" fill="#DC2626">
+              Bắt buộc mọi việc
+            </text>
+            <text x="12" y="60" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">Kiểm tra cũng bắt</text>
+          </g>
+        </g>
+
+        <!-- BOTTOM HALF: PROPOSED NORMALIZED MODEL -->
+        <g transform="translate(40, 310)">
+          <rect
+            x="0"
+            y="0"
+            width="940"
+            height="270"
+            rx="8"
+            fill="rgba(132,204,22,0.06)"
+            stroke="#84CC16"
+            stroke-width="2"
+          />
+          <rect x="20" y="-12" width="280" height="24" rx="4" fill="#166534" />
+          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            ĐỀ XUẤT CHUẨN HÓA (THỰC TẾ &amp; KHẢ THI)
+          </text>
+
+          <text x="24" y="36" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            Xác thực hiện trường linh hoạt + Bằng chứng theo Loại việc
+          </text>
+          <text x="24" y="54" font-family="'Geist', sans-serif" font-size="11" fill="#166534">
+            GPS cảnh báo mềm; QR có đường thoát khi mờ; Phân biệt việc cần Before/After với việc chỉ cần 1 ảnh.
+          </text>
+
+          <!-- Proposed Flow -->
+          <g transform="translate(24, 80)">
+            <!-- Block 1: Site Verification -->
+            <rect x="0" y="0" width="260" height="140" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+            <text x="16" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#166534">
+              BƯỚC 1: XÁC THỰC HIỆN TRƯỜNG
+            </text>
+            <text x="16" y="44" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+              Linh hoạt trật tự (Quét QR hoặc đo GPS trước):
+            </text>
+            <text x="16" y="66" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+              • Quét QR (Nếu hỏng -> Báo mã hỏng)
+            </text>
+            <text x="16" y="86" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+              • Đo GPS (Nếu lệch &gt; 10m -> Cảnh báo vàng)
+            </text>
+            <text x="16" y="106" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+              • Ghi nhận tọa độ thực tế để Quản lý hậu kiểm
+            </text>
+            <text x="16" y="126" font-family="'Geist Mono', monospace" font-size="9" fill="#84CC16">
+              [KHÔNG CHẶN ĐỨNG THỢ NGOÀI NẮNG]
+            </text>
+
+            <line x1="260" y1="70" x2="310" y2="70" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
+
+            <!-- Block 2: Tailored Proof by Task Type -->
+            <rect x="315" y="0" width="310" height="140" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+            <text x="16" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#166534">
+              BƯỚC 2: BẰNG CHỨNG THEO LOẠI VIỆC
+            </text>
+            <text x="16" y="48" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#112116">
+              A. Cắt tỉa / Bón phân / Trồng mới:
+            </text>
+            <text x="26" y="66" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+              Ảnh Trước -> Checklist -> Ảnh Sau
+            </text>
+
+            <text x="16" y="90" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#112116">
+              B. Tưới nước / Khảo sát sâu bệnh:
+            </text>
+            <text x="26" y="108" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+              Checklist -> 1 Ảnh hiện trường xác nhận
+            </text>
+            <text x="16" y="128" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
+              [TIẾT KIỆM 40% THAO TÁC THỪA]
+            </text>
+
+            <line x1="625" y1="70" x2="675" y2="70" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
+
+            <!-- Block 3: Review & Targeted Rework -->
+            <rect x="680" y="0" width="215" height="140" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+            <text x="16" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#166534">
+              BƯỚC 3: DUYỆT / LÀM LẠI
+            </text>
+            <text x="16" y="48" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+              • Quản lý duyệt 100% báo cáo
+            </text>
+            <text x="16" y="68" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+              • Thấy rõ cờ cảnh báo nếu GPS trôi
+            </text>
+            <text x="16" y="90" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#D97706">
+              • Làm lại có trọng tâm:
+            </text>
+            <text x="26" y="108" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+              Chỉ sửa đúng khâu bị từ chối
+            </text>
+            <text x="26" y="124" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+              Không reset bằng chứng đã đạt
+            </text>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </body>
+</html>
