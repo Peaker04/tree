@@ -1,0 +1,9 @@
+node_modules
+dist
+.expo
+.agents
+.claude
+.planning
+external/hermes-agent
+package-lock.json
+apps/mobile/package-lock.json

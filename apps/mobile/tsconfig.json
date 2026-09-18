@@ -1,0 +1,14 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@novyx/ui": ["../../packages/ui/src"],
+      "@novyx/contracts": ["../../packages/contracts/src"],
+      "@novyx/config": ["../../packages/config/src"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../../packages/ui/src/**/*.ts"]
+}

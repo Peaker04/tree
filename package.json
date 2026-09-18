@@ -1,35 +1,47 @@
 {
-  "name": "react-example",
+  "name": "novyx-foundation",
+  "version": "0.1.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "main": "apps/mobile/index.ts",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@google/genai": "^2.4.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
-    "lucide-react": "^0.546.0",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
-    "vite": "^6.2.3",
-    "express": "^4.21.2",
-    "dotenv": "^17.2.3",
-    "motion": "^12.23.24"
+    "start": "npm run mobile:start",
+    "mobile:start": "node scripts/expo-mobile.cjs start --port 8082 --dev-client --host localhost",
+    "mobile:connect:android": "node scripts/mobile-connect-android.cjs",
+    "mobile:android": "node scripts/expo-mobile.cjs run:android --no-install --port 8082",
+    "mobile:prebuild:android": "node scripts/expo-mobile.cjs prebuild --platform android --clean --no-install",
+    "mobile:export:android": "npm run export:android --workspace @novyx/mobile",
+    "mobile:smoke:check": "node scripts/mobile-smoke-check.cjs",
+    "api:dev": "node scripts/greenops-dev-api.cjs",
+    "qr:demo": "node scripts/generate-qr-demo.cjs",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run mobile:export:android"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "autoprefixer": "^10.4.21",
-    "esbuild": "^0.25.0",
-    "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.3",
-    "@types/express": "^4.17.21"
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^24.10.3",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-native": "^5.0.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4",
+    "qrcode": "^1.5.4",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.50.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "expo": "~57.0.4",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
   }
 }

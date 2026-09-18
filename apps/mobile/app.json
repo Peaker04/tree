@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "NOVYX",
+    "slug": "novyx-greenops",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/novyx-app-icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FAF7EF",
+        "foregroundImage": "./assets/novyx-app-icon.png"
+      },
+      "package": "com.novyx.greenops",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/novyx-app-icon.png"
+    },
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Cho phép NOVYX dùng vị trí của bạn để check-in công việc chăm sóc cây xanh."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép NOVYX dùng camera để quét QR cây và chụp ảnh bằng chứng hiện trường.",
+          "microphonePermission": "NOVYX không dùng micro cho luồng MVP.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      "./plugins/with-android-path-check.cjs"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ad3355f5-40d2-4ddd-81c7-e2c95e82b27c"
+      }
+    }
+  }
+}
