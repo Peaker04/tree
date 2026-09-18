@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>12 - NOVYX Architecture Dependency Map</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --color-paper: #fbfbf9;
+        --color-paper-2: #f0efea;
+        --color-ink: #112116;
+        --color-muted: #68756b;
+        --color-rule: rgba(17, 33, 22, 0.08);
+        --color-rule-solid: #e2e0d8;
+        --color-accent: #166534;
+        --color-lime: #84cc16;
+        --color-danger: #dc2626;
+        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.5rem;
+      }
+
+      .frame {
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        margin-bottom: 0.5rem;
+      }
+
+      h1 {
+        font-family: var(--font-serif);
+        font-size: 2.1rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+      }
+
+      .desc {
+        font-size: 0.92rem;
+        color: var(--color-muted);
+        line-height: 1.5;
+        margin-bottom: 1.75rem;
+      }
+
+      svg {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--color-rule-solid);
+        border-radius: 8px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <p class="eyebrow">12 · Module Governance · Dependency Graph</p>
+      <h1>Bản đồ Phụ thuộc Gói &amp; Quy tắc Biên giới (Dependency Map)</h1>
+      <p class="desc">
+        Ranh giới thẩm quyền giữa các Workspace: Chiều phụ thuộc cho phép và các chiều nhập phụ thuộc bị nghiêm cấm.
+      </p>
+
+      <svg viewBox="0 0 1020 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dep-title dep-desc">
+        <title id="dep-title">NOVYX Architecture Dependency Map</title>
+        <desc id="dep-desc">Sơ đồ phụ thuộc giữa các package và ranh giới cấm trong monorepo.</desc>
+
+        <defs>
+          <marker id="arr-allowed" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#166534" />
+          </marker>
+          <marker id="arr-prohibited" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#DC2626" />
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#FBFBF9" />
+
+        <!-- TOP: APPS/MOBILE -->
+        <g transform="translate(360, 40)">
+          <rect x="0" y="0" width="300" height="110" rx="8" fill="#FFF" stroke="#166534" stroke-width="2" />
+          <rect x="20" y="-12" width="130" height="22" rx="4" fill="#166534" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            APPLICATION
+          </text>
+
+          <text x="24" y="32" font-family="'Geist', sans-serif" font-size="16" font-weight="600" fill="#112116">
+            apps/mobile
+          </text>
+          <text x="24" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Expo SDK 57 React Native App
+          </text>
+          <line x1="24" y1="60" x2="276" y2="60" stroke="#E2E0D8" />
+          <text x="24" y="80" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            Presentation, Hooks, Services
+          </text>
+          <text x="24" y="98" font-family="'Geist Mono', monospace" font-size="10" fill="#166534">
+            Chỉ import Public API của packages
+          </text>
+        </g>
+
+        <!-- MIDDLE: SHARED PACKAGES -->
+        <!-- Pkg 1: contracts -->
+        <g transform="translate(60, 240)">
+          <rect x="0" y="0" width="260" height="130" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="20" y="-12" width="140" height="22" rx="4" fill="#112116" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#84CC16">
+            SHARED PACKAGES
+          </text>
+
+          <text x="20" y="32" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            packages/contracts
+          </text>
+          <text x="20" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            API Envelopes, DTOs &amp; Codes
+          </text>
+          <line x1="20" y1="60" x2="240" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="80" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+            • ApiSuccess, ApiFailure, ApiList
+          </text>
+          <text x="20" y="96" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+            • TaskDto, TreeDto, StaffDto
+          </text>
+          <text x="20" y="112" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
+            Zero runtime dependencies
+          </text>
+        </g>
+
+        <!-- Pkg 2: config -->
+        <g transform="translate(380, 240)">
+          <rect x="0" y="0" width="260" height="130" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="20" y="-12" width="140" height="22" rx="4" fill="#112116" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#84CC16">
+            SHARED PACKAGES
+          </text>
+
+          <text x="20" y="32" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            packages/config
+          </text>
+          <text x="20" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Environment Validation
+          </text>
+          <line x1="20" y1="60" x2="240" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="80" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+            • EXPO_PUBLIC_APP_ENV
+          </text>
+          <text x="20" y="96" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+            • EXPO_PUBLIC_API_BASE_URL
+          </text>
+          <text x="20" y="112" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
+            Zod environment validation
+          </text>
+        </g>
+
+        <!-- Pkg 3: ui -->
+        <g transform="translate(700, 240)">
+          <rect x="0" y="0" width="260" height="130" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="20" y="-12" width="140" height="22" rx="4" fill="#112116" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#84CC16">
+            SHARED PACKAGES
+          </text>
+
+          <text x="20" y="32" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            packages/ui
+          </text>
+          <text x="20" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Shared Design Tokens
+          </text>
+          <line x1="20" y1="60" x2="240" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="80" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+            • colors, spacing, radius
+          </text>
+          <text x="20" y="96" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
+            • typography tokens (400, 500, 600)
+          </text>
+          <text x="20" y="112" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
+            Tuân thủ DESIGN.md
+          </text>
+        </g>
+
+        <!-- BOTTOM: EXTERNAL SUBMODULE (HERMES AGENT) -->
+        <g transform="translate(360, 460)">
+          <rect x="0" y="0" width="300" height="110" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="20" y="-12" width="170" height="22" rx="4" fill="#68756B" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            EXTERNAL SUBMODULE
+          </text>
+
+          <text x="20" y="32" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            external/hermes-agent
+          </text>
+          <text x="20" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Pinned upstream git submodule
+          </text>
+          <line x1="20" y1="60" x2="280" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="80" font-family="'Geist', sans-serif" font-size="10" fill="#DC2626">
+            CẤM CHỈNH SỬA TRỰC TIẾP TRONG PRODUCT WORK
+          </text>
+          <text x="20" y="98" font-family="'Geist', sans-serif" font-size="10" fill="#DC2626">
+            CẤM DEEP IMPORT VÀO MÃ NGUỒN MOBILE
+          </text>
+        </g>
+
+        <!-- ALLOWED ARROWS -->
+        <line x1="420" y1="150" x2="220" y2="235" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+        <line x1="510" y1="150" x2="510" y2="235" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+        <line x1="600" y1="150" x2="800" y2="235" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+
+        <!-- PROHIBITED ARROWS (Crosses) -->
+        <!-- Reverse contracts -> mobile -->
+        <path
+          d="M 160 235 L 160 170 L 350 120"
+          fill="none"
+          stroke="#DC2626"
+          stroke-width="2"
+          stroke-dasharray="4,4"
+          marker-end="url(#arr-prohibited)"
+        />
+        <text x="140" y="160" font-family="'Geist Mono', monospace" font-size="9" font-weight="600" fill="#DC2626">
+          CẤM NGƯỢC CHIỀU
+        </text>
+
+        <!-- Mobile -> hermes internal deep import -->
+        <line
+          x1="510"
+          y1="375"
+          x2="510"
+          y2="455"
+          stroke="#DC2626"
+          stroke-width="2"
+          stroke-dasharray="4,4"
+          marker-end="url(#arr-prohibited)"
+        />
+        <text x="518" y="420" font-family="'Geist Mono', monospace" font-size="9" font-weight="600" fill="#DC2626">
+          CẤM DEEP IMPORT
+        </text>
+      </svg>
+    </div>
+  </body>
+</html>

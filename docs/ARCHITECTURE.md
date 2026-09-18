@@ -1,106 +1,191 @@
-# Architecture
+# NOVYX GreenOps — System Architecture & Technical Decomposition
 
-## Overview
+Tài liệu này là chuẩn mực duy nhất định nghĩa **KIẾN TRÚC KỸ THUẬT (System Architecture)**. Tài liệu phân định rạch ròi giữa **Hiện trạng thực tế (AS-IS tại commit `2f9a26b`)** và **Kiến trúc mục tiêu (TO-BE Target Baseline)**, đồng thời đánh giá chi tiết dịch vụ `greenOpsService` và hợp đồng dữ liệu `packages/contracts`.
+
+---
+
+## 1. Hiện trạng kiến trúc thực tế (AS-IS Architecture)
+
+Hệ thống hiện tại là một ứng dụng Expo SDK 57 React Native dạng nguyên khối phía client (Fat Client Monolith) với cơ chế hoạt động Hybrid (vừa gọi REST API vừa có fallback in-memory):
 
 ```text
-apps/mobile
-  |
-  | REST /v1 contracts from packages/contracts
-  v
-apps/api (planned/local dev API)
-  |
-  +-- database (planned)
-  +-- object storage (planned)
-  +-- background jobs (planned)
-  +-- Hermes Agent integration boundary
++-----------------------------------------------------------------------------------+
+|                        AS-IS ARCHITECTURE (COMMIT 2f9a26b)                        |
++-----------------------------------------------------------------------------------+
+| [PRESENTATION & ORCHESTRATION]                                                    |
+| MobileApp.tsx (2,054 dòng)                                                        |
+|   - Quản lý toàn bộ State (tasks, trees, notifications, activeTask, reviewTask)   |
+|   - Điều phối điều hướng (Login, Forgot, StaffArea, ManagerArea)                  |
+|   - Chứa mã JSX inline cho màn Login và Quên mật khẩu                             |
+|   - Prop Drilling hơn 30 props xuống StaffArea và ManagerArea                     |
+|                                                                                   |
+| StaffArea.tsx & ManagerArea.tsx                                                   |
+|   - Nhận props từ MobileApp, tiếp tục khoan props xuống các màn hình con          |
+|                                                                                   |
+| Màn hình độc khối (Monolithic Screens):                                           |
+|   - StaffProofFlow.tsx (1,476 dòng): Gộp cả GPS, Camera QR, Chụp ảnh, Checklist   |
+|   - ManagerReview.tsx (483 dòng): Tự tính toán fallbackTask trong JSX            |
+|   - LoginScreen.tsx (300 dòng): Dead code (bị bỏ quên, không được dùng)          |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+| [DOMAIN & BUSINESS HELPERS]                                                       |
+| mobileWorkflow.ts (295 dòng)                                                      |
+|   - Gộp chung màn hình giao diện (HOME, WORK, MAP) và bước bằng chứng (GPS, QR)   |
+|   - Cung cấp hàm thuần tính toán gaps và chuyển bước                              |
+|   - Chưa có lớp thực thể (Entity class) bảo vệ tính toàn vẹn trạng thái           |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+| [SERVICE FACADE / HYBRID CATCH-ALL]                                               |
+| greenOpsService.ts (856 dòng)                                                     |
+|   - Quá tải trách nhiệm: REST Client, In-Memory DB, Session Manager, Mock Data    |
+|   - Snapshot lưu trong biến RAM (let snapshot: AppData) -> Mất sạch khi kill app  |
+|   - Cơ chế Fallback nhận "fallbackTask" được tính toán sẵn từ UI component        |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+| [SHARED CONTRACTS & PACKAGES]                                                     |
+| @novyx/contracts                                                                  |
+|   - DTOs được export trực tiếp và alias thành Domain Type trong apps/mobile/types |
+|   - Thiếu Idempotency-Key và Concurrency Token trong hợp đồng                     |
++-----------------------------------------------------------------------------------+
 ```
 
-## Repository Strategy
+### 1.1. Các khiếm khuyết kiến trúc cốt tử của hiện trạng (Architectural Flaws)
 
-This repository is an npm workspace monorepo:
+1. **Rò rỉ nghiệp vụ vào giao diện (Domain Leakage into UI):**
+   Tại `ManagerReview.tsx` (dòng 132-136 và 163-167), mã JSX tự tay tạo ra object `fallbackTask` với trạng thái `COMPLETED` hoặc `REWORK_REQUIRED` rồi truyền vào `greenOpsService.reviewTask(request, fallbackTask)`. Giao diện đang làm nhiệm vụ của Domain Model!
+2. **Quá tải thành phần gốc (`MobileApp.tsx` & `greenOpsService.ts`):**
+   Hai file này chiếm tới hơn 2.900 dòng code, nắm giữ mọi trạng thái và phân tán trách nhiệm điều phối.
+3. **Mất dữ liệu ngoại tuyến khi ứng dụng bị tắt ngầm (Data Loss Risk):**
+   Biến `snapshot` trong `greenOpsService.ts` nằm trên bộ nhớ RAM. Nếu nhân viên tắt app hoặc Android kill app khi đang rớt mạng, toàn bộ dữ liệu task và bằng chứng mới thu thập biến mất hoàn toàn.
+4. **Nhầm lẫn giữa điều hướng và quy trình nghiệp vụ:**
+   Enum `StaffStep` trong `mobileWorkflow.ts` chứa cả `HOME`, `MY_TREES`, `WORK` lẫn `GPS`, `QR`, `BEFORE`.
 
-- `apps/mobile`: Expo SDK 57 mobile application.
-- `apps/api`: reserved for the backend API.
-- `packages/contracts`: shared API contracts, error registry, and cross-app DTOs.
-- `packages/config`: environment validation.
-- `packages/ui`: shared design tokens.
-- `external/hermes-agent`: git submodule pinned to upstream.
+---
 
-## Module Boundaries
+## 2. Kiến trúc mục tiêu (TO-BE Target Architecture)
 
-- Mobile imports shared package public APIs only.
-- Backend must not return raw database entities as API responses.
-- Contracts must not import mobile, backend, ORM, or Hermes implementation code.
-- `external/hermes-agent` is treated as an external tool/runtime, not a shared library for deep imports.
-- This mobile UI/UX refactor does not add environment variables, backend endpoints, native capabilities, package installs, or copied contract types.
+Hệ thống mục tiêu áp dụng nguyên lý **Clean Architecture / Ports and Adapters** nhằm đảm bảo mã nguồn độc lập với framework, dễ kiểm thử tự động (TDD) và bảo vệ dữ liệu hiện trường.
 
-## Mobile Ownership
+```text
++-----------------------------------------------------------------------------------+
+|                           TO-BE CLEAN ARCHITECTURE                                |
++-----------------------------------------------------------------------------------+
+| [1. PRESENTATION LAYER (Giao diện người dùng)]                                     |
+| Screens (StaffHome, StaffWork, StaffProofFlow, ManagerDashboard, ManagerReview)   |
+| Presentational Components (TaskSurfaces, TreeSurfaces, AppPrimitives)             |
+| UI ViewModels & Hooks (useTaskQueue, useProofWorkflow, useManagerReview)          |
+| -> Chỉ render dữ liệu từ Application Layer; TUYỆT ĐỐI KHÔNG chứa logic nghiệp vụ. |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+| [2. APPLICATION LAYER / USE CASES (Ca sử dụng ứng dụng)]                          |
+| - StartTaskUseCase: Bắt đầu thực hiện nhiệm vụ                                    |
+| - AcquireProofStepUseCase: Cập nhật bằng chứng từng bước (GPS, QR, Ảnh, Checklist)|
+| - SubmitTaskEvidenceUseCase: Đóng gói và gửi duyệt (Kiểm tra cổng 5/5)           |
+| - ReviewTaskUseCase: Phê duyệt hoặc Yêu cầu làm lại kèm lý do                     |
+| - LookupTreeByQrUseCase: Tra cứu cây và lịch sử chăm sóc                          |
+| - RestoreSessionUseCase: Khôi phục phiên làm việc                                 |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+| [3. DOMAIN LAYER (Thực thể & Quy tắc nghiệp vụ cốt lõi)]                          |
+| Aggregates & Entities: Task, Tree, ProofWorkflow, ReviewAudit                     |
+| Value Objects: GpsCheck, QrCheck, TaskEvidence, Coordinates                      |
+| Domain Invariants: DR-01..DR-10 (Bán kính 10m, QR khớp, Khóa việc đã đóng...)     |
+| Domain Events: TaskAssignedEvent, TaskSubmittedEvent, TaskReworkRequiredEvent     |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+| [4. PORTS (Giao diện ranh giới cổng)]                                             |
+| ITaskRepository | ITreeRepository | IAuthRepository | IDeviceHardwarePort        |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+| [5. INFRASTRUCTURE ADAPTERS (Bộ điều hợp kỹ thuật & Ngoại vi)]                    |
+| - RestApiAdapter: HTTP Client REST v1, multipart upload, xử lý mạng chập chờn     |
+| - DurableStorageAdapter: SQLite / MMKV lưu trữ ngoại tuyến chống mất dữ liệu      |
+| - ExpoHardwareAdapter: Quản lý quyền và luồng Camera / GPS của Expo SDK 57        |
++-----------------------------------------------------------------------------------+
+```
 
-`apps/mobile` owns the operational UI, device permissions, role routing, and screen composition.
+---
 
-- `apps/mobile/src/screens/MobileApp.tsx` owns auth/session restore routing, role selection, bottom-nav visibility, and `greenOpsService` callback wiring.
-- `apps/mobile/src/screens/staff/*` owns Staff Home, My Trees, Work, Account, notifications, and the proof sequence.
-- `apps/mobile/src/screens/manager/*` owns Manager Dashboard, Create Task, QR lookup, Review, Trees, and Account.
-- `apps/mobile/src/components/AppPrimitives.tsx` owns React Native primitives used in place of shadcn/Radix/Tailwind.
-- `apps/mobile/src/components/NotchedBottomNav.tsx` owns the locked notched five-action navigation and centered QR FAB for both roles.
-- `apps/mobile/src/theme/tokens.ts` re-exports shared tokens from `packages/ui`.
+## 3. Phân rã dịch vụ `greenOpsService` (Decomposition Plan)
 
-## Device Permission Architecture
+`greenOpsService.ts` hiện là một "Anti-Corruption Layer" chuyển tiếp (Transitional Facade). Kế hoạch phân rã theo từng giai đoạn:
 
-Device permission behavior is contextual and source-of-truth based.
+| Trách nhiệm hiện tại trong `greenOpsService`        | Phân loại       | Thành phần thay thế mục tiêu (Target Component) | Tầng kiến trúc (Layer)         |
+| --------------------------------------------------- | --------------- | ----------------------------------------------- | ------------------------------ |
+| Gọi HTTP REST `/v1/` và xử lý envelope              | Kỹ thuật / Mạng | `HttpTransportClient` / `RestApiAdapter`        | Infrastructure                 |
+| Quản lý token, login, logout, restoreSession        | Ứng dụng        | `AuthRepository` & `useSession`                 | Application / Infra            |
+| Lưu trữ và cập nhật danh sách Task, Tree cục bộ     | Dữ liệu / Kho   | `LocalTaskRepository`, `LocalTreeRepository`    | Infrastructure (Durable Cache) |
+| Đóng gói multipart và upload ảnh bằng chứng         | Kỹ thuật        | `EvidenceUploadService`                         | Infrastructure                 |
+| Tính toán `buildCareHistory` từ các task hoàn thành | Miền            | `CareHistoryProjector`                          | Domain / Application           |
+| Tạo và cập nhật trạng thái thông báo                | Ứng dụng        | `NotificationRepository`                        | Infrastructure                 |
 
-- `apps/mobile/src/services/devicePermissions.ts` wraps Expo SDK 57 camera/location permission APIs, maps permission responses, and exposes `openDeviceSettings()`.
-- `apps/mobile/src/hooks/useDevicePermissions.ts` stores camera/location permission responses, active camera purpose, runtime-unavailable messages, and request/refresh callbacks.
-- `apps/mobile/src/components/DevicePermissionState.tsx` renders rationale, `not-determined`, `denied-retry`, `blocked-settings`, `granted`, checking, and runtime-unavailable states.
-- `apps/mobile/src/components/DeviceCameraView.tsx` is the one active `CameraView` owner. It renders the native preview only when permission is `granted`, the focused purpose owns the camera, and `expo-camera` is available.
-- `Linking.openSettings()` is the blocked recovery path behind the `Mở cài đặt` action.
+---
 
-The app has no post-login Permission gate. `type Screen = 'Login' | 'Forgot' | 'Main'` in `MobileApp.tsx`; login and restored sessions route directly to the role home.
+## 4. Kiểm toán hợp đồng `@novyx/contracts` (Contracts Audit)
 
-## Role Navigation
+### 4.1. Cấu trúc chuẩn đã được xác lập `[VERIFIED]`
 
-Both roles use the same `NotchedBottomNav` primitive.
+- Chuẩn hóa Envelope phản hồi thành công: `ApiSuccess<TData> { data: TData }`.
+- Chuẩn hóa Envelope phản hồi lỗi: `ApiFailure { error: ApiError { code, message, requestId, details } }`.
+- Chuẩn hóa danh sách phân trang: `ApiList<TData> { data: TData[], meta: { nextCursor, hasMore } }`.
+- Chuẩn hóa mã lỗi nghiệp vụ: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL`.
 
-- Staff left actions are `Trang chủ` and `Cây của tôi`; right actions are `Công việc` and `Tài khoản`; the centered QR FAB resumes next proof or opens free QR lookup.
-- Manager left actions are `Tổng quan` and `Giao việc`; right actions are `Duyệt` and `Tài khoản`; the centered QR FAB opens Manager QR lookup.
-- Active side-nav state is green icon/text only. The implementation does not use an active pill, top line, or filled square.
-- Staff nav hides during focused proof/detail workflows; Manager nav hides for review detail and QR lookup.
+### 4.2. Các khoảng trống và rò rỉ hợp đồng cần bổ sung `[GAP]`
 
-## Staff Workflow Ownership
+1. **Thiếu Idempotency Key cho thao tác nộp bằng chứng:**
+   Trong `SubmitTaskEvidenceRequest`, chưa có trường `idempotencyKey` hoặc header HTTP tương ứng. Khi mạng chập chờn, nhân viên bấm gửi nhiều lần có thể gây trùng lặp request trên backend.
+2. **Thiếu Optimistic Concurrency Control:**
+   `TaskDto` chưa có trường `version: number`. Nếu Quản lý đổi người giao việc trong lúc Nhân viên đang nộp bằng chứng, hệ thống chưa có cơ chế phát hiện xung đột dữ liệu (Data Conflict).
+3. **Bất đồng bộ giữa Pagination Contract và Triển khai UI:**
+   Hợp đồng có `ListTasksQuery` hỗ trợ `cursor` và `limit`, nhưng toàn bộ màn hình mobile hiện tải 100% dữ liệu về bộ nhớ và lọc bằng mảng JavaScript cục bộ.
 
-- `StaffHome.tsx`: overview, metrics, progress, and next-action card.
-- `StaffTrees.tsx`: assigned-tree workspace with search/filter, QR, current task, and care history entry points.
-- `StaffWork.tsx`: task queue with filters, rework markers through `TaskCard`, and open-task count.
-- `StaffProofFlow.tsx`: GPS, QR, before photo, checklist, after photo, review, submit, success, wrong QR, damaged QR, loading, and permission recovery states.
+---
 
-The proof sequence is task context -> GPS -> QR -> before photo -> checklist -> after photo -> review -> submit. Progress is stored on the active task as GPS/QR/photo/checklist evidence before submission.
+## 5. Kiến trúc dữ liệu và Bằng chứng hiện trường (Data & Evidence Architecture)
 
-## Manager Workflow Ownership
+Bằng chứng hiện trường (Evidence) là tài sản thông tin có giá trị pháp lý cao nhất trong NOVYX:
 
-- `ManagerDashboard.tsx`: dashboard metrics, operational pulse, review queue, exceptions, risky trees, and QR demo payloads.
-- `ManagerCreateTask.tsx`: guided task creation with tree, assignee, task type, deadline, checklist preview, and field validation.
-- `ManagerQrLookup.tsx`: camera/mock QR lookup that resolves tree facts, care history, and related tasks without advancing Staff proof.
-- `ManagerReview.tsx`: evidence-first review list/detail, proof gate, GPS/QR audit, proof chain, before/after photo comparison, checklist, metadata, approve, and rework.
-- `ManagerTrees.tsx`: searchable tree inventory and care-history entry points.
+```text
+[Camera Thiết bị]
+       |
+       | 1. Chụp ảnh
+       v
+[File cục bộ trong Cache máy: file://.../cache/evidence-123.jpg]
+       |
+       | 2. Lưu vào CSDL cục bộ (SQLite/Durable Store) kèm Metadata:
+       |    - taskId, treeId, stage ('before' | 'after')
+       |    - capturedAt (ISO UTC), capturedByUserId (StaffId)
+       |    - gpsCheck (lat, lng, accuracy, distance, timestamp)
+       v
+[Hàng đợi đồng bộ (Sync Queue / Outbox)]
+       |
+       +---> [Khi có mạng]: Upload Multipart (File nhị phân + JSON metadata)
+       |        |
+       |        v
+       |     [Backend Object Storage (S3 / GCS) & Database]
+       |        |
+       |        v
+       |     [Trả về Remote URL chính thức: https://storage.novyx.vn/...]
+       |
+       +---> [Khi mất mạng]: Giữ nguyên URI cục bộ; giao diện tiếp tục hoạt động.
+```
 
-Manager rework requires a concrete reason before request; approve is disabled while proof gaps remain.
+### 5.1. Bất biến lưu trữ bằng chứng
 
-## API And Contract Boundary
-
-`apps/mobile/src/services/greenOpsService.ts` is the mobile API boundary.
-
-- It reads `EXPO_PUBLIC_APP_ENV` and `EXPO_PUBLIC_API_BASE_URL` through `@novyx/config`.
-- It imports DTOs and requests from `@novyx/contracts`.
-- It owns REST calls, fallback behavior, task progress mutation, evidence submission, review decisions, notifications, login, and session restore.
-- Screen components receive typed callbacks and do not copy contracts or call `fetch` directly.
-- Evidence submission uses multipart only when local file URIs are present; otherwise it sends metadata JSON.
-- Offline/API failure falls back to the local snapshot while preserving field workflow continuity.
-
-## Planned Backend Baseline
-
-- REST API under `/v1`.
-- Request ID on every response.
-- Standard success envelope: `{ "data": ... }`.
-- Standard error envelope: `{ "error": { "code", "message", "details", "requestId" } }`.
-- Health and readiness endpoints.
-- Structured logging and safe error handling.
+- Không bao giờ lưu file ảnh dạng Base64 trong database hoặc state.
+- URI cục bộ phải được đảm bảo không bị hệ điều hành xóa dọn (Garbage Collected) trước khi nộp thành công lên server.
+- Mỗi ảnh bằng chứng bắt buộc phải đi kèm metadata định vị tại đúng thời điểm chụp để phục vụ hậu kiểm.

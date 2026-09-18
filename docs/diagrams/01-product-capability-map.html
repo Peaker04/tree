@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>01 - NOVYX Product Capability Map</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --color-paper: #fbfbf9; /* snowWhite */
+        --color-paper-2: #f0efea; /* warmStone */
+        --color-ink: #112116; /* forestDepths */
+        --color-muted: #68756b; /* pewter */
+        --color-soft: #8a968d;
+        --color-rule: rgba(17, 33, 22, 0.08);
+        --color-rule-solid: #e2e0d8; /* hairlineBorder */
+        --color-accent: #166534; /* forestDeep / focal */
+        --color-lime: #84cc16; /* limePulse */
+        --color-accent-tint: rgba(132, 204, 22, 0.12);
+        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.5rem;
+      }
+
+      .frame {
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        margin-bottom: 0.5rem;
+      }
+
+      h1 {
+        font-family: var(--font-serif);
+        font-size: 2.1rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+      }
+
+      .desc {
+        font-size: 0.92rem;
+        color: var(--color-muted);
+        line-height: 1.5;
+        margin-bottom: 1.75rem;
+      }
+
+      svg {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--color-rule-solid);
+        border-radius: 8px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <p class="eyebrow">01 · Business Capability Map · Target Baseline</p>
+      <h1>Bản đồ Năng lực Nghiệp vụ NOVYX GreenOps</h1>
+      <p class="desc">
+        Phân tách rõ ràng giữa Miền lõi cạnh tranh (Core Domain: Xác thực hiện trường), các Miền hỗ trợ chuyên biệt và
+        Nền tảng kỹ thuật dùng chung.
+      </p>
+
+      <svg viewBox="0 0 1000 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cap-title cap-desc">
+        <title id="cap-title">NOVYX Business Capability Map</title>
+        <desc id="cap-desc">Sơ đồ năng lực nghiệp vụ NOVYX GreenOps phân rã Core, Supporting và Generic domains.</desc>
+
+        <defs>
+          <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="0.8" fill="rgba(17,33,22,0.05)" />
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#FBFBF9" />
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- SECTION 1: CORE DOMAIN -->
+        <rect
+          x="30"
+          y="30"
+          width="940"
+          height="200"
+          rx="8"
+          fill="rgba(132,204,22,0.06)"
+          stroke="#84CC16"
+          stroke-width="2"
+        />
+        <rect x="50" y="18" width="210" height="24" rx="4" fill="#112116" />
+        <text
+          x="60"
+          y="34"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#84CC16"
+          letter-spacing="0.08em"
+        >
+          CORE DOMAIN · PHẠM VI LÕI
+        </text>
+        <text x="50" y="65" font-family="'Geist', sans-serif" font-size="16" font-weight="600" fill="#112116">
+          Xác thực tác nghiệp hiện trường (Field Work Verification)
+        </text>
+        <text x="50" y="85" font-family="'Geist', sans-serif" font-size="12" fill="#68756B">
+          Tạo chuỗi chứng cứ số 5 chốt không thể làm giả, bảo vệ tính trung thực của tác nghiệp công viên cây xanh.
+        </text>
+
+        <!-- 5 Core Capabilities -->
+        <g transform="translate(50, 105)">
+          <!-- Cap 1 -->
+          <rect x="0" y="0" width="168" height="105" rx="6" fill="#FFF" stroke="#E2E0D8" stroke-width="1.2" />
+          <circle cx="24" cy="26" r="12" fill="rgba(132,204,22,0.18)" />
+          <text
+            x="24"
+            y="30"
+            text-anchor="middle"
+            font-family="'Geist', sans-serif"
+            font-size="11"
+            font-weight="600"
+            fill="#166534"
+          >
+            1
+          </text>
+          <text x="44" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            Xác thực GPS
+          </text>
+          <text x="44" y="38" font-family="'Geist Mono', monospace" font-size="9" fill="#84CC16">PROXIMITY GATE</text>
+          <text x="12" y="62" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">Đo tọa độ thực tế,</text>
+          <text x="12" y="77" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">khoảng cách gốc cây</text>
+          <text x="12" y="93" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#112116">
+            bán kính &lt;= 10m
+          </text>
+
+          <!-- Cap 2 -->
+          <rect x="182" y="0" width="168" height="105" rx="6" fill="#FFF" stroke="#E2E0D8" stroke-width="1.2" />
+          <circle cx="206" cy="26" r="12" fill="rgba(132,204,22,0.18)" />
+          <text
+            x="206"
+            y="30"
+            text-anchor="middle"
+            font-family="'Geist', sans-serif"
+            font-size="11"
+            font-weight="600"
+            fill="#166534"
+          >
+            2
+          </text>
+          <text x="226" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            Đối soát mã QR
+          </text>
+          <text x="226" y="38" font-family="'Geist Mono', monospace" font-size="9" fill="#84CC16">IDENTITY GATE</text>
+          <text x="194" y="62" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Quét mã QR thân cây,
+          </text>
+          <text x="194" y="77" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">đối chiếu mã task</text>
+          <text x="194" y="93" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#112116">
+            khớp 100% TreeId
+          </text>
+
+          <!-- Cap 3 -->
+          <rect x="364" y="0" width="168" height="105" rx="6" fill="#FFF" stroke="#E2E0D8" stroke-width="1.2" />
+          <circle cx="388" cy="26" r="12" fill="rgba(132,204,22,0.18)" />
+          <text
+            x="388"
+            y="30"
+            text-anchor="middle"
+            font-family="'Geist', sans-serif"
+            font-size="11"
+            font-weight="600"
+            fill="#166534"
+          >
+            3
+          </text>
+          <text x="408" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            Ảnh trước tác vụ
+          </text>
+          <text x="408" y="38" font-family="'Geist Mono', monospace" font-size="9" fill="#84CC16">BEFORE PROOF</text>
+          <text x="376" y="62" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Ghi nhận hiện trạng
+          </text>
+          <text x="376" y="77" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            cây trước can thiệp
+          </text>
+          <text x="376" y="93" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#112116">
+            kèm timestamp
+          </text>
+
+          <!-- Cap 4 -->
+          <rect x="546" y="0" width="168" height="105" rx="6" fill="#FFF" stroke="#E2E0D8" stroke-width="1.2" />
+          <circle cx="570" cy="26" r="12" fill="rgba(132,204,22,0.18)" />
+          <text
+            x="570"
+            y="30"
+            text-anchor="middle"
+            font-family="'Geist', sans-serif"
+            font-size="11"
+            font-weight="600"
+            fill="#166534"
+          >
+            4
+          </text>
+          <text x="590" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            Checklist nghiệp vụ
+          </text>
+          <text x="590" y="38" font-family="'Geist Mono', monospace" font-size="9" fill="#84CC16">EXECUTION GATE</text>
+          <text x="558" y="62" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">Tích hoàn thành</text>
+          <text x="558" y="77" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">100% hạng mục</text>
+          <text x="558" y="93" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#112116">
+            kỹ thuật bắt buộc
+          </text>
+
+          <!-- Cap 5 -->
+          <rect x="728" y="0" width="172" height="105" rx="6" fill="#FFF" stroke="#E2E0D8" stroke-width="1.2" />
+          <circle cx="752" cy="26" r="12" fill="rgba(132,204,22,0.18)" />
+          <text
+            x="752"
+            y="30"
+            text-anchor="middle"
+            font-family="'Geist', sans-serif"
+            font-size="11"
+            font-weight="600"
+            fill="#166534"
+          >
+            5
+          </text>
+          <text x="772" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            Ảnh nghiệm thu sau
+          </text>
+          <text x="772" y="38" font-family="'Geist Mono', monospace" font-size="9" fill="#84CC16">AFTER PROOF</text>
+          <text x="740" y="62" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Ảnh hiện trường sau
+          </text>
+          <text x="740" y="77" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">khi hoàn tất việc</text>
+          <text x="740" y="93" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#112116">
+            đủ 5/5 -> Nộp báo cáo
+          </text>
+        </g>
+
+        <!-- SECTION 2: SUPPORTING SUBDOMAINS -->
+        <rect x="30" y="255" width="940" height="210" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.2" />
+        <rect x="50" y="243" width="260" height="24" rx="4" fill="#68756B" />
+        <text
+          x="60"
+          y="259"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#FFF"
+          letter-spacing="0.08em"
+        >
+          SUPPORTING SUBDOMAINS · MIỀN HỖ TRỢ
+        </text>
+
+        <g transform="translate(50, 280)">
+          <!-- Sub 1: Work Management -->
+          <rect x="0" y="0" width="210" height="165" rx="6" fill="#FFF" stroke="#E2E0D8" />
+          <text x="18" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            Work Management
+          </text>
+          <text x="18" y="44" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+            Quản lý nhiệm vụ
+          </text>
+          <line x1="18" y1="54" x2="192" y2="54" stroke="rgba(17,33,22,0.08)" />
+          <text x="18" y="74" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Lập &amp; giao nhiệm vụ mới
+          </text>
+          <text x="18" y="94" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Điều phối tải nhân viên
+          </text>
+          <text x="18" y="114" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Hàng đợi việc &amp; lọc trạng thái
+          </text>
+          <text x="18" y="134" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Ưu tiên hóa việc làm lại
+          </text>
+
+          <!-- Sub 2: Tree Registry -->
+          <rect x="230" y="0" width="210" height="165" rx="6" fill="#FFF" stroke="#E2E0D8" />
+          <text x="248" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            Tree Asset Registry
+          </text>
+          <text x="248" y="44" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+            Hồ sơ tài sản cây
+          </text>
+          <line x1="248" y1="54" x2="422" y2="54" stroke="rgba(17,33,22,0.08)" />
+          <text x="248" y="74" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Quản lý tọa độ &amp; mã QR
+          </text>
+          <text x="248" y="94" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Phân loại sức khỏe &amp; rủi ro
+          </text>
+          <text x="248" y="114" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Tra cứu nhanh cây thực địa
+          </text>
+          <text x="248" y="134" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Chiếu lịch sử chăm sóc
+          </text>
+
+          <!-- Sub 3: Review & QC -->
+          <rect x="460" y="0" width="210" height="165" rx="6" fill="#FFF" stroke="#E2E0D8" />
+          <text x="478" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            Review &amp; Quality Control
+          </text>
+          <text x="478" y="44" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+            Kiểm duyệt chất lượng
+          </text>
+          <line x1="478" y1="54" x2="652" y2="54" stroke="rgba(17,33,22,0.08)" />
+          <text x="478" y="74" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Cổng thẩm định 5 chốt
+          </text>
+          <text x="478" y="94" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Khóa duyệt khi thiếu bằng chứng
+          </text>
+          <text x="478" y="114" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Trả việc làm lại kèm lý do
+          </text>
+          <text x="478" y="134" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Đóng nhiệm vụ hoàn thành
+          </text>
+
+          <!-- Sub 4: Notifications -->
+          <rect x="690" y="0" width="210" height="165" rx="6" fill="#FFF" stroke="#E2E0D8" />
+          <text x="708" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            Operational Alerts
+          </text>
+          <text x="708" y="44" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+            Thông báo vận hành
+          </text>
+          <line x1="708" y1="54" x2="882" y2="54" stroke="rgba(17,33,22,0.08)" />
+          <text x="708" y="74" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Báo việc mới được giao
+          </text>
+          <text x="708" y="94" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Báo việc bị trả lại làm lại
+          </text>
+          <text x="708" y="114" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Báo cáo đã được phê duyệt
+          </text>
+          <text x="708" y="134" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Cảnh báo mã QR hư hỏng
+          </text>
+        </g>
+
+        <!-- SECTION 3: GENERIC PLATFORM CAPABILITIES -->
+        <rect x="30" y="485" width="940" height="165" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.2" />
+        <rect x="50" y="473" width="280" height="24" rx="4" fill="#112116" />
+        <text
+          x="60"
+          y="489"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#E2E0D8"
+          letter-spacing="0.08em"
+        >
+          GENERIC / PLATFORM · NỀN TẢNG DÙNG CHUNG
+        </text>
+
+        <g transform="translate(50, 510)">
+          <!-- Gen 1 -->
+          <rect x="0" y="0" width="210" height="120" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
+          <text x="16" y="26" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+            Identity &amp; Session
+          </text>
+          <text x="16" y="48" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Đăng nhập vai trò (Staff/Manager), lưu JWT an toàn, khôi phục phiên khi mở lại app.
+          </text>
+
+          <!-- Gen 2 -->
+          <rect x="230" y="0" width="210" height="120" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
+          <text x="246" y="26" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+            Contextual Permissions
+          </text>
+          <text x="246" y="48" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Xin quyền Camera/GPS đúng ngữ cảnh sử dụng, giải thích lý do, mở Settings khi bị khóa.
+          </text>
+
+          <!-- Gen 3 -->
+          <rect x="460" y="0" width="210" height="120" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
+          <text x="476" y="26" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+            Resilient Local Cache
+          </text>
+          <text x="476" y="48" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Lưu snapshot và ảnh offline bền vững, không mất dữ liệu khi rớt mạng hoặc kill app.
+          </text>
+
+          <!-- Gen 4 -->
+          <rect x="690" y="0" width="210" height="120" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
+          <text x="706" y="26" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+            API &amp; UI System
+          </text>
+          <text x="706" y="48" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Envelope chuẩn REST v1, upload multipart, token thiết kế Seed/Linear cho Android.
+          </text>
+        </g>
+      </svg>
+    </div>
+  </body>
+</html>

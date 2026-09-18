@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>10 - NOVYX System Target Architecture</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --color-paper: #fbfbf9;
+        --color-paper-2: #f0efea;
+        --color-ink: #112116;
+        --color-muted: #68756b;
+        --color-rule: rgba(17, 33, 22, 0.08);
+        --color-rule-solid: #e2e0d8;
+        --color-accent: #166534;
+        --color-lime: #84cc16;
+        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.5rem;
+      }
+
+      .frame {
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        margin-bottom: 0.5rem;
+      }
+
+      h1 {
+        font-family: var(--font-serif);
+        font-size: 2.1rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+      }
+
+      .desc {
+        font-size: 0.92rem;
+        color: var(--color-muted);
+        line-height: 1.5;
+        margin-bottom: 1.75rem;
+      }
+
+      svg {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--color-rule-solid);
+        border-radius: 8px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <p class="eyebrow">10 · Target Architecture · Clean / Ports &amp; Adapters</p>
+      <h1>Kiến trúc Mục tiêu Hệ thống (System Target Architecture)</h1>
+      <p class="desc">
+        Phân tầng chuẩn Clean Architecture: Tách biệt Giao diện, Ca sử dụng, Thực thể nghiệp vụ, Cổng giao tiếp và Bộ
+        điều hợp hạ tầng.
+      </p>
+
+      <svg viewBox="0 0 1020 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ta-title ta-desc">
+        <title id="ta-title">NOVYX System Target Architecture</title>
+        <desc id="ta-desc">Kiến trúc 5 tầng Clean Architecture chuẩn hóa cho NOVYX GreenOps.</desc>
+
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#166534" />
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#FBFBF9" />
+
+        <!-- LAYER 1: PRESENTATION -->
+        <g transform="translate(40, 30)">
+          <rect x="0" y="0" width="940" height="110" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="20" y="-12" width="180" height="22" rx="4" fill="#112116" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#84CC16">
+            1. PRESENTATION LAYER
+          </text>
+
+          <text x="24" y="32" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+            Giao diện người dùng &amp; Điều phối ViewModels
+          </text>
+          <text x="24" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Màn hình mỏng, thuần Presentational; không chứa logic biến đổi trạng thái nghiệp vụ
+          </text>
+          <line x1="24" y1="60" x2="916" y2="60" stroke="#E2E0D8" />
+
+          <text x="24" y="85" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+            • Screens: StaffHome, StaffWork, StaffProofFlow, ManagerDashboard, ManagerReview, ManagerTrees
+          </text>
+          <text x="24" y="100" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            • Hooks: useTaskQueue(), useProofWorkflow(), useDevicePermissions(), useSession()
+          </text>
+        </g>
+
+        <!-- Arrow 1 -> 2 -->
+        <line x1="510" y1="140" x2="510" y2="165" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
+
+        <!-- LAYER 2: APPLICATION -->
+        <g transform="translate(40, 170)">
+          <rect x="0" y="0" width="940" height="110" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="20" y="-12" width="220" height="22" rx="4" fill="#166534" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            2. APPLICATION / USE CASES
+          </text>
+
+          <text x="24" y="32" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+            Điều phối Ca sử dụng Nghiệp vụ (Use Cases)
+          </text>
+          <text x="24" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Thực thi quy trình, gọi Domain Aggregates và lưu trữ qua Ports
+          </text>
+          <line x1="24" y1="60" x2="916" y2="60" stroke="#E2E0D8" />
+
+          <g transform="translate(24, 75)">
+            <text x="0" y="15" font-family="'Geist', sans-serif" font-size="11" fill="#112116">• StartTaskUseCase</text>
+            <text x="200" y="15" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+              • AcquireProofStepUseCase
+            </text>
+            <text x="440" y="15" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#166534">
+              • SubmitEvidenceUseCase
+            </text>
+            <text x="680" y="15" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#166534">
+              • ReviewTaskUseCase
+            </text>
+          </g>
+        </g>
+
+        <!-- Arrow 2 -> 3 -->
+        <line x1="510" y1="280" x2="510" y2="305" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
+
+        <!-- LAYER 3: DOMAIN CORE -->
+        <g transform="translate(40, 310)">
+          <rect
+            x="0"
+            y="0"
+            width="940"
+            height="130"
+            rx="8"
+            fill="rgba(132,204,22,0.06)"
+            stroke="#84CC16"
+            stroke-width="2"
+          />
+          <rect x="20" y="-12" width="220" height="22" rx="4" fill="#112116" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#84CC16">
+            3. DOMAIN CORE (THỰC THỂ LÕI)
+          </text>
+
+          <text x="24" y="32" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+            Aggregates, Value Objects &amp; Invariants (DR-01..DR-10)
+          </text>
+          <text x="24" y="50" font-family="'Geist', sans-serif" font-size="11" fill="#166534">
+            Trái tim của hệ thống; độc lập 100% với React Native, UI và cơ sở dữ liệu
+          </text>
+          <line x1="24" y1="60" x2="916" y2="60" stroke="#E2E0D8" />
+
+          <g transform="translate(24, 80)">
+            <text x="0" y="15" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+              • Task Aggregate (Vòng đời trạng thái)
+            </text>
+            <text x="0" y="35" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+              Khóa việc đã Completed
+            </text>
+
+            <text x="320" y="15" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+              • ProofWorkflow State Machine
+            </text>
+            <text x="320" y="35" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+              Bảo vệ cổng 5 chốt &lt;= 10m, QR khớp
+            </text>
+
+            <text x="640" y="15" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+              • Tree Aggregate &amp; CareHistory
+            </text>
+            <text x="640" y="35" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+              Chiếu dữ liệu lịch sử chăm sóc
+            </text>
+          </g>
+        </g>
+
+        <!-- Arrow 3 -> 4 -->
+        <line x1="510" y1="440" x2="510" y2="465" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
+
+        <!-- LAYER 4: PORTS -->
+        <g transform="translate(40, 470)">
+          <rect x="0" y="0" width="940" height="90" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="20" y="-12" width="160" height="22" rx="4" fill="#68756B" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            4. PORTS (GIAO DIỆN CỔNG)
+          </text>
+
+          <text x="24" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            Hợp đồng giao tiếp kỹ thuật
+          </text>
+          <line x1="24" y1="40" x2="916" y2="40" stroke="#E2E0D8" />
+
+          <g transform="translate(24, 60)">
+            <text x="0" y="12" font-family="'Geist Mono', monospace" font-size="11" fill="#112116">
+              ITaskRepository
+            </text>
+            <text x="230" y="12" font-family="'Geist Mono', monospace" font-size="11" fill="#112116">
+              ITreeRepository
+            </text>
+            <text x="460" y="12" font-family="'Geist Mono', monospace" font-size="11" fill="#112116">
+              IDeviceHardwarePort
+            </text>
+            <text x="700" y="12" font-family="'Geist Mono', monospace" font-size="11" fill="#112116">
+              INotificationPort
+            </text>
+          </g>
+        </g>
+
+        <!-- Arrow 4 -> 5 -->
+        <line x1="510" y1="560" x2="510" y2="585" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
+
+        <!-- LAYER 5: INFRASTRUCTURE ADAPTERS -->
+        <g transform="translate(40, 590)">
+          <rect x="0" y="0" width="940" height="100" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.2" />
+          <rect x="20" y="-12" width="220" height="22" rx="4" fill="#112116" />
+          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#E2E0D8">
+            5. INFRASTRUCTURE ADAPTERS
+          </text>
+
+          <g transform="translate(24, 30)">
+            <rect x="0" y="0" width="280" height="55" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text x="14" y="22" font-family="'Geist', sans-serif" font-size="11" font-weight="600">RestApiAdapter</text>
+            <text x="14" y="40" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+              HTTP Client REST v1, multipart upload
+            </text>
+
+            <rect x="310" y="0" width="280" height="55" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text x="324" y="22" font-family="'Geist', sans-serif" font-size="11" font-weight="600">
+              DurableStorageAdapter
+            </text>
+            <text x="324" y="40" font-family="'Geist', sans-serif" font-size="10" fill="#166534">
+              MMKV / SQLite bền vững chống mất dữ liệu
+            </text>
+
+            <rect x="620" y="0" width="270" height="55" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text x="634" y="22" font-family="'Geist', sans-serif" font-size="11" font-weight="600">
+              ExpoHardwareAdapter
+            </text>
+            <text x="634" y="40" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+              Wrapper expo-camera, expo-location SDK 57
+            </text>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </body>
+</html>

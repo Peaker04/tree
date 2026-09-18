@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>07 - NOVYX Action Eligibility & Security Matrix</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --color-paper: #fbfbf9;
+        --color-paper-2: #f0efea;
+        --color-ink: #112116;
+        --color-muted: #68756b;
+        --color-rule: rgba(17, 33, 22, 0.08);
+        --color-rule-solid: #e2e0d8;
+        --color-accent: #166534;
+        --color-lime: #84cc16;
+        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.5rem;
+      }
+
+      .frame {
+        max-width: 1150px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        margin-bottom: 0.5rem;
+      }
+
+      h1 {
+        font-family: var(--font-serif);
+        font-size: 2.1rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+      }
+
+      .desc {
+        font-size: 0.92rem;
+        color: var(--color-muted);
+        line-height: 1.5;
+        margin-bottom: 1.75rem;
+      }
+
+      svg {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--color-rule-solid);
+        border-radius: 8px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <p class="eyebrow">07 · Access Control & Authorization · Security Matrix</p>
+      <h1>Ma trận Phân quyền & Điều kiện Kích hoạt Hành động</h1>
+      <p class="desc">
+        Nguyên tắc: Quyền hành động = Vai trò (Role) ∧ Phạm vi sở hữu (Scope) ∧ Trạng thái đối tượng (State) ∧ Điều kiện
+        tiên quyết (Preconditions).
+      </p>
+
+      <svg viewBox="0 0 1080 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sm-title sm-desc">
+        <title id="sm-title">NOVYX Action Eligibility Security Matrix</title>
+        <desc id="sm-desc">Bảng ma trận phân quyền và điều kiện tiên quyết cho từng hành động nghiệp vụ.</desc>
+
+        <rect width="100%" height="100%" fill="#FBFBF9" />
+
+        <!-- TABLE HEADER -->
+        <rect x="30" y="30" width="1020" height="45" fill="#112116" rx="6" />
+        <text x="50" y="58" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+          HÀNH ĐỘNG NGHIỆP VỤ
+        </text>
+        <text x="320" y="58" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16">
+          NHÂN VIÊN (STAFF)
+        </text>
+        <text x="540" y="58" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16">
+          QUẢN LÝ (MANAGER)
+        </text>
+        <text x="760" y="58" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+          ĐIỀU KIỆN TIÊN QUYẾT &amp; CHỐT CHẶN
+        </text>
+
+        <!-- ROW 1: Create Task -->
+        <g transform="translate(30, 85)">
+          <rect x="0" y="0" width="1020" height="50" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
+            Tạo &amp; giao nhiệm vụ
+          </text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+            CẤM (FORBIDDEN)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            THỰC THI (OWN)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Chọn đúng cây, hạn chót tương lai, có checklist
+          </text>
+        </g>
+
+        <!-- ROW 2: GPS Check -->
+        <g transform="translate(30, 140)">
+          <rect x="0" y="0" width="1020" height="50" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
+            Xác thực vị trí GPS
+          </text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            THỰC THI (OWN)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+            ĐỐI SOÁT (AUDIT)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Cấp quyền Location; khoảng cách &lt;= 10m so với cây
+          </text>
+        </g>
+
+        <!-- ROW 3: QR Verification -->
+        <g transform="translate(30, 195)">
+          <rect x="0" y="0" width="1020" height="50" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
+            Quét &amp; xác thực mã QR
+          </text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            THỰC THI (OWN)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+            ĐỐI SOÁT (AUDIT)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Cấp quyền Camera; mã quét khớp 100% mã cây của task
+          </text>
+        </g>
+
+        <!-- ROW 4: Photo Capture -->
+        <g transform="translate(30, 250)">
+          <rect x="0" y="0" width="1020" height="50" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
+            Chụp ảnh Trước / Sau
+          </text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            THỰC THI (OWN)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+            ĐỐI SOÁT (AUDIT)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Camera độc quyền; ảnh sau yêu cầu checklist 100% xong
+          </text>
+        </g>
+
+        <!-- ROW 5: Submit Evidence -->
+        <g transform="translate(30, 305)">
+          <rect x="0" y="0" width="1020" height="50" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
+            Nộp chuỗi bằng chứng
+          </text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            THỰC THI (OWN)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+            TIẾP NHẬN (RECEIVE)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#166534">
+            BẮT BUỘC ĐỦ 5/5 BẰNG CHỨNG HỢP LỆ (DR-05)
+          </text>
+        </g>
+
+        <!-- ROW 6: Approve Review -->
+        <g transform="translate(30, 360)">
+          <rect x="0" y="0" width="1020" height="50" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
+            Phê duyệt hoàn thành
+          </text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+            CẤM (FORBIDDEN)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            THỰC THI (OWN)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#166534">
+            KHÔNG CÒN BẤT KỲ LỖ HỔNG NÀO (Gaps === 0) (DR-06)
+          </text>
+        </g>
+
+        <!-- ROW 7: Request Rework -->
+        <g transform="translate(30, 415)">
+          <rect x="0" y="0" width="1020" height="50" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">Yêu cầu làm lại</text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+            TIẾP NHẬN (RECEIVE)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            THỰC THI (OWN)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#D97706">
+            BẮT BUỘC KÈM LÝ DO CỤ THỂ (rejectReason !== '') (DR-07)
+          </text>
+        </g>
+
+        <!-- ROW 8: Fast QR Tree Lookup -->
+        <g transform="translate(30, 470)">
+          <rect x="0" y="0" width="1020" height="50" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1" />
+          <text x="20" y="30" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
+            Tra cứu nhanh cây (FAB)
+          </text>
+          <text x="290" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            ĐỌC (READ-ONLY)
+          </text>
+          <text x="510" y="30" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            ĐỌC (READ-ONLY)
+          </text>
+          <text x="730" y="30" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            Mở camera quét mã; hiển thị hồ sơ &amp; CareHistory cây
+          </text>
+        </g>
+
+        <!-- FOOTER NOTE -->
+        <text x="40" y="555" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+          Ghi chú: Toàn bộ các kiểm soát bị chặn (Forbidden) hoặc khóa nút (Disabled) đều có câu thông báo hiển thị rõ
+          lý do cho người dùng.
+        </text>
+        <text x="40" y="575" font-family="'Geist Mono', monospace" font-size="10" fill="#166534">
+          Backend API remains the final authoritative enforcement boundary.
+        </text>
+      </svg>
+    </div>
+  </body>
+</html>

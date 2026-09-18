@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>03 - NOVYX MVP Operational Swimlane</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --color-paper: #fbfbf9;
+        --color-paper-2: #f0efea;
+        --color-ink: #112116;
+        --color-muted: #68756b;
+        --color-rule: rgba(17, 33, 22, 0.08);
+        --color-rule-solid: #e2e0d8;
+        --color-accent: #166534;
+        --color-lime: #84cc16;
+        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-mono: 'Geist Mono', ui-monospace, monospace;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-paper);
+        color: var(--color-ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.5rem;
+      }
+
+      .frame {
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        margin-bottom: 0.5rem;
+      }
+
+      h1 {
+        font-family: var(--font-serif);
+        font-size: 2.1rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        color: var(--color-ink);
+        margin-bottom: 0.5rem;
+      }
+
+      .desc {
+        font-size: 0.92rem;
+        color: var(--color-muted);
+        line-height: 1.5;
+        margin-bottom: 1.75rem;
+      }
+
+      svg {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--color-rule-solid);
+        border-radius: 8px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <p class="eyebrow">03 · Cross-Role Business Workflow · Walking Skeleton</p>
+      <h1>Quy trình Vận hành Liên vai trò (Operational Swimlane)</h1>
+      <p class="desc">
+        Chu trình đầu-cuối của một nhiệm vụ: Tạo việc -> Giao việc -> Thu thập 5 chốt bằng chứng -> Nộp -> Thẩm định ->
+        Phê duyệt / Trả việc làm lại.
+      </p>
+
+      <svg viewBox="0 0 1120 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="sw-title sw-desc">
+        <title id="sw-title">NOVYX Operational Swimlane</title>
+        <desc id="sw-desc">Biểu đồ luồng phối hợp giữa Quản lý, Nhân viên hiện trường và Hệ thống nền tảng.</desc>
+
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#68756B" />
+          </marker>
+          <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#166534" />
+          </marker>
+          <marker id="arr-amber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#D97706" />
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#FBFBF9" />
+
+        <!-- LANE 1: MANAGER -->
+        <rect x="0" y="30" width="1120" height="190" fill="#FFF" />
+        <line x1="0" y1="220" x2="1120" y2="220" stroke="#E2E0D8" stroke-width="1.5" />
+        <rect x="0" y="30" width="120" height="190" fill="#F0EFEA" />
+        <text
+          x="60"
+          y="115"
+          text-anchor="middle"
+          font-family="'Geist', sans-serif"
+          font-size="14"
+          font-weight="600"
+          fill="#112116"
+        >
+          QUẢN LÝ
+        </text>
+        <text x="60" y="135" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+          Manager
+        </text>
+
+        <!-- LANE 2: STAFF -->
+        <rect x="0" y="220" width="1120" height="260" fill="#FBFBF9" />
+        <line x1="0" y1="480" x2="1120" y2="480" stroke="#E2E0D8" stroke-width="1.5" />
+        <rect x="0" y="220" width="120" height="260" fill="#F0EFEA" />
+        <text
+          x="60"
+          y="340"
+          text-anchor="middle"
+          font-family="'Geist', sans-serif"
+          font-size="14"
+          font-weight="600"
+          fill="#112116"
+        >
+          NHÂN VIÊN
+        </text>
+        <text x="60" y="360" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+          Field Staff
+        </text>
+
+        <!-- LANE 3: SYSTEM -->
+        <rect x="0" y="480" width="1120" height="190" fill="#FFF" />
+        <rect x="0" y="480" width="120" height="190" fill="#F0EFEA" />
+        <text
+          x="60"
+          y="565"
+          text-anchor="middle"
+          font-family="'Geist', sans-serif"
+          font-size="14"
+          font-weight="600"
+          fill="#112116"
+        >
+          HỆ THỐNG
+        </text>
+        <text x="60" y="585" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+          System / API
+        </text>
+
+        <!-- STEP 1: Manager Creates Task -->
+        <g transform="translate(150, 70)">
+          <rect x="0" y="0" width="130" height="70" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+          <text x="12" y="24" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            1. Tạo &amp; giao việc
+          </text>
+          <text x="12" y="42" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+            Chọn cây, nhân viên,
+          </text>
+          <text x="12" y="56" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+            hạn chót &amp; checklist
+          </text>
+        </g>
+
+        <!-- Arrow Step 1 -> System notify -->
+        <line x1="215" y1="140" x2="215" y2="520" stroke="#68756B" stroke-width="1.5" marker-end="url(#arr)" />
+
+        <!-- STEP 2: System registers Task -->
+        <g transform="translate(150, 520)">
+          <rect x="0" y="0" width="130" height="70" rx="6" fill="#F0EFEA" stroke="#E2E0D8" />
+          <text x="12" y="24" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            Lưu Task (Pending)
+          </text>
+          <text x="12" y="42" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">Phát thông báo</text>
+          <text x="12" y="56" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">giao việc cho Staff</text>
+        </g>
+
+        <!-- Arrow System -> Staff receives -->
+        <line x1="280" y1="555" x2="330" y2="350" stroke="#68756B" stroke-width="1.5" marker-end="url(#arr)" />
+
+        <!-- STEP 3: Staff opens work & 5-point proof -->
+        <g transform="translate(320, 270)">
+          <rect
+            x="0"
+            y="0"
+            width="370"
+            height="150"
+            rx="8"
+            fill="rgba(132,204,22,0.06)"
+            stroke="#84CC16"
+            stroke-width="1.8"
+          />
+          <text x="16" y="24" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+            2. Thu thập chuỗi 5 bằng chứng hiện trường
+          </text>
+          <text x="16" y="40" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
+            CHUYỂN TRẠNG THÁI: IN_PROGRESS
+          </text>
+
+          <!-- 5 mini boxes -->
+          <g transform="translate(16, 55)">
+            <rect x="0" y="0" width="60" height="70" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text x="30" y="24" text-anchor="middle" font-family="'Geist', sans-serif" font-size="11" font-weight="600">
+              GPS
+            </text>
+            <text x="30" y="42" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="8" fill="#68756B">
+              &lt;= 10m
+            </text>
+            <text x="30" y="58" text-anchor="middle" font-family="'Geist', sans-serif" font-size="9" fill="#166534">
+              Đạt
+            </text>
+
+            <rect x="68" y="0" width="60" height="70" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text x="98" y="24" text-anchor="middle" font-family="'Geist', sans-serif" font-size="11" font-weight="600">
+              QR
+            </text>
+            <text x="98" y="42" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="8" fill="#68756B">
+              Khớp 100%
+            </text>
+            <text x="98" y="58" text-anchor="middle" font-family="'Geist', sans-serif" font-size="9" fill="#166534">
+              Đạt
+            </text>
+
+            <rect x="136" y="0" width="60" height="70" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text
+              x="166"
+              y="24"
+              text-anchor="middle"
+              font-family="'Geist', sans-serif"
+              font-size="11"
+              font-weight="600"
+            >
+              Trước
+            </text>
+            <text
+              x="166"
+              y="42"
+              text-anchor="middle"
+              font-family="'Geist Mono', monospace"
+              font-size="8"
+              fill="#68756B"
+            >
+              Ảnh hiện trạng
+            </text>
+            <text x="166" y="58" text-anchor="middle" font-family="'Geist', sans-serif" font-size="9" fill="#166534">
+              Đạt
+            </text>
+
+            <rect x="204" y="0" width="60" height="70" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text
+              x="234"
+              y="24"
+              text-anchor="middle"
+              font-family="'Geist', sans-serif"
+              font-size="11"
+              font-weight="600"
+            >
+              Checklist
+            </text>
+            <text
+              x="234"
+              y="42"
+              text-anchor="middle"
+              font-family="'Geist Mono', monospace"
+              font-size="8"
+              fill="#68756B"
+            >
+              100% mục
+            </text>
+            <text x="234" y="58" text-anchor="middle" font-family="'Geist', sans-serif" font-size="9" fill="#166534">
+              Đạt
+            </text>
+
+            <rect x="272" y="0" width="60" height="70" rx="4" fill="#FFF" stroke="#E2E0D8" />
+            <text
+              x="302"
+              y="24"
+              text-anchor="middle"
+              font-family="'Geist', sans-serif"
+              font-size="11"
+              font-weight="600"
+            >
+              Sau
+            </text>
+            <text
+              x="302"
+              y="42"
+              text-anchor="middle"
+              font-family="'Geist Mono', monospace"
+              font-size="8"
+              fill="#68756B"
+            >
+              Ảnh kết quả
+            </text>
+            <text x="302" y="58" text-anchor="middle" font-family="'Geist', sans-serif" font-size="9" fill="#166534">
+              Đạt
+            </text>
+          </g>
+        </g>
+
+        <!-- Staff Submits -> System -->
+        <line x1="690" y1="350" x2="735" y2="350" stroke="#166534" stroke-width="2" marker-end="url(#arr-green)" />
+
+        <g transform="translate(740, 315)">
+          <rect x="0" y="0" width="110" height="70" rx="6" fill="#166534" />
+          <text x="14" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#FFF">
+            3. Nộp báo cáo
+          </text>
+          <text x="14" y="44" font-family="'Geist', sans-serif" font-size="10" fill="#E2E0D8">Đủ 5/5 bằng chứng</text>
+          <text x="14" y="58" font-family="'Geist Mono', monospace" font-size="8" fill="#84CC16">WAITING_REVIEW</text>
+        </g>
+
+        <!-- Arrow Submit -> Manager Review Queue -->
+        <line x1="795" y1="315" x2="795" y2="150" stroke="#166534" stroke-width="2" marker-end="url(#arr-green)" />
+
+        <!-- STEP 4: Manager Reviews Evidence -->
+        <g transform="translate(730, 70)">
+          <rect x="0" y="0" width="150" height="80" rx="6" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <text x="12" y="24" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#112116">
+            4. Thẩm định 5 chốt
+          </text>
+          <text x="12" y="42" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+            Soát GPS, QR, ảnh cặp
+          </text>
+          <text x="12" y="56" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+            Trước/Sau và Checklist
+          </text>
+          <text x="12" y="72" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">Gaps === 0 ?</text>
+        </g>
+
+        <!-- Split Branches: Approve vs Rework -->
+        <!-- Branch 1: Approve (Right) -->
+        <line x1="880" y1="110" x2="940" y2="110" stroke="#166534" stroke-width="2" marker-end="url(#arr-green)" />
+        <g transform="translate(945, 75)">
+          <rect x="0" y="0" width="135" height="70" rx="6" fill="#166534" />
+          <text x="14" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#FFF">
+            PHÊ DUYỆT
+          </text>
+          <text x="14" y="44" font-family="'Geist', sans-serif" font-size="10" fill="#FFF">Task: COMPLETED</text>
+          <text x="14" y="58" font-family="'Geist', sans-serif" font-size="9" fill="#84CC16">-> Lưu CareHistory</text>
+        </g>
+
+        <!-- Branch 2: Request Rework (Loop back to Staff) -->
+        <path
+          d="M 805 70 L 805 45 L 530 45 L 530 260"
+          fill="none"
+          stroke="#D97706"
+          stroke-width="2"
+          stroke-dasharray="5,4"
+          marker-end="url(#arr-amber)"
+        />
+        <rect x="610" y="32" width="140" height="24" rx="4" fill="#D97706" />
+        <text x="618" y="48" font-family="'Geist Mono', monospace" font-size="9" font-weight="600" fill="#FFF">
+          REWORK_REQUIRED
+        </text>
+      </svg>
+    </div>
+  </body>
+</html>
