@@ -24,6 +24,7 @@ Khi tìm kiếm câu trả lời cho bất kỳ khía cạnh nào của hệ th�
 | **Lịch sử và bằng chứng ra quyết định nghiệp vụ nằm ở đâu?**        | [`docs/BUSINESS-PROCESS-REVIEW.md`](BUSINESS-PROCESS-REVIEW.md)                 | Approved Decision Evidence / Historical Decision Record (Lưu vết 14 quyết định nghiệp vụ `BUS-DEC-01`..`14`).                                  |
 | **Các sơ đồ kiến trúc và luồng nghiệp vụ trực quan ở đâu?**         | [`docs/diagrams/`](diagrams/)                                                   | Standalone Branded HTML/SVG Diagrams (Derived Views từ Canonical Docs) tuân thủ tiêu chuẩn `diagram-design` và palette NOVYX.                  |
 | **Cổng chất lượng, tiêu chí nghiệm thu và sổ bộ bằng chứng ở đâu?** | [`docs/quality-gates/`](quality-gates/)                                         | Quality Gate Taxonomy (CAN, RTM, ARC, NFR, DG, VAL, SRC), Acceptance Oracles, Verification Evidence Protocol & Baseline Lock Protocol.         |
+| **Kế hoạch đối chiếu nghiệp vụ & quản trị vai trò Admin ở đâu?**    | [`docs/NOVYX_Business_Baseline_Reconciliation_Master_Plan.md`](NOVYX_Business_Baseline_Reconciliation_Master_Plan.md)<br>[`docs/business-reconciliation/`](business-reconciliation/) | Master Plan 12 Phase chuẩn hóa mô hình 3 role (Staff, Manager, Admin), đóng băng baseline và sổ đăng ký khoảng trống nghiệp vụ. |
 
 ---
 
@@ -47,7 +48,7 @@ Dự án áp dụng mô hình phân cấp thẩm quyền tài liệu nghiêm ng�
    - Tài liệu chủ quản: [`docs/BUSINESS-PROCESS-REVIEW.md`](BUSINESS-PROCESS-REVIEW.md), các báo cáo kiểm toán cũ (`docs/MOBILE_DESIGN_AUDIT.md`).
    - Thẩm quyền: Lưu vết quá trình phân tích và căn cứ dẫn đến quyết định. Không ghi đè các tài liệu chuẩn tắc Lớp A sau khi đã đồng bộ.
 6. **Lớp F: PLANNING / GAP / MIGRATION (Kế hoạch & Báo cáo khoảng trống):**
-   - Tài liệu chủ quản: [`docs/POST-SYNC-IMPLEMENTATION-GAP-MAP.md`](POST-SYNC-IMPLEMENTATION-GAP-MAP.md), [`docs/INCEPTION-GAP-REPORT.md`](INCEPTION-GAP-REPORT.md).
+   - Tài liệu chủ quản: [`docs/NOVYX_Business_Baseline_Reconciliation_Master_Plan.md`](NOVYX_Business_Baseline_Reconciliation_Master_Plan.md), [`docs/business-reconciliation/`](business-reconciliation/), [`docs/POST-SYNC-IMPLEMENTATION-GAP-MAP.md`](POST-SYNC-IMPLEMENTATION-GAP-MAP.md), [`docs/INCEPTION-GAP-REPORT.md`](INCEPTION-GAP-REPORT.md).
    - Thẩm quyền: Bảng đối chiếu thực tế phục vụ lộ trình nâng cấp kỹ thuật; không thay đổi hợp đồng cốt lõi.
 7. **Lớp G: DERIVED VIEWS (Góc nhìn trực quan dẫn xuất):**
    - Tài liệu chủ quản: Toàn bộ các sơ đồ tại [`docs/diagrams/`](diagrams/).
