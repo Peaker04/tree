@@ -3,7 +3,7 @@
 ## NOVYX GreenOps — Documentation, Traceability, Governance & Diagram Reconciliation
 
 > **Phân loại báo cáo:** `[VERIFIED]` / `[PROPOSED]` / `[NEEDS_DECISION]`
-> **Giai đoạn:** FINAL BASELINE REPAIR & QUALITY GATE CLOSURE
+> **Giai đoạn:** QUALITY GATE SELF-CONSISTENCY CLOSURE
 > **Trạng thái kết thúc:** `BASELINE QUALITY GATE PASS — READY FOR TECHNICAL ARCHITECTURE BASELINE RECONCILIATION`
 
 ---
@@ -12,8 +12,8 @@
 
 - **Repository:** `https://github.com/Peaker04/tree`
 - **Branch làm việc:** `base-setup`
-- **Baseline SHA thẩm tra:** `249fe1f73863314d33d518cc31e120dca69fc2a6`
-- **Tình trạng Working Tree:** Toàn bộ mã nguồn ứng dụng (`apps/mobile/src/**`) và hợp đồng dữ liệu (`packages/**/src/**`) được bảo toàn tuyệt đối **0 tệp sửa đổi**. Các thay đổi chỉ tập trung tại `docs/**`, `DESIGN.md`, `.agents/skills/diagram-design/**`, và `scripts/diagram_tool.py`.
+- **Baseline Starting HEAD:** `3dc5bd8f107ced03501a22155746f7a1ad713481`
+- **Tình trạng Working Tree:** Toàn bộ mã nguồn ứng dụng (`apps/mobile/src/**`) và hợp đồng dữ liệu (`packages/**/src/**`) được bảo toàn tuyệt đối **0 tệp sửa đổi**. Các thay đổi chỉ tập trung tại `docs/**`, `DESIGN.md`, `.agents/skills/diagram-design/**`, `scripts/diagram_tool.py` và `scripts/quality_gate_report.py`.
 
 ---
 
@@ -204,12 +204,16 @@ File [`scripts/diagram_tool.py`](file:///d:/ki7/EXE/tree/scripts/diagram_tool.py
 
 > [!IMPORTANT]
 > **ĐIỀU KIỆN KHÓA ĐƯỜNG CƠ SỞ ĐƯỢC THỎA MÃN:**
-> Pha **Final Baseline Repair** đã xử lý triệt để toàn bộ 6 khiếm khuyết hình học và ngữ nghĩa của Danh mục Biểu đồ Active (loại bỏ chuỗi 5 chốt cũ, tái cấu trúc 5 nhóm năng lực chuẩn trong sơ đồ 01, đồng bộ Bounded Context trong sơ đồ 02, mở rộng kích thước card và pill trong sơ đồ `proposed-02..04`, nâng font floor $\ge 11\text{px}$ cho sơ đồ 08 và 12).
+> Pha **NOVYX QUALITY GATE SELF-CONSISTENCY CLOSURE** đã thiết lập sự đồng bộ tuyệt đối giữa:
+> `QUALITY CHECKLIST` $\rightarrow$ `VALIDATOR` $\rightarrow$ `EXECUTION EVIDENCE` $\rightarrow$ `FINAL COMMIT` $\rightarrow$ `FINAL STATUS`.
 >
-> Hai lượt kiểm tra độc lập (**Pass A** và **Pass B**) đã được thực thi từ đĩa sạch và ghi nhận chi tiết tại Sổ Bộ Bằng Chứng [`VERIFICATION-EVIDENCE.md`](quality-gates/VERIFICATION-EVIDENCE.md):
+> Validator trình duyệt headless đã được nâng cấp kiểm tra hình học thực tế (va chạm chữ với đường nối, đường nối cắt xuyên thân card không liên quan, kiểm tra nạp font Noto Sans / Noto Serif, và kiểm tra khoảng đệm an toàn 4 phía $\ge 8\text{px}/\ge 6\text{px}$), chứng minh qua 7/7 ca kiểm thử self-test cố ý.
 >
-> - 100% Cổng Chất Lượng Bắt Buộc (66/66) đạt **`[PASS]`**.
+> Ba lượt kiểm tra độc lập (**Pass A**, **Pass B** và **Pass C**) đã được thực thi và đối soát tự động bởi [`scripts/quality_gate_report.py`](../scripts/quality_gate_report.py), lưu trữ tại Sổ Bộ Bằng Chứng [`VERIFICATION-EVIDENCE.md`](quality-gates/VERIFICATION-EVIDENCE.md) và máy đọc [`dist/quality-gates/final-gate.json`](../dist/quality-gates/final-gate.json):
+>
+> - 100% Cổng Chất Lượng Bắt Buộc (**113/113**) đạt **`[PASS]`**.
 > - **0** FAIL, **0** WARN, **0** NOT_RUN, **0** INCONCLUSIVE.
+> - Toàn bộ 11/11 Biểu đồ Active đạt cả 4 trụ cột: Ngữ nghĩa chuẩn (`DERIVED VIEW`), Hình học runtime (0 va chạm, 0 cắt viền, font floor $\ge 11\text{px}$), Soát xét thị giác (`MANUAL_VISUAL_VERIFIED`), và Đường ống xuất bản (SVG, PNG @2x/@3x, PDF).
 > - Ranh giới mã nguồn được bảo toàn tuyệt đối: `apps/mobile/src/**` = 0 modified, `packages/**/src/**` = 0 modified.
 > - Chất lượng mã và tài liệu: `git diff --check`, `npm run format:check`, `npm run lint`, `npm run typecheck` đạt 100% exit code `0`.
 >
