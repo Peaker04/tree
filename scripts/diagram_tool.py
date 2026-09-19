@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-NOVYX Diagram Tool — Runtime Geometry Validation, SVG Extraction, PNG & PDF Export
-Authoritative Project-Local Tooling for diagram-design in NOVYX GreenOps.
+NOVYX Diagram Tool — Authoritative Geometry Validation, SVG Extraction, Multi-scale PNG & PDF Export
+Project-Local Tooling for diagram-design in NOVYX GreenOps.
 """
 
 import sys
@@ -99,10 +99,6 @@ def extract_svg(html_content, title="NOVYX Diagram", desc="Architecture Diagram"
     else:
         raw_svg = re.sub(r'(<svg[^>]*>)', rf'\1{font_style}', raw_svg, count=1)
 
-    # Ensure title and desc if missing
-    if '<title>' not in raw_svg:
-        raw_svg = re.sub(r'(<svg[^>]*>)', rf'\1\n  <title>{title}</title>\n  <desc>{desc}</desc>', raw_svg, count=1)
-
     normalized = normalize_svg_colors(raw_svg)
     return f'<?xml version="1.0" encoding="UTF-8"?>\n{normalized}'
 
@@ -110,11 +106,16 @@ def build_runtime_validator_script():
     """
     Browser-evaluated script injected into diagram DOM to perform real geometric collision detection.
     Evaluates:
-    - document.fonts.ready
-    - Text vs Text collision
-    - Text vs Owning Node boundary overflow
-    - Visible clipping outside SVG viewBox
-    - Minimum typography floor (font-size < 10px)
+    - VAL-002: await document.fonts.ready
+    - VAL-003: document.fonts.check font faces ('Noto Sans', 'Noto Serif')
+    - VAL-004: tightest enclosing owner detection with priority order
+    - VAL-005: 4-sided safe padding (left, right, top, bottom) & boundary overflow
+    - VAL-006: text vs text bounding box intersection
+    - VAL-007: text vs connector collision & connector label background mask
+    - VAL-008: node vs node overlap (with header badge exclusion)
+    - VAL-009: SVG viewport boundary clipping
+    - VAL-010: connector vs non-target card interior penetration
+    - VAL-011: Vietnamese typography floor (font-size < 11px)
     """
     return """
 <script id="__collision_validator__">
@@ -152,17 +153,22 @@ window.addEventListener('DOMContentLoaded', async () => {
             nodeCollisions: [],
             clippingIssues: [],
             fontFloorViolations: [],
+            textConnectorCollisions: [],
+            connectorNodeCrossings: [],
             executedChecks: [
                 'VAL-002: await document.fonts.ready',
                 'VAL-003: document.fonts.check font faces',
                 'VAL-004: tightest enclosing owner detection',
                 'VAL-005: safe padding & boundary overflow',
                 'VAL-006: text vs text collision',
+                'VAL-007: connector label mask & line clearance',
                 'VAL-008: node vs node overlap',
-                'VAL-009: SVG viewport clipping'
+                'VAL-009: SVG viewport clipping',
+                'VAL-010: connector vs non-target node crossing',
+                'VAL-011: typography floor >= 11px'
             ],
             skippedChecks: [],
-            stats: { totalTexts: 0, totalNodes: 0 }
+            stats: { totalTexts: 0, totalNodes: 0, totalConnectors: 0 }
         };
 
         const texts = Array.from(svg.querySelectorAll('text'));
@@ -170,34 +176,85 @@ window.addEventListener('DOMContentLoaded', async () => {
         results.stats.totalTexts = texts.length;
         results.stats.totalNodes = rects.length;
 
-        // 1. Text element data extraction
+        // 1. All rects in SVG
+        const allRects = rects.map(r => ({
+            element: r,
+            rect: r.getBoundingClientRect(),
+            id: r.id || ''
+        }));
+
+        // 2. Text element data extraction & mask detection
         const textData = texts.map((t, idx) => {
             const rect = t.getBoundingClientRect();
             const textContent = t.textContent.trim().replace(/\\s+/g, ' ');
             const computedStyle = window.getComputedStyle(t);
             const fontSize = parseFloat(computedStyle.fontSize) || 12;
+
+            // Check if text has background mask (rect covering text with solid fill)
+            let hasMask = false;
+            let maskRect = null;
+            for (const cr of allRects) {
+                const sb = cr.rect;
+                if (sb.left <= rect.left + 2 && sb.right >= rect.right - 2 &&
+                    sb.top <= rect.top + 2 && sb.bottom >= rect.bottom - 2) {
+                    const fill = cr.element.getAttribute('fill') || '';
+                    if (fill !== 'none' && fill !== 'transparent') {
+                        hasMask = true;
+                        maskRect = cr;
+                        break;
+                    }
+                }
+            }
+
             return {
                 id: t.id || `text-${idx}`,
                 text: textContent,
                 rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height },
                 fontSize,
+                hasMask,
+                maskRect,
                 element: t
             };
         });
 
-        // 2. Candidate card/node rects (exclude full-canvas background rects)
-        const cardRects = rects
-            .map(r => {
-                const b = r.getBoundingClientRect();
-                return { element: r, rect: b };
-            })
-            .filter(c => {
-                return c.rect.width > 15 && c.rect.height > 8 &&
-                       c.rect.width < (svgRect.width * 0.95) &&
-                       c.rect.height < (svgRect.height * 0.95);
-            });
+        // 3. Candidate card/node rects (exclude full-canvas background rects)
+        const cardRects = allRects.filter(c => {
+            return c.rect.width > 15 && c.rect.height > 8 &&
+                   c.rect.width < (svgRect.width * 0.95) &&
+                   c.rect.height < (svgRect.height * 0.95);
+        });
 
-        // 3. Node vs Node Overlap check (VAL-008)
+        // Obstacle cards for connector crossing check (exclude small label mask badges/pills)
+        const obstacleCards = allRects.filter(c => {
+            if (c.rect.height <= 32 && c.rect.width < 250) return false; // label badge or pill
+            return c.rect.width > 30 && c.rect.height > 25 &&
+                   c.rect.width < (svgRect.width * 0.95) &&
+                   c.rect.height < (svgRect.height * 0.95);
+        });
+
+        // 4. Connectors
+        const connectors = Array.from(svg.querySelectorAll('line, path')).filter(el => {
+            if (el.tagName === 'line') {
+                const hasMarker = el.getAttribute('marker-end') || el.getAttribute('marker-start');
+                const hasConnId = el.getAttribute('data-connector-id');
+                const isDashed = el.getAttribute('stroke-dasharray');
+                if (hasMarker || hasConnId || isDashed) return true;
+                return false; // internal separator lines are not connectors
+            } else if (el.tagName === 'path') {
+                if (el.getAttribute('marker-end') || el.getAttribute('marker-start')) return true;
+                if (el.getAttribute('data-connector-id')) return true;
+                const d = el.getAttribute('d') || '';
+                const fill = el.getAttribute('fill');
+                if ((fill === 'none' || !fill) && el.getAttribute('stroke') && d.length > 10) {
+                    const b = el.getBoundingClientRect();
+                    if (b.width > 20 || b.height > 20) return true;
+                }
+            }
+            return false;
+        });
+        results.stats.totalConnectors = connectors.length;
+
+        // 5. Node vs Node Overlap check (VAL-008)
         for (let i = 0; i < cardRects.length; i++) {
             const c1 = cardRects[i];
             for (let j = i + 1; j < cardRects.length; j++) {
@@ -209,7 +266,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                                       c2.rect.top <= c1.rect.top + 2 && c2.rect.bottom >= c1.rect.bottom - 2);
                 if (c1ContainsC2 || c2ContainsC1) continue;
 
-                // Documented exclusion (VAL-010): Section header badge tab sitting on top border of container
+                // Documented exclusion: Section header badge tab sitting on top border of container
                 const isHeaderBadge = (c1.rect.height <= 36 && Math.abs(c1.rect.top - c2.rect.top) <= 25 && c1.rect.width < c2.rect.width) ||
                                       (c2.rect.height <= 36 && Math.abs(c2.rect.top - c1.rect.top) <= 25 && c2.rect.width < c1.rect.width);
                 if (isHeaderBadge) continue;
@@ -228,20 +285,20 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 4. Text checks
+        // 6. Text checks (Typography floor, clipping, text vs text, owner padding)
         for (let i = 0; i < textData.length; i++) {
             const t1 = textData[i];
 
-            // A. Typography floor check
-            if (t1.fontSize < 10) {
+            // A. Typography floor check (VAL-011 / DG-TYP-004 / DG-TYP-006: minimum 11px)
+            if (t1.fontSize < 11) {
                 results.fontFloorViolations.push({
                     text: t1.text.substring(0, 35),
                     fontSize: t1.fontSize,
-                    issue: `Font size ${t1.fontSize}px is below minimum floor (>= 11-12px required)`
+                    issue: `Font size ${t1.fontSize}px is below minimum floor (>= 11px required)`
                 });
             }
 
-            // B. Visible clipping outside SVG canvas
+            // B. Visible clipping outside SVG canvas (VAL-009)
             if (t1.rect.left < svgRect.left - 2 ||
                 t1.rect.top < svgRect.top - 2 ||
                 t1.rect.right > svgRect.right + 2 ||
@@ -310,14 +367,17 @@ window.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Priority 3: Geometric center containment (midX, midY strictly within card)
+            // Priority 3: Geometric center containment or anchor containment (starts inside card)
             if (!ownerCard) {
                 const midX = (t1.rect.left + t1.rect.right) / 2;
                 const midY = (t1.rect.top + t1.rect.bottom) / 2;
                 const candidateCards = cardRects.filter(card => {
                     const cr = card.rect;
-                    return (midX >= cr.left - 4 && midX <= cr.right + 4 &&
-                            midY >= cr.top - 4 && midY <= cr.bottom + 4);
+                    const centerInside = (midX >= cr.left - 4 && midX <= cr.right + 4 &&
+                                          midY >= cr.top - 4 && midY <= cr.bottom + 4);
+                    const anchorInside = (t1.rect.left >= cr.left - 4 && t1.rect.left <= cr.right - 8 &&
+                                          midY >= cr.top - 4 && midY <= cr.bottom + 4);
+                    return centerInside || anchorInside;
                 });
                 candidateCards.sort((a, b) => (a.rect.width * a.rect.height) - (b.rect.width * b.rect.height));
                 if (candidateCards.length > 0) {
@@ -327,12 +387,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             if (ownerCard) {
                 const cr = ownerCard.rect;
-                const padRight = cr.right - t1.rect.right;
-                const padBottom = cr.bottom - t1.rect.bottom;
                 const padLeft = t1.rect.left - cr.left;
+                const padRight = cr.right - t1.rect.right;
                 const padTop = t1.rect.top - cr.top;
+                const padBottom = cr.bottom - t1.rect.bottom;
 
-                // Hard boundary overflow
+                // Hard boundary overflow: text extends beyond card borders
                 if (padRight < -1 || padBottom < -1 || padLeft < -2 || padTop < -2) {
                     results.boundaryOverflows.push({
                         text: t1.text.substring(0, 35),
@@ -343,19 +403,140 @@ window.addEventListener('DOMContentLoaded', async () => {
                             y: Math.max(0, Math.round(-padBottom), Math.round(-padTop))
                         }
                     });
-                } else if (padRight < 4 || padLeft < 2) {
-                    // Safe padding violation: text pressed right against card boundary
+                } else if (padLeft < 4 || padRight < 4 || padTop < 3 || padBottom < 3) {
+                    // Safe padding violation: text pressed tight against card boundary (4-sided check)
                     results.safePaddingViolations.push({
                         text: t1.text.substring(0, 35),
                         ownerId: ownerCard.element.id || 'card',
-                        padding: { left: Math.round(padLeft), right: Math.round(padRight), top: Math.round(padTop), bottom: Math.round(padBottom) },
-                        minExpected: 4
+                        padding: {
+                            left: Math.round(padLeft),
+                            right: Math.round(padRight),
+                            top: Math.round(padTop),
+                            bottom: Math.round(padBottom)
+                        },
+                        minExpected: { horizontal: 4, vertical: 3 }
                     });
                 }
             }
         }
 
-        // Full-page dimensions for dynamic export scaling (Section 25)
+        // 7. Connector Geometry Checks (VAL-007, VAL-010 / DG-GEO-004, DG-GEO-005, DG-GEO-006)
+        for (const conn of connectors) {
+            const connId = conn.id || conn.getAttribute('data-connector-id') || 'connector';
+            const samplePoints = [];
+
+            if (conn.tagName === 'path') {
+                const totalLen = conn.getTotalLength ? conn.getTotalLength() : 0;
+                if (totalLen > 0) {
+                    const step = Math.max(5, totalLen / 40);
+                    for (let len = 0; len <= totalLen; len += step) {
+                        const pt = conn.getPointAtLength(len);
+                        const ctm = conn.getScreenCTM ? conn.getScreenCTM() : null;
+                        if (ctm) {
+                            const clientPt = pt.matrixTransform(ctm);
+                            samplePoints.push({ x: clientPt.x, y: clientPt.y, len, totalLen });
+                        }
+                    }
+                }
+            } else if (conn.tagName === 'line') {
+                const b = conn.getBoundingClientRect();
+                const x1 = parseFloat(conn.getAttribute('x1') || 0);
+                const y1 = parseFloat(conn.getAttribute('y1') || 0);
+                const x2 = parseFloat(conn.getAttribute('x2') || 0);
+                const y2 = parseFloat(conn.getAttribute('y2') || 0);
+                const totalLen = Math.hypot(x2 - x1, y2 - y1);
+                const numSteps = Math.max(5, Math.floor(totalLen / 5));
+                const ctm = conn.getScreenCTM ? conn.getScreenCTM() : null;
+                const p1 = svg.createSVGPoint(); p1.x = x1; p1.y = y1;
+                const p2 = svg.createSVGPoint(); p2.x = x2; p2.y = y2;
+                const cp1 = ctm ? p1.matrixTransform(ctm) : { x: b.left, y: b.top };
+                const cp2 = ctm ? p2.matrixTransform(ctm) : { x: b.right, y: b.bottom };
+
+                for (let s = 0; s <= numSteps; s++) {
+                    const ratio = s / numSteps;
+                    samplePoints.push({
+                        x: cp1.x + (cp2.x - cp1.x) * ratio,
+                        y: cp1.y + (cp2.y - cp1.y) * ratio,
+                        len: totalLen * ratio,
+                        totalLen
+                    });
+                }
+            }
+
+            if (samplePoints.length === 0) continue;
+
+            const startPt = samplePoints[0];
+            const endPt = samplePoints[samplePoints.length - 1];
+
+            // Identify source and target cards
+            const srcId = conn.getAttribute('data-source-node');
+            const tgtId = conn.getAttribute('data-target-node');
+            let sourceCard = srcId ? obstacleCards.find(c => c.element.id === srcId) : null;
+            let targetCard = tgtId ? obstacleCards.find(c => c.element.id === tgtId) : null;
+
+            if (!sourceCard) {
+                sourceCard = obstacleCards.find(c => {
+                    const cr = c.rect;
+                    return startPt.x >= cr.left - 15 && startPt.x <= cr.right + 15 &&
+                           startPt.y >= cr.top - 15 && startPt.y <= cr.bottom + 15;
+                });
+            }
+            if (!targetCard) {
+                targetCard = obstacleCards.find(c => {
+                    const cr = c.rect;
+                    return endPt.x >= cr.left - 15 && endPt.x <= cr.right + 15 &&
+                           endPt.y >= cr.top - 15 && endPt.y <= cr.bottom + 15;
+                });
+            }
+
+            // Check A & B: Text vs Connector (VAL-007 / DG-GEO-004, DG-GEO-005)
+            for (const t of textData) {
+                if (t.hasMask) continue; // Masked label is shielded by its background pill/rect
+                const tr = t.rect;
+                for (const pt of samplePoints) {
+                    if (pt.x >= tr.left && pt.x <= tr.right &&
+                        pt.y >= tr.top && pt.y <= tr.bottom) {
+                        results.textConnectorCollisions.push({
+                            text: t.text.substring(0, 30),
+                            connectorId: connId,
+                            point: { x: Math.round(pt.x - svgRect.left), y: Math.round(pt.y - svgRect.top) }
+                        });
+                        break;
+                    }
+                }
+            }
+
+            // Check C: Connector vs Non-target Node crossing (VAL-010 / DG-GEO-006)
+            for (const card of obstacleCards) {
+                if (card === sourceCard || card === targetCard) continue;
+                // Exclude parent containers of source or target
+                if (sourceCard && (card.rect.left <= sourceCard.rect.left && card.rect.right >= sourceCard.rect.right &&
+                                   card.rect.top <= sourceCard.rect.top && card.rect.bottom >= sourceCard.rect.bottom)) {
+                    continue;
+                }
+                if (targetCard && (card.rect.left <= targetCard.rect.left && card.rect.right >= targetCard.rect.right &&
+                                   card.rect.top <= targetCard.rect.top && card.rect.bottom >= targetCard.rect.bottom)) {
+                    continue;
+                }
+
+                const cr = card.rect;
+                for (const pt of samplePoints) {
+                    if (pt.len < 15 || (pt.totalLen - pt.len) < 15) continue;
+                    // Deep penetration (> 8px inside card border)
+                    if (pt.x >= cr.left + 8 && pt.x <= cr.right - 8 &&
+                        pt.y >= cr.top + 8 && pt.y <= cr.bottom - 8) {
+                        results.connectorNodeCrossings.push({
+                            connectorId: connId,
+                            cardId: card.id || card.element.getAttribute('class') || 'card',
+                            point: { x: Math.round(pt.x - svgRect.left), y: Math.round(pt.y - svgRect.top) }
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Full-page dimensions for dynamic export scaling
         results.fullPageBounds = {
             width: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth, 1200),
             height: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 800)
@@ -379,7 +560,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 def validate_diagram_runtime(html_path):
     """
-    Executes headless Edge to collect real DOM/geometry metrics and validate zero-collision.
+    Executes headless Edge/Chrome to collect real DOM/geometry metrics and validate zero-collision.
     """
     html_path = Path(html_path).resolve()
     content = html_path.read_text(encoding="utf-8")
@@ -424,7 +605,7 @@ def validate_diagram_runtime(html_path):
             "--dump-dom",
             file_url
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=20)
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=25)
         output = res.stdout
 
         marker = '<script id="__validation_data__" type="application/json">'
@@ -476,17 +657,25 @@ def print_validation_report(html_name, val_result):
         return "FAIL"
 
     font_checks = geom.get("fontChecks", {})
-    print(f"  [PASS] Font Engine: loaded={geom.get('fontsLoaded')} (Noto Sans: {font_checks.get('notoSans')}, Noto Serif: {font_checks.get('notoSerif')}, Loaded faces: {geom.get('fontCount')})")
-    print(f"  [INFO] Evaluated SVG elements: {geom['stats']['totalTexts']} texts, {geom['stats']['totalNodes']} nodes.")
+    noto_sans_ok = font_checks.get("notoSans", False)
+    if not noto_sans_ok:
+        has_errors = True
+        print(f"  [FAIL] Font Face Verification: Noto Sans not verified via document.fonts.check ('12px \"Noto Sans\"' === false).")
+    else:
+        print(f"  [PASS] Font Engine: loaded={geom.get('fontsLoaded')} (Noto Sans: {font_checks.get('notoSans')}, Noto Serif: {font_checks.get('notoSerif')}, Loaded faces: {geom.get('fontCount')})")
+
+    print(f"  [INFO] Evaluated SVG elements: {geom['stats']['totalTexts']} texts, {geom['stats']['totalNodes']} nodes, {geom['stats'].get('totalConnectors', 0)} connectors.")
     print(f"  [INFO] Executed Checks: {len(geom.get('executedChecks', []))} active validation gates.")
 
-    # Check collisions
+    # Check geometry results
     collisions = geom.get("textCollisions", [])
     overflows = geom.get("boundaryOverflows", [])
     padding_viols = geom.get("safePaddingViolations", [])
     node_collisions = geom.get("nodeCollisions", [])
     clippings = geom.get("clippingIssues", [])
     font_floors = geom.get("fontFloorViolations", [])
+    text_conn_collisions = geom.get("textConnectorCollisions", [])
+    node_crossings = geom.get("connectorNodeCrossings", [])
 
     if collisions:
         has_errors = True
@@ -513,12 +702,29 @@ def print_validation_report(html_name, val_result):
         print("  [PASS] Zero Node Boundary overflow.")
 
     if padding_viols:
-        # Undersized container warning / safe padding violation
+        # Safe padding violation (tight content box)
         print(f"  [WARN] Safe Padding Violations ({len(padding_viols)} detected - tight content box):")
         for pv in padding_viols:
-            print(f"         - \"{pv['text']}\" in card [{pv.get('ownerId', '')}]: rightPad={pv['padding']['right']}px, leftPad={pv['padding']['left']}px (min expected: {pv['minExpected']}px)")
+            pad = pv['padding']
+            print(f"         - \"{pv['text']}\" in card [{pv.get('ownerId', '')}]: left={pad['left']}px, right={pad['right']}px, top={pad['top']}px, bottom={pad['bottom']}px (min expected: x>=4, y>=3)")
     else:
-        print("  [PASS] Safe padding maintained for all content labels.")
+        print("  [PASS] Safe padding maintained for all content labels (4-sided check satisfied).")
+
+    if text_conn_collisions:
+        has_errors = True
+        print(f"  [FAIL] Text vs Connector Collisions ({len(text_conn_collisions)} detected):")
+        for tc in text_conn_collisions:
+            print(f"         - \"{tc['text']}\" collides with connector [{tc['connectorId']}] at ({tc['point']['x']}, {tc['point']['y']})")
+    else:
+        print("  [PASS] Zero Text vs Connector collision (all connector labels shielded by background mask).")
+
+    if node_crossings:
+        has_errors = True
+        print(f"  [FAIL] Connector vs Non-target Node Crossings ({len(node_crossings)} detected):")
+        for nc in node_crossings:
+            print(f"         - Connector [{nc['connectorId']}] penetrates interior of card [{nc['cardId']}] at ({nc['point']['x']}, {nc['point']['y']})")
+    else:
+        print("  [PASS] Zero Connector vs Non-target Node crossing.")
 
     if clippings:
         has_errors = True
@@ -661,11 +867,9 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
         render_w, render_h = svg_w, svg_h
     else:
         render_target = str(html_path)
-        # Dynamically calculate full-page dimensions (Section 25)
         fp_bounds = val_res.get("geometryData", {}).get("fullPageBounds", {}) if val_res else {}
         measured_w = int(fp_bounds.get("width", 1400))
         measured_h = int(fp_bounds.get("height", 1000))
-        # Ensure sufficient viewport height to include entire banner, diagram, and legends without cut-off
         render_w = max(1400, measured_w)
         render_h = max(900, measured_h + 80)
 
@@ -691,7 +895,9 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
             ]
             subprocess.run(cmd, capture_output=True, timeout=30)
             if png_out.exists():
-                print(f"  [OK] Exported PNG ({mode} @{scale}x): {png_out.name} ({render_w}x{render_h})")
+                render_px_w = render_w * scale
+                render_px_h = render_h * scale
+                print(f"  [OK] Exported PNG ({mode} @{scale}x): {png_out.name} ({render_px_w}x{render_px_h}px, logical {render_w}x{render_h})")
             else:
                 print(f"  [FAIL] Failed to produce PNG: {png_out.name}")
 
@@ -725,6 +931,169 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
 
     return True
 
+def run_self_test():
+    """
+    Executes the self-test test suite covering all 7 critical defect categories:
+    CASE 1: Text overflow -> expected FAIL
+    CASE 2: Safe padding below threshold -> expected FAIL/WARN
+    CASE 3: Text-text overlap -> expected FAIL
+    CASE 4: Text-connector collision -> expected FAIL
+    CASE 5: Connector crosses unrelated node -> expected FAIL
+    CASE 6: Browser unavailable simulation -> expected INCONCLUSIVE (exit 2)
+    CASE 7: Valid diagram -> expected PASS (exit 0)
+    """
+    print("\n==================================================")
+    print("RUNNING VALIDATOR SELF-TEST SUITE")
+    print("==================================================")
+
+    test_cases = [
+        {
+            "name": "CASE 1: Text Boundary Overflow",
+            "html": """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet"></head><body>
+<div class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</div>
+<div class="source-ref">SOURCE: docs/WORKFLOWS.md</div>
+<svg viewBox="0 0 500 300" width="500" height="300">
+  <g>
+    <rect id="card-overflow" x="50" y="50" width="80" height="40" fill="#FFF" stroke="#112116"/>
+    <text x="60" y="75" font-family="'Noto Sans', sans-serif" font-size="14">VĂN BẢN QUÁ DÀI CHẮC CHẮN SẼ BỊ TRÀN VIỀN HỘP THẺ</text>
+  </g>
+</svg></body></html>""",
+            "expect": "FAIL",
+            "check": lambda res: len(res.get("geometryData", {}).get("boundaryOverflows", [])) > 0
+        },
+        {
+            "name": "CASE 2: Safe Padding Below Threshold",
+            "html": """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet"></head><body>
+<div class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</div>
+<div class="source-ref">SOURCE: docs/WORKFLOWS.md</div>
+<svg viewBox="0 0 500 300" width="500" height="300">
+  <rect id="card-1" x="50" y="50" width="100" height="40" fill="#FFF" stroke="#112116"/>
+  <text x="51" y="70" font-family="'Noto Sans', sans-serif" font-size="12">Dính sát mép</text>
+</svg></body></html>""",
+            "expect": "WARN_OR_FAIL",
+            "check": lambda res: len(res.get("geometryData", {}).get("safePaddingViolations", [])) > 0 or len(res.get("geometryData", {}).get("boundaryOverflows", [])) > 0
+        },
+        {
+            "name": "CASE 3: Text-to-Text Overlap",
+            "html": """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet"></head><body>
+<div class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</div>
+<div class="source-ref">SOURCE: docs/WORKFLOWS.md</div>
+<svg viewBox="0 0 500 300" width="500" height="300">
+  <text x="100" y="100" font-family="'Noto Sans', sans-serif" font-size="14">Chữ A đè lên chữ B</text>
+  <text x="100" y="100" font-family="'Noto Sans', sans-serif" font-size="14">Chữ B đè lên chữ A</text>
+</svg></body></html>""",
+            "expect": "FAIL",
+            "check": lambda res: len(res.get("geometryData", {}).get("textCollisions", [])) > 0
+        },
+        {
+            "name": "CASE 4: Text vs Connector Collision",
+            "html": """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet"></head><body>
+<div class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</div>
+<div class="source-ref">SOURCE: docs/WORKFLOWS.md</div>
+<svg viewBox="0 0 500 300" width="500" height="300">
+  <defs><marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#112116"/></marker></defs>
+  <rect x="20" y="30" width="60" height="40" fill="#FFF" stroke="#112116"/>
+  <rect x="300" y="30" width="60" height="40" fill="#FFF" stroke="#112116"/>
+  <line x1="80" y1="50" x2="300" y2="50" stroke="#112116" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="180" y="54" text-anchor="middle" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">Unmasked Text Cross</text>
+</svg></body></html>""",
+            "expect": "FAIL",
+            "check": lambda res: len(res.get("geometryData", {}).get("textConnectorCollisions", [])) > 0
+        },
+        {
+            "name": "CASE 5: Connector Penetrates Unrelated Node",
+            "html": """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet"></head><body>
+<div class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</div>
+<div class="source-ref">SOURCE: docs/WORKFLOWS.md</div>
+<svg viewBox="0 0 600 300" width="600" height="300">
+  <defs><marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#112116"/></marker></defs>
+  <rect id="source-node" x="20" y="30" width="80" height="60" fill="#FFF" stroke="#112116"/>
+  <text x="30" y="65" font-family="'Noto Sans', sans-serif" font-size="12">Nguồn</text>
+  <rect id="obstacle-card" x="160" y="10" width="120" height="100" fill="#FFF" stroke="#DC2626"/>
+  <rect id="target-node" x="350" y="30" width="80" height="60" fill="#FFF" stroke="#112116"/>
+  <text x="360" y="65" font-family="'Noto Sans', sans-serif" font-size="12">Đích</text>
+  <line x1="100" y1="60" x2="350" y2="60" stroke="#112116" stroke-width="2" marker-end="url(#arr)"/>
+</svg></body></html>""",
+            "expect": "FAIL",
+            "check": lambda res: len(res.get("geometryData", {}).get("connectorNodeCrossings", [])) > 0
+        },
+        {
+            "name": "CASE 6: Browser Unavailable Simulation",
+            "simulate_no_browser": True,
+            "expect": "INCONCLUSIVE",
+            "check": lambda res: res.get("browserFound") is False
+        },
+        {
+            "name": "CASE 7: Valid Diagram with Masked Connector Label",
+            "html": """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet"></head><body>
+<div class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</div>
+<div class="source-ref">SOURCE: docs/WORKFLOWS.md</div>
+<svg viewBox="0 0 600 300" width="600" height="300">
+  <defs><marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#112116"/></marker></defs>
+  <g transform="translate(40, 50)">
+    <rect x="0" y="0" width="160" height="90" rx="8" fill="#FFF" stroke="#166534" stroke-width="2"/>
+    <text x="16" y="32" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">Bước Bắt Đầu</text>
+    <text x="16" y="58" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">Khởi tạo tác nghiệp</text>
+  </g>
+  <line x1="200" y1="95" x2="360" y2="95" stroke="#166534" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="240" y="83" width="80" height="24" rx="4" fill="#FFF" stroke="#166534" stroke-width="1"/>
+  <text x="280" y="99" text-anchor="middle" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#166534">Chuyển tiếp</text>
+  <g transform="translate(360, 50)">
+    <rect x="0" y="0" width="160" height="90" rx="8" fill="#FFF" stroke="#166534" stroke-width="2"/>
+    <text x="16" y="32" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">Bước Kết Thúc</text>
+    <text x="16" y="58" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">Nghiệm thu hoàn tất</text>
+  </g>
+</svg></body></html>""",
+            "expect": "PASS",
+            "check": lambda res: True
+        }
+    ]
+
+    all_passed = True
+    for idx, tc in enumerate(test_cases, 1):
+        print(f"\n[{idx}/7] Running {tc['name']}...")
+        if tc.get("simulate_no_browser"):
+            sim_res = {
+                "browserFound": False,
+                "staticErrors": [],
+                "staticWarnings": [],
+                "geometryData": None
+            }
+            status = print_validation_report("simulate_no_browser.html", sim_res)
+            expected_status = tc["expect"]
+            passed = (status == expected_status)
+        else:
+            with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False, encoding='utf-8') as tf:
+                tf.write(tc["html"])
+                tmp_path = tf.name
+
+            try:
+                res = validate_diagram_runtime(tmp_path)
+                status = print_validation_report(tc["name"], res)
+                condition_ok = tc["check"](res)
+                if tc["expect"] == "FAIL":
+                    passed = (status == "FAIL" and condition_ok)
+                elif tc["expect"] == "WARN_OR_FAIL":
+                    passed = condition_ok
+                elif tc["expect"] == "PASS":
+                    passed = (status == "PASS" and condition_ok)
+                else:
+                    passed = False
+            finally:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+
+        if passed:
+            print(f"  ==> TEST RESULT: [PASS] Expected {tc['expect']} verified.")
+        else:
+            print(f"  ==> TEST RESULT: [FAIL] Expected {tc['expect']} but check failed.")
+            all_passed = False
+
+    print("\n==================================================")
+    print(f"SELF-TEST SUMMARY: {'7/7 TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
+    print("==================================================")
+    return all_passed
+
 def main():
     parser = argparse.ArgumentParser(description="NOVYX Diagram Tool — Authoritative Validation & Export")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
@@ -741,6 +1110,9 @@ def main():
     exp_parser.add_argument("--scale", type=int, choices=[1, 2, 3], default=2, help="Scale factor for raster export (@1x, @2x, @3x)")
     exp_parser.add_argument("--out-dir", default=None, help="Output directory for exports")
 
+    # Command: self-test
+    subparsers.add_parser("self-test", help="Run self-test test suite across 7 defect categories")
+
     # Backward compatibility flags at root parser
     parser.add_argument("diagrams_legacy", nargs="*", help="Legacy diagrams list")
     parser.add_argument("--validate-only", action="store_true", default=False, help="Run validation only")
@@ -754,7 +1126,11 @@ def main():
     args = parser.parse_args()
 
     # Route command
-    if args.command == "validate":
+    if args.command == "self-test":
+        ok = run_self_test()
+        sys.exit(0 if ok else 1)
+
+    elif args.command == "validate":
         overall_status = "PASS"
         for d in args.diagrams:
             p = Path(d)
