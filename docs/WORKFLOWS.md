@@ -331,7 +331,7 @@ Quy tắc phân công lại nhân viên thực hiện nhiệm vụ:
 
 ## 11. Phần K: Chiếu Lịch sử chăm sóc (Care History Projection)
 
-`CareHistory` là hồ sơ kỹ thuật chính thức và có giá trị pháp lý cao nhất đối với tài sản cây xanh:
+`CareHistory` là hồ sơ kỹ thuật chính thức và có giá trị kiểm toán vận hành cao nhất đối với tài sản cây xanh (LEGAL STATUS: NOT ESTABLISHED / OUTSIDE CURRENT MVP CLAIMS):
 
 - **Điều kiện sinh ra:** **CHỈ KHI TASK CHUYỂN SANG TRẠNG THÁI `COMPLETED`**.
 - **Cờ ngoại lệ:** Nếu nghiệm thu thông qua `APPROVE_WITH_EXCEPTION`, bản ghi `CareHistory` phải giữ cờ `HAS_EXCEPTION` kèm tham chiếu mã ngoại lệ và lý do chấp thuận của Quản lý.

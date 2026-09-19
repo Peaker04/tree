@@ -68,13 +68,15 @@ Hệ thống hiện tại là một ứng dụng Expo SDK 57 React Native dạng
 
 ---
 
-## 2. Kiến trúc mục tiêu (TO-BE Target Architecture)
+## 2. Kiến trúc mục tiêu đề xuất (Proposed Target Architecture — Subject to ADR Approval)
 
-Hệ thống mục tiêu áp dụng nguyên lý **Clean Architecture / Ports and Adapters** nhằm đảm bảo mã nguồn độc lập với framework, dễ kiểm thử tự động (TDD) và bảo vệ dữ liệu hiện trường.
+> **Phân loại kiến trúc:** `[PROPOSED]` — Kiến trúc phân tầng Clean Architecture / Ports and Adapters dưới đây là phương án kỹ thuật đề xuất, đang chờ phê duyệt thông qua Architecture Decision Record (ADR) chính thức trước khi triển khai mã nguồn.
+
+Hệ thống mục tiêu đề xuất áp dụng nguyên lý **Clean Architecture / Ports and Adapters** nhằm đảm bảo mã nguồn độc lập với framework, dễ kiểm thử tự động (TDD) và bảo vệ dữ liệu hiện trường:
 
 ```text
 +-----------------------------------------------------------------------------------+
-|                           TO-BE CLEAN ARCHITECTURE                                |
+|               TO-BE CLEAN ARCHITECTURE (PROPOSED TARGET ARCHITECTURE)             |
 +-----------------------------------------------------------------------------------+
 | [1. PRESENTATION LAYER (Giao diện người dùng)]                                     |
 | Screens (StaffHome, StaffWork, StaffProofFlow, ManagerDashboard, ManagerReview)   |
@@ -162,10 +164,10 @@ Hệ thống mục tiêu áp dụng nguyên lý **Clean Architecture / Ports and
 
 ## 5. Kiến trúc dữ liệu và Bằng chứng hiện trường (Data & Evidence Architecture)
 
-Bằng chứng hiện trường (Evidence) là tài sản thông tin có giá trị pháp lý cao nhất trong NOVYX:
+Bằng chứng hiện trường (Evidence) là tài sản thông tin có giá trị kiểm toán vận hành cao nhất trong NOVYX (LEGAL STATUS: NOT ESTABLISHED / OUTSIDE CURRENT MVP CLAIMS):
 
 ```text
-[Camera Thiết bị]
+[Camera máy / Cảm biến GPS]
        |
        | 1. Chụp ảnh
        v
@@ -182,10 +184,10 @@ Bằng chứng hiện trường (Evidence) là tài sản thông tin có giá tr
        +---> [Khi có mạng]: Upload Multipart (File nhị phân + JSON metadata)
        |        |
        |        v
-       |     [Backend Object Storage (S3 / GCS) & Database]
+       |     [Backend Object Storage (Provider: TBD / NEEDS_DECISION) & Database]
        |        |
        |        v
-       |     [Trả về Remote URL chính thức: https://storage.novyx.vn/...]
+       |     [Trả về Remote URL chính thức: https://... (Storage Provider TBD)]
        |
        +---> [Khi mất mạng]: Giữ nguyên URI cục bộ; giao diện tiếp tục hoạt động.
 ```

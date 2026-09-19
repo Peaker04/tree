@@ -194,3 +194,36 @@ Four options:
 - **Paper is warm-neutral, not pure white**: pure white turns the design sterile. Pick a cream, bone, or light grey with a hint of warmth.
 - **Dot pattern is optional, not default**: the 22×22 dot pattern is an opt-in "dotted paper" variant (good for long-form editorial hero diagrams). The default background is a clean `paper` fill, no pattern. When the pattern is enabled, it should sit at ~10% opacity of `ink` on `paper` — visible but quiet.
 - **Container is clean by default**: the diagram sits directly on the page paper, no secondary container background or border. A framed variant (`paper-2` bg + `rule` border + 8px radius + padding) is available as an opt-in for card-heavy layouts, but don't reach for it by default — the extra chrome fights the figure.
+
+---
+
+## NOVYX Local Visual Profile (Seed + Linear)
+
+> **Source of Truth:** [`DESIGN.md`](../../../../DESIGN.md) & `@novyx/ui`.
+> This profile maps diagram semantic roles directly to NOVYX project design tokens. All NOVYX architecture, workflow, and lifecycle diagrams MUST reference this profile.
+
+### Color Mapping (Project Tokens → Diagram Semantic Roles)
+
+| Diagram Semantic Role | NOVYX Token Name | Exact Hex / Value | Purpose & Usage in Diagrams |
+|:---|:---|:---|:---|
+| `paper` | `colors.snowWhite` | `#fcfcf7` | Diagram canvas background, primary page background |
+| `paper-2` | `colors.warmStone` | `#eeeee9` | Subtle container background, alternate section fill, stepper track |
+| `card` | `colors.card` | `#fffffb` | Clean card / node surface with high contrast against `paper` |
+| `ink` | `colors.ink` | `#13231a` | Primary text, titles, high-contrast borders and active arrows |
+| `muted` | `colors.pewter` | `#64748b` | Body copy, secondary descriptions, passive connector lines |
+| `soft` | `colors.muted` | `#94a3b8` | Metadata, captions, disabled states, subtle annotations |
+| `rule` | `colors.hairlineBorder` | `rgba(19,35,26,0.12)` | Hairline dividers, subtle card borders (1px) |
+| `rule-solid` | `colors.hairlineBorder` | `#e6ede3` | Solid 1px card boundary lines and table outlines |
+| `accent` | `colors.forestDepths` | `#1c3a13` | Brand authority stroke, primary decision gates, focal CTA |
+| `accent-focal` | `colors.limePulse` | `#d3fa99` | Punctuation badge, current step indicator, active focal pill |
+| `accent-tint` | `colors.primarySoft` | `#e7f6df` | Verified step background, success badge background |
+| `success` | `colors.primaryDark` | `#236236` | Approved terminal state, verified checkmarks, positive paths |
+| `warning` | `colors.amber` | `#9f7115` | Waiting review, overdue warning, caution callout |
+| `warning-tint` | `colors.amberSoft` | `#fffae0` | Waiting review card fill, warning banner background |
+| `danger` | `colors.danger` | `#c92c4a` | Rework required, rejected terminal state, blocked issues |
+| `danger-tint` | `colors.dangerSoft` | `#fff1f2` | Error banner background, rework callout fill |
+| `link` / `info` | `colors.sky` | `#1c7890` | In-progress tasks, GPS in-progress, system API sync paths |
+| `info-tint` | `colors.skySoft` | `#eef8fb` | In-progress badge background, info card fill |
+
+> [!NOTE]
+> Do NOT use `#f5f5f5` or `#2d3142` (upstream generic skin) in NOVYX diagrams. Always use `#fcfcf7` (`snowWhite`) and `#13231a` (`ink`) to maintain strict fidelity with `DESIGN.md`.

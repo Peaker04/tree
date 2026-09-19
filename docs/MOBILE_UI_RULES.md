@@ -64,28 +64,31 @@ There is no post-login Permission screen. Login and restored sessions enter the 
 - GPS verification uses Expo SDK 57 `expo-location` foreground permission and `getCurrentPositionAsync` for a current location fix. The UI must show distance to tree, timestamp, accuracy, and the 10m threshold.
 - `react-native-maps` is the current map implementation. Keep native map key handling out of `EXPO_PUBLIC_` variables.
 
-## Staff Proof Sequence
+## Staff Proof Execution Rules
 
-Staff task execution is one visible sequence:
+Staff task execution follows profile-driven proof rendering determined by `ProofProfile` (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`) and canonical lifecycle states:
 
-1. Task context and proof gaps.
-2. GPS with `Lấy GPS`, distance, accuracy, timestamp, and 10m gate.
-3. QR scan matched to the active task tree.
-4. Before photo capture and preview.
-5. Checklist completion.
-6. After photo capture and preview.
-7. Review with proof gate, proof chain, evidence transport, photos, checklist, and notes.
-8. Submit, success, and return to Work.
+- **Explicit Start:** Opening task details does NOT transition status; only the explicit `StartTask` action transitions `PENDING` $\to$ `IN_PROGRESS`.
+- **Site Verification:** GPS ($\le 10$m target distance) and Tree QR verification are independent signals and may be completed in any order. Neither changes the Task lifecycle state.
+- **Profile-Driven Requirements:**
+  - `CHANGE_PROOF`: Site Verification + Before Photo + Checklist + After Photo.
+  - `SERVICE_PROOF`: Site Verification + Checklist + Completion Photo.
+  - `INSPECTION_PROOF`: Site Verification + Structured Findings + Condition Photos.
+- **Review & Submission:** Once profile evidence is complete, Staff reviews and submits. Local submission sets `LocalSubmissionStatus = PENDING_SYNC`; server authoritative status transitions to `WAITING_REVIEW` upon sync.
+- **Data Preservation:** Back navigation inside an active task must preserve completed proof fields.
+- **Targeted Rework:** Tasks in `REWORK_REQUIRED` display the Manager's reject reason and focus on the affected proof area; previously valid evidence is retained.
+- **Field Issue:** Tasks blocked by on-site impediments enter `BLOCKED` via `ReportFieldIssue` and can be resumed, reassigned, or cancelled.
 
-Back navigation inside an active task must preserve completed proof fields. Rework tasks must show the Manager reason before the next action.
-
-## Manager Evidence Rules
+## Manager Evidence & Review Rules
 
 - Manager Dashboard prioritizes review backlog, operational pulse, quick actions, risky trees, QR issues, overdue work, and QR demo payloads.
-- Manager Create Task is guided: tree, assignee, task type, checklist, deadline validation, and preview before `Tạo việc`.
+- Manager Create Task is guided: tree, assignee, task type, checklist, deadline validation, and preview before `Tạo việc`. TaskType determines the required ProofProfile by system policy.
 - Manager QR lookup is evidence-neutral: it opens tree facts, location/care history, and related tasks; it does not advance Staff proof.
-- Manager Review is evidence-first. Proof gate, GPS/QR audit, proof chain, before/after photos, checklist, and metadata appear before approve/rework actions.
-- `Phê duyệt` is disabled while proof gaps remain. `Từ chối` requires a concrete reason and creates a Staff recovery path.
+- Manager Review supports the 4 canonical outcomes at `WAITING_REVIEW`:
+  1. `Phê duyệt` (`APPROVE` $\to$ `COMPLETED`, creates CareHistory).
+  2. `Yêu cầu làm lại` (`REQUEST_REWORK` $\to$ `REWORK_REQUIRED`, requires targeted reason/area).
+  3. `Duyệt có ngoại lệ` (`APPROVE_WITH_EXCEPTION` $\to$ `COMPLETED`, records exception audit marker in CareHistory).
+  4. `Hủy bỏ` (`CANCEL` $\to$ `CANCELLED`, requires reason, preserves history, no CareHistory created).
 
 ## Environment Variables
 

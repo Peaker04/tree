@@ -26,24 +26,31 @@ Khi tìm kiếm câu trả lời cho bất kỳ khía cạnh nào của hệ th�
 
 ---
 
-## 2. Phân loại tài liệu và Quy tắc giá trị (Classification Hierarchy)
+## 2. Mô hình phân tầng thẩm quyền tài liệu (Source-of-Truth Authority Hierarchy)
 
-Để tránh tình trạng tài liệu cũ mâu thuẫn với thiết kế mới, mọi tài liệu trong repository được phân hạng theo trật tự ưu tiên:
+Dự án áp dụng mô hình phân cấp thẩm quyền tài liệu nghiêm ngặt, tuyệt đối không dùng quy tắc gộp chung "mọi file docs/*.md đều là canonical truth":
 
-1. **CANONICAL (Chuẩn tắc - Cấp 1):**
-   - Các file nằm tại thư mục gốc `docs/*.md` (`PRODUCT.md`, `DOMAIN.md`, `WORKFLOWS.md`, `ACCESS-CONTROL.md`, `REQUIREMENTS-TRACEABILITY.md`, `ARCHITECTURE.md`, `NFR.md`), `/DESIGN.md`, và `@novyx/contracts`.
-   - Đây là sự thật tuyệt đối về hợp đồng, nghiệp vụ và kiến trúc mục tiêu.
-2. **REFERENCE (Tham chiếu - Cấp 2):**
-   - Tài liệu bên ngoài được ghi nhận: `Peaker04/IPCManagement` (mô hình quản trị), `cathrynlavery/diagram-design` (công cụ biểu đồ), tài liệu chính thức `Expo SDK 57`.
-   - Dùng để học hỏi kỷ luật và giải pháp kỹ thuật; không ghi đè quy tắc nghiệp vụ của NOVYX.
-3. **PLANNING (Kế hoạch thực thi - Cấp 3):**
-   - Các tài liệu trong `.planning/` hoặc kế hoạch nhiệm vụ ngắn hạn.
-   - Thể hiện trạng thái triển khai, không thay đổi hợp đồng cốt lõi nếu chưa qua ADR.
-4. **DECISION EVIDENCE / HISTORICAL (Bằng chứng quyết định & Lịch sử - Cấp 4):**
-   - `docs/BUSINESS-PROCESS-REVIEW.md` (hồ sơ lưu vết quá trình phê duyệt quyết định nghiệp vụ), các báo cáo kiểm toán cũ (`docs/MOBILE_DESIGN_AUDIT.md`).
-   - **Quy tắc vàng:** Tài liệu lịch sử hay mã nguồn cũ KHÔNG ĐƯỢC PHÉP ghi đè tài liệu chuẩn tắc. Toàn bộ quy tắc vận hành đã được đồng bộ chính thức vào các tài liệu Canonical Cấp 1.
-5. **EVIDENCE (Bằng chứng thực thi):**
-   - Kết quả test thực tế, profiling log, runtime trace, snapshot verify. Chỉ có bằng chứng thực mới được chứng nhận hoàn thành (DoD).
+1. **Lớp A: BUSINESS TARGET CONTRACT — CANONICAL (Hợp đồng nghiệp vụ mục tiêu chuẩn tắc):**
+   - Tài liệu chủ quản: [`docs/PRODUCT.md`](PRODUCT.md), [`docs/DOMAIN.md`](DOMAIN.md), [`docs/WORKFLOWS.md`](WORKFLOWS.md), [`docs/ACCESS-CONTROL.md`](ACCESS-CONTROL.md), và định nghĩa yêu cầu mục tiêu trong [`docs/REQUIREMENTS-TRACEABILITY.md`](REQUIREMENTS-TRACEABILITY.md).
+   - Thẩm quyền: Đây là sự thật nghiệp vụ tối cao đã được Product Owner phê duyệt. Bất kỳ sự khác biệt nào giữa code và Lớp A đều được phân loại là Khoảng trống triển khai (`[GAP]`).
+2. **Lớp B: TECHNICAL TARGET / ARCHITECTURE (Kiến trúc kỹ thuật mục tiêu):**
+   - Tài liệu chủ quản: [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/NFR.md`](NFR.md).
+   - Thẩm quyền: Định hướng cấu trúc phần mềm dài hạn. Các phần chưa có quyết định ADR chính thức từ Tech Lead/Owner bắt buộc phải mang nhãn `[PROPOSED]` hoặc `[NEEDS_DECISION]`.
+3. **Lớp C: CURRENT IMPLEMENTATION TRUTH (Hiện trạng triển khai thực tế):**
+   - Chủ sở hữu: Toàn bộ mã nguồn thực tế (`apps/mobile/src/`, `packages/contracts/src/`), cấu hình runtime đang chạy ở commit baseline (`2f9a26b`).
+   - Thẩm quyền: Thể hiện chính xác những gì đang hoạt động. Mã nguồn hiện tại KHÔNG được tự động xem là business target; ngược lại, business target cũng KHÔNG được mô tả như đã hoàn thành nếu mã nguồn chưa đáp ứng.
+4. **Lớp D: DESIGN GOVERNANCE (Quản trị thiết kế & Giao diện):**
+   - Tài liệu chủ quản: [`/DESIGN.md`](../DESIGN.md), [`docs/MOBILE_UI_RULES.md`](MOBILE_UI_RULES.md).
+   - Thẩm quyền: Chỉ quản lý khía cạnh hiển thị, hệ thống token, layout, khả năng tiếp cận ngoài trời và quy tắc tương tác UI. Tuyệt đối KHÔNG sở hữu máy trạng thái hay định nghĩa lại quy trình nghiệp vụ trái với `WORKFLOWS.md`.
+5. **Lớp E: DECISION EVIDENCE / HISTORY (Chứng cứ quyết định & Lịch sử):**
+   - Tài liệu chủ quản: [`docs/BUSINESS-PROCESS-REVIEW.md`](BUSINESS-PROCESS-REVIEW.md), các báo cáo kiểm toán cũ (`docs/MOBILE_DESIGN_AUDIT.md`).
+   - Thẩm quyền: Lưu vết quá trình phân tích và căn cứ dẫn đến quyết định. Không ghi đè các tài liệu chuẩn tắc Lớp A sau khi đã đồng bộ.
+6. **Lớp F: PLANNING / GAP / MIGRATION (Kế hoạch & Báo cáo khoảng trống):**
+   - Tài liệu chủ quản: [`docs/POST-SYNC-IMPLEMENTATION-GAP-MAP.md`](POST-SYNC-IMPLEMENTATION-GAP-MAP.md), [`docs/INCEPTION-GAP-REPORT.md`](INCEPTION-GAP-REPORT.md).
+   - Thẩm quyền: Bảng đối chiếu thực tế phục vụ lộ trình nâng cấp kỹ thuật; không thay đổi hợp đồng cốt lõi.
+7. **Lớp G: DERIVED VIEWS (Góc nhìn trực quan dẫn xuất):**
+   - Tài liệu chủ quản: Toàn bộ các sơ đồ tại [`docs/diagrams/`](diagrams/).
+   - Thẩm quyền: Biểu đồ KHÔNG BAO GIỜ là hợp đồng độc lập hoặc business source of truth. Mọi sơ đồ phải trích dẫn rõ nguồn chuẩn tắc (`SOURCE: docs/WORKFLOWS.md`...).
 
 ---
 

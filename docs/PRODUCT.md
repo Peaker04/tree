@@ -6,7 +6,8 @@ Tài liệu này là hợp đồng thẩm quyền cao nhất giải thích **T�
 
 ## 1. Tuyên ngôn sản phẩm & Tầm nhìn (Product Vision)
 
-> **Tầm nhìn:** Thiết lập hệ thống chuẩn mực vận hành số tin cậy cho công tác quản lý và chăm sóc cây xanh đô thị, biến mọi tác nghiệp hiện trường thành chuỗi bằng chứng không thể chối bỏ (Tamper-evident Proof Chain) thông qua định vị thực địa, định danh số và cổng kiểm duyệt chất lượng nghiêm ngặt.
+> **Tầm nhìn:** Thiết lập hệ thống chuẩn mực vận hành số tin cậy cho công tác quản lý và chăm sóc cây xanh đô thị, biến mọi tác nghiệp hiện trường thành chuỗi bằng chứng có kiểm chứng và lưu vết đáng tin cậy (Evidence-backed Field Verification Trail) thông qua định vị thực địa, định danh số và cổng kiểm duyệt chất lượng nghiêm ngặt.<br>
+> _(Lưu ý thẩm quyền: LEGAL STATUS: NOT ESTABLISHED / OUTSIDE CURRENT MVP CLAIMS. Dự án tập trung vào tính trung thực vận hành nội bộ và mô hình bảo toàn phiên bản bằng chứng)._
 
 ### 1.1. Bài toán thực tiễn (Problem Statement)
 

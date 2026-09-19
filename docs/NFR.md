@@ -13,51 +13,54 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
 ### QAS-PERF-01: Hiệu năng hiển thị danh sách lớn ngoài thực địa
 
 - **ID:** `QAS-PERF-01`
-- **Thuộc tính chất lượng:** **Performance / UI Responsiveness**
-- **Kịch bản:** Nhân viên hoặc Quản lý mở danh sách nhiệm vụ hoặc danh mục cây chứa từ 200 đến 1.000 mục trên thiết bị Android phổ thông (RAM 3GB - 4GB).
-- **Kích hoạt (Trigger):** Người dùng cuộn nhanh (Fling scroll) hoặc nhập từ khóa tìm kiếm.
-- **Ngữ cảnh (Context):** Thiết bị đang chạy ngoài trời dưới nhiệt độ cao, pin còn dưới 20%.
-- **Phản ứng kỳ vọng:** Giao diện duy trì tốc độ khung hình ổn định, không bị đơ giật; bộ nhớ RAM không tăng đột biến dẫn đến ứng dụng bị hệ điều hành tắt ngầm (OOM Crash).
-- **Thước đo / Chấp thuận:**
-  - Danh sách bắt buộc sử dụng cơ chế ảo hóa danh sách (`FlatList` / `FlashList`) với `windowSize <= 5` và định danh khóa ổn định (`keyExtractor={(item) => item.id}`).
-  - Tỷ lệ khung hình rơi (Dropped frames) $< 5\%$; thời gian phản hồi khung hình $\le 16.6\text{ms}$ (60 FPS).
-  - Nghiêm cấm sử dụng `ScrollView` bọc toàn bộ danh sách kết hợp hàm `map()`.
-- **Bằng chứng kiểm chứng:** Profiling qua React Native DevTools / Systrace trên máy ảo hoặc thiết bị thật; báo cáo không còn cảnh báo bộ nhớ.
-- **Trạng thái MVP:** **MUST HAVE**
+- **Thuộc tính chất lượng (Quality Attribute):** **Performance / UI Responsiveness** (`[APPROVED REQUIREMENT]`)
+- **Kịch bản vận hành:** Nhân viên hoặc Quản lý thao tác cuộn nhanh danh sách nhiệm vụ hoặc danh mục cây trên thiết bị Android ngoài thực địa.
+- **Kích hoạt (Trigger):** Thao tác cuộn nhanh (Fling scroll) hoặc nhập từ khóa tìm kiếm.
+- **Ngữ cảnh kiểm thử tham chiếu:** Thiết bị Android phân khúc phổ thông (tham chiếu `[PROPOSED BENCHMARK]`: RAM 3GB–4GB, danh sách 200–1.000 bản ghi).
+- **Phản ứng kỳ vọng:** Giao diện duy trì độ mượt mà ổn định, không bị đơ giật; bộ nhớ RAM không tăng đột biến gây OOM crash.
+- **Chỉ tiêu đo lường & Phân loại:**
+  - `[APPROVED REQUIREMENT]`: Bắt buộc sử dụng cơ chế ảo hóa danh sách; nghiêm cấm render danh sách không giới hạn bằng `ScrollView` kết hợp `map()`.
+  - `[TARGET SLO]`: Tỷ lệ khung hình rơi (Dropped frames) $< 5\%$; thời gian phản hồi khung hình hướng tới $\le 16.6\text{ms}$ (60 FPS).
+  - `[NEEDS_MEASUREMENT]`: Ngưỡng tải chính xác (200 vs 1.000 bản ghi) cần đo đạc thực tế trên thiết bị mục tiêu ở pha sau.
+- **Tùy chọn kỹ thuật tham chiếu (Reference Implementation Option):** `FlatList` với `windowSize` tối ưu và `keyExtractor` ổn định (hoặc `FlashList` nếu profiling yêu cầu).
+- **Phương thức kiểm chứng (Verification Method):** Đo đạc qua React Native DevTools / Systrace trên máy ảo và thiết bị thật.
 
 ---
 
 ### QAS-OFFLINE-01: Mất kết nối mạng giữa chu trình thu thập bằng chứng
 
 - **ID:** `QAS-OFFLINE-01`
-- **Thuộc tính chất lượng:** **Offline Resilience / Zero Data Loss**
-- **Kịch bản:** Nhân viên đang thực hiện dở dang bước thu thập bằng chứng hoặc Checklist thì thiết bị mất sóng 3G/4G hoàn toàn (vào vùng mù viễn thông).
+- **Thuộc tính chất lượng (Quality Attribute):** **Offline Resilience / Zero Data Loss** (`[APPROVED REQUIREMENT]`)
+- **Kịch bản vận hành:** Nhân viên đang thực hiện dở dang bước thu thập bằng chứng hoặc Checklist thì thiết bị mất sóng 3G/4G hoàn toàn (vào vùng mù viễn thông).
 - **Kích hoạt (Trigger):** Rớt mạng đột ngột khi đang tương tác tại hiện trường.
-- **Ngữ cảnh (Context):** Nhiệm vụ đã có Site Verification (QR/GPS hoặc cờ ngoại lệ); ảnh chụp vừa lưu vào bộ nhớ tạm của máy.
+- **Ngữ cảnh kiểm thử tham chiếu:** Nhiệm vụ đã có Site Verification; ảnh chụp vừa lưu vào bộ nhớ tạm của máy.
 - **Phản ứng kỳ vọng:**
   - Ứng dụng không bật popup lỗi chặn màn hình; không chuyển hướng người dùng về màn hình đăng nhập.
   - Hiển thị huy hiệu nhận diện: `Ngoại tuyến (Dữ liệu cục bộ)` màu hổ phách (Amber).
   - Nhân viên tiếp tục hoàn thành các hạng mục bằng chứng theo `ProofProfile` bình thường.
   - Khi bấm "Gửi duyệt", báo cáo được đóng gói và đưa vào Hàng đợi gửi (Outbox) với trạng thái `LocalSubmissionStatus = PENDING_SYNC` để tự động gửi lại khi có mạng; trên máy chủ trạng thái vẫn là `IN_PROGRESS`.
-- **Thước đo / Chấp thuận:**
-  - $0\%$ dữ liệu bằng chứng bị mất khi rớt mạng.
-  - Toàn bộ chuỗi bằng chứng theo hồ sơ nhiệm vụ vẫn được ghi nhận đầy đủ với timestamp cục bộ chính xác.
-- **Bằng chứng kiểm chứng:** Kiểm thử ngắt mạng (Airplane mode test) xuyên suốt chu trình proof trên máy thật; khôi phục mạng và kiểm tra dữ liệu nhận được trên server.
-- **Trạng thái MVP:** **MUST HAVE**
+- **Chỉ tiêu đo lường & Phân loại:**
+  - `[APPROVED REQUIREMENT]`: $0\%$ dữ liệu bằng chứng đã chụp và checklist đã hoàn thành bị mất khi rớt mạng.
+  - `[APPROVED REQUIREMENT]`: Toàn bộ chuỗi bằng chứng theo hồ sơ nhiệm vụ vẫn được ghi nhận đầy đủ với timestamp cục bộ chính xác.
+  - `[NEEDS_DECISION]`: Lựa chọn engine lưu trữ bền vững ngoại tuyến (SQLite vs MMKV) cần quyết định qua `ADR-PROPOSED-02`.
+- **Tùy chọn kỹ thuật tham chiếu (Reference Implementation Option):** Outbox Queue tuần tự (FIFO) với exponential backoff.
+- **Phương thức kiểm chứng (Verification Method):** Kiểm thử ngắt mạng (Airplane mode test) trên máy thật; khôi phục mạng và kiểm tra dữ liệu nhận được trên server.
 
 ---
 
 ### QAS-OFFLINE-02: Ứng dụng bị hệ điều hành tắt ngầm khi đang mở Camera
 
 - **ID:** `QAS-OFFLINE-02`
-- **Thuộc tính chất lượng:** **Fault Tolerance / State Recoverability**
-- **Kịch bản:** Khi nhân viên bật Camera để chụp ảnh bằng chứng, hệ điều hành Android giải phóng RAM bằng cách tắt ngầm (OS Kill) tiến trình chính của ứng dụng.
+- **Thuộc tính chất lượng (Quality Attribute):** **Fault Tolerance / State Recoverability** (`[APPROVED REQUIREMENT]`)
+- **Kịch bản vận hành:** Khi nhân viên bật Camera để chụp ảnh bằng chứng, hệ điều hành Android giải phóng RAM bằng cách tắt ngầm (OS Kill) tiến trình chính của ứng dụng.
 - **Kích hoạt (Trigger):** Ứng dụng bị tắt cưỡng bức trong lúc tác vụ đang dang dở.
-- **Ngữ cảnh (Context):** Nhân viên vừa hoàn thành Site Verification và các bằng chứng giai đoạn đầu.
+- **Ngữ cảnh kiểm thử tham chiếu:** Nhân viên vừa hoàn thành Site Verification và các bằng chứng giai đoạn đầu.
 - **Phản ứng kỳ vọng:** Khi nhân viên mở lại ứng dụng, phiên đăng nhập được tự động khôi phục từ lưu trữ bền vững (Durable Store); nhiệm vụ đang làm dở được tự động mở lại với đầy đủ bằng chứng đã thu thập trước thời điểm bị tắt.
-- **Thước đo / Chấp thuận:** Nhân viên không phải đi lại từ đầu các khâu đã hoàn thành hợp lệ; thời gian phục hồi về đúng trạng thái trước khi tắt $\le 2$ giây.
-- **Bằng chứng kiểm chứng:** Thử nghiệm bật chế độ "Don't keep activities" trên Android Developer Options và kiểm tra độ bền dữ liệu.
-- **Trạng thái MVP:** **MUST HAVE**
+- **Chỉ tiêu đo lường & Phân loại:**
+  - `[APPROVED REQUIREMENT]`: Nhân viên không phải đi lại từ đầu các khâu đã hoàn thành hợp lệ trước đó.
+  - `[TARGET SLO]`: Thời gian phục hồi về đúng màn hình tác vụ trước khi tắt hướng tới mục tiêu $\le 2$ giây.
+- **Tùy chọn kỹ thuật tham chiếu (Reference Implementation Option):** Local Persistence lưu draft ngay sau mỗi bước chụp ảnh hoặc tích checklist.
+- **Phương thức kiểm chứng (Verification Method):** Thử nghiệm bật chế độ "Don't keep activities" trên Android Developer Options và kiểm tra độ bền dữ liệu.
 
 ---
 

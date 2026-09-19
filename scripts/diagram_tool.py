@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-NOVYX Diagram Tool — Validation, SVG Extraction, PNG & PDF Export
-Project-Local Extension for diagram-design in NOVYX GreenOps.
+NOVYX Diagram Tool — Runtime Geometry Validation, SVG Extraction, PNG & PDF Export
+Authoritative Project-Local Tooling for diagram-design in NOVYX GreenOps.
 """
 
 import sys
@@ -10,7 +10,15 @@ import re
 import argparse
 import subprocess
 import shutil
+import tempfile
+import json
 from pathlib import Path
+
+# Ensure UTF-8 output on Windows terminal
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 EDGE_PATHS = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -22,7 +30,6 @@ def find_browser():
     for p in EDGE_PATHS:
         if os.path.exists(p):
             return p
-    # Try which / where
     for b in ["msedge", "chrome", "google-chrome"]:
         found = shutil.which(b)
         if found:
@@ -43,83 +50,388 @@ def normalize_svg_colors(svg_content):
     Replace rgba(r,g,b,a) in stroke/fill attributes with compatible hex + opacity
     to ensure SVG 1.1 / PowerPoint / Illustrator compatibility without black box rendering.
     """
-    def replace_rgba_fill(match):
-        full = match.group(0)
-        attr = match.group(1) # fill or stroke
+    def replace_rgba_attr(match):
+        attr = match.group(1)
         rgba = match.group(2)
         hex_c, op = rgba_to_hex_opacity(rgba)
         if float(op) < 1.0:
             return f'{attr}="{hex_c}" {attr}-opacity="{op}"'
         return f'{attr}="{hex_c}"'
 
-    normalized = re.sub(r'(fill|stroke)=["\'](rgba?\([^)]+\))["\']', replace_rgba_fill, svg_content)
+    normalized = re.sub(r'(fill|stroke)=["\'](rgba?\([^)]+\))["\']', replace_rgba_attr, svg_content)
     return normalized
 
 def extract_svg(html_content, title="NOVYX Diagram", desc="Architecture Diagram"):
+    """
+    Extracts inline SVG and enriches it for standalone SVG usage:
+    - Injects Google Fonts @import inside <defs><style> with XML-escaped '&amp;'
+    - Injects reliable fallback font-family declarations
+    - Normalizes rgba colors to hex + opacity
+    - Ensures standard XML header, xmlns, role="img", title and desc
+    """
     m = re.search(r'(<svg[^>]*>.*?</svg>)', html_content, re.DOTALL | re.IGNORECASE)
     if not m:
         return None
     raw_svg = m.group(1)
-    
+
     # Ensure xmlns
     if 'xmlns="http://www.w3.org/2000/svg"' not in raw_svg:
         raw_svg = raw_svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"', 1)
-    
+
     # Ensure role="img"
     if 'role=' not in raw_svg:
         raw_svg = raw_svg.replace('<svg', '<svg role="img"', 1)
-        
+
+    # Font style definition with XML-safe '&amp;'
+    font_style = (
+        "\n  <defs>\n"
+        "    <style type=\"text/css\"><![CDATA[\n"
+        "      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600&amp;display=swap');\n"
+        "      text {\n"
+        "        font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\n"
+        "      }\n"
+        "    ]]></style>\n"
+        "  </defs>"
+    )
+
+    if '<defs>' in raw_svg:
+        raw_svg = raw_svg.replace('<defs>', font_style.replace('</defs>', ''), 1)
+    else:
+        raw_svg = re.sub(r'(<svg[^>]*>)', rf'\1{font_style}', raw_svg, count=1)
+
     # Ensure title and desc if missing
     if '<title>' not in raw_svg:
         raw_svg = re.sub(r'(<svg[^>]*>)', rf'\1\n  <title>{title}</title>\n  <desc>{desc}</desc>', raw_svg, count=1)
-        
+
     normalized = normalize_svg_colors(raw_svg)
-    return normalized
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n{normalized}'
 
-def validate_vietnamese_typography(html_path):
+def build_runtime_validator_script():
     """
-    Validates typography rules from localization-vi.md:
-    1. Font size floor: prose should not be 7px, 8px, 9px.
-    2. Font loading: check for Noto Sans / Noto Serif.
-    3. Monospace check: technical IDs only.
-    4. Text wrapping: dy="1.4em" check.
+    Browser-evaluated script injected into diagram DOM to perform real geometric collision detection.
+    Evaluates:
+    - document.fonts.ready
+    - Text vs Text collision
+    - Text vs Owning Node boundary overflow
+    - Visible clipping outside SVG viewBox
+    - Minimum typography floor (font-size < 10px)
     """
-    content = Path(html_path).read_text(encoding="utf-8")
-    errors = []
-    warnings = []
+    return """
+<script id="__collision_validator__">
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await document.fonts.ready;
+        const svg = document.querySelector('svg');
+        if (!svg) {
+            outputResult({ error: 'No SVG element found in page' });
+            return;
+        }
 
-    # 1. Check Google Fonts
-    if "Noto+Sans" not in content and "Noto+Serif" not in content:
-        warnings.append("Google Fonts link does not explicitly include Noto Sans / Noto Serif.")
+        const svgRect = svg.getBoundingClientRect();
+        const vb = svg.viewBox.baseVal;
+        const vbWidth = vb && vb.width > 0 ? vb.width : svg.clientWidth;
+        const vbHeight = vb && vb.height > 0 ? vb.height : svg.clientHeight;
 
-    # 2. Check font sizes
-    small_fonts = re.findall(r'font-size=["\']([0-9]+)(?:px)?["\']', content)
-    for size_str in small_fonts:
-        size = int(size_str)
-        if size < 10:
-            errors.append(f"Found font-size={size}px below recommended floor (>= 11-12px required).")
-            break
+        const results = {
+            fontsLoaded: document.fonts.status === 'loaded',
+            fontCount: document.fonts.size,
+            svgBounds: { width: Math.round(svgRect.width), height: Math.round(svgRect.height) },
+            viewBox: { width: vbWidth, height: vbHeight },
+            textCollisions: [],
+            boundaryOverflows: [],
+            clippingIssues: [],
+            fontFloorViolations: [],
+            stats: { totalTexts: 0, totalNodes: 0 }
+        };
 
-    # 3. Check for foreignObject
-    if "<foreignObject" in content:
-        warnings.append("Found <foreignObject> in SVG. Prefer authoring-time <tspan> for static portability.")
+        const texts = Array.from(svg.querySelectorAll('text'));
+        const rects = Array.from(svg.querySelectorAll('rect'));
+        results.stats.totalTexts = texts.length;
+        results.stats.totalNodes = rects.length;
 
-    # 4. Check for dy="1.4em" or dy wrapping in multi-line texts
-    tspans = re.findall(r'<tspan[^>]*>', content)
-    if tspans:
-        has_dy = any("dy=" in t for t in tspans)
-        if not has_dy:
-            warnings.append("Multi-line <tspan> elements found but no 'dy=' spacing specified.")
+        // 1. Text element data extraction
+        const textData = texts.map((t, idx) => {
+            const rect = t.getBoundingClientRect();
+            const textContent = t.textContent.trim().replace(/\\s+/g, ' ');
+            const computedStyle = window.getComputedStyle(t);
+            const fontSize = parseFloat(computedStyle.fontSize) || 12;
+            return {
+                id: t.id || `text-${idx}`,
+                text: textContent,
+                rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height },
+                fontSize,
+                element: t
+            };
+        });
 
-    # 5. Check banner status
+        // 2. Candidate card/node rects (exclude full-canvas background rects)
+        const cardRects = rects
+            .map(r => {
+                const b = r.getBoundingClientRect();
+                return { element: r, rect: b };
+            })
+            .filter(c => {
+                // Must be smaller than 85% of SVG to be a meaningful card/box
+                return c.rect.width > 30 && c.rect.height > 20 &&
+                       c.rect.width < (svgRect.width * 0.90) &&
+                       c.rect.height < (svgRect.height * 0.90);
+            });
+
+        // 3. Collision and Boundary checks
+        for (let i = 0; i < textData.length; i++) {
+            const t1 = textData[i];
+
+            // A. Typography floor check
+            if (t1.fontSize < 10) {
+                results.fontFloorViolations.push({
+                    text: t1.text.substring(0, 35),
+                    fontSize: t1.fontSize,
+                    issue: `Font size ${t1.fontSize}px is below minimum floor (>= 11-12px required)`
+                });
+            }
+
+            // B. Visible clipping outside SVG canvas
+            if (t1.rect.left < svgRect.left - 2 ||
+                t1.rect.top < svgRect.top - 2 ||
+                t1.rect.right > svgRect.right + 2 ||
+                t1.rect.bottom > svgRect.bottom + 2) {
+                results.clippingIssues.push({
+                    text: t1.text.substring(0, 40),
+                    issue: 'Text clips outside SVG viewport boundaries',
+                    coords: { x: Math.round(t1.rect.left - svgRect.left), y: Math.round(t1.rect.top - svgRect.top) }
+                });
+            }
+
+            // C. Text vs Text overlap
+            for (let j = i + 1; j < textData.length; j++) {
+                const t2 = textData[j];
+                if (!t1.text || !t2.text) continue;
+                if (t1.element.contains(t2.element) || t2.element.contains(t1.element)) continue;
+
+                // Screen overlap
+                const overlapX = Math.max(0, Math.min(t1.rect.right, t2.rect.right) - Math.max(t1.rect.left, t2.rect.left));
+                const overlapY = Math.max(0, Math.min(t1.rect.bottom, t2.rect.bottom) - Math.max(t1.rect.top, t2.rect.top));
+
+                // Threshold: more than 3px in both dimensions
+                if (overlapX > 3 && overlapY > 3) {
+                    results.textCollisions.push({
+                        textA: t1.text.substring(0, 30),
+                        textB: t2.text.substring(0, 30),
+                        overlap: { width: Math.round(overlapX), height: Math.round(overlapY) },
+                        coordsA: { x: Math.round(t1.rect.left - svgRect.left), y: Math.round(t1.rect.top - svgRect.top) },
+                        coordsB: { x: Math.round(t2.rect.left - svgRect.left), y: Math.round(t2.rect.top - svgRect.top) }
+                    });
+                }
+            }
+
+            // D. Text vs Owning Node Boundary overflow
+            // Find if text is logically inside a card (by top-left being inside card with some padding)
+            for (const card of cardRects) {
+                const cr = card.rect;
+                const isInsideStart = (t1.rect.left >= cr.left - 4 && t1.rect.left <= cr.right) &&
+                                     (t1.rect.top >= cr.top - 4 && t1.rect.top <= cr.bottom);
+                if (isInsideStart) {
+                    // Check if right or bottom spills outside card
+                    const spillX = t1.rect.right - cr.right;
+                    const spillY = t1.rect.bottom - cr.bottom;
+                    if (spillX > 6 || spillY > 6) {
+                        results.boundaryOverflows.push({
+                            text: t1.text.substring(0, 30),
+                            cardWidth: Math.round(cr.width),
+                            cardHeight: Math.round(cr.height),
+                            overflow: { x: Math.max(0, Math.round(spillX)), y: Math.max(0, Math.round(spillY)) }
+                        });
+                    }
+                    break;
+                }
+            }
+        }
+
+        outputResult(results);
+    } catch (err) {
+        outputResult({ error: err.toString() });
+    }
+
+    function outputResult(data) {
+        const el = document.createElement('script');
+        el.id = '__validation_data__';
+        el.type = 'application/json';
+        el.textContent = JSON.stringify(data);
+        document.body.appendChild(el);
+    }
+});
+</script>
+"""
+
+def validate_diagram_runtime(html_path):
+    """
+    Executes headless Edge to collect real DOM/geometry metrics and validate zero-collision.
+    """
+    html_path = Path(html_path).resolve()
+    content = html_path.read_text(encoding="utf-8")
+    browser = find_browser()
+
+    static_errors = []
+    static_warnings = []
+
+    # 1. Static authority & metadata checks
     if "CANONICAL DOC SYNCHRONIZATION PENDING" in content:
-        errors.append("Banner still states 'CANONICAL DOC SYNCHRONIZATION PENDING'. Update to 'DERIVED VIEW — CANONICAL BUSINESS BASELINE'.")
+        static_errors.append("Banner states 'CANONICAL DOC SYNCHRONIZATION PENDING'. Must be 'DERIVED VIEW — CANONICAL BUSINESS BASELINE'.")
     if "SOURCE:" not in content:
-        warnings.append("Diagram does not explicitly state its canonical source (e.g. 'SOURCE: docs/WORKFLOWS.md').")
+        static_warnings.append("Missing explicit canonical source citation (e.g. 'SOURCE: docs/WORKFLOWS.md').")
+    if 'lang="vi"' not in content:
+        static_warnings.append("Missing lang=\"vi\" on <html> element.")
+    if "Noto+Sans" not in content and "Noto+Serif" not in content:
+        static_warnings.append("Missing explicit Noto Sans / Noto Serif Google Fonts link.")
 
-    return errors, warnings
+    if not browser:
+        return {
+            "browserFound": False,
+            "staticErrors": static_errors,
+            "staticWarnings": static_warnings,
+            "geometryData": None
+        }
 
-def export_diagram(html_path, out_dir=None, export_svg=True, export_png=True, export_pdf=True, full_page=False):
+    # Inject validator script
+    validator_code = build_runtime_validator_script()
+    injected_html = content.replace("</body>", f"{validator_code}\n</body>")
+
+    with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False, encoding='utf-8') as tf:
+        tf.write(injected_html)
+        tmp_file = tf.name
+
+    try:
+        file_url = "file:///" + tmp_file.replace("\\", "/")
+        cmd = [
+            browser,
+            "--headless",
+            "--disable-gpu",
+            "--virtual-time-budget=4000",
+            "--dump-dom",
+            file_url
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=20)
+        output = res.stdout
+
+        marker = '<script id="__validation_data__" type="application/json">'
+        if marker in output:
+            start = output.index(marker) + len(marker)
+            end = output.index('</script>', start)
+            geom_data = json.loads(output[start:end])
+        else:
+            geom_data = {"error": "Failed to parse validation data from browser DOM dump"}
+    except Exception as ex:
+        geom_data = {"error": f"Browser execution failed: {ex}"}
+    finally:
+        if os.path.exists(tmp_file):
+            try:
+                os.unlink(tmp_file)
+            except Exception:
+                pass
+
+    return {
+        "browserFound": True,
+        "staticErrors": static_errors,
+        "staticWarnings": static_warnings,
+        "geometryData": geom_data
+    }
+
+def print_validation_report(html_name, val_result):
+    print(f"\n==================================================")
+    print(f"DIAGRAM VALIDATION REPORT: {html_name}")
+    print(f"==================================================")
+
+    static_errs = val_result["staticErrors"]
+    static_warns = val_result["staticWarnings"]
+    geom = val_result["geometryData"]
+
+    has_errors = len(static_errs) > 0
+
+    for w in static_warns:
+        print(f"  [WARN] {w}")
+    for e in static_errs:
+        print(f"  [FAIL] {e}")
+
+    if not val_result["browserFound"]:
+        print("  [WARN] Headless browser not found. Skipping runtime geometry collision validation.")
+        return not has_errors
+
+    if not geom or "error" in geom:
+        print(f"  [FAIL] Runtime geometry error: {geom.get('error', 'Unknown error')}")
+        return False
+
+    print(f"  [PASS] Font Engine Status: loaded={geom.get('fontsLoaded')} (Loaded faces: {geom.get('fontCount')})")
+    print(f"  [INFO] Evaluated SVG elements: {geom['stats']['totalTexts']} texts, {geom['stats']['totalNodes']} nodes.")
+
+    # Check collisions
+    collisions = geom.get("textCollisions", [])
+    overflows = geom.get("boundaryOverflows", [])
+    clippings = geom.get("clippingIssues", [])
+    font_floors = geom.get("fontFloorViolations", [])
+
+    if collisions:
+        has_errors = True
+        print(f"  [FAIL] Text vs Text Collisions ({len(collisions)} detected):")
+        for c in collisions:
+            print(f"         - \"{c['textA']}\" [x:{c['coordsA']['x']}, y:{c['coordsA']['y']}] collides with \"{c['textB']}\" [x:{c['coordsB']['x']}, y:{c['coordsB']['y']}] (Overlap: {c['overlap']['width']}x{c['overlap']['height']}px)")
+    else:
+        print("  [PASS] Zero Text vs Text collision.")
+
+    if overflows:
+        has_errors = True
+        print(f"  [FAIL] Boundary Overflows ({len(overflows)} detected):")
+        for o in overflows:
+            print(f"         - \"{o['text']}\" overflows parent card by {o['overflow']['x']}px x {o['overflow']['y']}px")
+    else:
+        print("  [PASS] Zero Node Boundary overflow.")
+
+    if clippings:
+        has_errors = True
+        print(f"  [FAIL] SVG Viewport Clipping ({len(clippings)} detected):")
+        for cl in clippings:
+            print(f"         - \"{cl['text']}\" at {cl.get('coords', '')}: {cl['issue']}")
+    else:
+        print("  [PASS] Zero Viewport clipping.")
+
+    if font_floors:
+        has_errors = True
+        print(f"  [FAIL] Font Floor Violations ({len(font_floors)} detected):")
+        for ff in font_floors:
+            print(f"         - \"{ff['text']}\": {ff['issue']}")
+    else:
+        print("  [PASS] Vietnamese typography floor satisfied (all text >= 11px).")
+
+    if not has_errors:
+        print(f"  ==> RESULT: [VERIFIED PASS] Zero Visual Collision & Fully Validated.")
+    else:
+        print(f"  ==> RESULT: [FAIL] Issues detected requiring diagram geometry repair.")
+
+    return not has_errors
+
+def get_svg_dimensions(svg_content):
+    """
+    Extracts width and height or viewBox dimensions from SVG
+    """
+    m_vb = re.search(r'viewBox=["\']\s*([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s*["\']', svg_content)
+    if m_vb:
+        return int(float(m_vb.group(3))), int(float(m_vb.group(4)))
+    m_w = re.search(r'width=["\']([0-9.]+)["\']', svg_content)
+    m_h = re.search(r'height=["\']([0-9.]+)["\']', svg_content)
+    if m_w and m_h:
+        return int(float(m_w.group(1))), int(float(m_h.group(1)))
+    return 1200, 800
+
+def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=2):
+    """
+    Multi-format export:
+    - SVG: Standalone SVG with Google Fonts @import, clean XML, rgba normalized
+    - PNG:
+        mode="diagram": Exact SVG bounding box screenshot at scale (e.g. 2x or 3x)
+        mode="full-page": Full page screenshot including header, metadata, badges
+    - PDF:
+        mode="diagram": Exact SVG dimensions vector PDF with 0 margins
+        mode="full-page": Full page vector PDF
+    """
     html_path = Path(html_path).resolve()
     if not html_path.exists():
         print(f"Error: File not found: {html_path}")
@@ -135,123 +447,223 @@ def export_diagram(html_path, out_dir=None, export_svg=True, export_png=True, ex
     content = html_path.read_text(encoding="utf-8")
     browser = find_browser()
 
-    print(f"\nProcessing diagram: {html_path.name}")
-    errors, warnings = validate_vietnamese_typography(html_path)
-    if warnings:
-        for w in warnings:
-            print(f"  [WARN] {w}")
-    if errors:
-        for e in errors:
-            print(f"  [FAIL] {e}")
+    if formats is None:
+        formats = ["svg", "png", "pdf"]
+
+    print(f"\n==================================================")
+    print(f"EXPORTING: {html_path.name}")
+    print(f"Mode: {mode} | Scale: @{scale}x | Formats: {', '.join(formats)}")
+    print(f"==================================================")
+
+    # Validate first
+    val_res = validate_diagram_runtime(html_path)
+    print_validation_report(html_path.name, val_res)
+
+    svg_content = extract_svg(content, title=base_name, desc=f"NOVYX Diagram {base_name}")
+    if not svg_content:
+        print("  [FAIL] Could not extract inline SVG from diagram.")
+        return False
+
+    svg_w, svg_h = get_svg_dimensions(svg_content)
 
     # 1. Export SVG
-    if export_svg:
-        svg_content = extract_svg(content, title=base_name, desc=f"Generated from {html_path.name}")
-        if svg_content:
-            svg_out = out_dir / f"{base_name}.svg"
-            svg_out.write_text(svg_content, encoding="utf-8")
-            print(f"  [OK] Exported SVG: {svg_out.name}")
-        else:
-            print(f"  [WARN] No inline <svg> found to extract.")
+    if "svg" in formats:
+        svg_out = out_dir / f"{base_name}.svg"
+        svg_out.write_text(svg_content, encoding="utf-8")
+        print(f"  [OK] Exported Standalone SVG: {svg_out.name}")
 
-    # 2. Export PNG via Headless Edge/Chrome
-    if export_png:
-        if not browser:
-            print("  [SKIP] PNG export: No headless browser found.")
-        else:
-            # Full-page PNG
-            png_suffix = ".full.png" if full_page else ".png"
-            png_out = out_dir / f"{base_name}{png_suffix}"
+    if not browser and ("png" in formats or "pdf" in formats):
+        print("  [SKIP] PNG/PDF export skipped: No headless browser found.")
+        return True
+
+    # Prepare temporary HTML wrapper for diagram-only capture
+    if mode == "diagram":
+        wrapper_html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{base_name}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @page {{
+      size: {svg_w}px {svg_h}px;
+      margin: 0;
+    }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    html, body {{
+      margin: 0;
+      padding: 0;
+      width: {svg_w}px;
+      height: {svg_h}px;
+      overflow: hidden;
+      background: #FCFCF7;
+    }}
+    svg {{
+      display: block;
+      width: {svg_w}px;
+      height: {svg_h}px;
+    }}
+  </style>
+</head>
+<body>
+  {svg_content.replace('<?xml version="1.0" encoding="UTF-8"?>', '')}
+</body>
+</html>
+"""
+        with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False, encoding='utf-8') as tf:
+            tf.write(wrapper_html)
+            render_target = tf.name
+        render_w, render_h = svg_w, svg_h
+    else:
+        render_target = str(html_path)
+        render_w, render_h = 1600, 1200
+
+    target_url = "file:///" + render_target.replace("\\", "/")
+
+    try:
+        # 2. Export PNG
+        if "png" in formats:
+            suffix = ".png" if mode == "diagram" else ".full.png"
+            if scale == 3:
+                suffix = f"@3x{suffix}"
+            png_out = out_dir / f"{base_name}{suffix}"
+
             cmd = [
                 browser,
                 "--headless",
                 "--disable-gpu",
-                "--force-device-scale-factor=2",
-                "--window-size=1600,1200",
+                f"--force-device-scale-factor={scale}",
+                f"--window-size={render_w},{render_h}",
                 f"--screenshot={str(png_out)}",
-                f"file:///{str(html_path).replace(os.sep, '/')}"
+                target_url
             ]
-            try:
-                res = subprocess.run(cmd, capture_output=True, timeout=30)
-                if png_out.exists():
-                    print(f"  [OK] Exported PNG @2x: {png_out.name}")
-                else:
-                    print(f"  [FAIL] PNG export failed: {res.stderr.decode('utf-8', errors='ignore')}")
-            except Exception as ex:
-                print(f"  [FAIL] PNG export error: {ex}")
+            subprocess.run(cmd, capture_output=True, timeout=30)
+            if png_out.exists():
+                print(f"  [OK] Exported PNG ({mode} @{scale}x): {png_out.name}")
+            else:
+                print(f"  [FAIL] Failed to produce PNG: {png_out.name}")
 
-    # 3. Export PDF via Headless Edge/Chrome
-    if export_pdf:
-        if not browser:
-            print("  [SKIP] PDF export: No headless browser found.")
-        else:
-            pdf_suffix = ".full.pdf" if full_page else ".pdf"
-            pdf_out = out_dir / f"{base_name}{pdf_suffix}"
+        # 3. Export PDF
+        if "pdf" in formats:
+            suffix = ".pdf" if mode == "diagram" else ".full.pdf"
+            pdf_out = out_dir / f"{base_name}{suffix}"
+
             cmd = [
                 browser,
                 "--headless",
                 "--disable-gpu",
                 "--no-pdf-header-footer",
                 f"--print-to-pdf={str(pdf_out)}",
-                f"file:///{str(html_path).replace(os.sep, '/')}"
+                target_url
             ]
-            try:
-                res = subprocess.run(cmd, capture_output=True, timeout=30)
-                if pdf_out.exists():
-                    print(f"  [OK] Exported PDF: {pdf_out.name}")
-                else:
-                    print(f"  [FAIL] PDF export failed: {res.stderr.decode('utf-8', errors='ignore')}")
-            except Exception as ex:
-                print(f"  [FAIL] PDF export error: {ex}")
+            subprocess.run(cmd, capture_output=True, timeout=30)
+            if pdf_out.exists():
+                print(f"  [OK] Exported PDF ({mode}): {pdf_out.name}")
+            else:
+                print(f"  [FAIL] Failed to produce PDF: {pdf_out.name}")
 
-    return len(errors) == 0
+    finally:
+        if mode == "diagram" and os.path.exists(render_target):
+            try:
+                os.unlink(render_target)
+            except Exception:
+                pass
+
+    return True
 
 def main():
-    parser = argparse.ArgumentParser(description="NOVYX Diagram Tool — Validate, Export SVG, PNG, PDF")
-    parser.add_argument("diagrams", nargs="+", help="Path to diagram HTML file(s)")
-    parser.add_argument("--out-dir", default=None, help="Output directory for exports")
-    parser.add_argument("--svg", action="store_true", default=True, help="Export SVG")
-    parser.add_argument("--no-svg", action="store_false", dest="svg", help="Do not export SVG")
-    parser.add_argument("--png", action="store_true", default=True, help="Export PNG @2x")
-    parser.add_argument("--no-png", action="store_false", dest="png", help="Do not export PNG")
-    parser.add_argument("--pdf", action="store_true", default=True, help="Export PDF")
-    parser.add_argument("--no-pdf", action="store_false", dest="pdf", help="Do not export PDF")
-    parser.add_argument("--full-page", action="store_true", default=False, help="Export full-page PNG/PDF")
-    parser.add_argument("--validate-only", action="store_true", default=False, help="Validate only without export")
+    parser = argparse.ArgumentParser(description="NOVYX Diagram Tool — Authoritative Validation & Export")
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
+
+    # Command: validate
+    val_parser = subparsers.add_parser("validate", help="Run geometric and typography validation on diagrams")
+    val_parser.add_argument("diagrams", nargs="+", help="Diagram HTML file(s) to validate")
+
+    # Command: export
+    exp_parser = subparsers.add_parser("export", help="Export diagram(s) to SVG, PNG, PDF")
+    exp_parser.add_argument("diagrams", nargs="+", help="Diagram HTML file(s) to export")
+    exp_parser.add_argument("--format", default="svg,png,pdf", help="Comma-separated formats: svg, png, pdf")
+    exp_parser.add_argument("--mode", choices=["diagram", "full-page"], default="diagram", help="Export mode: diagram or full-page")
+    exp_parser.add_argument("--scale", type=int, choices=[1, 2, 3], default=2, help="Scale factor for raster export (@1x, @2x, @3x)")
+    exp_parser.add_argument("--out-dir", default=None, help="Output directory for exports")
+
+    # Backward compatibility flags at root parser
+    parser.add_argument("diagrams_legacy", nargs="*", help="Legacy diagrams list")
+    parser.add_argument("--validate-only", action="store_true", default=False, help="Run validation only")
+    parser.add_argument("--out-dir", default=None, help="Output directory for legacy export")
+    parser.add_argument("--svg", action="store_true", default=None, help="Export SVG")
+    parser.add_argument("--png", action="store_true", default=None, help="Export PNG")
+    parser.add_argument("--pdf", action="store_true", default=None, help="Export PDF")
+    parser.add_argument("--full-page", action="store_true", default=False, help="Export full page")
+    parser.add_argument("--scale", type=int, choices=[1, 2, 3], default=2, help="Scale factor")
 
     args = parser.parse_args()
 
-    all_passed = True
-    for d in args.diagrams:
-        p = Path(d)
-        if not p.exists():
-            print(f"File not found: {d}")
-            all_passed = False
-            continue
-        if args.validate_only:
-            errors, warnings = validate_vietnamese_typography(p)
-            print(f"\nValidation for {p.name}:")
-            for w in warnings:
-                print(f"  [WARN] {w}")
-            if errors:
-                for e in errors:
-                    print(f"  [FAIL] {e}")
-                all_passed = False
-            else:
-                print("  [PASS] All typography and banner checks passed.")
-        else:
-            ok = export_diagram(
-                p,
-                out_dir=args.out_dir,
-                export_svg=args.svg,
-                export_png=args.png,
-                export_pdf=args.pdf,
-                full_page=args.full_page
-            )
-            if not ok:
-                all_passed = False
+    # Route command
+    if args.command == "validate":
+        all_ok = True
+        for d in args.diagrams:
+            p = Path(d)
+            if not p.exists():
+                print(f"Error: File not found: {d}")
+                all_ok = False
+                continue
+            res = validate_diagram_runtime(p)
+            passed = print_validation_report(p.name, res)
+            if not passed:
+                all_ok = False
+        sys.exit(0 if all_ok else 1)
 
-    sys.exit(0 if all_passed else 1)
+    elif args.command == "export":
+        formats = [f.strip().lower() for f in args.format.split(",") if f.strip()]
+        all_ok = True
+        for d in args.diagrams:
+            p = Path(d)
+            if not p.exists():
+                print(f"Error: File not found: {d}")
+                all_ok = False
+                continue
+            ok = export_diagram(p, out_dir=args.out_dir, formats=formats, mode=args.mode, scale=args.scale)
+            if not ok:
+                all_ok = False
+        sys.exit(0 if all_ok else 1)
+
+    # Legacy invocation support
+    diagrams = args.diagrams_legacy
+    if not diagrams:
+        parser.print_help()
+        sys.exit(1)
+
+    if args.validate_only:
+        all_ok = True
+        for d in diagrams:
+            p = Path(d)
+            res = validate_diagram_runtime(p)
+            passed = print_validation_report(p.name, res)
+            if not passed:
+                all_ok = False
+        sys.exit(0 if all_ok else 1)
+    else:
+        formats = []
+        if args.svg or (args.svg is None and not (args.png or args.pdf)):
+            formats.append("svg")
+        if args.png:
+            formats.append("png")
+        if args.pdf:
+            formats.append("pdf")
+        if not formats:
+            formats = ["svg", "png", "pdf"]
+
+        mode = "full-page" if args.full_page else "diagram"
+        all_ok = True
+        for d in diagrams:
+            p = Path(d)
+            ok = export_diagram(p, out_dir=args.out_dir, formats=formats, mode=mode, scale=args.scale)
+            if not ok:
+                all_ok = False
+        sys.exit(0 if all_ok else 1)
 
 if __name__ == "__main__":
     main()

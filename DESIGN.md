@@ -14,7 +14,7 @@ This document is the single authoritative design specification for the NOVYX Gre
 
 1. **Seed's botanical-clinical identity:** Warm organic canvas, deep forest green authority, and restrained lime functional accent.
 2. **Linear's structural precision:** Hairline borders, density discipline, 4px spacing rhythm, flat surface hierarchy, and minimal decoration.
-3. **NOVYX domain requirements:** Rigorous 5-step field proof chain (GPS → QR → Before Photo → Checklist → After Photo), outdoor readability, one-handed field usability, and interrupted workflow resilience.
+3. **NOVYX domain requirements:** Profile-driven proof rendering (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`), independent site verification (QR & GPS), outdoor readability, one-handed field usability, and interrupted workflow resilience.
 
 Every future screen refactor, component creation, and code review must strictly adhere to this specification.
 
@@ -33,7 +33,7 @@ Every future screen refactor, component creation, and code review must strictly 
  │     SEED     │                 │    LINEAR    │                 │    NOVYX     │
  │  IDENTITY    │                 │  DISCIPLINE  │                 │    DOMAIN    │
  ├──────────────┤                 ├──────────────┤                 ├──────────────┤
- │• Warm canvas │                 │• Hairline 1px│                 │• 5-step proof│
+ │• Warm canvas │                 │• Hairline 1px│                 │• Profile UI  │
  │• Forest tone │                 │• 4px rhythm  │                 │• Field-ready │
  │• Lime accent │                 │• Flat over   │                 │• TalkBack    │
  │• Quiet calm  │                 │  elevated    │                 │• Offline     │
@@ -83,7 +83,7 @@ Visual Polish & Aesthetic Detail
 
 > [!IMPORTANT]
 > **Workflow Integrity Rule:** A visual rule must NEVER override a domain workflow requirement.
-> For example, if the proof sequence mandates `GPS → QR → BEFORE PHOTO → CHECKLIST → AFTER PHOTO`, the UI must faithfully reflect that sequence. The design system must never provide visual shortcuts or false completion CTAs that bypass domain prerequisites.
+> The UI must faithfully render proof requirements provided by the domain and application layers according to the assigned `ProofProfile` (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`) and Site Verification signals (`QR` & `GPS`). The design system must never provide visual shortcuts or false completion CTAs that bypass domain prerequisites.
 
 ---
 
@@ -334,15 +334,20 @@ UI components are strict projections of underlying domain state.
 └─────────────────┘       └────────────────────────┘       └──────────────────────┘       └─────────────────┘
 ```
 
-### 13.2 Proof Sequence Rules
+### 13.2 Profile-Driven Proof UI Rules
 
-1. **Mandatory Step Order:** `GPS` $\rightarrow$ `QR` $\rightarrow$ `BEFORE` $\rightarrow$ `CHECKLIST` $\rightarrow$ `AFTER` $\rightarrow$ `REVIEW` $\rightarrow$ `SUBMIT`.
-2. **Dynamic Stepper Projection:** Each step pill reflects one of three domain states:
+1. **Domain State Ownership:** `docs/WORKFLOWS.md` and `docs/DOMAIN.md` strictly own business semantics, Task lifecycle state transitions, and proof policies. `DESIGN.md` owns visual presentation, tokens, stepper components, and feedback surfaces.
+2. **Profile-Driven Stepper Projection:** The UI must render proof requirements provided by the domain and application layers according to the assigned `ProofProfile`:
+   - `CHANGE_PROOF`: Site Verification (QR + GPS) + Before Evidence + Checklist + After Evidence.
+   - `SERVICE_PROOF`: Site Verification (QR + GPS) + Checklist + Completion Photo.
+   - `INSPECTION_PROOF`: Site Verification (QR + GPS) + Structured Findings + Condition Photos.
+     _Note: Site Verification consists of independent QR and GPS signals; they may be captured in either order._
+3. **Dynamic Stepper Projection:** Each step pill reflects domain state computed by workflow helpers:
    - `done`: Background `primarySoft`, checkmark icon, dark green text.
    - `isCurrent`: Background `limePulse`, step icon, forest green bold text.
    - `pending`: Background `card`, circle icon, pewter text.
-3. **Guaranteed Valid Action:** The primary CTA button text and destination must be computed directly by `workflowState.activeActionText` and `workflowState.nextStep`. Components must never hardcode "Bắt đầu chụp ảnh" if GPS has not yet passed.
-4. **Terminal State Lockdown:** When a task is `COMPLETED` or `WAITING_REVIEW`, the primary proof action disappears, replaced by review inspection or return to queue.
+4. **Guaranteed Valid Action:** The primary CTA button text and destination must be computed directly by `workflowState.activeActionText` and `workflowState.nextStep`. Components must never bypass prerequisite domain steps.
+5. **Canonical Lifecycle States:** The UI recognizes the 7 canonical Task lifecycle states (`PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`). When a task is `COMPLETED` or `WAITING_REVIEW`, primary proof editing is locked down and replaced by review inspection or queue return.
 
 ---
 

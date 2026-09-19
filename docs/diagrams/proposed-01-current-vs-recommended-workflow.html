@@ -144,85 +144,97 @@
           <!-- Current Flow Boxes -->
           <g transform="translate(24, 85)">
             <!-- GPS -->
-            <rect x="0" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
-            <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
-              1. GPS Check
-            </text>
-            <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
-              Khóa cứng &lt;= 10m
-            </text>
-            <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
-              Lệch 11m: Chặn
-            </text>
-            <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
-              Không ngoại lệ
-            </text>
+            <g transform="translate(0, 0)">
+              <rect x="0" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
+              <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+                1. GPS Check
+              </text>
+              <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+                &lt;= 10m
+              </text>
+              <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+                Lỗi lệch vị trí
+              </text>
+              <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+                Tắc nghẽn tại chỗ
+              </text>
+            </g>
 
             <line x1="145" y1="55" x2="178" y2="55" stroke="#DC2626" stroke-width="1.8" marker-end="url(#arr-red)" />
 
             <!-- QR -->
-            <rect x="180" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
-            <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
-              2. Quét QR
-            </text>
-            <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
-              Khớp 100% mã
-            </text>
-            <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
-              Mã rách: Bế tắc
-            </text>
-            <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
-              Không có phục hồi
-            </text>
+            <g transform="translate(180, 0)">
+              <rect x="0" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
+              <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+                2. Quét QR
+              </text>
+              <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+                Mã cây đúng
+              </text>
+              <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+                Mã trầy / mờ
+              </text>
+              <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+                Không thể tiếp tục
+              </text>
+            </g>
 
             <line x1="325" y1="55" x2="358" y2="55" stroke="#DC2626" stroke-width="1.8" marker-end="url(#arr-red)" />
 
             <!-- Before -->
-            <rect x="360" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
-            <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
-              3. Ảnh Trước
-            </text>
-            <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
-              Bắt buộc 100%
-            </text>
-            <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">Tưới cũng bắt</text>
-            <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
-              Hình thức lãng phí
-            </text>
+            <g transform="translate(360, 0)">
+              <rect x="0" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
+              <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+                3. Ảnh Trước
+              </text>
+              <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+                Bắt buộc 100%
+              </text>
+              <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+                Tưới nước cũng ép
+              </text>
+              <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+                Lãng phí tài nguyên
+              </text>
+            </g>
 
             <line x1="505" y1="55" x2="538" y2="55" stroke="#DC2626" stroke-width="1.8" marker-end="url(#arr-red)" />
 
             <!-- Checklist -->
-            <rect x="540" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
-            <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
-              4. Checklist
-            </text>
-            <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
-              Tích 100%
-            </text>
-            <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
-              Không phân loại
-            </text>
-            <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
-              Thiếu linh hoạt
-            </text>
+            <g transform="translate(540, 0)">
+              <rect x="0" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
+              <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+                4. Checklist
+              </text>
+              <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+                Tích 100%
+              </text>
+              <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+                Không phân loại
+              </text>
+              <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+                Thiếu linh hoạt
+              </text>
+            </g>
 
             <line x1="685" y1="55" x2="718" y2="55" stroke="#DC2626" stroke-width="1.8" marker-end="url(#arr-red)" />
 
             <!-- After -->
-            <rect x="720" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
-            <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
-              5. Ảnh Sau
-            </text>
-            <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
-              Bắt buộc 100%
-            </text>
-            <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
-              Khảo sát cũng bắt
-            </text>
-            <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
-              Xóa hết nếu rework
-            </text>
+            <g transform="translate(720, 0)">
+              <rect x="0" y="0" width="145" height="110" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.2" />
+              <text x="14" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+                5. Ảnh Sau
+              </text>
+              <text x="14" y="52" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+                Bắt buộc 100%
+              </text>
+              <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+                Khảo sát cũng bắt
+              </text>
+              <text x="14" y="94" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+                Xóa hết nếu rework
+              </text>
+            </g>
           </g>
         </g>
 
@@ -254,104 +266,138 @@
           <!-- Proposed Flow -->
           <g transform="translate(24, 75)">
             <!-- Block 1: Site Verification -->
-            <rect x="0" y="0" width="270" height="215" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
-            <text x="16" y="28" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#166534">
-              1. XÁC THỰC HIỆN TRƯỜNG
-            </text>
-            <text x="16" y="48" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
-              Thứ tự độc lập (QR &amp; GPS):
-            </text>
-            <text x="16" y="72" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
-              • Quét QR đối soát danh tính cây
-            </text>
-            <text x="28" y="90" font-family="'Geist Mono', monospace" font-size="11" fill="#D97706">
-              (Hỏng: IDENTITY_EXCEPTION)
-            </text>
-            <text x="16" y="112" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
-              • Đo khoảng cách GPS (Mục tiêu &lt;=10m)
-            </text>
-            <text x="28" y="130" font-family="'Geist Mono', monospace" font-size="11" fill="#D97706">
-              (Lệch: LOCATION_EXCEPTION)
-            </text>
-            <line x1="16" y1="145" x2="254" y2="145" stroke="#E2E0D8" stroke-width="1" />
-            <text x="16" y="168" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="600" fill="#DC2626">
-              • Báo sự cố: ReportFieldIssue
-            </text>
-            <text x="28" y="188" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
-              -&gt; BLOCKED (3 lối thoát tất định)
-            </text>
+            <g transform="translate(0, 0)">
+              <rect x="0" y="0" width="270" height="215" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+              <text x="16" y="28" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#166534">
+                1. XÁC THỰC HIỆN TRƯỜNG
+              </text>
+              <text x="16" y="48" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+                Thứ tự độc lập (QR &amp; GPS):
+              </text>
+              <text x="16" y="72" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Quét QR đối soát danh tính cây
+              </text>
+              <text x="28" y="90" font-family="'Geist Mono', monospace" font-size="11" fill="#D97706">
+                (Hỏng: IDENTITY_EXCEPTION)
+              </text>
+              <text x="16" y="112" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Đo khoảng cách GPS (Mục tiêu &lt;=10m)
+              </text>
+              <text x="28" y="130" font-family="'Geist Mono', monospace" font-size="11" fill="#D97706">
+                (Lệch: LOCATION_EXCEPTION)
+              </text>
+              <line x1="16" y1="145" x2="254" y2="145" stroke="#E2E0D8" stroke-width="1" />
+              <text
+                x="16"
+                y="168"
+                font-family="'Noto Sans', sans-serif"
+                font-size="12"
+                font-weight="600"
+                fill="#DC2626"
+              >
+                • Báo sự cố: ReportFieldIssue
+              </text>
+              <text x="28" y="188" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                -&gt; BLOCKED (3 lối thoát tất định)
+              </text>
+            </g>
 
             <line x1="270" y1="108" x2="310" y2="108" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
 
             <!-- Block 2: Semantic Proof Profiles -->
-            <rect x="315" y="0" width="370" height="215" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
-            <text x="16" y="28" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#166534">
-              2. BẰNG CHỨNG THEO HỒ SƠ
-            </text>
+            <g transform="translate(315, 0)">
+              <rect x="0" y="0" width="370" height="215" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+              <text x="16" y="28" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#166534">
+                2. BẰNG CHỨNG THEO HỒ SƠ
+              </text>
 
-            <text x="16" y="52" font-family="'Geist Mono', monospace" font-size="12" font-weight="700" fill="#166534">
-              A. CHANGE_PROOF (Cắt tỉa, Đốn hạ):
-            </text>
-            <text x="28" y="70" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
-              Ảnh Trước -&gt; Checklist -&gt; Ảnh Sau
-            </text>
+              <text x="16" y="52" font-family="'Geist Mono', monospace" font-size="12" font-weight="700" fill="#166534">
+                A. CHANGE_PROOF (Cắt tỉa, Đốn hạ):
+              </text>
+              <text x="28" y="70" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                Ảnh Trước -&gt; Checklist -&gt; Ảnh Sau
+              </text>
 
-            <text x="16" y="100" font-family="'Geist Mono', monospace" font-size="12" font-weight="700" fill="#166534">
-              B. SERVICE_PROOF (Tưới nước, Bón phân):
-            </text>
-            <text x="28" y="118" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
-              Checklist -&gt; 01 Ảnh Hoàn thành
-            </text>
+              <text
+                x="16"
+                y="100"
+                font-family="'Geist Mono', monospace"
+                font-size="12"
+                font-weight="700"
+                fill="#166534"
+              >
+                B. SERVICE_PROOF (Tưới nước, Bón phân):
+              </text>
+              <text x="28" y="118" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                Checklist -&gt; 01 Ảnh Hoàn thành
+              </text>
 
-            <text x="16" y="148" font-family="'Geist Mono', monospace" font-size="12" font-weight="700" fill="#166534">
-              C. INSPECTION_PROOF (Khảo sát sâu bệnh):
-            </text>
-            <text x="28" y="166" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
-              Bảng phát hiện cấu trúc -&gt; Ảnh Hiện trạng
-            </text>
-            <text
-              x="16"
-              y="196"
-              font-family="'Noto Sans', sans-serif"
-              font-size="11"
-              font-style="italic"
-              fill="#68756B"
-            >
-              TaskType -&gt; ProofProfile (Cấm tùy tiện hạ cấp)
-            </text>
+              <text
+                x="16"
+                y="148"
+                font-family="'Geist Mono', monospace"
+                font-size="12"
+                font-weight="700"
+                fill="#166534"
+              >
+                C. INSPECTION_PROOF (Khảo sát sâu bệnh):
+              </text>
+              <text x="28" y="166" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                Bảng phát hiện cấu trúc -&gt; Ảnh Hiện trạng
+              </text>
+              <text
+                x="16"
+                y="196"
+                font-family="'Noto Sans', sans-serif"
+                font-size="11"
+                font-style="italic"
+                fill="#68756B"
+              >
+                TaskType -&gt; ProofProfile (Cấm tùy tiện hạ cấp)
+              </text>
+            </g>
 
             <line x1="685" y1="108" x2="725" y2="108" stroke="#166534" stroke-width="2" marker-end="url(#arr)" />
 
             <!-- Block 3: Review & Targeted Rework -->
-            <rect x="730" y="0" width="215" height="215" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
-            <text x="16" y="28" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#166534">
-              3. THẨM ĐỊNH &amp; LÀM LẠI
-            </text>
-            <text x="16" y="52" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
-              • Quản lý thẩm định 100%
-            </text>
-            <text x="16" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
-              • 4 Kết luận dứt điểm:
-            </text>
-            <text x="26" y="94" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
-              APPROVE -&gt; COMPLETED
-            </text>
-            <text x="26" y="114" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
-              APPROVE_WITH_EXCEPTION
-            </text>
-            <text x="26" y="134" font-family="'Geist Mono', monospace" font-size="11" fill="#D97706">
-              REQUEST_REWORK (Trọng tâm)
-            </text>
-            <text x="26" y="154" font-family="'Geist Mono', monospace" font-size="11" fill="#DC2626">
-              CANCEL -&gt; CANCELLED
-            </text>
-            <line x1="16" y1="168" x2="200" y2="168" stroke="#E2E0D8" stroke-width="1" />
-            <text x="16" y="188" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#166534">
-              Lưu vết đa phiên bản (Attempt 1..N)
-            </text>
-            <text x="16" y="204" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              COMPLETED -&gt; CareHistory
-            </text>
+            <g transform="translate(730, 0)">
+              <rect x="0" y="0" width="215" height="215" rx="6" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+              <text x="16" y="28" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#166534">
+                3. THẨM ĐỊNH &amp; LÀM LẠI
+              </text>
+              <text x="16" y="52" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Quản lý thẩm định 100%
+              </text>
+              <text x="16" y="74" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • 4 Kết luận dứt điểm:
+              </text>
+              <text x="26" y="94" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                APPROVE -&gt; COMPLETED
+              </text>
+              <text x="26" y="114" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                APPROVE_WITH_EXCEPTION
+              </text>
+              <text x="26" y="134" font-family="'Geist Mono', monospace" font-size="11" fill="#D97706">
+                REQUEST_REWORK (Trọng tâm)
+              </text>
+              <text x="26" y="154" font-family="'Geist Mono', monospace" font-size="11" fill="#DC2626">
+                CANCEL -&gt; CANCELLED
+              </text>
+              <line x1="16" y1="168" x2="200" y2="168" stroke="#E2E0D8" stroke-width="1" />
+              <text
+                x="16"
+                y="188"
+                font-family="'Noto Sans', sans-serif"
+                font-size="11"
+                font-weight="600"
+                fill="#166534"
+              >
+                Lưu vết đa phiên bản (Attempt 1..N)
+              </text>
+              <text x="16" y="204" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                COMPLETED -&gt; CareHistory
+              </text>
+            </g>
           </g>
         </g>
       </svg>
