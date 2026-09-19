@@ -220,13 +220,15 @@ File [`scripts/diagram_tool.py`](file:///d:/ki7/EXE/tree/scripts/diagram_tool.py
 >    - Mỗi cổng sở hữu `dependency_scope` độc lập (tài liệu canonical, hợp đồng RTM, file biểu đồ, validator tool, hoặc source surface tương ứng). Khi phạm vi thay đổi, bằng chứng cũ lập tức bị vô hiệu hóa (`DEPENDENCY_SCOPE_CHANGED`).
 >    - Kiểm toán mã băm định nghĩa cổng (`definition_hash = sha256(id|title|oracle|method|blocking|type)[:16]`) ngăn chặn việc âm thầm sửa đổi tiêu chí chấp nhận mà không chạy lại kiểm chứng.
 >    - Xác thực vật lý sự tồn tại của toàn bộ `artifact_refs` trên đĩa trước khi công nhận kết quả.
-> 3. **Bộ Kiểm Thử Độc Lập 12 Ca (12-Case Provenance Engine Self-Test):**
->    Bộ tự kiểm tra của `quality_gate_report.py` được mở rộng đạt **12/12 ca kiểm thử thành công**, bao quát toàn bộ các tình huống: thiếu bằng chứng, từ chối nguồn checklist marker, sai đường dẫn artifact, sai dòng dõi SHA, kế thừa hợp lệ/bị từ chối do đổi file tài liệu, lệch definition hash, sai lệch phân loại AUTOMATED/MANUAL/HYBRID, và lệnh thực thi thoát lỗi.
+> 3. **Bộ Kiểm Thử Độc Lập 14 Ca (14-Case Provenance & Oracle Engine Self-Test):**
+>    Bộ tự kiểm tra của `quality_gate_report.py` được mở rộng đạt **14/14 ca kiểm thử thành công**, bao quát toàn bộ các tình huống: thiếu bằng chứng, từ chối nguồn checklist marker, sai đường dẫn artifact, sai dòng dõi SHA, kế thừa hợp lệ/bị từ chối do đổi file tài liệu, lệch definition hash, sai lệch phân loại AUTOMATED/MANUAL/HYBRID, lệnh thực thi thoát lỗi, từ chối kế thừa khi tool hash thay đổi (`TOOL_HASH_MISMATCH`), và kiểm toán tĩnh triệt tiêu toàn bộ mã trả về giả lập `return True` (`ZERO_HARDCODED_PASS`).
 > 4. **Bằng Chứng Thực Nghiệm & Phân Bố Nguồn Gốc (Provenance Distribution):**
 >    - **113/113** Cổng Chất Lượng Bắt Buộc đạt **`[PASS]`**.
->    - Phân bố nguồn gốc bằng chứng: **106** Direct Final-SHA Automated, **5** Manual Inspection Records, **2** Hybrid Verified Records, **0** Missing, **0** Rejected, **0** Stale, **0** Invalid Artifact, **0** Dependency Scope Modified.
+>    - Phân bố nguồn gốc bằng chứng: **104** Direct Final-SHA Automated, **5** Manual Inspection Records, **4** Hybrid Verified Records (`RTM-007`, `RTM-009`, `VAL-012`, `VAL-013`), **0** Missing, **0** Rejected, **0** Stale, **0** Invalid Artifact, **0** Definition Hash Mismatches, **0** Dependency Scope Modified, **0** Tool Hash Mismatches.
+>    - Tỷ lệ bao phủ kiểm chứng Oracle (Acceptance Oracle Execution Coverage): **100.0%** (104 FULLY_EXECUTED, 4 HYBRID_VERIFIED, 5 MANUAL_VERIFIED, 0 HARDCODED_PASS, 0 NOT_IMPLEMENTED).
+>    - Sổ bộ máy tính tự động `dist/quality-evidence/evidence-index.json` đóng vai trò là registry trung tâm thẩm quyền (Authoritative Machine Registry).
 >    - Ranh giới mã nguồn được bảo toàn tuyệt đối: `apps/mobile/src/**` = 0 modified, `packages/**/src/**` = 0 modified.
->    - Toàn bộ các kiểm tra công cụ nền tảng (`git diff --check`, `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run mobile:export:android`, `diagram_tool self-test`) đạt 100% exit code `0`.
+>    - Toàn bộ các kiểm tra công cụ nền tảng (`git diff --check`, `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run mobile:export:android`, `diagram_tool self-test` 9/9, `quality_gate_report self-test` 14/14) đạt 100% exit code `0`.
 >
 > **Đường cơ sở chuẩn tắc (Canonical Baseline) chính thức được KHÓA.** Dự án sẵn sàng chuyển giao làm đầu vào cho pha tiếp theo:
 > **TECHNICAL ARCHITECTURE BASELINE RECONCILIATION**.

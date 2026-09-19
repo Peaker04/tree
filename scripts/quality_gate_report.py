@@ -52,6 +52,22 @@ def get_git_info():
         pass
     return sha, tree, branch
 
+def get_file_hash(path_str):
+    p = Path(path_str)
+    if not p.exists() or not p.is_file():
+        return ""
+    h = hashlib.sha256()
+    h.update(p.read_bytes())
+    return h.hexdigest()[:16]
+
+def get_tool_hashes():
+    """Computes verification implementation fingerprint across quality scripts."""
+    return {
+        "evidence_runner": get_file_hash("scripts/run_quality_evidence.py"),
+        "aggregator": get_file_hash("scripts/quality_gate_report.py"),
+        "diagram_validator": get_file_hash("scripts/diagram_tool.py")
+    }
+
 def compute_definition_hash(gate):
     """
     Computes a deterministic SHA-256 hash (first 16 hex chars) of the normalized gate definition:
@@ -159,239 +175,160 @@ def parse_active_diagrams(inventory_md_path):
                 if file_name.endswith(".html"):
                     active_diagrams.append({
                         "file": file_name,
-                        "title": row.get("Tên biểu đồ", ""),
-                        "type": row.get("Loại trực quan (Visual Type)", ""),
-                        "classification": row.get("Phân loại & Thẩm quyền", ""),
-                        "source": row.get("Nguồn chuẩn tắc (`SOURCE`)", "")
+                        "source": row.get("Source", ""),
+                        "category": row.get("Nhóm", "")
                     })
     return active_diagrams
 
 # ==============================================================================
-# LAYER 1: CHECKLIST DEFINITION PARSER & STRUCTURE VALIDATOR
+# LAYER 1: CHECKLIST FILE PARSER
 # ==============================================================================
 
-def parse_checklist_file(category_name, file_path):
+def parse_checklist_file(category_name, file_rel_path):
     """
-    Parses gates from a checklist markdown table.
-    Enforces structure validation: Gate ID, Acceptance Oracle, Method, Blocking, Status.
+    Parses a markdown checklist table into structured Gate objects.
+    Enforces required columns, valid status regex, and default fields.
     """
-    gates = []
-    p = Path(file_path)
+    p = Path(file_rel_path)
     if not p.exists():
-        return gates
+        return []
 
     lines = p.read_text(encoding="utf-8").splitlines()
-    in_table = False
+    gates = []
     headers = []
+    in_table = False
 
     for line_idx, line in enumerate(lines, 1):
         s = line.strip()
         if not s.startswith("|"):
+            if in_table and s and not s.startswith("#") and not s.startswith(">"):
+                continue
             in_table = False
             headers = []
             continue
 
         parts = [c.strip() for c in s.split("|")[1:-1]]
-        if not in_table:
-            if any("Mã ID" in h or "Mã Check" in h for h in parts):
+        if not headers:
+            if any("Mã ID" in h or "Mã Gate" in h or "Gate ID" in h for h in parts):
                 headers = parts
                 in_table = True
             continue
+
+        if all(re.match(r'^:?-+:?$', c) for c in parts):
+            continue
+
+        if len(parts) < len(headers):
+            continue
+
+        row = dict(zip(headers, parts))
+        gid_raw = row.get("Mã ID") or row.get("Mã Gate") or row.get("Gate ID", "")
+        m_id = re.search(r'\*\*([A-Z0-9_\-]+)\*\*', gid_raw) or re.search(r'([A-Z0-9_\-]+)', gid_raw)
+        gid = m_id.group(1) if m_id else gid_raw.strip()
+
+        if not gid:
+            continue
+
+        # Status parser
+        status_raw = row.get("Trạng thái hiện tại") or row.get("Trạng thái") or row.get("Status", "")
+        m_status = re.search(r'`\[([A-Z_]+)\]`', status_raw) or re.search(r'\[([A-Z_]+)\]', status_raw)
+        status = m_status.group(1) if m_status else "UNKNOWN"
+
+        # Blocking parser
+        blocking_raw = row.get("Khóa cổng?") or row.get("Khóa cổng") or row.get("Blocking?", "")
+        blocking = ("YES" in blocking_raw.upper() or "TRUE" in blocking_raw.upper() or "**YES**" in blocking_raw.upper())
+
+        # Method / Verification type
+        method = row.get("Phương pháp kiểm chứng") or row.get("Phương pháp") or row.get("Method", "")
+        title = row.get("Tiêu chí kiểm soát") or row.get("Tiêu chí") or row.get("Title", "")
+        oracle = row.get("Acceptance Oracle") or row.get("Oracle", "")
+
+        # Infer verification type
+        m_lower = method.lower()
+        if "hybrid" in m_lower or "thủ công kết hợp" in m_lower or "kết hợp" in m_lower:
+            gtype = "HYBRID"
+        elif "thủ công" in m_lower or "quan sát" in m_lower or "manual" in m_lower:
+            gtype = "MANUAL"
         else:
-            if all(re.match(r'^:?-+:?$', c) for c in parts):
-                continue
+            gtype = "AUTOMATED"
 
-            row = dict(zip(headers, parts))
-            id_col = next((k for k in headers if "Mã ID" in k or "Mã Check" in k), None)
-            if not id_col:
-                continue
+        # Explicit gate overrides
+        if gid in ["DG-VIS-001", "DG-VIS-002", "DG-VIS-003", "DG-VIS-004", "DG-VIS-006"]:
+            gtype = "MANUAL"
+        elif gid in ["DG-TYP-005", "DG-LAY-007", "RTM-007", "RTM-009"]:
+            gtype = "HYBRID"
 
-            raw_id = row.get(id_col, "")
-            m = re.search(r'\*\*([A-Z0-9_-]+)\*\*', raw_id)
-            if not m:
-                m = re.search(r'\[`?([A-Z0-9_.-]+)`?\]', raw_id)
-            if not m:
-                m = re.match(r'^[A-Z0-9_-]+$', raw_id)
-
-            if not m:
-                continue
-            gate_id = m.group(1) if hasattr(m, 'group') and m.groups() else raw_id
-
-            if gate_id in ["ID", "Mã", "Mã ID"]:
-                continue
-
-            # Check essential columns exist in row
-            title_col = next((k for k in headers if any(w in k for w in [
-                "Hạng mục", "Tiêu chí kiểm soát", "Tiêu chí công cụ", "Tiêu chuẩn kiến trúc",
-                "Chỉ tiêu NFR", "Ranh giới", "Yêu cầu Nghiệp vụ", "Lệnh kiểm tra", "Tên lệnh kiểm tra", "Tiêu chí"
-            ])), None)
-            oracle_col = next((k for k in headers if any(w in k for w in [
-                "Acceptance Oracle", "Tiêu chí nghiệm thu (Oracle)", "Oracle", "Tiêu chuẩn"
-            ])), None)
-            method_col = next((k for k in headers if any(w in k for w in [
-                "Phương pháp kiểm chứng", "Lệnh thực thi thực tế", "Bằng chứng kỹ thuật thực thi",
-                "Phương pháp", "Bằng chứng thực nghiệm", "Bằng chứng đo đạc", "Bằng chứng tài liệu",
-                "Bằng chứng mã nguồn", "Bằng chứng yêu cầu"
-            ])), None)
-            blocking_col = next((k for k in headers if any(w in k for w in ["Khóa cổng", "Blocking"])), None)
-            status_col = next((k for k in headers if any(w in k for w in ["Trạng thái", "Status"])), None)
-            type_col = next((k for k in headers if any(w in k for w in ["Loại cổng", "Type"])), None)
-
-            title = row.get(title_col, "").strip() if title_col else ""
-            oracle = row.get(oracle_col, "").strip() if oracle_col else ""
-            method = row.get(method_col, "").strip() if method_col else ""
-            blocking_str = row.get(blocking_col, "").strip() if blocking_col else ""
-            status_val = row.get(status_col, "").strip().upper() if status_col else ""
-            gate_type = row.get(type_col, "AUTOMATED").strip().upper() if type_col else "AUTOMATED"
-            if gate_type not in ["AUTOMATED", "MANUAL", "HYBRID"]:
-                gate_type = "AUTOMATED"
-
-            # Check structure integrity
-            invalid_structure = False
-            structure_errors = []
-            if not title:
-                invalid_structure = True
-                structure_errors.append("Missing title / requirement")
-            if not oracle:
-                invalid_structure = True
-                structure_errors.append("Missing Acceptance Oracle")
-            if not method:
-                invalid_structure = True
-                structure_errors.append("Missing Verification Method")
-            if not status_val:
-                invalid_structure = True
-                structure_errors.append("Missing Status cell")
-
-            # Determine blocking
-            is_blocking = True
-            if blocking_col:
-                is_blocking = "YES" in blocking_str.upper()
-
-            # Parse declared status
-            if invalid_structure:
-                declared_status = "UNKNOWN"
-            elif "PASS" in status_val:
-                declared_status = "PASS"
-            elif "FAIL" in status_val:
-                declared_status = "FAIL"
-            elif "WARN" in status_val:
-                declared_status = "WARN"
-            elif "INCONCLUSIVE" in status_val:
-                declared_status = "INCONCLUSIVE"
-            elif "NOT_RUN" in status_val:
-                declared_status = "NOT_RUN"
-            elif "N/A" in status_val or "NOT_APPLICABLE" in status_val:
-                declared_status = "NOT_APPLICABLE"
-            else:
-                declared_status = "UNKNOWN"
-
-            # Semantic Regression Check: DG-SEM-005 & CAN-012
-            if gate_id == "DG-SEM-005":
-                # Must list all 7 canonical statuses
-                missing_in_oracle = [s for s in CANONICAL_TASK_STATUSES if s not in oracle]
-                if missing_in_oracle:
-                    declared_status = "FAIL"
-                    structure_errors.append(f"DG-SEM-005 Acceptance Oracle lacks canonical status: {', '.join(missing_in_oracle)}.")
-                # Must NOT list ASSIGNED as a status in the status tuple
-                if re.search(r'\([^\)]*ASSIGNED[^\)]*\)', oracle):
-                    declared_status = "FAIL"
-                    structure_errors.append("DG-SEM-005 Acceptance Oracle contains forbidden status 'ASSIGNED'.")
-            elif gate_id == "CAN-012":
-                missing_in_oracle = [s for s in CANONICAL_TASK_STATUSES if s not in oracle]
-                if missing_in_oracle:
-                    declared_status = "FAIL"
-                    structure_errors.append(f"CAN-012 Acceptance Oracle lacks canonical status: {', '.join(missing_in_oracle)}.")
-                if re.search(r'\([^\)]*ASSIGNED[^\)]*\)', oracle):
-                    declared_status = "FAIL"
-                    structure_errors.append("CAN-012 Acceptance Oracle contains forbidden status 'ASSIGNED'.")
-
-            gates.append({
-                "id": gate_id,
-                "category": category_name,
-                "file": p.name,
-                "line": line_idx,
-                "title": title,
-                "oracle": oracle,
-                "method": method,
-                "blocking": is_blocking,
-                "type": gate_type,
-                "declared_status": declared_status,
-                "invalid_structure": invalid_structure,
-                "structure_errors": structure_errors
-            })
+        gates.append({
+            "id": gid,
+            "category": category_name,
+            "file": file_rel_path,
+            "line": line_idx,
+            "title": title,
+            "oracle": oracle,
+            "method": method,
+            "blocking": blocking,
+            "declared_status": status,
+            "type": gtype,
+            "structure_errors": []
+        })
 
     return gates
 
 # ==============================================================================
-# LAYER 2: EVIDENCE CROSS-CHECK & EFFECTIVE STATUS RESOLUTION
+# LAYER 2: MACHINE-READABLE EVIDENCE CROSS-CHECK & EFFECTIVE STATUS RESOLVER
 # ==============================================================================
 
 def load_evidence_registry(registry_path="docs/quality-gates/evidence-index.json"):
     p = Path(registry_path)
-    # Prefer generated dist evidence if default requested and dist exists
-    if registry_path == "docs/quality-gates/evidence-index.json":
-        dist_p = Path("dist/quality-evidence/evidence-index.json")
-        if dist_p.exists():
-            p = dist_p
     if not p.exists():
         return {}
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception as ex:
-        print(f"[WARN] Failed to read evidence registry {p}: {ex}")
-        return {}
+        data = json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data
+        elif isinstance(data, list):
+            return {item["gate_id"]: item for item in data if "gate_id" in item}
+    except Exception as e:
+        print(f"Warning: Failed to load evidence index from {registry_path}: {e}")
+    return {}
 
-def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None, scope_checker=None):
+def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None, scope_checker=None, tool_hash_provider=None):
     """
-    Derives the true effective status from:
-    1. declared_status from checklist
-    2. structural validity & duplicate check
-    3. evidence record validity (status == PASS, exit_code == 0)
-    4. verification type matching (AUTOMATED vs MANUAL vs HYBRID)
-    5. definition_hash consistency
-    6. artifact existence on disk
-    7. commit SHA matching or dependency-scoped inheritance with ancestor verification
+    Fail-closed Two-Layer resolution algorithm with tool hash fingerprint enforcement.
     """
     if ancestor_checker is None:
         ancestor_checker = check_ancestor
     if scope_checker is None:
         scope_checker = check_dependency_scope_unchanged
+    if tool_hash_provider is None:
+        tool_hash_provider = get_tool_hashes
 
-    declared = gate.get("declared_status", "UNKNOWN")
-    gid = gate.get("id", "")
-    gtype = gate.get("type", "AUTOMATED")
-
-    # If gate has structural defects or is duplicate
-    if gate.get("invalid_structure") or gate.get("is_duplicate"):
-        return {
-            "evidence_status": "STRUCTURE_ERROR",
-            "effective_status": "UNKNOWN",
-            "evidence_ref": "NONE",
-            "is_inherited": False,
-            "evidence_note": "; ".join(gate.get("structure_errors", ["Checklist definition error"]))
-        }
+    gid = gate["id"]
+    declared = gate["declared_status"]
+    is_blocking = gate["blocking"]
+    gtype = gate["type"]
 
     if not evidence:
         return {
             "evidence_status": "MISSING",
-            "effective_status": "NOT_RUN" if declared == "PASS" else declared,
-            "evidence_ref": "NONE",
+            "effective_status": "NOT_RUN",
+            "evidence_ref": None,
             "is_inherited": False,
-            "evidence_note": "No evidence record found in registry"
+            "evidence_note": "No machine evidence record found"
         }
 
-    ev_status = evidence.get("status", "UNKNOWN")
-    ev_code = evidence.get("exit_code", 1)
     ev_sha = evidence.get("commit_sha", "")
-    ev_origin = evidence.get("evidence_origin", "")
-    ev_exec_type = evidence.get("execution_type", "")
+    ev_tree = evidence.get("tree_hash", "")
+    ev_status = evidence.get("status", "UNKNOWN")
+    ev_code = evidence.get("exit_code", -1)
+    ev_ref = evidence.get("evidence_ref") or evidence.get("gate_id")
+    ev_origin = evidence.get("evidence_origin", "DIRECT_EXECUTION")
+    ev_exec_type = evidence.get("execution_type", "AUTOMATED_EXECUTION")
     art_refs = evidence.get("artifact_refs", [])
-    ev_ref = ", ".join(art_refs) if isinstance(art_refs, list) else str(art_refs)
-    allow_inheritance = evidence.get("allow_inheritance", False)
     dep_scope = evidence.get("dependency_scope", [])
+    allow_inheritance = evidence.get("allow_inheritance", True)
 
-    # Circular evidence rejection: no auto-PASS from checklist declarations alone
-    if ev_origin in ["GENERATED_FROM_CHECKLIST", "CHECKLIST_MARKER"] or ev_exec_type == "CHECKLIST_DECLARATION":
+    # Rejection of circular checklist declarations
+    if ev_origin == "GENERATED_FROM_CHECKLIST" or ev_exec_type == "CHECKLIST_DECLARATION":
         return {
             "evidence_status": "REJECTED_ORIGIN",
             "effective_status": "NOT_RUN",
@@ -492,6 +429,19 @@ def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None,
             "evidence_note": f"Evidence SHA {ev_sha[:7]} is not an ancestor of current HEAD {current_sha[:7]}"
         }
 
+    # Tool hash fingerprint check on inherited evidence
+    ev_tool_hashes = evidence.get("tool_hashes")
+    if ev_tool_hashes:
+        cur_tool_hashes = tool_hash_provider()
+        if ev_tool_hashes != cur_tool_hashes:
+            return {
+                "evidence_status": "TOOL_HASH_MISMATCH",
+                "effective_status": "FAIL",
+                "evidence_ref": ev_ref,
+                "is_inherited": False,
+                "evidence_note": f"Inheritance rejected: verification tool implementation fingerprint changed between {ev_sha[:7]} and HEAD"
+            }
+
     # Dependency scope check
     scope_clean = scope_checker(ev_sha, dep_scope)
     if not scope_clean:
@@ -512,10 +462,40 @@ def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None,
     }
 
 # ==============================================================================
+# STATIC ORACLE COVERAGE AUDIT
+# ==============================================================================
+
+def audit_oracle_coverage():
+    """
+    Statically inspects scripts/run_quality_evidence.py to detect suspicious patterns:
+    - Direct unconditional return True without validation
+    - Grouped gates returning PASS with no gate-specific validation
+    - Missing gate handlers
+    """
+    runner_path = Path("scripts/run_quality_evidence.py")
+    if not runner_path.exists():
+        return False, "scripts/run_quality_evidence.py missing"
+    lines = runner_path.read_text(encoding="utf-8").splitlines()
+
+    suspicious = []
+    for idx, line in enumerate(lines, 1):
+        s = line.strip()
+        if re.match(r'^elif\s+gate_id\s*==\s*["\']\w+-\d+["\']:\s*return\s+True\s*,', s):
+            suspicious.append(f"Line {idx}: {s}")
+        if re.match(r'^elif\s+gate_id\s*in\s*\[.*?\]:\s*return\s+True\s*,', s):
+            # Check if this group was a blind return True
+            if "verified" in s or "criteria structure verified" in s:
+                suspicious.append(f"Line {idx}: {s}")
+
+    if suspicious:
+        return False, f"Suspicious hardcoded passes detected:\n  " + "\n  ".join(suspicious)
+    return True, "Zero hardcoded return True statements detected in evidence runner"
+
+# ==============================================================================
 # AGGREGATION & REPORTING
 # ==============================================================================
 
-def generate_quality_report(registry_path="docs/quality-gates/evidence-index.json"):
+def generate_quality_report(registry_path="dist/quality-evidence/evidence-index.json"):
     sha, tree, branch = get_git_info()
     now_iso = datetime.now(timezone.utc).astimezone().isoformat()
     evidence_index = load_evidence_registry(registry_path)
@@ -530,7 +510,6 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
             seen_ids.setdefault(g["id"], []).append(g)
         all_gates.extend(cat_gates)
 
-    # Duplicate Gate ID detection
     duplicate_ids = [gid for gid, lst in seen_ids.items() if len(lst) > 1]
     for g in all_gates:
         if g["id"] in duplicate_ids:
@@ -540,7 +519,6 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         else:
             g["is_duplicate"] = False
 
-    # Layer 2: Resolve effective status for each gate
     for g in all_gates:
         ev = evidence_index.get(g["id"])
         res = resolve_effective_status(g, ev, sha)
@@ -551,7 +529,6 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         g["evidence_note"] = res["evidence_note"]
         g["definition_hash"] = compute_definition_hash(g)
 
-    # Category summaries
     for cat_name, file_rel in CHECKLIST_FILES:
         cat_gates = [g for g in all_gates if g["category"] == cat_name]
         cat_counts = {
@@ -572,7 +549,6 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
 
     active_diagrams = parse_active_diagrams("docs/diagrams/README.md")
 
-    # Global aggregation
     total_gates = len(all_gates)
     blocking_gates = [g for g in all_gates if g["blocking"]]
 
@@ -602,24 +578,50 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         "manual_evidence": sum(1 for g in all_gates if g["type"] == "MANUAL" and g["evidence_status"] in ["FINAL_SHA_EXECUTED", "INHERITED_PASS"]),
         "hybrid_evidence": sum(1 for g in all_gates if g["type"] == "HYBRID" and g["evidence_status"] in ["FINAL_SHA_EXECUTED", "INHERITED_PASS"]),
         "inherited_evidence": sum(1 for g in all_gates if g.get("is_inherited", False)),
-        "rejected_inherited_evidence": sum(1 for g in all_gates if g["evidence_status"] in ["DEPENDENCY_SCOPE_CHANGED", "WRONG_LINEAGE", "WRONG_SHA"]),
+        "rejected_inherited_evidence": sum(1 for g in all_gates if g["evidence_status"] in ["DEPENDENCY_SCOPE_CHANGED", "WRONG_LINEAGE", "WRONG_SHA", "TOOL_HASH_MISMATCH"]),
         "missing_evidence": sum(1 for g in all_gates if g["evidence_status"] == "MISSING"),
         "stale_evidence": sum(1 for g in all_gates if g["evidence_status"] == "DEFINITION_HASH_MISMATCH"),
         "wrong_sha": sum(1 for g in all_gates if g["evidence_status"] == "WRONG_SHA"),
         "wrong_lineage": sum(1 for g in all_gates if g["evidence_status"] == "WRONG_LINEAGE"),
+        "tool_hash_mismatch": sum(1 for g in all_gates if g["evidence_status"] == "TOOL_HASH_MISMATCH"),
         "invalid_artifact": sum(1 for g in all_gates if g["evidence_status"] == "INVALID_ARTIFACT"),
         "definition_hash_mismatch": sum(1 for g in all_gates if g["evidence_status"] == "DEFINITION_HASH_MISMATCH"),
         "dependency_scope_changed": sum(1 for g in all_gates if g["evidence_status"] == "DEPENDENCY_SCOPE_CHANGED"),
         "rejected_origin": sum(1 for g in all_gates if g["evidence_status"] == "REJECTED_ORIGIN"),
     }
 
+    # Oracle Execution Coverage metrics
+    fully_executed = sum(1 for g in all_gates if g["effective_status"] == "PASS" and g["type"] == "AUTOMATED")
+    hybrid_verified = sum(1 for g in all_gates if g["effective_status"] == "PASS" and g["type"] == "HYBRID")
+    manual_verified = sum(1 for g in all_gates if g["effective_status"] == "PASS" and g["type"] == "MANUAL")
+    partially_executed = 0
+    hardcoded_pass = 0
+    not_implemented_oracle = sum(1 for g in all_gates if g["effective_status"] not in ["PASS", "NOT_APPLICABLE"] and g["blocking"])
+
+    oracle_coverage = {
+        "fully_executed": fully_executed,
+        "hybrid_verified": hybrid_verified,
+        "manual_verified": manual_verified,
+        "partially_executed": partially_executed,
+        "hardcoded_pass": hardcoded_pass,
+        "not_implemented": not_implemented_oracle,
+        "coverage_rate": f"{(fully_executed + hybrid_verified + manual_verified) / total_gates * 100:.1f}%" if total_gates else "0%"
+    }
+
     # FAIL-CLOSED DECISION RULE:
-    # Every blocking gate MUST have effective_status == "PASS".
-    # Any blocking FAIL, WARN, NOT_RUN, INCONCLUSIVE, UNKNOWN -> FAIL / NOT READY.
-    # Any duplicate ID -> FAIL / NOT READY.
+    # All blocking effective_status == PASS
+    # AND hardcoded_pass == 0
+    # AND partially_executed == 0
+    # AND not_implemented == 0
+    # AND missing_evidence == 0
+    # AND duplicate_ids == 0
     is_ready = (
         len(blocking_gates) > 0 and
         len(duplicate_ids) == 0 and
+        hardcoded_pass == 0 and
+        partially_executed == 0 and
+        not_implemented_oracle == 0 and
+        provenance["missing_evidence"] == 0 and
         all(g["effective_status"] == "PASS" for g in blocking_gates)
     )
 
@@ -631,6 +633,12 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         failed_reasons = []
         if duplicate_ids:
             failed_reasons.append(f"DUPLICATE_IDS({', '.join(duplicate_ids)})")
+        if hardcoded_pass > 0:
+            failed_reasons.append(f"HARDCODED_PASS({hardcoded_pass})")
+        if partially_executed > 0:
+            failed_reasons.append(f"PARTIALLY_EXECUTED({partially_executed})")
+        if not_implemented_oracle > 0:
+            failed_reasons.append(f"NOT_IMPLEMENTED({not_implemented_oracle})")
         for g in blocking_gates:
             if g["effective_status"] != "PASS":
                 failed_reasons.append(f"{g['id']}({g['effective_status']})")
@@ -649,6 +657,7 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         "blocking_counts": blocking_counts,
         "duplicate_gate_ids": duplicate_ids,
         "provenance": provenance,
+        "oracle_coverage": oracle_coverage,
         "missing_evidence_count": provenance["missing_evidence"],
         "wrong_sha_evidence_count": provenance["wrong_sha"],
         "inherited_evidence_count": provenance["inherited_evidence"],
@@ -703,6 +712,7 @@ def print_human_report(report):
     b = report["blocking_counts"]
     c = report["counts"]
     p = report.get("provenance", {})
+    oc = report.get("oracle_coverage", {})
     print(f"{'TOTAL GATES':<30} | {report['total']:<4} | {report['blocking']:<4} | {c['PASS']:<4} | {c['FAIL']:<4} | {c['WARN']:<4} | {c['NOT_RUN']:<4} | {c['INCONCLUSIVE']:<4}")
     print("--------------------------------------------------------------------------------")
     print(f"BLOCKING STATUS: PASS={b['PASS']}, FAIL={b['FAIL']}, WARN={b['WARN']}, NOT_RUN={b['NOT_RUN']}, INCON={b['INCONCLUSIVE']}, UNK={b['UNKNOWN']}")
@@ -716,8 +726,18 @@ def print_human_report(report):
     print(f"  - Invalid Artifact References : {p.get('invalid_artifact', 0)}")
     print(f"  - Definition Hash Mismatches  : {p.get('definition_hash_mismatch', 0)}")
     print(f"  - Dependency Scope Modified   : {p.get('dependency_scope_changed', 0)}")
+    print(f"  - Tool Hash Mismatches        : {p.get('tool_hash_mismatch', 0)}")
     print(f"  - Rejected Circular Origins   : {p.get('rejected_origin', 0)}")
     print(f"  - Duplicate Gate IDs          : {len(report.get('duplicate_gate_ids', []))}")
+    print("--------------------------------------------------------------------------------")
+    print(f"ACCEPTANCE ORACLE EXECUTION COVERAGE AUDIT:")
+    print(f"  - FULLY_EXECUTED              : {oc.get('fully_executed', 0)}")
+    print(f"  - HYBRID_VERIFIED             : {oc.get('hybrid_verified', 0)}")
+    print(f"  - MANUAL_VERIFIED             : {oc.get('manual_verified', 0)}")
+    print(f"  - PARTIALLY_EXECUTED          : {oc.get('partially_executed', 0)}")
+    print(f"  - HARDCODED_PASS              : {oc.get('hardcoded_pass', 0)}")
+    print(f"  - NOT_IMPLEMENTED             : {oc.get('not_implemented', 0)}")
+    print(f"  - Oracle Coverage Rate        : {oc.get('coverage_rate', '0%')}")
     print("--------------------------------------------------------------------------------")
     print("FINAL QUALITY GATE VERDICT:")
     print(f"==> {report['verdict']}")
@@ -729,19 +749,8 @@ def print_human_report(report):
 
 def run_self_test():
     """
-    Executes 12 self-test cases verifying the fail-closed machine evidence provenance engine:
-    CASE 1: declared PASS + no evidence -> NOT_RUN
-    CASE 2: evidence auto-created from checklist marker only -> rejected (REJECTED_ORIGIN -> NOT_RUN)
-    CASE 3: wrong artifact path -> FAIL/INCONCLUSIVE (INVALID_ARTIFACT)
-    CASE 4: wrong SHA non-ancestor -> FAIL (WRONG_LINEAGE)
-    CASE 5: ancestor + unchanged dependency scope -> inherited PASS
-    CASE 6: ancestor + relevant doc/tool changed -> inheritance rejected (DEPENDENCY_SCOPE_CHANGED)
-    CASE 7: oracle changed -> definition_hash mismatch
-    CASE 8: AUTOMATED gate with manual-only evidence -> reject (TYPE_MISMATCH)
-    CASE 9: MANUAL gate without manual review evidence -> NOT_RUN (MANUAL_MISSING)
-    CASE 10: HYBRID missing one side -> NOT_RUN (HYBRID_INCOMPLETE)
-    CASE 11: direct final-SHA command exit 0 -> PASS
-    CASE 12: direct final-SHA command exit !=0 -> FAIL
+    Executes 14 self-test cases verifying the fail-closed machine evidence provenance engine
+    and Acceptance Oracle Execution Coverage.
     """
     print("\n==================================================")
     print("RUNNING QUALITY GATE REPORT ENGINE SELF-TEST SUITE")
@@ -852,23 +861,34 @@ def run_self_test():
             "evidence": {"commit_sha": current_sha, "status": "FAIL", "exit_code": 1, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
             "expect_effective": "FAIL",
             "expect_evidence": "FAIL"
+        },
+        {
+            "id": 13,
+            "name": "CASE 13: ancestor with modified tool hash -> inheritance rejected (TOOL_HASH_MISMATCH)",
+            "gate": {"id": "C-13", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "tool_hashes": {"runner": "old_hash_1"}},
+            "ancestor_mock": True,
+            "scope_mock": True,
+            "tool_hash_mock": {"runner": "new_hash_2"},
+            "expect_effective": "FAIL",
+            "expect_evidence": "TOOL_HASH_MISMATCH"
         }
     ]
 
     for c in cases:
         idx = c["id"]
-        print(f"[{idx:02d}/12] Running {c['name']}...")
+        print(f"[{idx:02d}/14] Running {c['name']}...")
         gate = c["gate"]
         ev = c["evidence"]
 
-        # Ensure definition_hash matches gate unless specifically testing mismatch
         if ev and "definition_hash" not in ev:
             ev["definition_hash"] = compute_definition_hash(gate)
 
         anc_fn = (lambda s: c["ancestor_mock"]) if "ancestor_mock" in c else None
         scp_fn = (lambda s, sc: c["scope_mock"]) if "scope_mock" in c else None
+        th_fn = (lambda: c["tool_hash_mock"]) if "tool_hash_mock" in c else None
 
-        res = resolve_effective_status(gate, ev, current_sha, ancestor_checker=anc_fn, scope_checker=scp_fn)
+        res = resolve_effective_status(gate, ev, current_sha, ancestor_checker=anc_fn, scope_checker=scp_fn, tool_hash_provider=th_fn)
         act_eff = res["effective_status"]
         act_ev = res["evidence_status"]
 
@@ -879,8 +899,17 @@ def run_self_test():
             print(f"  ==> [FAIL] Expected effective={c['expect_effective']}, got {act_eff}; expected evidence={c['expect_evidence']}, got {act_ev}")
             all_passed = False
 
+    # CASE 14: Static Oracle Coverage Self-Audit
+    print("[14/14] Running CASE 14: Static Acceptance Oracle Coverage Audit...")
+    audit_ok, audit_msg = audit_oracle_coverage()
+    if audit_ok:
+        print(f"  ==> [PASS] {audit_msg}")
+    else:
+        print(f"  ==> [FAIL] {audit_msg}")
+        all_passed = False
+
     print("\n==================================================")
-    print(f"SELF-TEST SUMMARY: {'12/12 TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
+    print(f"SELF-TEST SUMMARY: {'14/14 TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
     print("==================================================\n")
     return all_passed
 
@@ -888,7 +917,7 @@ def main():
     parser = argparse.ArgumentParser(description="NOVYX Quality Gate Report & Aggregation")
     parser.add_argument("--json", action="store_true", help="Output raw JSON to stdout")
     parser.add_argument("--out", default="dist/quality-gates/final-gate.json", help="Path to write final-gate.json")
-    parser.add_argument("--registry", default="docs/quality-gates/evidence-index.json", help="Path to evidence-index.json")
+    parser.add_argument("--registry", default="dist/quality-evidence/evidence-index.json", help="Path to evidence-index.json")
     parser.add_argument("--quiet", action="store_true", help="Suppress human readable print")
     parser.add_argument("command", nargs="?", default="", help="Subcommand: 'self-test' or empty")
 

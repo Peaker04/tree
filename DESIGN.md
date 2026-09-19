@@ -402,10 +402,11 @@ Compliance with mobile accessibility standards is mandatory:
 1. **TalkBack Labels:** Every interactive element must define `accessibilityRole="button"` and a descriptive Vietnamese `accessibilityLabel` (e.g., `accessibilityLabel="Thông báo, 2 tin chưa đọc"`).
 2. **Screen Reader Headers:** Major section titles must define `accessibilityRole="header"`.
 3. **Touch Targets:** Tap targets must meet the minimum 44×44dp boundary.
-4. **Contrast Compliance:**
-   - Forest Depths (`#1c3a13`) on Snow White (`#fcfcf7`): Contrast ratio **14.2:1** (Passes AAA).
-   - Ink (`#13231a`) on Snow White (`#fcfcf7`): Contrast ratio **15.8:1** (Passes AAA).
-   - Pewter (`#64748b`) on Snow White (`#fcfcf7`): Contrast ratio **5.1:1** (Passes AA).
+4. **Contrast Compliance (WCAG AA minimum 4.5:1):**
+   - Forest Depths (`#1c3a13`) on Snow White (`#fcfcf7`): Contrast ratio **14.2:1** (Passes AAA, well above 4.5:1 minimum).
+   - Ink (`#13231a`) on Snow White (`#fcfcf7`): Contrast ratio **15.8:1** (Passes AAA, well above 4.5:1 minimum).
+   - Pewter (`#64748b`) on Snow White (`#fcfcf7`): Contrast ratio **5.1:1** (Passes AA, above 4.5:1 minimum for body text).
+   - **Minimum enforced:** All body text must maintain $\ge 4.5:1$ contrast; large text $\ge 3:1$.
 5. **Color Independence:** Ensure all colored status dots and badges are paired with descriptive text.
 
 ---

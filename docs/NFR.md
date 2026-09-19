@@ -8,6 +8,16 @@ Tài liệu này là chuẩn mực duy nhất định nghĩa **CÁC YÊU CẦU P
 
 Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng dụng phải mượt mà"). Mọi yêu cầu chất lượng bắt buộc phải tuân theo cấu trúc 9 thành phần có thể kiểm chứng bằng thực nghiệm:
 
+### Nhóm chất lượng được quản lý trong tài liệu này
+
+Năm nhóm thuộc tính chất lượng chính (`Quality Attribute Groups`) được theo dõi và kiểm chứng:
+
+1. **Hiệu năng** — UI Responsiveness, rendering performance, list virtualization
+2. **Ngoại tuyến & Khả năng phục hồi** — Offline resilience, data loss prevention, outbox queue
+3. **Bảo mật** — Token lifecycle, data integrity, session management
+4. **Khả năng tiếp cận & Tiện dụng** — Accessibility, outdoor usability, Vietnamese typography
+5. **Khả năng bảo trì** — Code structure, testability, architectural constraints
+
 ---
 
 ### QAS-PERF-01: Hiệu năng hiển thị danh sách lớn ngoài thực địa
@@ -24,7 +34,11 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
   - `[TARGET SLO]`: Tỷ lệ khung hình rơi (Dropped frames) $< 5\%$; thời gian kết xuất khung hình hướng tới $\le 16.6\text{ms}$ (60 FPS).
   - `[BENCHMARK CONTEXT]`: Thiết bị Android phổ thông RAM 3GB–4GB, danh sách tham chiếu 200–1.000 bản ghi.
   - `[NEEDS_MEASUREMENT]`: Ngưỡng tải chính xác và giới hạn bộ nhớ cụ thể cần đo đạc thực nghiệm trên thiết bị mục tiêu ở pha Kiến trúc kỹ thuật.
-- **Phương thức kiểm chứng (Verification Method):** Đo đạc qua React Native DevTools / Systrace trên máy ảo và thiết bị thật.
+- **Source:** `[APPROVED REQUIREMENT]`
+- **Stimulus:** Fling scroll 200+ items
+- **Response:** Frames rendered at target FPS
+- **Context:** Mid-range Android device, outdoor field use
+- **Phương thức kiểm chứng (Verification Method):** Đo đạc qua Profiler (React Native DevTools / Systrace) và Network Throttling trên máy ảo và thiết bị thật.
 
 ---
 
@@ -44,8 +58,13 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
   - `[APPROVED REQUIREMENT]`: $0\%$ dữ liệu bằng chứng đã chụp và checklist đã hoàn thành bị mất khi rớt mạng.
   - `[APPROVED REQUIREMENT]`: Toàn bộ chuỗi bằng chứng theo hồ sơ nhiệm vụ vẫn được ghi nhận đầy đủ với timestamp cục bộ chính xác.
   - `[NEEDS_DECISION]`: Lựa chọn engine lưu trữ bền vững ngoại tuyến (SQLite vs MMKV) cần quyết định qua `ADR-PROPOSED-02`.
-- **Tùy chọn kỹ thuật tham chiếu (Reference Implementation Option):** Outbox Queue tuần tự (FIFO) với exponential backoff.
-- **Phương thức kiểm chứng (Verification Method):** Kiểm thử ngắt mạng (Airplane mode test) trên máy thật; khôi phục mạng và kiểm tra dữ liệu nhận được trên server.
+  - `[NEEDS_MEASUREMENT]`: Dung lượng RAM tối đa mà Outbox snapshot được giữ an toàn trên thiết bị phổ thông cần đo đạc thực nghiệm.
+- **Source:** `[APPROVED REQUIREMENT]`
+- **Stimulus:** Network drop mid-evidence collection
+- **Response:** Outbox persisted, zero data loss
+- **Context:** Field use, 3G/4G dead zone
+- **Tùy chọn kỹ thuật tham chiếu (Reference Implementation Option):** Outbox Queue tuần tự (FIFO) với exponential backoff; RAM snapshot fallback.
+- **Phương thức kiểm chứng (Verification Method):** Kiểm thử ngắt mạng (Airplane mode test) trên máy thật; khôi phục mạng và kiểm tra dữ liệu nhận được trên server; Network Throttling qua Android emulator.
 
 ---
 
@@ -60,8 +79,36 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
 - **Chỉ tiêu đo lường & Phân loại:**
   - `[APPROVED REQUIREMENT]`: Nhân viên không phải đi lại từ đầu các khâu đã hoàn thành hợp lệ trước đó.
   - `[TARGET SLO]`: Thời gian phục hồi về đúng màn hình tác vụ trước khi tắt hướng tới mục tiêu $\le 2$ giây.
+  - `[NEEDS_MEASUREMENT]`: Kích thước tối đa của state snapshot an toàn cho thiết bị RAM 2GB cần đo đạc thực nghiệm.
+- **Source:** `[APPROVED REQUIREMENT]`
+- **Stimulus:** OS kills app during camera session
+- **Response:** State fully recovered on relaunch
+- **Context:** Android low-RAM device, field workflow
 - **Tùy chọn kỹ thuật tham chiếu (Reference Implementation Option):** Local Persistence lưu draft ngay sau mỗi bước chụp ảnh hoặc tích checklist.
-- **Phương thức kiểm chứng (Verification Method):** Thử nghiệm bật chế độ "Don't keep activities" trên Android Developer Options và kiểm tra độ bền dữ liệu.
+- **Phương thức kiểm chứng (Verification Method):** Thử nghiệm bật chế độ "Don't keep activities" trên Android Developer Options; Automated Contract Test để xác nhận state schema tồn tại sau kill.
+
+---
+
+### QAS-FAULT-01: Xử lý lỗi hệ thống khi toàn bộ tầng dịch vụ không khả dụng
+
+- **ID:** `QAS-FAULT-01`
+- **Thuộc tính chất lượng (Quality Attribute):** **Fault Tolerance / Graceful Degradation** (`[APPROVED REQUIREMENT]`)
+- **Kịch bản vận hành:** Toàn bộ backend API trả về `503 Service Unavailable` hoặc không phản hồi trong thời gian dài.
+- **Kích hoạt (Trigger):** Mọi yêu cầu HTTP trả về lỗi 5xx hoặc timeout trong $> 10$ giây.
+- **Ngữ cảnh kiểm thử tham chiếu:** Nhân viên đang ở màn hình nhiệm vụ, không có dữ liệu cache offline khả dụng.
+- **Phản ứng kỳ vọng:**
+  - Ứng dụng hiển thị trạng thái lỗi có thể hành động (Actionable Error State), không crash.
+  - Cung cấp nút "Thử lại" (Retry) rõ ràng.
+  - Dữ liệu đã nhập cục bộ được bảo toàn trong local storage.
+  - Không chuyển hướng người dùng về trang đăng nhập khi lỗi là lỗi mạng (không phải lỗi xác thực).
+- **Chỉ tiêu đo lường & Phân loại:**
+  - `[APPROVED REQUIREMENT]`: Ứng dụng không crash khi toàn bộ API trả về lỗi.
+  - `[TARGET SLO]`: Thời gian phát hiện và hiển thị lỗi $\le 15$ giây sau khi mất phản hồi.
+- **Source:** `[APPROVED REQUIREMENT]`
+- **Stimulus:** All API endpoints return 503 or timeout
+- **Response:** Graceful degraded UI, no crash, retry available
+- **Context:** Field use, server outage scenario
+- **Phương thức kiểm chứng (Verification Method):** Automated Contract Test với mock server trả về 503; kiểm tra crash-free logging; Profiler kiểm tra memory không tăng đột biến khi retry loop.
 
 ---
 
@@ -77,7 +124,7 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
   - Vùng chạm (Touch Target) của mọi nút thao tác chính đạt tối thiểu $48 \times 48\text{px}$ (khuyến nghị $48 - 52\text{px}$ chiều cao).
   - Không có hiện tượng cắt cụt chữ tiếng Việt (No ugly text truncation) làm mất nghĩa từ vựng.
 - **Thước đo / Chấp thuận:** Toàn bộ bảng màu tuân thủ nghiêm ngặt `DESIGN.md` (nền `snowWhite`, chữ `forestDepths`, nút bấm `forestDepths` hoặc `limePulse` tương phản cao).
-- **Bằng chứng kiểm chứng:** Kiểm toán trực quan ngoài trời nắng thực tế và đo tỷ lệ tương phản bằng công cụ Accessibility Inspector.
+- **Bằng chứng kiểm chứng:** Kiểm toán trực quan ngoài trời nắng thực tế và đo tỷ lệ tương phản bằng WCAG Contrast Analyzer.
 - **Trạng thái MVP:** **MUST HAVE**
 
 ---
@@ -91,7 +138,7 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
 - **Ngữ cảnh (Context):** Nhân viên đang ở màn hình Review chuẩn bị nộp báo cáo.
 - **Phản ứng kỳ vọng:** Ứng dụng tự động sử dụng Refresh Token để lấy Access Token mới trong im lặng (Silent Token Refresh); nếu Refresh Token cũng hết hạn, ứng dụng lưu bản nháp form vào local storage trước khi điều hướng về màn hình đăng nhập.
 - **Thước đo / Chấp thuận:** Người dùng không bị mất trắng đoạn ghi chú vừa nhập sau khi đăng nhập lại.
-- **Bằng chứng kiểm chứng:** Giả lập token hết hạn trong network interceptor và kiểm tra form draft tồn lưu.
+- **Bằng chứng kiểm chứng:** Giả lập token hết hạn trong network interceptor và kiểm tra form draft tồn lưu; Automated Contract Test.
 - **Trạng thái MVP:** **MUST HAVE**
 
 ---

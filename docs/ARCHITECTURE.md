@@ -212,3 +212,16 @@ Các quyết định kiến trúc sau đây được nhận diện từ quá tr�
 | **ADR-PROPOSED-04** | Cơ chế Outbox Queue & Retry Policy cho đồng bộ ngoại tuyến                                   | `[PROPOSED]`         | Hàng đợi tuần tự (FIFO) với exponential backoff, phân biệt lỗi 4xx và 5xx/mạng.                              |
 | **ADR-PROPOSED-05** | Hợp đồng API cho Báo cáo sự cố (`FieldIssue`) và 3 lối thoát của `BLOCKED`                   | `[PROPOSED]`         | Bổ sung endpoints `POST /tasks/:id/field-issue` và `POST /tasks/:id/resolve-blocked` vào `@novyx/contracts`. |
 | **ADR-PROPOSED-06** | Hợp đồng API cho Phê duyệt có ngoại lệ (`approve_with_exception`)                            | `[PROPOSED]`         | Cập nhật payload `ReviewDecisionRequest` và bổ sung cờ ngoại lệ vào `CareHistoryDto`.                        |
+
+---
+
+## 7. Hợp đồng API Đề Xuất — Chưa Triển Khai (Proposed Contract Extensions)
+
+> **Phân loại:** `[PROPOSED]` — Các kiểu dữ liệu dưới đây **chưa tồn tại** trong `packages/contracts/src/index.ts`. Chúng được mô tả ở đây với mục đích giữ chỗ (placeholder) cho giai đoạn thiết kế API, chờ phê duyệt ADR chính thức.
+
+| Tên kiểu dữ liệu (PROPOSED) | Mô tả nghiệp vụ                                          | Trạng thái   |
+| :-------------------------- | :------------------------------------------------------- | :----------- |
+| `StartTaskRequest`          | Payload kích hoạt chuyển trạng thái Task → `IN_PROGRESS` | `[PROPOSED]` |
+| `ReportFieldIssueRequest`   | Payload báo sự cố hiện trường từ Staff                   | `[PROPOSED]` |
+| `ResolveBlockedRequest`     | Payload giải quyết lối thoát cho Task `BLOCKED`          | `[PROPOSED]` |
+| `CancelTaskRequest`         | Payload hủy Task với lý do (reason) tường minh           | `[PROPOSED]` |

@@ -97,3 +97,5 @@ Hệ thống Quality Gates của NOVYX GreenOps bao gồm các tập tài liệu
    _Sổ Bộ Bằng Chứng Thực Tế (Evidence Ledger)._ Nhật ký ghi lại toàn bộ các lệnh kiểm tra, exit code, hash commit, và đường dẫn artifact của dự án.
 8. [`docs/quality-gates/FINAL-GATE-PROTOCOL.md`](FINAL-GATE-PROTOCOL.md)  
    _Giao thức Phán Quyết Cổng Cuối Cùng & Xác thực Hai Lượt (Two-Pass Verification)._ Quy định quy trình Pass A (kiểm tra sau sửa đổi) và Pass B (tái kiểm tra độc lập trên môi trường sạch), checklist khóa đường cơ sở tổng hợp.
+9. `dist/quality-evidence/evidence-index.json`
+   _Sổ Bộ Bằng Chứng Máy Tính Thẩm Quyền (Authoritative Machine Evidence Registry)._ Chứa 100% bản ghi thực thi khách quan (stdout/stderr, exit code, execution time, structured data, SHA, tool hashes) của toàn bộ 113 cổng chất lượng, phục vụ công cụ phán quyết `scripts/quality_gate_report.py`.

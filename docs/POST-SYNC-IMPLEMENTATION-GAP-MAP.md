@@ -59,3 +59,18 @@ Tài liệu này xác định chi tiết khoảng cách kỹ thuật giữa **Hi
    - Bổ sung 4 kết luận duyệt tại `ManagerReview`.
    - Bổ sung luồng xử lý sự cố `BLOCKED` (Resume, Reassign, Cancel).
    - Quản trị Loại việc `TaskType $\to$ ProofProfile` khi tạo việc.
+
+---
+
+## 3. Chỉ mục RTM — Ánh xạ sang Business Requirement IDs (RTM Cross-Reference)
+
+Bảng dưới đây ánh xạ tường minh các Business Requirement IDs (BR-xx) sang các hàng gap tương ứng ở Section 2, phục vụ cơ chế kiểm chứng tự động.
+
+| BR ID | Gap Hàng | Mô tả ngắn                                                          | Trạng thái RTM          |
+| :---- | :------- | :------------------------------------------------------------------ | :---------------------- |
+| BR-03 | Hàng 4   | `StartTask` command — khởi đầu thực địa tất định                    | `PARTIALLY_IMPLEMENTED` |
+| BR-04 | Hàng 1   | `CHANGE_PROOF` profile — thu thập bằng chứng ngữ nghĩa              | `PARTIALLY_IMPLEMENTED` |
+| BR-06 | Hàng 5   | `SubmitTaskEvidence` — nộp chuỗi bằng chứng nghiệm thu              | `PARTIALLY_IMPLEMENTED` |
+| BR-08 | Hàng 8   | `ReviewRequestRework` — yêu cầu làm lại có `targetedArea`           | `PARTIALLY_IMPLEMENTED` |
+| BR-11 | Hàng 14  | `CareHistory` chỉ sinh từ task `COMPLETED` (chứng vi phạm hiện tại) | `PARTIALLY_IMPLEMENTED` |
+| BR-12 | Hàng 2   | `CreateTask` với `TaskType → ProofProfile` mapping                  | `PARTIALLY_IMPLEMENTED` |

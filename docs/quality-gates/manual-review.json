@@ -20,7 +20,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Cấu trúc 2 cột song song hiển thị cân đối; nhãn mũi tên có background plate che chắn hoàn hảo; chữ Tiếng Việt đầy đủ dấu thanh; độ tương phản đạt chuẩn WCAG AA."
+      "findings": "Cấu trúc 2 cột song song hiển thị cân đối; nhãn mũi tên có background plate che chắn hoàn hảo; chữ Tiếng Việt đầy đủ dấu thanh; độ tương phản đạt chuẩn WCAG AA.",
+      "artifact_sha256": "28d704a527d4787c7a50ed36ae2b7295486d3ed7cf3734d280e88f0123066a78"
     },
     {
       "diagram": "proposed-02-mvp-operational-swimlane.html",
@@ -38,7 +39,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Làn swimlane Nhân viên / Quản lý phân tách rõ ràng; các thẻ card mở rộng chứa chữ thoáng đãng; 2 nhãn rẽ nhánh 11px sắc nét; không có connector cắt xuyên nội thất card."
+      "findings": "Làn swimlane Nhân viên / Quản lý phân tách rõ ràng; các thẻ card mở rộng chứa chữ thoáng đãng; 2 nhãn rẽ nhánh 11px sắc nét; không có connector cắt xuyên nội thất card.",
+      "artifact_sha256": "bd493bb79bc383f00235e4f55ed0f9a72f6c8b7c7c2257c27de78096de5af454"
     },
     {
       "diagram": "proposed-03-minimal-task-lifecycle.html",
@@ -56,7 +58,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "7 trạng thái tạo chu trình khép kín; đường loop ngược RequestRework có nhãn pill che chắn; 3 lối thoát sự cố BLOCKED màu hổ phách cảnh báo rõ rệt; marker gắn chính xác."
+      "findings": "7 trạng thái tạo chu trình khép kín; đường loop ngược RequestRework có nhãn pill che chắn; 3 lối thoát sự cố BLOCKED màu hổ phách cảnh báo rõ rệt; marker gắn chính xác.",
+      "artifact_sha256": "02ab656c0bf3ba939e74b38044b1baccbda4f418e3f19547b1e043a1008d1c2e"
     },
     {
       "diagram": "proposed-04-proof-policy-and-rework.html",
@@ -74,7 +77,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "3 cột đại diện cho 3 Profile (CHANGE, SERVICE, INSPECTION) định dạng chuẩn; khối Rework giải thích cơ chế lưu vết đa phiên bản rõ ràng; không tràn mép hay dính viền."
+      "findings": "3 cột đại diện cho 3 Profile (CHANGE, SERVICE, INSPECTION) định dạng chuẩn; khối Rework giải thích cơ chế lưu vết đa phiên bản rõ ràng; không tràn mép hay dính viền.",
+      "artifact_sha256": "2fbcd5db9f3f29e6618334036277b60bfeb4d85d7255fed3bab5572f74227f03"
     },
     {
       "diagram": "01-product-capability-map.html",
@@ -92,7 +96,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "5 nhóm năng lực chuẩn từ PRODUCT.md; phân cấp Core Domain nổi bật với viền xanh lá đậm; nhãn phụ và mô tả cỡ chữ 11-20px; khoảng cách giữa các card tối thiểu 16px."
+      "findings": "5 nhóm năng lực chuẩn từ PRODUCT.md; phân cấp Core Domain nổi bật với viền xanh lá đậm; nhãn phụ và mô tả cỡ chữ 11-20px; khoảng cách giữa các card tối thiểu 16px.",
+      "artifact_sha256": "43dae1c5162e8f73417f634bf1400b7a391127bad7fd359d727982b19eecaf5f"
     },
     {
       "diagram": "02-domain-context-map.html",
@@ -110,7 +115,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Quan hệ Upstream/Downstream hiển thị chuẩn xác; nhãn quan hệ U/D và Customer-Supplier nằm trên pill có nền che chắn; không còn chuỗi 5 bước lỗi thời."
+      "findings": "Quan hệ Upstream/Downstream hiển thị chuẩn xác; nhãn quan hệ U/D và Customer-Supplier nằm trên pill có nền che chắn; không còn chuỗi 5 bước lỗi thời.",
+      "artifact_sha256": "8865631b9ac6ab09afac39bbab6e2550c23a7f7d76ad834d95b23823642eaf7d"
     },
     {
       "diagram": "07-action-eligibility-security-matrix.html",
@@ -128,7 +134,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Ma trận phân quyền hiển thị dạng bảng trực quan sắc nét; các ký hiệu tick/cross phân biệt rõ quyền Staff vs Manager; độ tương phản màu chữ và nền đạt WCAG AA."
+      "findings": "Ma trận phân quyền hiển thị dạng bảng trực quan sắc nét; các ký hiệu tick/cross phân biệt rõ quyền Staff vs Manager; độ tương phản màu chữ và nền đạt WCAG AA.",
+      "artifact_sha256": "421a28885867674d9fb7949d67a58c17cec4d5d0b546f50c08b8b2b0764cbffc"
     },
     {
       "diagram": "08-role-information-architecture.html",
@@ -146,7 +153,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Cấu trúc thanh điều hướng Notched Bottom Nav 5 vị trí thể hiện chính xác; toàn bộ nhãn đạt 11px-16px; cây màn hình phân nhánh rành mạch."
+      "findings": "Cấu trúc thanh điều hướng Notched Bottom Nav 5 vị trí thể hiện chính xác; toàn bộ nhãn đạt 11px-16px; cây màn hình phân nhánh rành mạch.",
+      "artifact_sha256": "16471c90cfaa6ac80aef77c85a07e1de4a3f7976abf9eb8a37d121804e79c7d1"
     },
     {
       "diagram": "09-system-current-state.html",
@@ -164,7 +172,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Biểu đồ mang nhãn HISTORICAL AS-IS; phản ánh đúng khối monolithic MobileApp 2.054 dòng và bộ nhớ đệm RAM; các hộp cảnh báo rủi ro viền đỏ rõ nét."
+      "findings": "Biểu đồ mang nhãn HISTORICAL AS-IS; phản ánh đúng khối monolithic MobileApp 2.054 dòng và bộ nhớ đệm RAM; các hộp cảnh báo rủi ro viền đỏ rõ nét.",
+      "artifact_sha256": "fa14132735f6e885e85365fabb13a9ebf17a90b6b8a8e8a2beecb107c5bc01e1"
     },
     {
       "diagram": "10-system-target-architecture.html",
@@ -182,7 +191,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Clean Architecture hiển thị đúng chiều phụ thuộc hướng tâm; mang nhãn rõ ràng PROPOSED ARCHITECTURE (CHỜ DUYỆT ADR); safe padding các hộp đạt chuẩn."
+      "findings": "Clean Architecture hiển thị đúng chiều phụ thuộc hướng tâm; mang nhãn rõ ràng PROPOSED ARCHITECTURE (CHỜ DUYỆT ADR); safe padding các hộp đạt chuẩn.",
+      "artifact_sha256": "9e2e5ba6eed6d06198d463f491c99a6c39f6b724d2c6b3ac8a2bf9ec46acf208"
     },
     {
       "diagram": "12-architecture-dependency-map.html",
@@ -200,7 +210,8 @@
         "DG-TYP-005",
         "DG-LAY-007"
       ],
-      "findings": "Đường phụ thuộc hợp lệ (xanh lá) và ranh giới cấm (đỏ nét đứt) phân biệt trực quan hoàn hảo; nhãn cảnh báo cấm import ngược nâng lên 11px với pill badge riêng."
+      "findings": "Đường phụ thuộc hợp lệ (xanh lá) và ranh giới cấm (đỏ nét đứt) phân biệt trực quan hoàn hảo; nhãn cảnh báo cấm import ngược nâng lên 11px với pill badge riêng.",
+      "artifact_sha256": "17451d2d2514c48fca0ff261afe561800a61451fa0b41a325342b1e7b8be0565"
     }
   ],
   "gates": {
@@ -355,6 +366,32 @@
         "dist/diagrams_verification/10-system-target-architecture.png",
         "dist/diagrams_verification/12-architecture-dependency-map.png"
       ]
+    },
+    "RTM-007": {
+      "status": "PASS",
+      "description": "Thẩm tra ngữ nghĩa Acceptance Oracle (20/20 yêu cầu khách quan, không dùng từ cảm tính)",
+      "reviewer": "Antigravity Quality Lead",
+      "timestamp": "2026-09-19T15:45:00+07:00",
+      "artifact_refs": ["docs/REQUIREMENTS-TRACEABILITY.md"],
+      "artifact_sha256": "5c5371d43a801c48b823f2dd1da65f0a20075c7f6ff6fd90e86543532479f572",
+      "findings": "Toàn bộ 20 dòng yêu cầu BR-01..BR-13 đều có tiêu chí nghiệm thu nhị phân (testable binary condition), không có từ ngữ cảm tính; phân định rõ hậu điều kiện."
+    },
+    "RTM-009": {
+      "status": "PASS",
+      "description": "Thẩm tra mã nguồn thực tế cho duy nhất hàng CURRENTLY_IMPLEMENTED (BR-13)",
+      "reviewer": "Antigravity Quality Lead",
+      "timestamp": "2026-09-19T15:45:00+07:00",
+      "artifact_refs": [
+        "apps/mobile/src/screens/manager/ManagerQrLookup.tsx",
+        "apps/mobile/src/services/greenOpsService.ts",
+        "apps/mobile/src/services/devicePermissions.ts"
+      ],
+      "artifact_hashes": {
+        "apps/mobile/src/screens/manager/ManagerQrLookup.tsx": "bad3de8bee19d118597c877b4f961a71bba6200d68748cc94474264755ba51c6",
+        "apps/mobile/src/services/greenOpsService.ts": "36915d3feab2df65e8829e278b7ffdbfaa8dd459a032383c3f73f96752a1c1f3",
+        "apps/mobile/src/services/devicePermissions.ts": "f0db349dbf029d2a701657d2ed2a5e584cc12e32bf20e488db3030c0eb9d5e91"
+      },
+      "findings": "BR-13 (Tra cứu cây qua QR) được đối soát thực tế: ManagerQrLookup.tsx và greenOpsService.ts triển khai getTreeByQr, getCareHistoryByTreeId; xin quyền camera bằng requestCameraPermission; đáp ứng 100% tiêu chí nghiệm thu đã cam kết."
     }
   }
 }
