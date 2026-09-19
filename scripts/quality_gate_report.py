@@ -10,6 +10,7 @@ import sys
 import os
 import re
 import json
+import hashlib
 import subprocess
 import argparse
 from datetime import datetime, timezone
@@ -51,18 +52,82 @@ def get_git_info():
         pass
     return sha, tree, branch
 
+def compute_definition_hash(gate):
+    """
+    Computes a deterministic SHA-256 hash (first 16 hex chars) of the normalized gate definition:
+    gate_id, title, oracle, method, blocking, type.
+    """
+    gid = gate.get("id", "").strip()
+    title = gate.get("title", "").strip()
+    oracle = gate.get("oracle", "").strip()
+    method = gate.get("method", "").strip()
+    blocking = str(gate.get("blocking", True)).strip().upper()
+    gtype = gate.get("type", "AUTOMATED").strip().upper()
+
+    norm_str = "|".join([
+        gid,
+        re.sub(r'\s+', ' ', title),
+        re.sub(r'\s+', ' ', oracle),
+        re.sub(r'\s+', ' ', method),
+        blocking,
+        gtype
+    ])
+    return hashlib.sha256(norm_str.encode("utf-8")).hexdigest()[:16]
+
+def check_ancestor(from_sha):
+    """
+    Verifies if from_sha is an ancestor of HEAD using git merge-base --is-ancestor.
+    """
+    if not from_sha or from_sha in ["unknown", ""]:
+        return False
+    try:
+        r = subprocess.run(["git", "merge-base", "--is-ancestor", from_sha, "HEAD"], capture_output=True)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+def check_dependency_scope_unchanged(from_sha, dependency_scope):
+    """
+    Verifies whether all files in dependency_scope remain completely unchanged between from_sha and HEAD.
+    Handles globs and directory paths.
+    """
+    if not from_sha or from_sha in ["unknown", ""]:
+        return False
+    if not dependency_scope:
+        return True
+    try:
+        if "*" in dependency_scope:
+            r = subprocess.run(["git", "diff", from_sha, "HEAD"], capture_output=True, text=True)
+            return r.returncode == 0 and len(r.stdout.strip()) == 0
+
+        cmd = ["git", "diff", from_sha, "HEAD", "--"] + [s for s in dependency_scope if s != "*"]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        return r.returncode == 0 and len(r.stdout.strip()) == 0
+    except Exception:
+        return False
+
+def check_artifact_exists(artifact_refs):
+    """
+    Validates that every referenced artifact path exists on disk.
+    """
+    if not artifact_refs:
+        return True, ""
+    missing = []
+    for ref in artifact_refs:
+        if not ref:
+            continue
+        p = Path(ref)
+        if not p.exists():
+            missing.append(ref)
+    if missing:
+        return False, f"Missing required artifact(s): {', '.join(missing)}"
+    return True, ""
+
 def check_surface_unchanged(from_sha):
     """
-    Verifies whether apps/mobile/src and packages surfaces remain completely unchanged between from_sha and HEAD.
+    Legacy helper: checks apps/mobile/src and packages surfaces.
     """
-    try:
-        cmd = ["git", "diff", from_sha, "HEAD", "--", "apps/mobile/src", "packages"]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        if res.returncode == 0 and len(res.stdout.strip()) == 0:
-            return True
-    except Exception:
-        pass
-    return False
+    return check_dependency_scope_unchanged(from_sha, ["apps/mobile/src", "packages"])
 
 def parse_active_diagrams(inventory_md_path):
     active_diagrams = []
@@ -263,6 +328,11 @@ def parse_checklist_file(category_name, file_path):
 
 def load_evidence_registry(registry_path="docs/quality-gates/evidence-index.json"):
     p = Path(registry_path)
+    # Prefer generated dist evidence if default requested and dist exists
+    if registry_path == "docs/quality-gates/evidence-index.json":
+        dist_p = Path("dist/quality-evidence/evidence-index.json")
+        if dist_p.exists():
+            p = dist_p
     if not p.exists():
         return {}
     try:
@@ -271,14 +341,35 @@ def load_evidence_registry(registry_path="docs/quality-gates/evidence-index.json
         print(f"[WARN] Failed to read evidence registry {p}: {ex}")
         return {}
 
-def resolve_effective_status(gate, evidence, current_sha):
+def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None, scope_checker=None):
     """
     Derives the true effective status from:
     1. declared_status from checklist
-    2. evidence record validity (status == PASS, exit_code == 0)
-    3. commit SHA matching or inheritance validity
+    2. structural validity & duplicate check
+    3. evidence record validity (status == PASS, exit_code == 0)
+    4. verification type matching (AUTOMATED vs MANUAL vs HYBRID)
+    5. definition_hash consistency
+    6. artifact existence on disk
+    7. commit SHA matching or dependency-scoped inheritance with ancestor verification
     """
-    declared = gate["declared_status"]
+    if ancestor_checker is None:
+        ancestor_checker = check_ancestor
+    if scope_checker is None:
+        scope_checker = check_dependency_scope_unchanged
+
+    declared = gate.get("declared_status", "UNKNOWN")
+    gid = gate.get("id", "")
+    gtype = gate.get("type", "AUTOMATED")
+
+    # If gate has structural defects or is duplicate
+    if gate.get("invalid_structure") or gate.get("is_duplicate"):
+        return {
+            "evidence_status": "STRUCTURE_ERROR",
+            "effective_status": "UNKNOWN",
+            "evidence_ref": "NONE",
+            "is_inherited": False,
+            "evidence_note": "; ".join(gate.get("structure_errors", ["Checklist definition error"]))
+        }
 
     if not evidence:
         return {
@@ -290,12 +381,67 @@ def resolve_effective_status(gate, evidence, current_sha):
         }
 
     ev_status = evidence.get("status", "UNKNOWN")
-    ev_code = evidence.get("exit_code", 0)
+    ev_code = evidence.get("exit_code", 1)
     ev_sha = evidence.get("commit_sha", "")
-    ev_ref = evidence.get("artifact_ref", "")
+    ev_origin = evidence.get("evidence_origin", "")
+    ev_exec_type = evidence.get("execution_type", "")
+    art_refs = evidence.get("artifact_refs", [])
+    ev_ref = ", ".join(art_refs) if isinstance(art_refs, list) else str(art_refs)
     allow_inheritance = evidence.get("allow_inheritance", False)
+    dep_scope = evidence.get("dependency_scope", [])
 
-    # If evidence itself is not PASS or non-zero exit code
+    # Circular evidence rejection: no auto-PASS from checklist declarations alone
+    if ev_origin in ["GENERATED_FROM_CHECKLIST", "CHECKLIST_MARKER"] or ev_exec_type == "CHECKLIST_DECLARATION":
+        return {
+            "evidence_status": "REJECTED_ORIGIN",
+            "effective_status": "NOT_RUN",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": "Circular evidence rejected: cannot generate evidence from checklist marker alone"
+        }
+
+    # Verification type matching
+    if gtype == "AUTOMATED":
+        if ev_origin == "MANUAL_REVIEW" and ev_exec_type == "MANUAL_INSPECTION":
+            return {
+                "evidence_status": "TYPE_MISMATCH",
+                "effective_status": "FAIL",
+                "evidence_ref": ev_ref,
+                "is_inherited": False,
+                "evidence_note": "AUTOMATED gate rejected: manual-only evidence provided"
+            }
+    elif gtype == "MANUAL":
+        if ev_origin != "MANUAL_REVIEW" and ev_exec_type != "MANUAL_INSPECTION":
+            return {
+                "evidence_status": "MANUAL_MISSING",
+                "effective_status": "NOT_RUN",
+                "evidence_ref": ev_ref,
+                "is_inherited": False,
+                "evidence_note": "MANUAL gate requires explicit manual review evidence"
+            }
+    elif gtype == "HYBRID":
+        if ev_exec_type != "HYBRID_INSPECTION":
+            return {
+                "evidence_status": "HYBRID_INCOMPLETE",
+                "effective_status": "NOT_RUN",
+                "evidence_ref": ev_ref,
+                "is_inherited": False,
+                "evidence_note": "HYBRID gate requires both automated execution and manual inspection records"
+            }
+
+    # Definition hash validation
+    current_def_hash = compute_definition_hash(gate)
+    ev_def_hash = evidence.get("definition_hash")
+    if ev_def_hash and ev_def_hash != current_def_hash:
+        return {
+            "evidence_status": "DEFINITION_HASH_MISMATCH",
+            "effective_status": "FAIL",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"Stale evidence: definition hash mismatch (expected {current_def_hash}, got {ev_def_hash})"
+        }
+
+    # Status and exit code
     if ev_status != "PASS" or ev_code != 0:
         return {
             "evidence_status": "FAIL",
@@ -305,45 +451,64 @@ def resolve_effective_status(gate, evidence, current_sha):
             "evidence_note": f"Evidence reported {ev_status} with exit code {ev_code}"
         }
 
-    # If evidence SHA matches current final SHA directly
-    if ev_sha == current_sha or current_sha in ["unknown", ""]:
-        ev_stat = "FINAL_SHA_EXECUTED"
-        eff_stat = declared  # If declared is PASS -> PASS; if declared is WARN -> WARN; etc.
+    # Artifact validation
+    art_ok, art_err = check_artifact_exists(art_refs)
+    if not art_ok:
         return {
-            "evidence_status": ev_stat,
-            "effective_status": eff_stat,
+            "evidence_status": "INVALID_ARTIFACT",
+            "effective_status": "INCONCLUSIVE",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": art_err
+        }
+
+    # SHA and lineage evaluation
+    if ev_sha == current_sha or current_sha in ["unknown", ""]:
+        return {
+            "evidence_status": "FINAL_SHA_EXECUTED",
+            "effective_status": declared,
             "evidence_ref": ev_ref,
             "is_inherited": False,
             "evidence_note": f"Directly executed on final SHA {ev_sha[:7]}"
         }
 
-    # If evidence SHA differs, check inheritance policy
-    if allow_inheritance:
-        surface_clean = check_surface_unchanged(ev_sha)
-        if surface_clean:
-            return {
-                "evidence_status": "INHERITED_PASS",
-                "effective_status": declared,
-                "evidence_ref": ev_ref,
-                "is_inherited": True,
-                "evidence_note": f"Inherited from verified ancestor {ev_sha[:7]}; source boundary unmodified"
-            }
-        else:
-            return {
-                "evidence_status": "INVALID_INHERITANCE",
-                "effective_status": "FAIL",
-                "evidence_ref": ev_ref,
-                "is_inherited": False,
-                "evidence_note": f"Inheritance rejected: source surface modified between {ev_sha[:7]} and HEAD"
-            }
+    # Differing SHA: Check inheritance policy
+    if not allow_inheritance:
+        return {
+            "evidence_status": "WRONG_SHA",
+            "effective_status": "INCONCLUSIVE",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"Evidence SHA {ev_sha[:7]} does not match current SHA {current_sha[:7]} without inheritance flag"
+        }
 
-    # Evidence belongs to wrong SHA and inheritance is not permitted
+    # Ancestor check
+    if not ancestor_checker(ev_sha):
+        return {
+            "evidence_status": "WRONG_LINEAGE",
+            "effective_status": "FAIL",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"Evidence SHA {ev_sha[:7]} is not an ancestor of current HEAD {current_sha[:7]}"
+        }
+
+    # Dependency scope check
+    scope_clean = scope_checker(ev_sha, dep_scope)
+    if not scope_clean:
+        return {
+            "evidence_status": "DEPENDENCY_SCOPE_CHANGED",
+            "effective_status": "FAIL",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"Inheritance rejected: dependency scope modified between {ev_sha[:7]} and HEAD"
+        }
+
     return {
-        "evidence_status": "WRONG_SHA",
-        "effective_status": "INCONCLUSIVE",
+        "evidence_status": "INHERITED_PASS",
+        "effective_status": declared,
         "evidence_ref": ev_ref,
-        "is_inherited": False,
-        "evidence_note": f"Evidence SHA {ev_sha[:7]} does not match current SHA {current_sha[:7]} without inheritance flag"
+        "is_inherited": True,
+        "evidence_note": f"Inherited from verified ancestor {ev_sha[:7]}; dependency scope unchanged"
     }
 
 # ==============================================================================
@@ -384,6 +549,7 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         g["evidence_ref"] = res["evidence_ref"]
         g["is_inherited"] = res["is_inherited"]
         g["evidence_note"] = res["evidence_note"]
+        g["definition_hash"] = compute_definition_hash(g)
 
     # Category summaries
     for cat_name, file_rel in CHECKLIST_FILES:
@@ -430,6 +596,23 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         "NOT_APPLICABLE": sum(1 for g in blocking_gates if g["effective_status"] == "NOT_APPLICABLE"),
     }
 
+    # Provenance metrics
+    provenance = {
+        "direct_evidence": sum(1 for g in all_gates if g["evidence_status"] == "FINAL_SHA_EXECUTED" and g["type"] == "AUTOMATED"),
+        "manual_evidence": sum(1 for g in all_gates if g["type"] == "MANUAL" and g["evidence_status"] in ["FINAL_SHA_EXECUTED", "INHERITED_PASS"]),
+        "hybrid_evidence": sum(1 for g in all_gates if g["type"] == "HYBRID" and g["evidence_status"] in ["FINAL_SHA_EXECUTED", "INHERITED_PASS"]),
+        "inherited_evidence": sum(1 for g in all_gates if g.get("is_inherited", False)),
+        "rejected_inherited_evidence": sum(1 for g in all_gates if g["evidence_status"] in ["DEPENDENCY_SCOPE_CHANGED", "WRONG_LINEAGE", "WRONG_SHA"]),
+        "missing_evidence": sum(1 for g in all_gates if g["evidence_status"] == "MISSING"),
+        "stale_evidence": sum(1 for g in all_gates if g["evidence_status"] == "DEFINITION_HASH_MISMATCH"),
+        "wrong_sha": sum(1 for g in all_gates if g["evidence_status"] == "WRONG_SHA"),
+        "wrong_lineage": sum(1 for g in all_gates if g["evidence_status"] == "WRONG_LINEAGE"),
+        "invalid_artifact": sum(1 for g in all_gates if g["evidence_status"] == "INVALID_ARTIFACT"),
+        "definition_hash_mismatch": sum(1 for g in all_gates if g["evidence_status"] == "DEFINITION_HASH_MISMATCH"),
+        "dependency_scope_changed": sum(1 for g in all_gates if g["evidence_status"] == "DEPENDENCY_SCOPE_CHANGED"),
+        "rejected_origin": sum(1 for g in all_gates if g["evidence_status"] == "REJECTED_ORIGIN"),
+    }
+
     # FAIL-CLOSED DECISION RULE:
     # Every blocking gate MUST have effective_status == "PASS".
     # Any blocking FAIL, WARN, NOT_RUN, INCONCLUSIVE, UNKNOWN -> FAIL / NOT READY.
@@ -465,9 +648,10 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
         "counts": counts,
         "blocking_counts": blocking_counts,
         "duplicate_gate_ids": duplicate_ids,
-        "missing_evidence_count": sum(1 for g in all_gates if g["evidence_status"] == "MISSING"),
-        "wrong_sha_evidence_count": sum(1 for g in all_gates if g["evidence_status"] == "WRONG_SHA"),
-        "inherited_evidence_count": sum(1 for g in all_gates if g.get("is_inherited", False)),
+        "provenance": provenance,
+        "missing_evidence_count": provenance["missing_evidence"],
+        "wrong_sha_evidence_count": provenance["wrong_sha"],
+        "inherited_evidence_count": provenance["inherited_evidence"],
         "category_summaries": category_summaries,
         "active_diagrams_count": len(active_diagrams),
         "active_diagrams": active_diagrams,
@@ -482,7 +666,9 @@ def generate_quality_report(registry_path="docs/quality-gates/evidence-index.jso
                 "effective_status": g["effective_status"],
                 "evidence_ref": g["evidence_ref"],
                 "verification_type": g["type"],
-                "is_inherited": g["is_inherited"]
+                "is_inherited": g["is_inherited"],
+                "definition_hash": g.get("definition_hash", ""),
+                "evidence_note": g.get("evidence_note", "")
             }
             for g in all_gates
         ]
@@ -516,10 +702,22 @@ def print_human_report(report):
     print("================================================================================")
     b = report["blocking_counts"]
     c = report["counts"]
+    p = report.get("provenance", {})
     print(f"{'TOTAL GATES':<30} | {report['total']:<4} | {report['blocking']:<4} | {c['PASS']:<4} | {c['FAIL']:<4} | {c['WARN']:<4} | {c['NOT_RUN']:<4} | {c['INCONCLUSIVE']:<4}")
     print("--------------------------------------------------------------------------------")
     print(f"BLOCKING STATUS: PASS={b['PASS']}, FAIL={b['FAIL']}, WARN={b['WARN']}, NOT_RUN={b['NOT_RUN']}, INCON={b['INCONCLUSIVE']}, UNK={b['UNKNOWN']}")
-    print(f"EVIDENCE AUDIT: Missing={report['missing_evidence_count']}, Wrong-SHA={report['wrong_sha_evidence_count']}, Inherited={report['inherited_evidence_count']}, Duplicate IDs={len(report['duplicate_gate_ids'])}")
+    print(f"EVIDENCE PROVENANCE AUDIT:")
+    print(f"  - Direct Final-SHA Automated  : {p.get('direct_evidence', 0)}")
+    print(f"  - Manual Inspection Records   : {p.get('manual_evidence', 0)}")
+    print(f"  - Hybrid Verified Records     : {p.get('hybrid_evidence', 0)}")
+    print(f"  - Valid Inherited Evidence    : {p.get('inherited_evidence', 0)}")
+    print(f"  - Rejected Inherited Evidence : {p.get('rejected_inherited_evidence', 0)}")
+    print(f"  - Missing Evidence Records    : {p.get('missing_evidence', 0)}")
+    print(f"  - Invalid Artifact References : {p.get('invalid_artifact', 0)}")
+    print(f"  - Definition Hash Mismatches  : {p.get('definition_hash_mismatch', 0)}")
+    print(f"  - Dependency Scope Modified   : {p.get('dependency_scope_changed', 0)}")
+    print(f"  - Rejected Circular Origins   : {p.get('rejected_origin', 0)}")
+    print(f"  - Duplicate Gate IDs          : {len(report.get('duplicate_gate_ids', []))}")
     print("--------------------------------------------------------------------------------")
     print("FINAL QUALITY GATE VERDICT:")
     print(f"==> {report['verdict']}")
@@ -531,15 +729,19 @@ def print_human_report(report):
 
 def run_self_test():
     """
-    Executes 8 self-test cases verifying the fail-closed aggregation logic:
-    CASE 1: blocking PASS + valid evidence -> PASS
-    CASE 2: blocking WARN -> FAIL (WARN blocks)
-    CASE 3: blocking UNKNOWN -> FAIL
-    CASE 4: blocking PASS + missing evidence -> FAIL (NOT_RUN)
-    CASE 5: blocking PASS + evidence wrong SHA -> FAIL (INCONCLUSIVE)
-    CASE 6: blocking inherited evidence + allowed + unchanged surface -> PASS
-    CASE 7: duplicate Gate ID -> FAIL
-    CASE 8: all blocking PASS -> PASS
+    Executes 12 self-test cases verifying the fail-closed machine evidence provenance engine:
+    CASE 1: declared PASS + no evidence -> NOT_RUN
+    CASE 2: evidence auto-created from checklist marker only -> rejected (REJECTED_ORIGIN -> NOT_RUN)
+    CASE 3: wrong artifact path -> FAIL/INCONCLUSIVE (INVALID_ARTIFACT)
+    CASE 4: wrong SHA non-ancestor -> FAIL (WRONG_LINEAGE)
+    CASE 5: ancestor + unchanged dependency scope -> inherited PASS
+    CASE 6: ancestor + relevant doc/tool changed -> inheritance rejected (DEPENDENCY_SCOPE_CHANGED)
+    CASE 7: oracle changed -> definition_hash mismatch
+    CASE 8: AUTOMATED gate with manual-only evidence -> reject (TYPE_MISMATCH)
+    CASE 9: MANUAL gate without manual review evidence -> NOT_RUN (MANUAL_MISSING)
+    CASE 10: HYBRID missing one side -> NOT_RUN (HYBRID_INCOMPLETE)
+    CASE 11: direct final-SHA command exit 0 -> PASS
+    CASE 12: direct final-SHA command exit !=0 -> FAIL
     """
     print("\n==================================================")
     print("RUNNING QUALITY GATE REPORT ENGINE SELF-TEST SUITE")
@@ -550,96 +752,135 @@ def run_self_test():
 
     cases = [
         {
-            "name": "CASE 1: blocking PASS + valid direct evidence -> PASS",
-            "gates": [{"id": "G-01", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED"}],
-            "evidence": {"G-01": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "allow_inheritance": False}},
-            "expect": "PASS"
+            "id": 1,
+            "name": "CASE 1: declared PASS + no evidence -> NOT_RUN",
+            "gate": {"id": "C-01", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": None,
+            "expect_effective": "NOT_RUN",
+            "expect_evidence": "MISSING"
         },
         {
-            "name": "CASE 2: blocking WARN -> FAIL (WARN blocks blocking gate)",
-            "gates": [{"id": "G-02", "declared_status": "WARN", "blocking": True, "type": "AUTOMATED"}],
-            "evidence": {"G-02": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "allow_inheritance": False}},
-            "expect": "FAIL"
+            "id": 2,
+            "name": "CASE 2: evidence auto-created from checklist marker only -> rejected",
+            "gate": {"id": "C-02", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "GENERATED_FROM_CHECKLIST", "execution_type": "CHECKLIST_DECLARATION"},
+            "expect_effective": "NOT_RUN",
+            "expect_evidence": "REJECTED_ORIGIN"
         },
         {
-            "name": "CASE 3: blocking UNKNOWN -> FAIL",
-            "gates": [{"id": "G-03", "declared_status": "UNKNOWN", "blocking": True, "type": "AUTOMATED"}],
-            "evidence": {"G-03": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "allow_inheritance": False}},
-            "expect": "FAIL"
+            "id": 3,
+            "name": "CASE 3: wrong artifact path -> INCONCLUSIVE (INVALID_ARTIFACT)",
+            "gate": {"id": "C-03", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "artifact_refs": ["nonexistent_path_xyz/artifact.txt"]},
+            "expect_effective": "INCONCLUSIVE",
+            "expect_evidence": "INVALID_ARTIFACT"
         },
         {
-            "name": "CASE 4: blocking PASS + missing evidence -> FAIL (NOT_RUN)",
-            "gates": [{"id": "G-04", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED"}],
-            "evidence": {},  # Missing!
-            "expect": "FAIL"
+            "id": 4,
+            "name": "CASE 4: wrong SHA non-ancestor -> FAIL (WRONG_LINEAGE)",
+            "gate": {"id": "C-04", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": "diff_sha_999", "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True},
+            "ancestor_mock": False,
+            "scope_mock": True,
+            "expect_effective": "FAIL",
+            "expect_evidence": "WRONG_LINEAGE"
         },
         {
-            "name": "CASE 5: blocking PASS + evidence wrong SHA (no inheritance) -> FAIL",
-            "gates": [{"id": "G-05", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED"}],
-            "evidence": {"G-05": {"commit_sha": "wrong_sha_12345", "status": "PASS", "exit_code": 0, "allow_inheritance": False}},
-            "expect": "FAIL"
+            "id": 5,
+            "name": "CASE 5: ancestor + unchanged dependency scope -> inherited PASS",
+            "gate": {"id": "C-05", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "dependency_scope": ["docs/WORKFLOWS.md"]},
+            "ancestor_mock": True,
+            "scope_mock": True,
+            "expect_effective": "PASS",
+            "expect_evidence": "INHERITED_PASS"
         },
         {
-            "name": "CASE 6: blocking inherited evidence + allowed -> PASS (simulated clean surface)",
-            "gates": [{"id": "G-06", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED"}],
-            "evidence": {"G-06": {"commit_sha": "parent_sha_555", "status": "PASS", "exit_code": 0, "allow_inheritance": True}},
-            "expect": "PASS"
+            "id": 6,
+            "name": "CASE 6: ancestor + relevant doc/tool changed -> inheritance rejected",
+            "gate": {"id": "C-06", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "dependency_scope": ["docs/WORKFLOWS.md"]},
+            "ancestor_mock": True,
+            "scope_mock": False,
+            "expect_effective": "FAIL",
+            "expect_evidence": "DEPENDENCY_SCOPE_CHANGED"
         },
         {
-            "name": "CASE 7: duplicate Gate ID -> FAIL",
-            "duplicate": True,
-            "expect": "FAIL"
+            "id": 7,
+            "name": "CASE 7: oracle changed -> definition_hash mismatch",
+            "gate": {"id": "C-07", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "NEW_ORACLE", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "definition_hash": "OLD_HASH_123"},
+            "expect_effective": "FAIL",
+            "expect_evidence": "DEFINITION_HASH_MISMATCH"
         },
         {
-            "name": "CASE 8: all blocking PASS (multi-gate) -> PASS",
-            "gates": [
-                {"id": "G-08A", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED"},
-                {"id": "G-08B", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED"}
-            ],
-            "evidence": {
-                "G-08A": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "allow_inheritance": False},
-                "G-08B": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "allow_inheritance": False}
-            },
-            "expect": "PASS"
+            "id": 8,
+            "name": "CASE 8: AUTOMATED gate with manual-only evidence -> reject",
+            "gate": {"id": "C-08", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "MANUAL_REVIEW", "execution_type": "MANUAL_INSPECTION"},
+            "expect_effective": "FAIL",
+            "expect_evidence": "TYPE_MISMATCH"
+        },
+        {
+            "id": 9,
+            "name": "CASE 9: MANUAL gate without manual review evidence -> NOT_RUN",
+            "gate": {"id": "C-09", "declared_status": "PASS", "blocking": True, "type": "MANUAL", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "expect_effective": "NOT_RUN",
+            "expect_evidence": "MANUAL_MISSING"
+        },
+        {
+            "id": 10,
+            "name": "CASE 10: HYBRID missing one side -> NOT_RUN",
+            "gate": {"id": "C-10", "declared_status": "PASS", "blocking": True, "type": "HYBRID", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "expect_effective": "NOT_RUN",
+            "expect_evidence": "HYBRID_INCOMPLETE"
+        },
+        {
+            "id": 11,
+            "name": "CASE 11: direct final-SHA command exit 0 -> PASS",
+            "gate": {"id": "C-11", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "expect_effective": "PASS",
+            "expect_evidence": "FINAL_SHA_EXECUTED"
+        },
+        {
+            "id": 12,
+            "name": "CASE 12: direct final-SHA command exit !=0 -> FAIL",
+            "gate": {"id": "C-12", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
+            "evidence": {"commit_sha": current_sha, "status": "FAIL", "exit_code": 1, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "expect_effective": "FAIL",
+            "expect_evidence": "FAIL"
         }
     ]
 
-    for idx, c in enumerate(cases, 1):
-        print(f"[{idx}/8] Running {c['name']}...")
-        if c.get("duplicate"):
-            dup_ids = ["DUP-01"]
-            is_ready = (len(dup_ids) == 0)
-            actual = "PASS" if is_ready else "FAIL"
-        else:
-            gates = c["gates"]
-            ev_dict = c["evidence"]
-            resolved = []
-            for g in gates:
-                ev = ev_dict.get(g["id"])
-                # Mock resolution for test
-                if not ev:
-                    eff = "NOT_RUN"
-                elif ev.get("status") != "PASS":
-                    eff = "FAIL"
-                elif ev.get("commit_sha") == current_sha:
-                    eff = g["declared_status"]
-                elif ev.get("allow_inheritance"):
-                    eff = g["declared_status"]
-                else:
-                    eff = "INCONCLUSIVE"
-                resolved.append(eff)
-            is_ready = all(st == "PASS" for st in resolved)
-            actual = "PASS" if is_ready else "FAIL"
+    for c in cases:
+        idx = c["id"]
+        print(f"[{idx:02d}/12] Running {c['name']}...")
+        gate = c["gate"]
+        ev = c["evidence"]
 
-        passed = (actual == c["expect"])
+        # Ensure definition_hash matches gate unless specifically testing mismatch
+        if ev and "definition_hash" not in ev:
+            ev["definition_hash"] = compute_definition_hash(gate)
+
+        anc_fn = (lambda s: c["ancestor_mock"]) if "ancestor_mock" in c else None
+        scp_fn = (lambda s, sc: c["scope_mock"]) if "scope_mock" in c else None
+
+        res = resolve_effective_status(gate, ev, current_sha, ancestor_checker=anc_fn, scope_checker=scp_fn)
+        act_eff = res["effective_status"]
+        act_ev = res["evidence_status"]
+
+        passed = (act_eff == c["expect_effective"] and act_ev == c["expect_evidence"])
         if passed:
-            print(f"  ==> TEST RESULT: [PASS] Expected {c['expect']} verified.")
+            print(f"  ==> [PASS] Effective={act_eff}, Evidence={act_ev}")
         else:
-            print(f"  ==> TEST RESULT: [FAIL] Expected {c['expect']}, got {actual}.")
+            print(f"  ==> [FAIL] Expected effective={c['expect_effective']}, got {act_eff}; expected evidence={c['expect_evidence']}, got {act_ev}")
             all_passed = False
 
     print("\n==================================================")
-    print(f"SELF-TEST SUMMARY: {'8/8 TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
+    print(f"SELF-TEST SUMMARY: {'12/12 TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
     print("==================================================\n")
     return all_passed
 

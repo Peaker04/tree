@@ -1,0 +1,360 @@
+{
+  "version": "1.0.0",
+  "recorded_at": "2026-09-19T13:42:00+07:00",
+  "reviewer": "Antigravity Lead Verifier",
+  "review_scope": "Active Diagram Visual Inspection (11 Active Diagrams)",
+  "active_diagrams": [
+    {
+      "diagram": "proposed-01-current-vs-recommended-workflow.html",
+      "artifact_path": "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+      "dimensions": "2120x1360px",
+      "file_size": 262393,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Cấu trúc 2 cột song song hiển thị cân đối; nhãn mũi tên có background plate che chắn hoàn hảo; chữ Tiếng Việt đầy đủ dấu thanh; độ tương phản đạt chuẩn WCAG AA."
+    },
+    {
+      "diagram": "proposed-02-mvp-operational-swimlane.html",
+      "artifact_path": "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+      "dimensions": "2600x1400px",
+      "file_size": 282739,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Làn swimlane Nhân viên / Quản lý phân tách rõ ràng; các thẻ card mở rộng chứa chữ thoáng đãng; 2 nhãn rẽ nhánh 11px sắc nét; không có connector cắt xuyên nội thất card."
+    },
+    {
+      "diagram": "proposed-03-minimal-task-lifecycle.html",
+      "artifact_path": "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+      "dimensions": "2200x1200px",
+      "file_size": 192911,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "7 trạng thái tạo chu trình khép kín; đường loop ngược RequestRework có nhãn pill che chắn; 3 lối thoát sự cố BLOCKED màu hổ phách cảnh báo rõ rệt; marker gắn chính xác."
+    },
+    {
+      "diagram": "proposed-04-proof-policy-and-rework.html",
+      "artifact_path": "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+      "dimensions": "2600x1500px",
+      "file_size": 427284,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "3 cột đại diện cho 3 Profile (CHANGE, SERVICE, INSPECTION) định dạng chuẩn; khối Rework giải thích cơ chế lưu vết đa phiên bản rõ ràng; không tràn mép hay dính viền."
+    },
+    {
+      "diagram": "01-product-capability-map.html",
+      "artifact_path": "dist/diagrams_verification/01-product-capability-map.png",
+      "dimensions": "2500x1400px",
+      "file_size": 254186,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "5 nhóm năng lực chuẩn từ PRODUCT.md; phân cấp Core Domain nổi bật với viền xanh lá đậm; nhãn phụ và mô tả cỡ chữ 11-20px; khoảng cách giữa các card tối thiểu 16px."
+    },
+    {
+      "diagram": "02-domain-context-map.html",
+      "artifact_path": "dist/diagrams_verification/02-domain-context-map.png",
+      "dimensions": "2300x1300px",
+      "file_size": 231361,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Quan hệ Upstream/Downstream hiển thị chuẩn xác; nhãn quan hệ U/D và Customer-Supplier nằm trên pill có nền che chắn; không còn chuỗi 5 bước lỗi thời."
+    },
+    {
+      "diagram": "07-action-eligibility-security-matrix.html",
+      "artifact_path": "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+      "dimensions": "2500x1300px",
+      "file_size": 285472,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Ma trận phân quyền hiển thị dạng bảng trực quan sắc nét; các ký hiệu tick/cross phân biệt rõ quyền Staff vs Manager; độ tương phản màu chữ và nền đạt WCAG AA."
+    },
+    {
+      "diagram": "08-role-information-architecture.html",
+      "artifact_path": "dist/diagrams_verification/08-role-information-architecture.png",
+      "dimensions": "2400x1400px",
+      "file_size": 269206,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Cấu trúc thanh điều hướng Notched Bottom Nav 5 vị trí thể hiện chính xác; toàn bộ nhãn đạt 11px-16px; cây màn hình phân nhánh rành mạch."
+    },
+    {
+      "diagram": "09-system-current-state.html",
+      "artifact_path": "dist/diagrams_verification/09-system-current-state.png",
+      "dimensions": "2300x1300px",
+      "file_size": 221957,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Biểu đồ mang nhãn HISTORICAL AS-IS; phản ánh đúng khối monolithic MobileApp 2.054 dòng và bộ nhớ đệm RAM; các hộp cảnh báo rủi ro viền đỏ rõ nét."
+    },
+    {
+      "diagram": "10-system-target-architecture.html",
+      "artifact_path": "dist/diagrams_verification/10-system-target-architecture.png",
+      "dimensions": "2300x1300px",
+      "file_size": 219596,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Clean Architecture hiển thị đúng chiều phụ thuộc hướng tâm; mang nhãn rõ ràng PROPOSED ARCHITECTURE (CHỜ DUYỆT ADR); safe padding các hộp đạt chuẩn."
+    },
+    {
+      "diagram": "12-architecture-dependency-map.html",
+      "artifact_path": "dist/diagrams_verification/12-architecture-dependency-map.png",
+      "dimensions": "2000x1200px",
+      "file_size": 144457,
+      "result": "PASS",
+      "checked_gates": [
+        "DG-VIS-001",
+        "DG-VIS-002",
+        "DG-VIS-003",
+        "DG-VIS-004",
+        "DG-VIS-005",
+        "DG-VIS-006",
+        "DG-TYP-005",
+        "DG-LAY-007"
+      ],
+      "findings": "Đường phụ thuộc hợp lệ (xanh lá) và ranh giới cấm (đỏ nét đứt) phân biệt trực quan hoàn hảo; nhãn cảnh báo cấm import ngược nâng lên 11px với pill badge riêng."
+    }
+  ],
+  "gates": {
+    "DG-VIS-001": {
+      "status": "PASS",
+      "description": "Không Mất Nét / Không Cắt Chữ",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    },
+    "DG-VIS-002": {
+      "status": "PASS",
+      "description": "Khoảng Đệm Cân Đối (Breathing Room)",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    },
+    "DG-VIS-003": {
+      "status": "PASS",
+      "description": "Chiều Mũi Tên Rõ Ràng",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    },
+    "DG-VIS-004": {
+      "status": "PASS",
+      "description": "Phân Cấp Thị Giác Rõ Rệt",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    },
+    "DG-VIS-005": {
+      "status": "PASS",
+      "description": "Tương Phản Màu Đạt Chuẩn (WCAG AA)",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    },
+    "DG-VIS-006": {
+      "status": "PASS",
+      "description": "Không Có Lỗi Render Fallback Font",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    },
+    "DG-TYP-005": {
+      "status": "PASS",
+      "description": "Giãn Dòng Chống Chạm Dấu Thanh (Hybrid Manual Review)",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    },
+    "DG-LAY-007": {
+      "status": "PASS",
+      "description": "Định Tuyến Lại Khi Đổi Kích Thước (Hybrid Manual Review)",
+      "inspected_count": 11,
+      "passed_count": 11,
+      "artifact_refs": [
+        "dist/diagrams_verification/proposed-01-current-vs-recommended-workflow.png",
+        "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
+        "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
+        "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
+        "dist/diagrams_verification/01-product-capability-map.png",
+        "dist/diagrams_verification/02-domain-context-map.png",
+        "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
+        "dist/diagrams_verification/08-role-information-architecture.png",
+        "dist/diagrams_verification/09-system-current-state.png",
+        "dist/diagrams_verification/10-system-target-architecture.png",
+        "dist/diagrams_verification/12-architecture-dependency-map.png"
+      ]
+    }
+  }
+}

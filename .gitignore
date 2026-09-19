@@ -53,3 +53,6 @@ replay_pid*
 .idea/
 .planning/
 
+# python
+__pycache__/
+*.py[cod]
