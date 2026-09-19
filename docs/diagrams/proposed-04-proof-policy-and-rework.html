@@ -3,9 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PROPOSED 04 - Chính sách Bằng chứng theo Loại việc & Làm lại Trọng tâm</title>
+    <title>PROPOSED 04 — 3 Hồ sơ Bằng chứng Ngữ nghĩa &amp; Làm lại Trọng tâm (Versioned)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,600;0,700;1,600&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -26,8 +28,9 @@
         --color-accent: #166534;
         --color-lime: #84cc16;
         --color-amber: #d97706;
-        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
-        --font-serif: 'Instrument Serif', Georgia, serif;
+        --color-danger: #dc2626;
+        --font-sans: 'Noto Sans', 'Segoe UI', Arial, sans-serif;
+        --font-serif: 'Noto Serif', 'Times New Roman', serif;
         --font-mono: 'Geist Mono', ui-monospace, monospace;
       }
 
@@ -43,38 +46,48 @@
       }
 
       .frame {
-        max-width: 1150px;
+        max-width: 1220px;
         width: 100%;
         margin: 0 auto;
+      }
+      .badge-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
       }
       .badge-proposed {
         display: inline-block;
         font-family: var(--font-mono);
         font-size: 0.72rem;
         font-weight: 600;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        background: #d97706;
+        background: #166534;
         color: #fff;
-        padding: 3px 8px;
+        padding: 4px 10px;
         border-radius: 4px;
-        margin-bottom: 0.5rem;
+      }
+      .source-ref {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--color-muted);
       }
 
       h1 {
         font-family: var(--font-serif);
         font-size: 2.1rem;
-        font-weight: 400;
-        letter-spacing: -0.02em;
-        line-height: 1.15;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
         color: var(--color-ink);
         margin-bottom: 0.5rem;
       }
 
       .desc {
-        font-size: 0.92rem;
+        font-size: 0.95rem;
         color: var(--color-muted);
-        line-height: 1.5;
+        line-height: 1.55;
         margin-bottom: 1.75rem;
       }
 
@@ -89,163 +102,264 @@
   </head>
   <body>
     <div class="frame">
-      <div class="badge-proposed">PROPOSED — CHỜ PHÊ DUYỆT</div>
-      <h1>Chính sách Bằng chứng theo Loại việc &amp; Làm lại Trọng tâm</h1>
+      <div class="badge-container">
+        <span class="badge-proposed">DERIVED VIEW — CANONICAL BUSINESS BASELINE</span>
+        <span class="source-ref">SOURCE: docs/WORKFLOWS.md &amp; docs/DOMAIN.md</span>
+      </div>
+      <h1>Hồ sơ Bằng chứng Ngữ nghĩa &amp; Làm lại Trọng tâm (Versioned)</h1>
       <p class="desc">
-        Phân loại yêu cầu bằng chứng phù hợp tính chất vật lý của công việc, cùng cơ chế khắc phục lỗi có trọng tâm
-        không làm mất dữ liệu cũ.
+        Phân loại yêu cầu bằng chứng phù hợp bản chất kỹ thuật lâm sinh (Change, Service, Inspection) cùng cơ chế sửa
+        chữa có trọng tâm, bảo toàn lịch sử bằng chứng và chống ngụy tạo dữ liệu.
       </p>
 
-      <svg viewBox="0 0 1080 620" xmlns="http://www.w3.org/2000/svg" role="img">
+      <svg viewBox="0 0 1180 740" xmlns="http://www.w3.org/2000/svg" role="img">
+        <title>Hồ sơ Bằng chứng Ngữ nghĩa và Làm lại Trọng tâm</title>
+        <desc>Chi tiết 3 Profile bằng chứng và chu trình Rework lưu vết đa phiên bản</desc>
         <rect width="100%" height="100%" fill="#FBFBF9" />
 
-        <!-- SECTION 1: PROOF POLICIES (LEFT) -->
-        <g transform="translate(40, 30)">
-          <rect x="0" y="0" width="480" height="550" rx="8" fill="#FFF" stroke="#166534" stroke-width="1.8" />
-          <rect x="20" y="-12" width="260" height="24" rx="4" fill="#166534" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
-            CHÍNH SÁCH BẰNG CHỨNG (PROOF POLICY)
+        <!-- SECTION 1: PROOF PROFILES (LEFT SIDE) -->
+        <g transform="translate(30, 25)">
+          <rect x="0" y="0" width="540" height="690" rx="8" fill="#FFF" stroke="#166534" stroke-width="1.8" />
+          <rect x="20" y="-13" width="340" height="26" rx="4" fill="#166534" />
+          <text x="32" y="5" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+            3 HỒ SƠ BẰNG CHỨNG NGỮ NGHĨA (MVP)
           </text>
 
-          <!-- Policy A: Full -->
-          <g transform="translate(20, 35)">
+          <!-- Profile 1: CHANGE_PROOF -->
+          <g transform="translate(18, 25)">
             <rect
               x="0"
               y="0"
-              width="440"
-              height="230"
+              width="504"
+              height="200"
               rx="6"
-              fill="rgba(132,204,22,0.06)"
-              stroke="#84CC16"
+              fill="#F0EFEA"
+              fill-opacity="0.5"
+              stroke="#166534"
               stroke-width="1.5"
             />
-            <text x="16" y="26" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#166534">
-              1. CHÍNH SÁCH TOÀN DIỆN (FULL PROOF)
+            <text x="16" y="26" font-family="'Geist Mono', monospace" font-size="13" font-weight="700" fill="#166534">
+              1. CHANGE_PROOF (Biến đổi hình thái vật lý)
             </text>
-            <text x="16" y="44" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
-              Áp dụng cho: Cắt tỉa cành, Bón phân, Xử lý sâu bệnh, Trồng mới
+            <text x="16" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+              Áp dụng: Cắt tỉa cành, Đốn hạ cành mục, Trồng dặm, Trồng mới
             </text>
-            <line x1="16" y1="54" x2="424" y2="54" stroke="#E2E0D8" />
+            <line x1="16" y1="56" x2="488" y2="56" stroke="#E2E0D8" stroke-width="1" />
 
-            <g transform="translate(16, 70)">
-              <text x="0" y="16" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-                ✓ Xác thực GPS (Bán kính &lt;= 10m hoặc cảnh báo mềm)
+            <g transform="translate(16, 74)">
+              <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                ✓ Xác thực hiện trường: Quét mã QR + Định vị GPS (&lt;=10m)
               </text>
-              <text x="0" y="38" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-                ✓ Quét mã QR thân cây (Hoặc báo mã hỏng + nhập mã)
+              <text x="0" y="36" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
+                ✓ BẮT BUỘC ẢNH TRƯỚC (Ghi nhận hiện trạng cành/thân cây)
               </text>
-              <text x="0" y="60" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#166534">
-                ✓ BẮT BUỘC ẢNH TRƯỚC (Ghi nhận hiện trạng cây)
+              <text x="0" y="58" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                ✓ Checklist kỹ thuật thao tác hoàn thành 100%
               </text>
-              <text x="0" y="82" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-                ✓ Checklist kỹ thuật hoàn thành 100%
-              </text>
-              <text x="0" y="104" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#166534">
+              <text x="0" y="80" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
                 ✓ BẮT BUỘC ẢNH SAU (Nghiệm thu kết quả can thiệp)
               </text>
-              <text x="0" y="130" font-family="'Geist Mono', monospace" font-size="10" fill="#166534">
-                -> Báo cáo có cặp ảnh Trước/Sau đối chiếu.
+              <text x="0" y="104" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                -&gt; Cặp ảnh Trước / Sau đối chiếu biến đổi rõ rệt
               </text>
             </g>
           </g>
 
-          <!-- Policy B: Light -->
-          <g transform="translate(20, 285)">
-            <rect x="0" y="0" width="440" height="235" rx="6" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.2" />
-            <text x="16" y="26" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              2. CHÍNH SÁCH TINH GỌN (LIGHT PROOF)
+          <!-- Profile 2: SERVICE_PROOF -->
+          <g transform="translate(18, 245)">
+            <rect x="0" y="0" width="504" height="200" rx="6" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+            <text x="16" y="26" font-family="'Geist Mono', monospace" font-size="13" font-weight="700" fill="#112116">
+              2. SERVICE_PROOF (Bảo dưỡng định kỳ)
             </text>
-            <text x="16" y="44" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
-              Áp dụng cho: Tưới nước định kỳ, Khảo sát sức khỏe cây xanh
+            <text x="16" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+              Áp dụng: Tưới nước, Bón phân gốc/lá, Xử lý đất bồn cây
             </text>
-            <line x1="16" y1="54" x2="424" y2="54" stroke="#E2E0D8" />
+            <line x1="16" y1="56" x2="488" y2="56" stroke="#E2E0D8" stroke-width="1" />
 
-            <g transform="translate(16, 70)">
-              <text x="0" y="16" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-                ✓ Xác thực GPS (Bán kính &lt;= 10m hoặc cảnh báo mềm)
+            <g transform="translate(16, 74)">
+              <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                ✓ Xác thực hiện trường: Quét mã QR + Định vị GPS (&lt;=10m)
               </text>
-              <text x="0" y="38" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-                ✓ Quét mã QR thân cây (Hoặc báo mã hỏng + nhập mã)
+              <text x="0" y="36" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                ✓ Checklist kỹ thuật chăm sóc hoàn thành 100%
               </text>
-              <text x="0" y="60" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-                ✓ Checklist kiểm tra thao tác thực địa
+              <text x="0" y="58" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
+                ✓ 01 ẢNH HOÀN TẤT HIỆN TRƯỜNG (Completion Photo)
               </text>
-              <text x="0" y="82" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#166534">
-                ✓ 01 ẢNH MINH CHỨNG HIỆN TRƯỜNG DUY NHẤT
+              <text
+                x="0"
+                y="80"
+                font-family="'Noto Sans', sans-serif"
+                font-size="12"
+                font-style="italic"
+                fill="#68756B"
+              >
+                (Không ép chia Trước/Sau khi không có biến đổi hình thái)
               </text>
-              <text x="0" y="104" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
-                (Không bắt chụp ảnh Trước/Sau nhân tạo)
+              <text x="0" y="104" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                -&gt; Tinh gọn thao tác, phản ánh đúng bản chất bảo dưỡng
               </text>
-              <text x="0" y="130" font-family="'Geist Mono', monospace" font-size="10" fill="#166534">
-                -> Tiết kiệm 40% thao tác ngoài trời nắng cho thợ.
+            </g>
+          </g>
+
+          <!-- Profile 3: INSPECTION_PROOF -->
+          <g transform="translate(18, 465)">
+            <rect x="0" y="0" width="504" height="205" rx="6" fill="#FFF" stroke="#D97706" stroke-width="1.5" />
+            <text x="16" y="26" font-family="'Geist Mono', monospace" font-size="13" font-weight="700" fill="#D97706">
+              3. INSPECTION_PROOF (Khảo sát &amp; Đánh giá)
+            </text>
+            <text x="16" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+              Áp dụng: Khảo sát sâu bệnh, Đánh giá độ nghiêng/nguy cơ gãy đổ
+            </text>
+            <line x1="16" y1="56" x2="488" y2="56" stroke="#E2E0D8" stroke-width="1" />
+
+            <g transform="translate(16, 74)">
+              <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                ✓ Xác thực hiện trường: Quét mã QR + Định vị GPS (&lt;=10m)
+              </text>
+              <text x="0" y="36" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                ✓ Bảng phát hiện có cấu trúc (Structured Findings)
+              </text>
+              <text x="0" y="58" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#D97706">
+                ✓ 01 hoặc nhiều ẢNH HIỆN TRẠNG (Condition Photos)
+              </text>
+              <text
+                x="0"
+                y="80"
+                font-family="'Noto Sans', sans-serif"
+                font-size="12"
+                font-style="italic"
+                fill="#68756B"
+              >
+                (Không can thiệp vật lý tại thời điểm khảo sát đánh giá)
+              </text>
+              <text x="0" y="104" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                -&gt; Hồ sơ bệnh học chuyên môn phục vụ kế hoạch bảo tồn
               </text>
             </g>
           </g>
         </g>
 
-        <!-- SECTION 2: TARGETED REWORK (RIGHT) -->
-        <g transform="translate(560, 30)">
-          <rect x="0" y="0" width="480" height="550" rx="8" fill="#FFF" stroke="#D97706" stroke-width="1.8" />
-          <rect x="20" y="-12" width="280" height="24" rx="4" fill="#D97706" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
-            LÀM LẠI CÓ TRỌNG TÂM (TARGETED REWORK)
+        <!-- SECTION 2: TARGETED REWORK (RIGHT SIDE) -->
+        <g transform="translate(600, 25)">
+          <rect x="0" y="0" width="550" height="690" rx="8" fill="#FFF" stroke="#D97706" stroke-width="1.8" />
+          <rect x="20" y="-13" width="370" height="26" rx="4" fill="#D97706" />
+          <text x="32" y="5" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+            LÀM LẠI CÓ TRỌNG TÂM &amp; BẢO TOÀN LỊCH SỬ
           </text>
 
-          <g transform="translate(20, 35)">
-            <text x="0" y="20" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Cơ chế bảo toàn bằng chứng &amp; Hồi phục nhanh
+          <g transform="translate(20, 25)">
+            <text x="0" y="20" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+              Sửa chữa có mục tiêu &amp; Lưu vết phiên bản (Versioned)
             </text>
-            <text x="0" y="38" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+            <text x="0" y="38" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
               Khi Quản lý từ chối nghiệm thu, thợ không bị ép làm lại từ đầu:
             </text>
 
             <!-- Step 1 in Rework -->
-            <rect x="0" y="55" width="440" height="100" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
-            <text x="14" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#D97706">
-              BƯỚC 1: Quản lý chọn đích danh khâu chưa đạt
-            </text>
-            <text x="14" y="42" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-              • Chọn lý do từ chips: "Ảnh sau mờ", "Thiếu dọn cành", v.v.
-            </text>
-            <text x="14" y="58" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-              • Chỉ định rõ: Cần chụp lại ảnh sau HOẶC bổ sung checklist
-            </text>
-            <text x="14" y="78" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
-              -> Toàn bộ GPS, QR, Ảnh Trước đã duyệt ĐƯỢC GIỮ NGUYÊN
-            </text>
+            <g transform="translate(0, 50)">
+              <rect x="0" y="0" width="510" height="110" rx="6" fill="#FBFBF9" stroke="#E2E0D8" stroke-width="1.2" />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#D97706">
+                BƯỚC 1: Quản lý chọn đích danh khâu chưa đạt
+              </text>
+              <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Chọn lý do: "Ảnh sau mờ", "Sót rác bồn cây", v.v.
+              </text>
+              <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Chỉ định mục: Cần chụp lại ảnh sau HOẶC bổ sung checklist
+              </text>
+              <text x="14" y="90" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                -&gt; Toàn bộ QR, GPS, Ảnh Trước đã duyệt ĐƯỢC BẢO LƯU NGUYÊN VẸN
+              </text>
+            </g>
 
             <!-- Step 2 in Rework -->
-            <rect x="0" y="170" width="440" height="100" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
-            <text x="14" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#112116">
-              BƯỚC 2: Thẻ việc ưu tiên số 0 trên hàng đợi Staff
-            </text>
-            <text x="14" y="42" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-              • Hiển thị hộp thông báo vàng ghi rõ lý do của Quản lý
-            </text>
-            <text x="14" y="58" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-              • Nút bấm duy nhất: "Tiếp tục làm lại"
-            </text>
-            <text x="14" y="78" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
-              -> Nhảy thẳng vào khâu cần sửa (Không bắt đi lại từ bước 1)
-            </text>
+            <g transform="translate(0, 175)">
+              <rect x="0" y="0" width="510" height="110" rx="6" fill="#FBFBF9" stroke="#E2E0D8" stroke-width="1.2" />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+                BƯỚC 2: Thẻ việc ưu tiên hàng đầu trên hàng đợi Staff
+              </text>
+              <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Dán nhãn nổi bật kèm thông báo ghi rõ lý do Quản lý từ chối
+              </text>
+              <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Nút: "Khắc phục mục này" mở đúng khâu sai sót
+              </text>
+              <text x="14" y="90" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                -&gt; Staff chỉ làm đúng khâu yêu cầu (Không bắt làm lại từ đầu)
+              </text>
+            </g>
 
             <!-- Step 3 in Rework -->
-            <rect x="0" y="285" width="440" height="110" rx="6" fill="rgba(217,119,6,0.06)" stroke="#D97706" />
-            <text x="14" y="24" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#D97706">
-              BƯỚC 3: Bổ sung bằng chứng &amp; Gửi lại
-            </text>
-            <text x="14" y="42" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-              • Thợ chụp ảnh sau mới hoặc tích lại checklist
-            </text>
-            <text x="14" y="58" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-              • Bấm "Nộp lại báo cáo" -> Quay lại trạng thái Waiting_Review
-            </text>
-            <text x="14" y="78" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">
-              -> Quản lý đối chiếu ngay ảnh mới sửa với lý do vừa yêu cầu
-            </text>
-            <text x="14" y="94" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">
-              Khép kín chu trình không gây bế tắc.
-            </text>
+            <g transform="translate(0, 300)">
+              <rect
+                x="0"
+                y="0"
+                width="510"
+                height="115"
+                rx="6"
+                fill="#F0EFEA"
+                fill-opacity="0.5"
+                stroke="#D97706"
+                stroke-width="1.5"
+              />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#D97706">
+                BƯỚC 3: Bổ sung bằng chứng &amp; Lưu vết đa phiên bản
+              </text>
+              <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Bằng chứng lần 1 (bị từ chối) vẫn được lưu trong audit trail
+              </text>
+              <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Bằng chứng lần 2 được ghi nhận phiên bản mới (Attempt 2)
+              </text>
+              <text x="14" y="92" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+                -&gt; Nộp lại: Chuyển về WAITING_REVIEW để Quản lý đối soát
+              </text>
+            </g>
+
+            <!-- Step 4: Non-correctable historical defects -->
+            <g transform="translate(0, 430)">
+              <rect
+                x="0"
+                y="0"
+                width="510"
+                height="195"
+                rx="6"
+                fill="#F0EFEA"
+                fill-opacity="0.4"
+                stroke="#DC2626"
+                stroke-width="1.5"
+              />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#DC2626">
+                BƯỚC 4: Xử lý sai sót lịch sử không thể phục hồi
+              </text>
+              <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Ví dụ: Quên chụp ảnh Trước nhưng cây đã bị cắt tỉa trơ cành xong
+              </text>
+              <text x="14" y="68" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#DC2626">
+                • NGUYÊN TẮC: TUYỆT ĐỐI CẤM CHỤP GIẢ MẠO ẢNH TRƯỚC!
+              </text>
+              <text x="14" y="90" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+                • Xử lý: Ghi nhận ngoại lệ EVIDENCE_INTEGRITY_EXCEPTION
+              </text>
+              <text x="14" y="112" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+                • Quản lý thẩm định: APPROVE_WITH_EXCEPTION hoặc CANCEL
+              </text>
+              <line x1="14" y1="126" x2="496" y2="126" stroke="#E2E0D8" stroke-width="1" />
+              <text
+                x="14"
+                y="148"
+                font-family="'Noto Sans', sans-serif"
+                font-size="12"
+                font-weight="700"
+                fill="#166534"
+              >
+                CareHistory lưu cờ ngoại lệ: Minh bạch tính pháp lý
+              </text>
+              <text x="14" y="172" font-family="'Geist Mono', monospace" font-size="11" fill="#DC2626">
+                [BẢO VỆ TÍNH TRUNG THỰC TUYỆT ĐỐI CỦA DỮ LIỆU KIỂM TOÁN]
+              </text>
+            </g>
           </g>
         </g>
       </svg>

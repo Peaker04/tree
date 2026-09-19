@@ -25,16 +25,16 @@ Toàn bộ biểu đồ được tạo dưới dạng **Standalone HTML (Inline 
 
 ---
 
-## 2. Danh mục biểu đồ đề xuất chuẩn hóa quy trình (Proposed Process Recalibration)
+## 2. Danh mục biểu đồ chuẩn hóa quy trình nghiệp vụ (Derived Views — Canonical Baseline)
 
-Các sơ đồ dưới đây phục vụ đợt đánh giá lại mô hình vận hành tại [`docs/BUSINESS-PROCESS-REVIEW.md`](../BUSINESS-PROCESS-REVIEW.md) nhằm giải quyết tính cứng nhắc ngoài thực địa:
+Các sơ đồ dưới đây phản ánh trực quan mô hình vận hành chuẩn tắc đã được đồng bộ chính thức vào [`docs/WORKFLOWS.md`](../WORKFLOWS.md), [`docs/PRODUCT.md`](../PRODUCT.md) và [`docs/DOMAIN.md`](../DOMAIN.md):
 
-| File                                                                                                   | Tên biểu đồ                               | Loại trực quan    | Trạng thái               | Nội dung đề xuất                                                                                                    |
-| ------------------------------------------------------------------------------------------------------ | ----------------------------------------- | ----------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| [`proposed-01-current-vs-recommended-workflow.html`](proposed-01-current-vs-recommended-workflow.html) | So sánh Hiện trạng vs Đề xuất             | Comparison / Flow | **PROPOSED — CHỜ DUYỆT** | So sánh trực quan sự khác biệt giữa mô hình 5 chốt cào bằng cứng nhắc và mô hình xác thực linh hoạt theo loại việc. |
-| [`proposed-02-mvp-operational-swimlane.html`](proposed-02-mvp-operational-swimlane.html)               | Luồng Vận hành Liên vai trò Tối ưu        | Swimlane          | **PROPOSED — CHỜ DUYỆT** | Quy trình thực tế MVP với cảnh báo mềm GPS, xử lý mã QR hỏng, báo cáo sự cố hiện trường và duyệt có trọng tâm.      |
-| [`proposed-03-minimal-task-lifecycle.html`](proposed-03-minimal-task-lifecycle.html)                   | Vòng đời Nhiệm vụ Tối giản                | State Machine     | **PROPOSED — CHỜ DUYỆT** | Chu trình chuyển dịch trạng thái tối giản cho MVP kèm trạng thái sự cố `BLOCKED / ISSUE_REPORTED`.                  |
-| [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html)                 | Chính sách Bằng chứng & Làm lại Trọng tâm | Matrix / Flow     | **PROPOSED — CHỜ DUYỆT** | Phân loại hồ sơ Full (Cắt tỉa/Bón phân) vs Light (Tưới nước/Khảo sát) và cơ chế sửa lỗi không xóa bằng chứng cũ.    |
+| File                                                                                                   | Tên biểu đồ                           | Loại trực quan    | Phân loại & Nguồn chuẩn tắc                 | Nội dung mô hình thể hiện                                                                                                                              |
+| :----------------------------------------------------------------------------------------------------- | :------------------------------------ | :---------------- | :------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`proposed-01-current-vs-recommended-workflow.html`](proposed-01-current-vs-recommended-workflow.html) | So sánh Hiện trạng vs Chuẩn hóa       | Comparison / Flow | **DERIVED VIEW**<br>_Nguồn: `WORKFLOWS.md`_ | So sánh trực quan mô hình 5 chốt cứng nhắc cũ và mô hình Xác thực hiện trường linh hoạt kết hợp 3 Hồ sơ Bằng chứng Ngữ nghĩa.                          |
+| [`proposed-02-mvp-operational-swimlane.html`](proposed-02-mvp-operational-swimlane.html)               | Luồng Vận hành Liên vai trò Tối ưu    | Swimlane          | **DERIVED VIEW**<br>_Nguồn: `WORKFLOWS.md`_ | Chu trình vận hành MVP: Bắt đầu tất định, Xác thực hiện trường, Báo sự cố BLOCKED (3 lối thoát), 4 kết luận duyệt tại WAITING_REVIEW.                  |
+| [`proposed-03-minimal-task-lifecycle.html`](proposed-03-minimal-task-lifecycle.html)                   | Vòng đời Nhiệm vụ 7 Trạng thái        | State Machine     | **DERIVED VIEW**<br>_Nguồn: `WORKFLOWS.md`_ | Máy trạng thái 7 trạng thái tất định cho MVP: Khởi đầu với StartTask, các lối thoát của BLOCKED, kết luận duyệt ngoại lệ, và 2 trạng thái đóng.        |
+| [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html)                 | 3 Hồ sơ Ngữ nghĩa & Làm lại Trọng tâm | Matrix / Flow     | **DERIVED VIEW**<br>_Nguồn: `DOMAIN.md`_    | Chi tiết 3 Hồ sơ Bằng chứng (`CHANGE`, `SERVICE`, `INSPECTION`), làm lại có mục tiêu lưu vết đa phiên bản, và xử lý sai sót lịch sử không thể tái tạo. |
 
 ---
 

@@ -13,15 +13,16 @@ Khi tìm kiếm câu trả lời cho bất kỳ khía cạnh nào của hệ th�
 | Câu hỏi cần giải đáp                                               | Tài liệu chủ quản                                                               | Thẩm quyền & Nội dung chính                                                                                                                    |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Hệ thống giải quyết bài toán gì? Phạm vi MVP là gì?**            | [`docs/PRODUCT.md`](PRODUCT.md)                                                 | Vision, Problem Statement, Business Capabilities, MVP Walking Skeleton, Explicit Non-goals.                                                    |
-| **Nghiệp vụ có ý nghĩa gì? Bounded Context & Invariants là gì?**   | [`docs/DOMAIN.md`](DOMAIN.md)                                                   | Core/Supporting/Generic Domains, Bounded Contexts, Ubiquitous Language, Invariants (DR-01..DR-09), Entity Lifecycles.                          |
-| **Các quy trình nghiệp vụ chuyển trạng thái như thế nào?**         | [`docs/WORKFLOWS.md`](WORKFLOWS.md)                                             | Tách biệt 3 luồng: (1) Task Lifecycle, (2) Proof Acquisition, (3) Manager Review & Rework; Guards, Transition Tables, Handoffs.                |
+| **Nghiệp vụ có ý nghĩa gì? Bounded Context & Invariants là gì?**   | [`docs/DOMAIN.md`](DOMAIN.md)                                                   | Core/Supporting/Generic Domains, Bounded Contexts, Ubiquitous Language, Invariants (DR-01..DR-10), Entity Lifecycles.                          |
+| **Các quy trình nghiệp vụ chuyển trạng thái như thế nào?**         | [`docs/WORKFLOWS.md`](WORKFLOWS.md)                                             | 7-State Task Lifecycle, Site Verification, 3 Proof Profiles, Manager Review, Targeted Rework, Blocked, Cancel, Reassign, Care History.         |
 | **Ai có quyền xem và làm gì? Điều kiện kích hoạt action là gì?**   | [`docs/ACCESS-CONTROL.md`](ACCESS-CONTROL.md)                                   | Actor Registry, Role–Responsibility–Handoff Matrix, Action Eligibility Matrix (Role + Scope + State + Preconditions).                          |
 | **Hệ thống phần mềm được cấu trúc như thế nào (Hiện tại & Đích)?** | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)                                       | AS-IS vs TO-BE Architecture, Layered Clean/Ports-and-Adapters, Feature Ownership, greenOpsService Decomposition, Contract & Data Architecture. |
 | **Hệ thống phải chịu tải, phục hồi và xử lý lỗi ra sao?**          | [`docs/NFR.md`](NFR.md)                                                         | Measurable Quality Attribute Scenarios (QAS), Error & Recovery Matrix, Offline Interruption & Resilience Model.                                |
 | **Thiết kế trực quan, màu sắc, font chữ và UI rules là gì?**       | [`/DESIGN.md`](../DESIGN.md)<br>[`docs/MOBILE_UI_RULES.md`](MOBILE_UI_RULES.md) | Authoritative Visual Profile (Seed botanical identity + Linear structural discipline), Five-Action Nav, Mobile UX Rules.                       |
 | **Yêu cầu nghiệp vụ truy vết ra code và kiểm chứng như thế nào?**  | [`docs/REQUIREMENTS-TRACEABILITY.md`](REQUIREMENTS-TRACEABILITY.md)             | Requirements Taxonomy (BR, FR, DR, AR, NFR...), Traceability Matrix, Feature Definition of Ready (DoR), Definition of Done (DoD).              |
 | **Các khoảng trống, rủi ro và quyết định chưa chốt nằm ở đâu?**    | [`docs/INCEPTION-GAP-REPORT.md`](INCEPTION-GAP-REPORT.md)                       | Comprehensive Inception Gap Report, Open Decision Register (Options A/B/C), Re-evaluated Audit Findings.                                       |
-| **Các sơ đồ kiến trúc và luồng nghiệp vụ trực quan ở đâu?**        | [`docs/diagrams/`](diagrams/)                                                   | Standalone Branded HTML/SVG Diagrams tuân thủ tiêu chuẩn `diagram-design` và palette NOVYX.                                                    |
+| **Lịch sử và bằng chứng ra quyết định nghiệp vụ nằm ở đâu?**       | [`docs/BUSINESS-PROCESS-REVIEW.md`](BUSINESS-PROCESS-REVIEW.md)                 | Approved Decision Evidence / Historical Decision Record (Lưu vết 14 quyết định nghiệp vụ `BUS-DEC-01`..`14`).                                  |
+| **Các sơ đồ kiến trúc và luồng nghiệp vụ trực quan ở đâu?**        | [`docs/diagrams/`](diagrams/)                                                   | Standalone Branded HTML/SVG Diagrams (Derived Views từ Canonical Docs) tuân thủ tiêu chuẩn `diagram-design` và palette NOVYX.                  |
 
 ---
 
@@ -30,7 +31,7 @@ Khi tìm kiếm câu trả lời cho bất kỳ khía cạnh nào của hệ th�
 Để tránh tình trạng tài liệu cũ mâu thuẫn với thiết kế mới, mọi tài liệu trong repository được phân hạng theo trật tự ưu tiên:
 
 1. **CANONICAL (Chuẩn tắc - Cấp 1):**
-   - Các file nằm tại thư mục gốc `docs/*.md`, `/DESIGN.md`, và `@novyx/contracts`.
+   - Các file nằm tại thư mục gốc `docs/*.md` (`PRODUCT.md`, `DOMAIN.md`, `WORKFLOWS.md`, `ACCESS-CONTROL.md`, `REQUIREMENTS-TRACEABILITY.md`, `ARCHITECTURE.md`, `NFR.md`), `/DESIGN.md`, và `@novyx/contracts`.
    - Đây là sự thật tuyệt đối về hợp đồng, nghiệp vụ và kiến trúc mục tiêu.
 2. **REFERENCE (Tham chiếu - Cấp 2):**
    - Tài liệu bên ngoài được ghi nhận: `Peaker04/IPCManagement` (mô hình quản trị), `cathrynlavery/diagram-design` (công cụ biểu đồ), tài liệu chính thức `Expo SDK 57`.
@@ -38,9 +39,9 @@ Khi tìm kiếm câu trả lời cho bất kỳ khía cạnh nào của hệ th�
 3. **PLANNING (Kế hoạch thực thi - Cấp 3):**
    - Các tài liệu trong `.planning/` hoặc kế hoạch nhiệm vụ ngắn hạn.
    - Thể hiện trạng thái triển khai, không thay đổi hợp đồng cốt lõi nếu chưa qua ADR.
-4. **HISTORICAL / AUDIT (Lịch sử & Báo cáo kiểm toán - Cấp 4):**
-   - Các file audit cũ như `docs/MOBILE_DESIGN_AUDIT.md`.
-   - **Quy tắc vàng:** Một phát hiện kiểm toán cũ hoặc một đoạn mã UI lịch sử KHÔNG ĐƯỢC PHÉP ghi đè tài liệu chuẩn tắc. Mọi phát hiện audit phải được tái đánh giá dựa trên Domain Baseline.
+4. **DECISION EVIDENCE / HISTORICAL (Bằng chứng quyết định & Lịch sử - Cấp 4):**
+   - `docs/BUSINESS-PROCESS-REVIEW.md` (hồ sơ lưu vết quá trình phê duyệt quyết định nghiệp vụ), các báo cáo kiểm toán cũ (`docs/MOBILE_DESIGN_AUDIT.md`).
+   - **Quy tắc vàng:** Tài liệu lịch sử hay mã nguồn cũ KHÔNG ĐƯỢC PHÉP ghi đè tài liệu chuẩn tắc. Toàn bộ quy tắc vận hành đã được đồng bộ chính thức vào các tài liệu Canonical Cấp 1.
 5. **EVIDENCE (Bằng chứng thực thi):**
    - Kết quả test thực tế, profiling log, runtime trace, snapshot verify. Chỉ có bằng chứng thực mới được chứng nhận hoàn thành (DoD).
 

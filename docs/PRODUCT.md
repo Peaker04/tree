@@ -19,23 +19,33 @@ Các đơn vị quản lý công viên, cây xanh đô thị và nhà thầu d�
 
 ### 1.2. Giá trị vận hành cốt lõi (Core Value Proposition)
 
-NOVYX GreenOps giải quyết bài toán trên bằng mô hình **Xác thực tác nghiệp 5 điểm chốt (5-Point Field Verification Gate)**:
+NOVYX GreenOps giải quyết triệt để các bài toán vận hành thực địa bằng mô hình **Xác thực tác nghiệp thích ứng & 3 Hồ sơ Bằng chứng Ngữ nghĩa**:
 
-- **Chốt 1 — Tọa độ thực địa:** GPS sai lệch $\le 10$m so với tọa độ gốc của cây `[VERIFIED]`.
-- **Chốt 2 — Định danh thực thể:** Quét mã QR gắn cố định trên thân cây phải khớp 100% với Task `[VERIFIED]`.
-- **Chốt 3 — Trạng thái ban đầu:** Ảnh chụp hiện trường trước tác nghiệp (Before Photo) `[VERIFIED]`.
-- **Chốt 4 — Tuân thủ quy trình:** Đánh dấu hoàn tất toàn bộ hạng mục kỹ thuật bắt buộc (Checklist) `[VERIFIED]`.
-- **Chốt 5 — Nghiệm thu kết quả:** Ảnh chụp hiện trường sau khi hoàn thành (After Photo) `[VERIFIED]`.
+1. **Xác thực hiện trường hai tín hiệu độc lập (Site Verification):**
+   - **Định danh thực thể (Tree Identity):** Quét mã QR cố định trên thân cây để đối soát với cây được giao. Trường hợp mã mờ/rách/mất, cung cấp cơ chế ngoại lệ có kiểm soát (`IDENTITY_EXCEPTION`) qua ảnh tem chụp thực tế và mã số thủ công đối chiếu. Cây mục tiêu là **bất biến, tuyệt đối không được đổi sang cây khác**.
+   - **Vị trí thực địa (Location):** GPS đo đạc mục tiêu sai lệch $\le 10$m. Nếu tín hiệu trôi do tán lá rậm hoặc nhà cao tầng sau khi thử lại, cung cấp cơ chế ngoại lệ có kiểm soát (`LOCATION_EXCEPTION`) kèm lý do giải trình để Quản lý hậu kiểm.
+   - **Thứ tự linh hoạt:** QR và GPS có thể thu thập theo bất kỳ thứ tự nào; việc thu thập này chỉ phục vụ xác thực hiện trường chứ không làm đổi trạng thái vòng đời công việc.
+
+2. **Chính sách bằng chứng theo 3 Hồ sơ Ngữ nghĩa (Semantic Proof Profiles):**
+   - **`CHANGE_PROOF` (Công việc tạo biến đổi vật lý trực quan):** Cắt tỉa, đốn hạ cành sâu mục, trồng mới, can thiệp khẩn cấp. Yêu cầu: Xác thực hiện trường + Ảnh trước (Before) + Checklist thao tác + Ảnh sau (After).
+   - **`SERVICE_PROOF` (Bảo dưỡng định kỳ không tạo khác biệt trước/sau):** Tưới nước, bón phân, làm cỏ bồn cây, xử lý đất. Yêu cầu: Xác thực hiện trường + Checklist thao tác + Ảnh kết quả hoàn thành (Completion Photo).
+   - **`INSPECTION_PROOF` (Khảo sát, kiểm tra, đánh giá chuyên môn):** Đánh giá sức khỏe, phát hiện sâu bệnh, đo độ nghiêng rủi ro. Yêu cầu: Xác thực hiện trường + Tiêu chí phát hiện có cấu trúc (Structured Findings) + Ảnh hiện trạng (Condition Photos).
+
+3. **Cổng kiểm soát chất lượng & Hồi phục tất định:**
+   - Quản lý thẩm định 100% hồ sơ nộp với 4 kết luận rõ ràng (`APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`).
+   - Cơ chế làm lại có mục tiêu (`Targeted Rework`): Chỉ yêu cầu làm lại khâu bằng chứng sai sót; bảo lưu bằng chứng hợp lệ cũ; lưu vết lịch sử nộp nhiều phiên bản (Versioned Evidence).
+   - Cơ chế dừng tạm thời khi gặp trở ngại ngoài ý muốn (`ReportFieldIssue` $\to$ `BLOCKED`) với 3 lối thoát tất định (`Resume`, `Reassign`, `Cancel`).
+   - Biên giới Lịch sử chăm sóc (`Care History`): Chỉ công việc đã được nghiệm thu (`COMPLETED`) mới được ghi nhận vào hồ sơ chính thức của cây.
 
 ---
 
 ## 2. Đối tượng sử dụng & Chân dung người dùng (Target Actors)
 
-| Tác nhân (Actor)                  | Bối cảnh vận hành                                                                                               | Mục tiêu chính                                                                                                                       | Rào cản môi trường                                                                       |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| **Nhân viên hiện trường (Staff)** | Làm việc ngoài trời, di chuyển liên tục, thiết bị Android tầm trung/giá rẻ, sử dụng 1 tay, đeo găng tay bảo hộ. | Nhận việc rõ ràng, thao tác chứng thực nhanh gọn trong $\le 2$ phút/cây, không bị mất dữ liệu khi rớt mạng.                          | Ánh sáng chói chang, mạng 3G/4G chập chờn, bụi bẩn, pin yếu, ứng dụng dễ bị OS tắt ngầm. |
-| **Quản lý vận hành (Manager)**    | Điều hành tại văn phòng hoặc kiểm tra đột xuất ngoài tuyến đường; sử dụng smartphone hoặc tablet.               | Giao việc đúng người đúng cây, giám sát tiến độ toàn tuyến, duyệt nhanh báo cáo với bằng chứng minh bạch, yêu cầu làm lại chính xác. | Quá tải báo cáo tồn đọng, thiếu dữ liệu đối chiếu khách quan nếu bằng chứng bị cắt xén.  |
-| **Quản trị hệ thống (Admin)**     | Vận hành cấp cao, quản lý danh mục đô thị, tài khoản và phân quyền.                                             | Đảm bảo tính toàn vẹn dữ liệu, phân quyền bảo mật, tích hợp hệ sinh thái đô thị thông minh.                                          | _(Dự kiến cho tương lai — [OUT_OF_MVP], [RESERVED])_.                                    |
+| Tác nhân (Actor)                  | Bối cảnh vận hành                                                                                               | Mục tiêu chính                                                                                                                     | Rào cản môi trường                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Nhân viên hiện trường (Staff)** | Làm việc ngoài trời, di chuyển liên tục, thiết bị Android tầm trung/giá rẻ, sử dụng 1 tay, đeo găng tay bảo hộ. | Nhận việc rõ ràng, bấm bắt đầu, xác thực hiện trường, thu thập bằng chứng đúng loại việc, báo cáo sự cố khi bị cản trở, nộp duyệt. | Ánh sáng chói chang, mạng 3G/4G chập chờn, bụi bẩn, pin yếu, ứng dụng dễ bị OS tắt ngầm. |
+| **Quản lý vận hành (Manager)**    | Điều hành tại văn phòng hoặc kiểm tra đột xuất ngoài tuyến đường; sử dụng smartphone hoặc tablet.               | Giao việc đúng loại & đúng cây, xử lý sự cố tạm dừng, thẩm định bằng chứng minh bạch, phê duyệt (kể cả có ngoại lệ) hoặc trả lại.  | Quá tải báo cáo tồn đọng, thiếu dữ liệu đối chiếu khách quan nếu bằng chứng bị cắt xén.  |
+| **Quản trị hệ thống (Admin)**     | Vận hành cấp cao, quản lý danh mục đô thị, tài khoản và phân quyền.                                             | Đảm bảo tính toàn vẹn dữ liệu, phân quyền bảo mật, tích hợp hệ sinh thái đô thị thông minh.                                        | _(Dự kiến cho tương lai — [OUT_OF_MVP], [RESERVED])_.                                    |
 
 ---
 
@@ -47,130 +57,151 @@ Hệ thống năng lực của NOVYX GreenOps được phân tách rành mạch 
 +-----------------------------------------------------------------------------------+
 |                            NOVYX BUSINESS CAPABILITIES                            |
 +-----------------------------------------------------------------------------------+
-| [CORE DOMAIN]                                                                     |
-| 1. Field Work Verification (Xác thực tác nghiệp hiện trường)                       |
-|    - GPS Proximity Enforcement (Xác thực bán kính 10m)                            |
-|    - Physical Asset QR Validation (Xác thực mã QR thân cây)                       |
-|    - Chronological Photo Evidence Acquisition (Chụp ảnh Trước/Sau)                |
-|    - Technical Checklist Execution (Thực thi danh mục kỹ thuật)                   |
-|    - Proof Chain Packaging & Submission (Đóng gói và nộp chuỗi bằng chứng)        |
+| [CORE DOMAIN - Xác thực tác nghiệp hiện trường]                                    |
+| 1. Field Work Verification                                                        |
+|    - Site Verification (QR định danh cây + GPS vị trí mục tiêu <=10m)             |
+|    - Verification Exception Handling (Xử lý ngoại lệ QR hỏng & GPS trôi có kiểm soát)|
+|    - Semantic Proof Acquisition (Thu thập bằng chứng theo CHANGE/SERVICE/INSPECTION) |
+|    - Technical Checklist / Structured Findings Execution                          |
+|    - Field Issue Reporting (Báo cáo sự cố hiện trường chuyển sang BLOCKED)         |
+|    - Targeted Evidence Submission & Outbox Packaging                              |
 +-----------------------------------------------------------------------------------+
-| [SUPPORTING DOMAINS]                                                              |
-| 2. Work Management (Quản lý công việc)                                            |
-|    - Task Dispatching & Assignment (Tạo và phân công nhiệm vụ)                     |
-|    - Work Queue & Prioritization (Hàng đợi công việc và ưu tiên hóa việc làm lại)  |
-| 3. Tree Asset Registry (Quản lý hồ sơ cây xanh)                                   |
-|    - Tree Catalog & Risk Profiling (Hồ sơ cây và phân loại rủi ro/sức khỏe)       |
-|    - Fast QR Lookup (Tra cứu nhanh thông tin cây tại hiện trường)                  |
-|    - Care History Projection (Chiếu lịch sử chăm sóc từ các task hoàn thành)      |
-| 4. Review & Quality Control (Kiểm soát chất lượng & Nghiệm thu)                   |
-|    - Evidence Audit Gate (Cổng thẩm định 5 chốt bằng chứng)                       |
-|    - Review Approval (Phê duyệt đóng việc)                                        |
-|    - Rework Dispatch with Actionable Feedback (Trả việc làm lại kèm lý do rõ ràng)|
-| 5. Operational Notifications (Thông báo vận hành)                                 |
-|    - Task Status Alerts (Cảnh báo việc mới, việc bị trả lại, việc đã duyệt)       |
-|    - Operational Exception Alerts (Cảnh báo mã QR hỏng, bất thường hiện trường)   |
+| [SUPPORTING DOMAINS - Nghiệp vụ điều phối & Kiểm soát]                             |
+| 2. Work Management                                                                |
+|    - Task Dispatching & Assignment (Tạo việc, gắn TaskType -> ProofProfile)        |
+|    - Deterministic Task Lifecycle (PENDING, IN_PROGRESS, BLOCKED, WAITING, REWORK) |
+|    - Reassignment Governance (Đổi người ở PENDING & BLOCKED; cấm đổi trực tiếp)    |
+|    - Task Cancellation (Hủy việc có lý do từ mọi trạng thái chưa đóng)             |
+| 3. Tree Asset Registry                                                            |
+|    - Tree Catalog & Risk Profiling (Hồ sơ cây, tọa độ và mã QR bất biến)          |
+|    - Fast Field QR Lookup (Tra cứu nhanh thông tin cây tại hiện trường)            |
+|    - Official Care History Projection (Chỉ chiếu từ các nhiệm vụ COMPLETED)       |
+| 4. Review & Quality Control                                                       |
+|    - Multi-Outcome Manager Review Gate (APPROVE, REWORK, APPROVE_EXCEPTION, CANCEL)|
+|    - Targeted Rework Feedback Loop (Chỉ thị sửa đúng mục, bảo lưu bằng chứng cũ)  |
+|    - Versioned Evidence Audit Trail (Lưu vết lịch sử các lần nộp và thẩm định)    |
+| 5. Operational Notifications                                                      |
+|    - Task Lifecycle Alerts (Việc mới, yêu cầu làm lại, phê duyệt, sự cố tạm dừng)  |
 +-----------------------------------------------------------------------------------+
-| [GENERIC / PLATFORM CAPABILITIES]                                                 |
-| - Identity & Session (Đăng nhập, duy trì phiên, phân quyền vai trò)               |
-| - Contextual Device Permissions (Cấp quyền camera, định vị đúng thời điểm)        |
-| - Resilient Local Persistence (Lưu trữ ngoại tuyến, chống mất dữ liệu khi kill app)|
-| - API Transport & Envelopes (Giao thức REST v1, chuẩn hóa lỗi, upload multipart)   |
-| - Seed/Linear Design System (Giao diện chuẩn hóa, tối ưu ngoài trời)              |
+| [GENERIC / PLATFORM CAPABILITIES - Kỹ thuật nền tảng]                              |
+| - Session & Role-Based Access Control (Đăng nhập, phiên làm việc, phân quyền)     |
+| - Contextual Device Permissions (Cấp quyền Camera & Location đúng thời điểm)       |
+| - Resilient Offline Store & Outbox (Bảo toàn dữ liệu nhập dở, đồng bộ khi có mạng)|
+| - API Transport & Structured Envelopes (REST v1, chuẩn hóa lỗi, upload ảnh)       |
+| - Seed/Linear Outdoor Design System (Giao diện tối ưu ngoài trời nắng)            |
 +-----------------------------------------------------------------------------------+
 ```
 
 ### 3.1. Bảng chi tiết năng lực nghiệp vụ (Business Capabilities Matrix)
 
-| Mã         | Tên năng lực                   | Vai trò    | Tác nhân chính         | Đối tượng xử lý (Work Object)                 | Trạng thái MVP      | Chủ sở hữu mã nguồn hiện tại `[VERIFIED]`                      |
-| ---------- | ------------------------------ | ---------- | ---------------------- | --------------------------------------------- | ------------------- | -------------------------------------------------------------- |
-| **CAP-01** | **Field Work Verification**    | **CORE**   | Staff                  | `Task`, `TaskEvidence`, `GpsCheck`, `QrCheck` | **MUST HAVE**       | `StaffProofFlow.tsx`, `mobileWorkflow.ts`                      |
-| **CAP-02** | **Work Management**            | SUPPORTING | Manager, Staff         | `Task`                                        | **MUST HAVE**       | `ManagerCreateTask.tsx`, `StaffWork.tsx`, `greenOpsService.ts` |
-| **CAP-03** | **Tree Asset Registry**        | SUPPORTING | Manager, Staff         | `Tree`, `CareHistory`                         | **MUST HAVE**       | `StaffTrees.tsx`, `ManagerTrees.tsx`, `ManagerQrLookup.tsx`    |
-| **CAP-04** | **Review & Quality Control**   | SUPPORTING | Manager                | `Task`, `TaskEvidence`, `ReviewDecision`      | **MUST HAVE**       | `ManagerReview.tsx`, `greenOpsService.ts`                      |
-| **CAP-05** | **Operational Notifications**  | SUPPORTING | System, Staff, Manager | `Notification`                                | **MUST HAVE**       | `StaffArea.tsx`, `greenOpsService.ts`                          |
-| **CAP-06** | **Session & Access Control**   | GENERIC    | Staff, Manager         | `AuthSession`, `User`                         | **MUST HAVE**       | `MobileApp.tsx`, `authSessionStore.ts`                         |
-| **CAP-07** | **Contextual Permissions**     | GENERIC    | System, Staff, Manager | `DevicePermission`                            | **MUST HAVE**       | `devicePermissions.ts`, `useDevicePermissions.ts`              |
-| **CAP-08** | **Offline Resilience & Cache** | GENERIC    | System                 | `Snapshot`, `LocalCache`                      | **MUST HAVE (GAP)** | `greenOpsService.ts` _(Hiện tại in-memory, cần nâng cấp)_      |
+| Mã         | Tên năng lực                   | Vai trò    | Tác nhân chính         | Đối tượng xử lý (Work Object)                            | Trạng thái MVP      | Chủ sở hữu mã nguồn tương lai                               |
+| ---------- | ------------------------------ | ---------- | ---------------------- | -------------------------------------------------------- | ------------------- | ----------------------------------------------------------- |
+| **CAP-01** | **Field Work Verification**    | **CORE**   | Staff                  | `Task`, `SiteVerification`, `TaskEvidence`, `FieldIssue` | **MUST HAVE**       | `StaffProofFlow.tsx`, `mobileWorkflow.ts`                   |
+| **CAP-02** | **Work Management**            | SUPPORTING | Manager, Staff         | `Task`, `TaskAssignment`, `TaskType`                     | **MUST HAVE**       | `ManagerCreateTask.tsx`, `StaffWork.tsx`, `greenOpsService` |
+| **CAP-03** | **Tree Asset Registry**        | SUPPORTING | Manager, Staff         | `Tree`, `CareHistory` (Chỉ tạo khi `COMPLETED`)          | **MUST HAVE**       | `StaffTrees.tsx`, `ManagerTrees.tsx`, `ManagerQrLookup.tsx` |
+| **CAP-04** | **Review & Quality Control**   | SUPPORTING | Manager                | `Task`, `ReviewDecision`, `ReworkRequest`                | **MUST HAVE**       | `ManagerReview.tsx`, `greenOpsService.ts`                   |
+| **CAP-05** | **Operational Notifications**  | SUPPORTING | System, Staff, Manager | `Notification`                                           | **MUST HAVE**       | `StaffArea.tsx`, `greenOpsService.ts`                       |
+| **CAP-06** | **Session & Access Control**   | GENERIC    | Staff, Manager         | `AuthSession`, `User`                                    | **MUST HAVE**       | `MobileApp.tsx`, `authSessionStore.ts`                      |
+| **CAP-07** | **Contextual Permissions**     | GENERIC    | System, Staff, Manager | `DevicePermission`                                       | **MUST HAVE**       | `devicePermissions.ts`, `useDevicePermissions.ts`           |
+| **CAP-08** | **Offline Resilience & Cache** | GENERIC    | System                 | `LocalSubmissionStatus`, `DurableStore`, `Outbox`        | **MUST HAVE (GAP)** | `greenOpsService.ts` _(Cần nâng cấp bền vững)_              |
 
 ---
 
-## 4. Phạm vi MVP — Luồng vận hành tối thiểu (Walking Skeleton)
+## 4. Phạm vi MVP — Chu trình vận hành chuẩn tắc (The Canonical Operating Loop)
 
-Định nghĩa MVP của NOVYX GreenOps **KHÔNG ĐƯỢC ĐO BẰNG SỐ LƯỢNG MÀN HÌNH**, mà được đo bằng **Một chu trình công việc khép kín đầu-cuối (End-to-End Minimum Viable Workflow)**:
+Định nghĩa MVP của NOVYX GreenOps được đo bằng **Chu trình vận hành khép kín tất định (Deterministic End-to-End Operating Loop)**:
 
 ```text
-[1. Manager Tạo việc]
-  |-- Chọn cây, người làm, loại việc, hạn chót, checklist mẫu
+[1. Manager Tạo việc & Phân công] (Trạng thái: PENDING)
+  |-- Manager chọn Cây mục tiêu, Người thực hiện, Hạn chót, Loại việc (TaskType).
+  |-- Hệ thống tự động ánh xạ TaskType -> ProofProfile (CHANGE, SERVICE, hoặc INSPECTION).
+  |-- TaskType gắn kèm Checklist mẫu hoặc Mẫu khảo sát cấu trúc mặc định.
+  |-- Manager KHÔNG được tùy tiện hạ cấp ProofProfile của từng task riêng lẻ.
+  |-- (Tại PENDING: Manager có quyền Reassign sang Staff khác hoặc Cancel -> CANCELLED).
   v
-[2. Staff Tiếp nhận]
-  |-- Nhận thông báo việc mới, thấy việc trong hàng đợi Công việc
+[2. Staff Tiếp nhận & Bấm Bắt đầu]
+  |-- Thấy việc trong hàng đợi Công việc.
+  |-- Staff chủ động bấm "Bắt đầu làm việc" (StartTask).
+  |-- DUY NHẤT hành động này chuyển Task từ PENDING -> IN_PROGRESS.
   v
-[3. Staff Xác thực GPS]
-  |-- Đo khoảng cách tới tọa độ cây, yêu cầu <= 10m
+[3. Staff Xác thực hiện trường (Site Verification)]
+  |-- Quét mã QR trên thân cây (Tree Identity) và đo khoảng cách GPS (Location target <=10m).
+  |-- Thu thập theo thứ tự tùy chọn; không làm đổi trạng thái Task.
+  |-- Nếu gặp khó khăn: Kích hoạt ngoại lệ có kiểm soát (LOCATION_EXCEPTION hoặc IDENTITY_EXCEPTION).
+  |-- Cây mục tiêu là bất biến; tuyệt đối không cho phép đổi sang cây khác.
   v
-[4. Staff Quét QR Cây]
-  |-- Quét mã vật lý trên cây, đối soát khớp 100% mã cây của task
+[4. Tác nghiệp thực địa & Thu thập bằng chứng theo Hồ sơ ngữ nghĩa]
+  |-- Nếu phát sinh sự cố không thể tiếp tục: Staff bấm ReportFieldIssue -> Chuyển sang BLOCKED.
+  |     +--> Manager xử lý: (a) Bỏ cản trở: RESUME -> IN_PROGRESS; (b) Đổi người: REASSIGN -> PENDING; (c) Hủy việc: CANCEL -> CANCELLED.
+  |-- Thu thập bằng chứng đúng hợp đồng bắt buộc của ProofProfile:
+  |     * CHANGE_PROOF: Ảnh trước -> Tích checklist kỹ thuật -> Ảnh sau.
+  |     * SERVICE_PROOF: Tích checklist kỹ thuật -> Ảnh hoàn thành.
+  |     * INSPECTION_PROOF: Đánh giá tiêu chí có cấu trúc -> Ảnh hiện trạng.
   v
-[5. Staff Chụp Ảnh Trước]
-  |-- Ghi nhận hiện trạng cây trước khi thao tác
+[5. Staff Nộp hồ sơ nghiệm thu (Evidence Submission)]
+  |-- Rà soát hợp đồng bằng chứng theo hồ sơ nhiệm vụ.
+  |-- Bấm "Gửi duyệt kết quả".
+  |-- Nếu ngoại tuyến: LocalSubmissionStatus = PENDING_SYNC, trên server Task vẫn là IN_PROGRESS.
+  |-- Khi đồng bộ thành công: Task chuyển sang WAITING_REVIEW, LocalSubmissionStatus = SYNCED.
   v
-[6. Staff Làm việc & Tích Checklist]
-  |-- Hoàn thành từng hạng mục chăm sóc thực tế
-  v
-[7. Staff Chụp Ảnh Sau]
-  |-- Ghi nhận hiện trạng cây sau khi hoàn thành
-  v
-[8. Staff Soát Bằng chứng & Nộp]
-  |-- Kiểm tra cổng 5 điểm chốt, nộp báo cáo (Status: Waiting_Review)
-  v
-[9. Manager Thẩm định Bằng chứng]
-  |-- Xem chi tiết GPS (m/timestamp), QR, cặp ảnh Trước/Sau, Checklist
-  v
-  +---> [Nhánh A: PHÊ DUYỆT (Approve)]
-  |       |-- Khép kín nhiệm vụ (Status: Completed)
-  |       |-- Ghi nhận vào Lịch sử chăm sóc (Care History) của cây
-  |       v
-  +---> [Nhánh B: YÊU CẦU LÀM LẠI (Request Rework)]
-          |-- Manager bắt buộc nhập lý do cụ thể (Reject Reason)
-          |-- Chuyển trạng thái (Status: Rework_Required)
-          |-- Staff nhận thông báo, thấy lý do, tiếp tục đúng bước thiếu
-          |-- Staff bổ sung bằng chứng và nộp lại (Loopback to Step 8)
+[6. Manager Thẩm định Hồ sơ (Manager Review Gate)]
+  |-- Manager đối soát hiện trường (QR/GPS/Ngoại lệ) và nội dung bằng chứng chuyên môn.
+  |-- Ra 1 trong 4 quyết định dứt điểm:
+        +---> [APPROVE]: Nghiệm thu đạt chuẩn -> Chuyển sang COMPLETED -> Sinh CareHistory chính thức.
+        +---> [APPROVE_WITH_EXCEPTION]: Chấp nhận ngoại lệ (công việc đã làm, lỗi không thể tạo lại,
+        |     Quản lý chịu trách nhiệm phê duyệt kèm lý do bắt buộc) -> Chuyển sang COMPLETED (có cờ ngoại lệ).
+        +---> [REQUEST_REWORK]: Chỉ rõ khâu sai sót -> Chuyển sang REWORK_REQUIRED -> Staff sửa đúng mục
+        |     bị từ chối (bảo lưu bằng chứng hợp lệ cũ) -> Nộp lại về WAITING_REVIEW.
+        +---> [CANCEL]: Hủy bỏ nhiệm vụ kèm lý do -> Chuyển sang CANCELLED (không sinh CareHistory).
 ```
 
-### 4.1. Tiêu chí phân định phạm vi (Scope Boundary)
+> **Tham chiếu chi tiết:** Toàn bộ bảng chuyển dịch trạng thái, điều kiện tiên quyết (Guards) và ma trận sự kiện được quy định thẩm quyền tại [`docs/WORKFLOWS.md`](WORKFLOWS.md).
+
+---
+
+### 4.1. Ranh giới phạm vi MVP (Scope Boundary)
 
 #### MUST HAVE (Bắt buộc trong MVP):
 
-- Đăng nhập theo vai trò (`Staff` hoặc `Manager`) với cơ chế khôi phục phiên từ storage cục bộ.
-- Cơ chế xin quyền thiết bị theo ngữ cảnh sử dụng (Contextual Permissions) cho Camera và GPS, không có màn xin quyền chung sau đăng nhập.
-- Luồng 5 bước thu thập bằng chứng tuần tự của Staff có chốt chặn (Guards).
-- Luồng duyệt của Manager với cổng khóa nút Duyệt nếu thiếu bất kỳ bằng chứng nào trong 5 chốt.
-- Luồng trả việc làm lại kèm lý do bắt buộc và chỉ dẫn hồi phục cho Staff.
-- Tra cứu nhanh thông tin cây qua quét QR cho cả Staff và Manager.
-- Chế độ hoạt động ngoại tuyến / rớt mạng bảo toàn dữ liệu nhập liệu không bị mất khi thoát ứng dụng.
+- Đăng nhập phân quyền theo 2 vai trò vận hành thực tế: `Staff` và `Manager`.
+- Cơ chế xin quyền thiết bị theo ngữ cảnh sử dụng (Contextual Permissions) cho Camera và GPS.
+- Quản trị Loại việc (`TaskType`) gắn liền với 3 Hồ sơ Bằng chứng Ngữ nghĩa (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`).
+- Xác thực hiện trường hai tín hiệu độc lập (QR + GPS mục tiêu $\le 10$m) có xử lý ngoại lệ có kiểm soát.
+- Vòng đời nhiệm vụ 7 trạng thái tất định: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`.
+- Báo cáo sự cố hiện trường (`ReportFieldIssue` $\to$ `BLOCKED`) và 3 lối thoát xử lý của Quản lý.
+- Cổng thẩm định 4 kết luận của Quản lý (`APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`).
+- Làm lại có mục tiêu (`Targeted Rework`), bảo lưu bằng chứng hợp lệ cũ, lưu vết lịch sử nhiều phiên bản.
+- Quyền Hủy việc (`CancelTask`) có lý do bắt buộc từ mọi trạng thái chưa đóng.
+- Quy tắc đổi người làm việc (`Reassign`): Cho phép ở `PENDING` và `BLOCKED`; cấm đổi trực tiếp ở `IN_PROGRESS` và `WAITING_REVIEW`.
+- Chiếu Lịch sử chăm sóc (`Care History`): Chỉ nhiệm vụ `COMPLETED` mới sinh Care History; bảo toàn cờ ngoại lệ nếu có.
+- Cơ chế ngoại tuyến: Phân tách rõ ràng giữa `TaskStatus` và `LocalSubmissionStatus`.
 
 #### SHOULD HAVE (Giai đoạn tiếp theo sau MVP):
 
-- Tải ảnh nền đồng bộ (Background photo upload) khi mạng yếu.
-- Phân trang dạng Cursor cho danh sách hàng trăm cây và hàng trăm task.
-- Lọc cây theo bản đồ thực địa tương tác cụ thể (Interactive Map clustering).
+- Tải ảnh nền đồng bộ (Background photo upload queue) khi kết nối chập chờn.
+- Phân trang Cursor cho danh mục cây và danh sách nhiệm vụ trên giao diện mobile.
+- Lọc cây theo bản đồ thực địa tương tác (Interactive Map clustering).
 
-#### EXPLICIT NON-GOALS (Tuyệt đối không làm trong MVP):
+#### EXPLICIT NON-GOALS (Dứt khoát loại trừ khỏi MVP):
 
-- Triển khai toàn bộ Backend Cloud Production trong giai đoạn hiện tại (giữ nguyên hợp đồng Mock/REST hybrid).
-- Tích hợp nhà cung cấp định danh doanh nghiệp SSO/Active Directory/OAuth2 phức tạp.
-- Phát triển giao diện Admin Web/Mobile (Role Admin là `[RESERVED]`).
-- Tính năng chạy ngầm liên tục theo dõi vị trí (Background continuous geolocation tracking / Geofencing).
-- Cho phép người dân/cộng đồng gửi phản ánh (Citizen public reporting portal).
-- Bổ sung framework điều hướng bên ngoài (React Navigation v7 / Expo Router mới) khi chưa có ADR.
+- Tối ưu hóa lộ trình di chuyển tự động (Route optimization / TSP).
+- Quản lý chấm công, tính lương công nhật (Workforce payroll).
+- Quản trị kho vật tư, phân bón, thuốc bảo vệ thực vật chi tiết (Parts & inventory).
+- Quản lý hợp đồng nhà thầu và thanh quyết toán dịch vụ (Contractor billing, SLAs).
+- Ký nhận điện tử của người dân/chủ đầu tư (Customer digital signatures).
+- Hệ thống GIS chuyên sâu biên tập đa giác bản đồ (Advanced GIS polygon editing).
+- Cảm biến IoT gắn đất hoặc thân cây (IoT soil/tree tilt sensors).
+- Dự báo bảo trì bằng trí tuệ nhân tạo (Predictive maintenance AI).
+- Phê duyệt đa cấp bậc tổ chức (Multi-level corporate approvals).
+- Vai trò Quản trị viên hệ thống (Admin) — _Dành cho tương lai, [OUT_OF_MVP], [RESERVED]_.
 
 ---
 
 ## 5. Giả định và Ràng buộc vận hành (Assumptions & Constraints)
 
 1. **Ràng buộc phần cứng:** Thiết bị Staff là Android 10+ với camera có tự động lấy nét và GPS phần cứng hoạt động được ngoài trời.
-2. **Ràng buộc độ chính xác GPS:** Ngưỡng 10 mét là tiêu chuẩn kỹ thuật đô thị đã được nghiệm thu trong mã nguồn (`DISTANCE_THRESHOLD = 10`). Độ chính xác GPS thực địa có thể dao động tùy tán cây và nhà cao tầng, hệ thống cung cấp cơ chế thông báo rõ ràng cho nhân viên.
-3. **Ràng buộc định danh QR:** Mỗi cây xanh chỉ gắn duy nhất một mã QR kim loại/nhựa chịu thời tiết. Mã QR chứa trực tiếp chuỗi định danh cây (ví dụ `TREE-01` hoặc URL chứa mã cây).
-4. **Ràng buộc ngôn ngữ & Định dạng:** Toàn bộ giao diện người dùng sử dụng tiếng Việt tiêu chuẩn; thời gian hiển thị theo múi giờ `Asia/Ho_Chi_Minh` (GMT+7); khoảng cách hiển thị theo mét (m).
-5. **Ràng buộc kiến trúc monorepo:** Mọi cấu trúc dữ liệu trao đổi giữa ứng dụng di động và backend tương lai phải đi qua package `@novyx/contracts`. Cấm tuyệt đối việc sao chép thủ công kiểu dữ liệu vào `apps/mobile/src/`.
+2. **Ràng buộc khoảng cách GPS:** Tiêu chuẩn mục tiêu là $\le 10$ mét (`DISTANCE_TARGET = 10`). Không áp dụng ngưỡng phụ 25m. Nếu GPS không đạt sau khi thử lại do tán lá rậm/nhà cao tầng, kích hoạt `LOCATION_EXCEPTION` kèm giải trình để Quản lý hậu kiểm.
+3. **Ràng buộc định danh QR:** Mỗi cây xanh có một mã QR vật lý chịu thời tiết gắn trên thân. Cây mục tiêu của Task là **bất biến trong suốt quá trình thực thi**. Nếu tem hỏng, kích hoạt `IDENTITY_EXCEPTION` đối soát mã chụp với chính cây được giao, không được đổi sang cây khác.
+4. **Ràng buộc bảo toàn dữ liệu bằng chứng:** Không bao giờ xóa đè hoặc viết lại tác giả của các bằng chứng đã thu thập; lịch sử các lần nộp và thẩm định phải được bảo toàn nguyên vẹn. Bằng chứng lịch sử không thể tái tạo trung thực thì không bao giờ được làm giả (`EVIDENCE_INTEGRITY_EXCEPTION`).
+5. **Ràng buộc ngôn ngữ & Định dạng:** Giao diện người dùng sử dụng tiếng Việt chuẩn tắc; múi giờ vận hành `Asia/Ho_Chi_Minh` (GMT+7); khoảng cách tính theo mét (m).
+6. **Ràng buộc kiến trúc monorepo:** Mọi cấu trúc dữ liệu trao đổi giữa ứng dụng di động và backend tương lai phải đi qua package `@novyx/contracts`. Cấm tuyệt đối việc sao chép thủ công kiểu dữ liệu vào `apps/mobile/src/`.

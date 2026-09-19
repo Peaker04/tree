@@ -3,9 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PROPOSED 03 - Vòng đời Nhiệm vụ Tối giản Chuẩn hóa</title>
+    <title>PROPOSED 03 — Vòng đời Nhiệm vụ Tối giản Tất định (7 Trạng thái)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,600;0,700;1,600&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -27,8 +29,8 @@
         --color-lime: #84cc16;
         --color-amber: #d97706;
         --color-danger: #dc2626;
-        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
-        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-sans: 'Noto Sans', 'Segoe UI', Arial, sans-serif;
+        --font-serif: 'Noto Serif', 'Times New Roman', serif;
         --font-mono: 'Geist Mono', ui-monospace, monospace;
       }
 
@@ -44,38 +46,48 @@
       }
 
       .frame {
-        max-width: 1050px;
+        max-width: 1180px;
         width: 100%;
         margin: 0 auto;
+      }
+      .badge-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
       }
       .badge-proposed {
         display: inline-block;
         font-family: var(--font-mono);
         font-size: 0.72rem;
         font-weight: 600;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        background: #d97706;
+        background: #166534;
         color: #fff;
-        padding: 3px 8px;
+        padding: 4px 10px;
         border-radius: 4px;
-        margin-bottom: 0.5rem;
+      }
+      .source-ref {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--color-muted);
       }
 
       h1 {
         font-family: var(--font-serif);
         font-size: 2.1rem;
-        font-weight: 400;
-        letter-spacing: -0.02em;
-        line-height: 1.15;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
         color: var(--color-ink);
         margin-bottom: 0.5rem;
       }
 
       .desc {
-        font-size: 0.92rem;
+        font-size: 0.95rem;
         color: var(--color-muted);
-        line-height: 1.5;
+        line-height: 1.55;
         margin-bottom: 1.75rem;
       }
 
@@ -90,14 +102,20 @@
   </head>
   <body>
     <div class="frame">
-      <div class="badge-proposed">PROPOSED — CHỜ PHÊ DUYỆT</div>
-      <h1>Vòng đời Nhiệm vụ Tối giản Chuẩn hóa (Minimal Task Lifecycle)</h1>
+      <div class="badge-container">
+        <span class="badge-proposed">DERIVED VIEW — CANONICAL BUSINESS BASELINE</span>
+        <span class="source-ref">SOURCE: docs/WORKFLOWS.md &amp; docs/DOMAIN.md</span>
+      </div>
+      <h1>Vòng đời Nhiệm vụ Tối giản Tất định (Minimal Task Lifecycle)</h1>
       <p class="desc">
-        Vòng đời thực tế cho MVP: Mỗi trạng thái đều có một ý nghĩa vận hành duy nhất, một chủ sở hữu và điều kiện
-        chuyển trạng thái rành mạch.
+        Mô hình 7 trạng thái tất định cho MVP: Khởi đầu tất định với StartTask, 3 lối thoát chuẩn xác cho sự cố BLOCKED
+        (Resume &rarr; In_Progress, Reassign &rarr; Pending, Cancel &rarr; Cancelled), 4 kết quả thẩm định tại
+        Waiting_Review, và hai trạng thái kết thúc (COMPLETED và CANCELLED).
       </p>
 
-      <svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img">
+      <svg viewBox="0 0 1140 700" xmlns="http://www.w3.org/2000/svg" role="img">
+        <title>Vòng đời Nhiệm vụ Tối giản Tất định</title>
+        <desc>Máy trạng thái 7 trạng thái của Task theo hợp đồng nghiệp vụ chuẩn tắc</desc>
         <defs>
           <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#112116" />
@@ -115,152 +133,267 @@
 
         <rect width="100%" height="100%" fill="#FBFBF9" />
 
-        <!-- START -->
-        <circle cx="50" cy="180" r="10" fill="#112116" />
-        <line x1="60" y1="180" x2="105" y2="180" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
-        <text x="50" y="150" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">CreateTask</text>
+        <!-- START CIRCLE & CreateTask -->
+        <circle cx="45" cy="260" r="10" fill="#112116" />
+        <line x1="55" y1="260" x2="105" y2="260" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
+        <text x="35" y="235" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+          CreateTask
+        </text>
 
         <!-- STATE 1: PENDING -->
-        <g transform="translate(110, 135)">
-          <rect x="0" y="0" width="145" height="90" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.8" />
-          <text x="14" y="28" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#112116">
+        <g transform="translate(110, 205)">
+          <rect x="0" y="0" width="160" height="110" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="2" />
+          <text x="14" y="28" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#112116">
             PENDING
           </text>
-          <text x="14" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">Đã giao việc</text>
-          <line x1="14" y1="54" x2="131" y2="54" stroke="#E2E0D8" />
-          <text x="14" y="70" font-family="'Geist', sans-serif" font-size="10" fill="#112116">Chưa bắt đầu</text>
-          <text x="14" y="84" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">Owner: Staff</text>
+          <text x="14" y="52" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+            Đã giao cho Staff
+          </text>
+          <line x1="14" y1="62" x2="146" y2="62" stroke="#E2E0D8" stroke-width="1" />
+          <text x="14" y="80" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+            Chưa bắt đầu làm
+          </text>
+          <text x="14" y="98" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">Reassign hợp lệ</text>
         </g>
 
-        <!-- Arrow 1 -> 2 -->
-        <line x1="255" y1="180" x2="330" y2="180" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
-        <text x="265" y="165" font-family="'Geist Mono', monospace" font-size="9" fill="#112116">StartTask</text>
-        <text x="260" y="202" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">[Đến cây / Bấm làm]</text>
+        <!-- Arrow PENDING -> IN_PROGRESS -->
+        <line x1="270" y1="260" x2="335" y2="260" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
+        <rect x="272" y="236" width="62" height="18" rx="3" fill="#FFF" />
+        <text x="275" y="250" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+          StartTask
+        </text>
 
         <!-- STATE 2: IN_PROGRESS -->
-        <g transform="translate(335, 125)">
+        <g transform="translate(340, 195)">
           <rect
             x="0"
             y="0"
-            width="170"
-            height="110"
+            width="190"
+            height="130"
             rx="8"
-            fill="rgba(132,204,22,0.08)"
-            stroke="#84CC16"
+            fill="#F0EFEA"
+            fill-opacity="0.5"
+            stroke="#166534"
             stroke-width="2"
           />
-          <text x="16" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+          <text x="14" y="28" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#112116">
             IN_PROGRESS
           </text>
-          <text x="16" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#166534">Đang thực hiện</text>
-          <line x1="16" y1="54" x2="154" y2="54" stroke="#E2E0D8" />
-          <text x="16" y="72" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-            • Xác thực QR &amp; GPS
+          <text x="14" y="50" font-family="'Noto Sans', sans-serif" font-size="12" fill="#166534">
+            Đang thi công thực địa
           </text>
-          <text x="16" y="88" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-            • Chụp ảnh &amp; Checklist
+          <line x1="14" y1="60" x2="176" y2="60" stroke="#E2E0D8" stroke-width="1" />
+          <text x="14" y="80" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+            • Xác thực Site (QR/GPS)
           </text>
-          <text x="16" y="102" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">Owner: Staff</text>
+          <text x="14" y="100" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+            • Bằng chứng theo Profile
+          </text>
+          <text x="14" y="118" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+            Cấm đổi thợ trực tiếp
+          </text>
         </g>
 
-        <!-- Arrow 2 -> 3 -->
-        <line x1="505" y1="180" x2="585" y2="180" stroke="#166534" stroke-width="2" marker-end="url(#arr-green)" />
-        <text x="510" y="160" font-family="'Geist Mono', monospace" font-size="9" font-weight="600" fill="#166534">
-          SubmitEvidence
+        <!-- Arrow IN_PROGRESS -> WAITING_REVIEW -->
+        <line x1="530" y1="260" x2="605" y2="260" stroke="#166534" stroke-width="2" marker-end="url(#arr-green)" />
+        <rect x="532" y="236" width="70" height="18" rx="3" fill="#FFF" />
+        <text x="534" y="250" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+          Submit
         </text>
-        <text x="512" y="202" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">[Đủ proof policy]</text>
 
         <!-- STATE 3: WAITING_REVIEW -->
-        <g transform="translate(590, 125)">
-          <rect x="0" y="0" width="165" height="110" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
-          <text x="16" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+        <g transform="translate(610, 190)">
+          <rect x="0" y="0" width="195" height="140" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
+          <text x="14" y="28" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#112116">
             WAITING_REVIEW
           </text>
-          <text x="16" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#D97706">Chờ phê duyệt</text>
-          <line x1="16" y1="54" x2="149" y2="54" stroke="#E2E0D8" />
-          <text x="16" y="72" font-family="'Geist', sans-serif" font-size="10" fill="#112116">Tại hàng đợi duyệt</text>
-          <text x="16" y="88" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">Quản lý đối soát</text>
-          <text x="16" y="102" font-family="'Geist Mono', monospace" font-size="9" fill="#D97706">Owner: Manager</text>
+          <text x="14" y="50" font-family="'Noto Sans', sans-serif" font-size="12" fill="#D97706">
+            Chờ Quản lý thẩm định
+          </text>
+          <line x1="14" y1="60" x2="181" y2="60" stroke="#E2E0D8" stroke-width="1" />
+          <text x="14" y="78" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+            4 Kết luận thẩm định:
+          </text>
+          <text x="14" y="96" font-family="'Noto Sans', sans-serif" font-size="11" fill="#166534">
+            1. Approve / 2. Exception
+          </text>
+          <text x="14" y="114" font-family="'Noto Sans', sans-serif" font-size="11" fill="#D97706">
+            3. Rework / 4. Cancel
+          </text>
+          <text x="14" y="130" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">Owner: Manager</text>
         </g>
 
-        <!-- Arrow 3 -> COMPLETED -->
-        <line x1="755" y1="180" x2="830" y2="180" stroke="#166534" stroke-width="2.5" marker-end="url(#arr-green)" />
-        <text x="765" y="160" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#166534">
-          Approve
+        <!-- Arrow WAITING_REVIEW -> COMPLETED -->
+        <line x1="805" y1="260" x2="880" y2="260" stroke="#166534" stroke-width="2.5" marker-end="url(#arr-green)" />
+        <rect x="810" y="235" width="66" height="20" rx="3" fill="#FFF" />
+        <text x="815" y="250" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
+          Duyệt
         </text>
-        <text x="760" y="202" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">[Hợp lệ 100%]</text>
 
-        <!-- STATE 4: COMPLETED -->
-        <g transform="translate(835, 125)">
-          <rect x="0" y="0" width="135" height="110" rx="8" fill="#166534" />
-          <rect x="4" y="4" width="127" height="102" rx="6" fill="none" stroke="#84CC16" stroke-width="1.5" />
-          <text x="16" y="32" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#FFF">
+        <!-- STATE 4: COMPLETED (TERMINAL) -->
+        <g transform="translate(885, 195)">
+          <rect x="0" y="0" width="165" height="130" rx="8" fill="#166534" />
+          <rect x="4" y="4" width="157" height="122" rx="6" fill="none" stroke="#84CC16" stroke-width="1.5" />
+          <text x="14" y="30" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#FFF">
             COMPLETED
           </text>
-          <text x="16" y="52" font-family="'Geist', sans-serif" font-size="11" fill="#84CC16">Hoàn thành</text>
-          <line x1="16" y1="60" x2="119" y2="60" stroke="rgba(255,255,255,0.2)" />
-          <text x="16" y="78" font-family="'Geist Mono', monospace" font-size="9" fill="#FFF">[TERMINAL]</text>
-          <text x="16" y="94" font-family="'Geist', sans-serif" font-size="9" fill="#E2E0D8">Ghi CareHistory</text>
+          <text x="14" y="52" font-family="'Noto Sans', sans-serif" font-size="12" fill="#84CC16">
+            Nghiệm thu đóng việc
+          </text>
+          <line x1="14" y1="62" x2="151" y2="62" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+          <text x="14" y="80" font-family="'Geist Mono', monospace" font-size="11" fill="#FFF">
+            [TERMINAL: SUCCESS]
+          </text>
+          <text x="14" y="100" font-family="'Noto Sans', sans-serif" font-size="12" fill="#FFF">
+            -&gt; Ghi CareHistory
+          </text>
+          <text x="14" y="118" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            (Bảo lưu cờ ngoại lệ)
+          </text>
         </g>
 
         <!-- REWORK LOOPBACK -->
         <path
-          d="M 672 235 L 672 380 L 525 380"
+          d="M 700 330 L 700 460 L 560 460"
           fill="none"
           stroke="#D97706"
           stroke-width="2"
           marker-end="url(#arr-amber)"
         />
-        <text x="682" y="300" font-family="'Geist Mono', monospace" font-size="9" font-weight="600" fill="#D97706">
-          RequestRework
+        <rect x="635" y="385" width="130" height="22" rx="4" fill="#D97706" />
+        <text x="642" y="401" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+          RequestRework (Lý do)
         </text>
-        <text x="682" y="316" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">[Kèm lý do cụ thể]</text>
 
         <!-- STATE 5: REWORK_REQUIRED -->
-        <g transform="translate(335, 335)">
-          <rect x="0" y="0" width="185" height="90" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
-          <text x="14" y="26" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#D97706">
+        <g transform="translate(340, 410)">
+          <rect x="0" y="0" width="215" height="105" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
+          <text x="14" y="26" font-family="'Geist Mono', monospace" font-size="13" font-weight="700" fill="#D97706">
             REWORK_REQUIRED
           </text>
-          <text x="14" y="44" font-family="'Geist', sans-serif" font-size="10" fill="#112116">
-            Ưu tiên cao nhất hàng đợi
+          <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
+            Ưu tiên hàng đầu của Staff
           </text>
-          <text x="14" y="60" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-            Bảo toàn bằng chứng cũ
+          <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="12" fill="#166534">
+            Bảo toàn bằng chứng cũ (Attempt 1)
           </text>
-          <text x="14" y="78" font-family="'Geist Mono', monospace" font-size="9" fill="#D97706">
-            Staff chỉ sửa điểm thiếu
+          <text x="14" y="88" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#D97706">
+            Chỉ sửa đúng khâu bị từ chối
           </text>
         </g>
 
-        <line x1="420" y1="335" x2="420" y2="240" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
-        <text x="428" y="290" font-family="'Geist Mono', monospace" font-size="9" fill="#112116">ResumeTask</text>
-
-        <!-- EXCEPTION BRANCH: BLOCKED / CANNOT COMPLETE -->
+        <!-- Resubmit from REWORK_REQUIRED to WAITING_REVIEW -->
         <path
-          d="M 420 125 L 420 50 L 255 50"
+          d="M 445 515 L 445 555 L 730 555 L 730 335"
+          fill="none"
+          stroke="#166534"
+          stroke-width="2"
+          stroke-dasharray="4,4"
+          marker-end="url(#arr-green)"
+        />
+        <rect x="540" y="543" width="95" height="22" rx="4" fill="#166534" />
+        <text x="546" y="559" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+          Resubmit (Nộp lại)
+        </text>
+
+        <!-- EXCEPTION BRANCH: BLOCKED (STATE 6) -->
+        <path
+          d="M 435 195 L 435 105 L 340 105"
           fill="none"
           stroke="#DC2626"
           stroke-width="1.8"
           stroke-dasharray="4,4"
           marker-end="url(#arr-red)"
         />
-        <text x="280" y="40" font-family="'Geist Mono', monospace" font-size="9" font-weight="600" fill="#DC2626">
-          ReportIssue (Không thể làm)
+        <rect x="365" y="93" width="135" height="22" rx="4" fill="#DC2626" />
+        <text x="372" y="109" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+          ReportFieldIssue
         </text>
 
-        <g transform="translate(100, 20)">
-          <rect x="0" y="0" width="150" height="60" rx="6" fill="#FFF" stroke="#DC2626" stroke-width="1.5" />
-          <text x="12" y="22" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
-            BLOCKED / SỰ CỐ
+        <g transform="translate(130, 50)">
+          <rect x="0" y="0" width="205" height="110" rx="6" fill="#FFF" stroke="#DC2626" stroke-width="2" />
+          <text x="14" y="26" font-family="'Geist Mono', monospace" font-size="13" font-weight="700" fill="#DC2626">
+            BLOCKED (ĐÌNH CHỈ)
           </text>
-          <text x="12" y="38" font-family="'Geist', sans-serif" font-size="9" fill="#68756B">
-            Kẹt rào, cây gãy, nguy hiểm
+          <text x="14" y="48" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+            Vào duy nhất từ IN_PROGRESS
           </text>
-          <text x="12" y="52" font-family="'Geist Mono', monospace" font-size="8" fill="#112116">
-            -> Trả về Quản lý xử lý
+          <line x1="14" y1="56" x2="191" y2="56" stroke="#E2E0D8" stroke-width="1" />
+          <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            Manager giải quyết qua 3 lối:
+          </text>
+          <text x="14" y="92" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#D97706">
+            Resume / Reassign / Cancel
           </text>
         </g>
+
+        <!-- BLOCKED Exit 1: RESUME -> back to IN_PROGRESS -->
+        <path
+          d="M 235 160 L 235 180 L 340 215"
+          fill="none"
+          stroke="#166534"
+          stroke-width="1.8"
+          marker-end="url(#arr-green)"
+        />
+        <rect x="240" y="172" width="55" height="18" rx="3" fill="#FFF" />
+        <text x="243" y="186" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+          RESUME
+        </text>
+
+        <!-- BLOCKED Exit 2: REASSIGN -> back to PENDING -->
+        <path d="M 180 160 L 180 200" fill="none" stroke="#68756B" stroke-width="1.8" marker-end="url(#arr)" />
+        <rect x="135" y="172" width="60" height="18" rx="3" fill="#FFF" />
+        <text x="138" y="186" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+          REASSIGN
+        </text>
+
+        <!-- CANCELLED BRANCH (STATE 7: TERMINAL) -->
+        <g transform="translate(680, 50)">
+          <rect x="0" y="0" width="185" height="100" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.8" />
+          <text x="14" y="26" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#DC2626">
+            CANCELLED
+          </text>
+          <text x="14" y="48" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
+            Hủy từ mọi state chưa đóng
+          </text>
+          <line x1="14" y1="56" x2="171" y2="56" stroke="#E2E0D8" stroke-width="1" />
+          <text x="14" y="74" font-family="'Geist Mono', monospace" font-size="11" fill="#DC2626">
+            [TERMINAL: VOID]
+          </text>
+          <text x="14" y="92" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Không vào CareHistory
+          </text>
+        </g>
+
+        <!-- BLOCKED Exit 3 -> CANCELLED -->
+        <line
+          x1="335"
+          y1="85"
+          x2="675"
+          y2="85"
+          stroke="#DC2626"
+          stroke-width="1.8"
+          stroke-dasharray="4,4"
+          marker-end="url(#arr-red)"
+        />
+        <rect x="470" y="74" width="75" height="20" rx="3" fill="#FFF" />
+        <text x="475" y="89" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
+          Hủy sự cố
+        </text>
+
+        <!-- Cancel from WAITING_REVIEW / REWORK to CANCELLED -->
+        <path
+          d="M 770 190 L 770 155"
+          fill="none"
+          stroke="#DC2626"
+          stroke-width="1.5"
+          stroke-dasharray="4,4"
+          marker-end="url(#arr-red)"
+        />
+        <rect x="745" y="165" width="50" height="18" rx="3" fill="#FFF" />
+        <text x="750" y="179" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+          CANCEL
+        </text>
       </svg>
     </div>
   </body>

@@ -85,33 +85,38 @@ Hệ thống mục tiêu áp dụng nguyên lý **Clean Architecture / Ports and
                                          |
                                          v
 +-----------------------------------------------------------------------------------+
-| [2. APPLICATION LAYER / USE CASES (Ca sử dụng ứng dụng)]                          |
-| - StartTaskUseCase: Bắt đầu thực hiện nhiệm vụ                                    |
-| - AcquireProofStepUseCase: Cập nhật bằng chứng từng bước (GPS, QR, Ảnh, Checklist)|
-| - SubmitTaskEvidenceUseCase: Đóng gói và gửi duyệt (Kiểm tra cổng 5/5)           |
-| - ReviewTaskUseCase: Phê duyệt hoặc Yêu cầu làm lại kèm lý do                     |
+| [2. APPLICATION LAYER / USE CASES (Ca sử dụng ứng dụng - PROPOSED)]               |
+| - StartTaskUseCase: Bắt đầu thực hiện nhiệm vụ (PENDING -> IN_PROGRESS)           |
+| - VerifySiteUseCase: Thu thập QR/GPS & Xử lý ngoại lệ có kiểm soát                |
+| - AcquireProofUseCase: Thu thập bằng chứng theo 3 ProofProfiles (CHANGE/SERVICE/INSP)|
+| - ReportFieldIssueUseCase: Báo cáo sự cố hiện trường (IN_PROGRESS -> BLOCKED)     |
+| - ResolveBlockedUseCase: Xử lý sự cố hiện trường (Resume / Reassign / Cancel)     |
+| - SubmitTaskEvidenceUseCase: Đóng gói và gửi duyệt (Hợp đồng ProofProfile)        |
+| - ReviewTaskUseCase: Thẩm định 4 kết luận (Approve, Rework, ApproveException, Cancel)|
+| - CancelTaskUseCase: Hủy việc có lý do từ mọi trạng thái chưa đóng                |
+| - ReassignTaskUseCase: Phân công lại ở PENDING & BLOCKED                          |
 | - LookupTreeByQrUseCase: Tra cứu cây và lịch sử chăm sóc                          |
 | - RestoreSessionUseCase: Khôi phục phiên làm việc                                 |
 +-----------------------------------------------------------------------------------+
                                          |
                                          v
 +-----------------------------------------------------------------------------------+
-| [3. DOMAIN LAYER (Thực thể & Quy tắc nghiệp vụ cốt lõi)]                          |
-| Aggregates & Entities: Task, Tree, ProofWorkflow, ReviewAudit                     |
-| Value Objects: GpsCheck, QrCheck, TaskEvidence, Coordinates                      |
-| Domain Invariants: DR-01..DR-10 (Bán kính 10m, QR khớp, Khóa việc đã đóng...)     |
-| Domain Events: TaskAssignedEvent, TaskSubmittedEvent, TaskReworkRequiredEvent     |
+| [3. DOMAIN LAYER (Thực thể & Quy tắc nghiệp vụ cốt lõi - PROPOSED)]               |
+| Aggregates & Entities: Task (7 states), Tree, SiteVerification, ReviewAudit       |
+| Value Objects: QrCheck, GpsCheck, TaskEvidence (versioned), FieldIssue, Coordinates|
+| Domain Invariants: DR-HARD-01..07, DR-MVP-01..06, DR-POL-01..05                   |
+| Domain Events: TaskStartedEvent, TaskBlockedEvent, TaskSubmittedEvent...          |
 +-----------------------------------------------------------------------------------+
                                          |
                                          v
 +-----------------------------------------------------------------------------------+
-| [4. PORTS (Giao diện ranh giới cổng)]                                             |
+| [4. PORTS (Giao diện ranh giới cổng - PROPOSED)]                                  |
 | ITaskRepository | ITreeRepository | IAuthRepository | IDeviceHardwarePort        |
 +-----------------------------------------------------------------------------------+
                                          |
                                          v
 +-----------------------------------------------------------------------------------+
-| [5. INFRASTRUCTURE ADAPTERS (Bộ điều hợp kỹ thuật & Ngoại vi)]                    |
+| [5. INFRASTRUCTURE ADAPTERS (Bộ điều hợp kỹ thuật & Ngoại vi - PROPOSED)]         |
 | - RestApiAdapter: HTTP Client REST v1, multipart upload, xử lý mạng chập chờn     |
 | - DurableStorageAdapter: SQLite / MMKV lưu trữ ngoại tuyến chống mất dữ liệu      |
 | - ExpoHardwareAdapter: Quản lý quyền và luồng Camera / GPS của Expo SDK 57        |
@@ -167,9 +172,10 @@ Bằng chứng hiện trường (Evidence) là tài sản thông tin có giá tr
 [File cục bộ trong Cache máy: file://.../cache/evidence-123.jpg]
        |
        | 2. Lưu vào CSDL cục bộ (SQLite/Durable Store) kèm Metadata:
-       |    - taskId, treeId, stage ('before' | 'after')
+       |    - taskId, treeId, proofProfile (CHANGE/SERVICE/INSPECTION)
+       |    - stage/role (before/after/completion/finding), attemptNumber
        |    - capturedAt (ISO UTC), capturedByUserId (StaffId)
-       |    - gpsCheck (lat, lng, accuracy, distance, timestamp)
+       |    - siteVerification (lat, lng, accuracy, distance, timestamp, exceptions)
        v
 [Hàng đợi đồng bộ (Sync Queue / Outbox)]
        |
@@ -189,3 +195,18 @@ Bằng chứng hiện trường (Evidence) là tài sản thông tin có giá tr
 - Không bao giờ lưu file ảnh dạng Base64 trong database hoặc state.
 - URI cục bộ phải được đảm bảo không bị hệ điều hành xóa dọn (Garbage Collected) trước khi nộp thành công lên server.
 - Mỗi ảnh bằng chứng bắt buộc phải đi kèm metadata định vị tại đúng thời điểm chụp để phục vụ hậu kiểm.
+
+---
+
+## 6. Sổ đăng ký quyết định kiến trúc kỹ thuật tiếp theo (Technical Decisions Register)
+
+Các quyết định kiến trúc sau đây được nhận diện từ quá trình đồng bộ nghiệp vụ nhưng **CHƯA ĐƯỢC TRIỂN KHAI MÃ NGUỒN** và sẽ được giải quyết trong giai đoạn "Technical Architecture Baseline Reconciliation":
+
+| Mã quyết định       | Vấn đề kiến trúc kỹ thuật                                                                    | Phân loại trạng thái | Hướng tiếp cận sơ khởi                                                                                       |
+| :------------------ | :------------------------------------------------------------------------------------------- | :------------------- | :----------------------------------------------------------------------------------------------------------- |
+| **ADR-PROPOSED-01** | Tách biệt trạng thái Vòng đời Task (`TaskStatus`) và Tiến trình bằng chứng (`ProofProgress`) | `[PROPOSED]`         | Tách state owner trong ViewModel/Hook thay vì gộp chung vào `TaskDto`.                                       |
+| **ADR-PROPOSED-02** | Lựa chọn giải pháp lưu trữ bền vững ngoại tuyến: SQLite (expo-sqlite) vs MMKV                | `[NEEDS_DECISION]`   | SQLite hỗ trợ quan hệ bảng cho evidence history; MMKV tối ưu cho key-value cache nhẹ.                        |
+| **ADR-PROPOSED-03** | Mô hình lưu trữ và định danh phiên bản bằng chứng (`TaskEvidenceAttempt`)                    | `[NEEDS_DECISION]`   | Lưu vết `attemptNumber: 1, 2...` kèm tham chiếu ID bằng chứng cũ thay vì clone toàn bộ.                      |
+| **ADR-PROPOSED-04** | Cơ chế Outbox Queue & Retry Policy cho đồng bộ ngoại tuyến                                   | `[PROPOSED]`         | Hàng đợi tuần tự (FIFO) với exponential backoff, phân biệt lỗi 4xx và 5xx/mạng.                              |
+| **ADR-PROPOSED-05** | Hợp đồng API cho Báo cáo sự cố (`FieldIssue`) và 3 lối thoát của `BLOCKED`                   | `[PROPOSED]`         | Bổ sung endpoints `POST /tasks/:id/field-issue` và `POST /tasks/:id/resolve-blocked` vào `@novyx/contracts`. |
+| **ADR-PROPOSED-06** | Hợp đồng API cho Phê duyệt có ngoại lệ (`approve_with_exception`)                            | `[PROPOSED]`         | Cập nhật payload `ReviewDecisionRequest` và bổ sung cờ ngoại lệ vào `CareHistoryDto`.                        |

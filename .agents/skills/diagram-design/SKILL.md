@@ -12,6 +12,17 @@ Create visual diagrams as self-contained HTML files with inline SVG and CSS, fol
 
 Forty visual types. Semantic patterns describe behavior independently; type references describe layout. Details load from `references/` only when selected.
 
+> [!NOTE]
+> **UPSTREAM PROVENANCE & NOVYX LOCAL EXTENSIONS:**
+> - **Upstream repository:** [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) (License: MIT)
+> - **Pinned commit:** `8585047d16a7973f1c1a126e3eea3c38027e52d0`
+> - **Project-Local Extensions for NOVYX GreenOps:**
+>   1. **Vietnamese Localization & Typography:** Detailed rules in [`references/localization-vi.md`](references/localization-vi.md) (`Noto Serif` for headings, `Noto Sans` for body/nodes, `Geist Mono` for technical IDs only, $\ge 12$px body, diacritic line-height $1.4$em, authoring-time `<tspan>` wrapping).
+>   2. **Content-Driven Layout:** Content defines node dimensions; dynamic relayout of downstream nodes to prevent text clipping and overlapping.
+>   3. **Collision Validation Oracle:** Strict zero-collision validation (Text vs Node, Text vs Text, Arrow Label vs Node/Line).
+>   4. **Multi-Format Export Tooling:** Headless Edge/Chrome runner supporting SVG (rgba normalized to hex+opacity), PNG (@2x/@3x), and PDF (Diagram-only and Full-page).
+>   5. **Canonical Governance:** Explicit banner annotation referencing canonical source document (`SOURCE: docs/WORKFLOWS.md`).
+
 ---
 
 ## 0. First-time setup — style guide gate

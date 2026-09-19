@@ -31,18 +31,18 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
 
 - **ID:** `QAS-OFFLINE-01`
 - **Thuộc tính chất lượng:** **Offline Resilience / Zero Data Loss**
-- **Kịch bản:** Nhân viên đang thực hiện dở dang bước Chụp ảnh trước hoặc Checklist thì thiết bị mất sóng 3G/4G hoàn toàn (vào vùng mù viễn thông).
+- **Kịch bản:** Nhân viên đang thực hiện dở dang bước thu thập bằng chứng hoặc Checklist thì thiết bị mất sóng 3G/4G hoàn toàn (vào vùng mù viễn thông).
 - **Kích hoạt (Trigger):** Rớt mạng đột ngột khi đang tương tác tại hiện trường.
-- **Ngữ cảnh (Context):** Nhiệm vụ đã có GPS và QR hợp lệ; ảnh chụp vừa lưu vào bộ nhớ tạm của máy.
+- **Ngữ cảnh (Context):** Nhiệm vụ đã có Site Verification (QR/GPS hoặc cờ ngoại lệ); ảnh chụp vừa lưu vào bộ nhớ tạm của máy.
 - **Phản ứng kỳ vọng:**
   - Ứng dụng không bật popup lỗi chặn màn hình; không chuyển hướng người dùng về màn hình đăng nhập.
   - Hiển thị huy hiệu nhận diện: `Ngoại tuyến (Dữ liệu cục bộ)` màu hổ phách (Amber).
-  - Nhân viên tiếp tục hoàn thành các mục checklist và chụp ảnh sau bình thường.
-  - Khi bấm "Gửi duyệt", báo cáo được đóng gói và đưa vào Hàng đợi gửi (Outbox) để tự động gửi lại khi có mạng.
+  - Nhân viên tiếp tục hoàn thành các hạng mục bằng chứng theo `ProofProfile` bình thường.
+  - Khi bấm "Gửi duyệt", báo cáo được đóng gói và đưa vào Hàng đợi gửi (Outbox) với trạng thái `LocalSubmissionStatus = PENDING_SYNC` để tự động gửi lại khi có mạng; trên máy chủ trạng thái vẫn là `IN_PROGRESS`.
 - **Thước đo / Chấp thuận:**
   - $0\%$ dữ liệu bằng chứng bị mất khi rớt mạng.
-  - Toàn bộ 5 chốt bằng chứng vẫn được ghi nhận đầy đủ với timestamp cục bộ chính xác.
-- **Bằng chứng kiểm chứng:** Kiểm thử ngắt mạng (Airplane mode test) xuyên suốt 5 bước proof trên máy thật; khôi phục mạng và kiểm tra dữ liệu nhận được trên server.
+  - Toàn bộ chuỗi bằng chứng theo hồ sơ nhiệm vụ vẫn được ghi nhận đầy đủ với timestamp cục bộ chính xác.
+- **Bằng chứng kiểm chứng:** Kiểm thử ngắt mạng (Airplane mode test) xuyên suốt chu trình proof trên máy thật; khôi phục mạng và kiểm tra dữ liệu nhận được trên server.
 - **Trạng thái MVP:** **MUST HAVE**
 
 ---
@@ -51,11 +51,11 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
 
 - **ID:** `QAS-OFFLINE-02`
 - **Thuộc tính chất lượng:** **Fault Tolerance / State Recoverability**
-- **Kịch bản:** Khi nhân viên bật Camera để chụp ảnh Sau, hệ điều hành Android giải phóng RAM bằng cách tắt ngầm (OS Kill) tiến trình chính của ứng dụng.
+- **Kịch bản:** Khi nhân viên bật Camera để chụp ảnh bằng chứng, hệ điều hành Android giải phóng RAM bằng cách tắt ngầm (OS Kill) tiến trình chính của ứng dụng.
 - **Kích hoạt (Trigger):** Ứng dụng bị tắt cưỡng bức trong lúc tác vụ đang dang dở.
-- **Ngữ cảnh (Context):** Nhân viên vừa hoàn thành GPS, QR, ảnh Trước và Checklist.
+- **Ngữ cảnh (Context):** Nhân viên vừa hoàn thành Site Verification và các bằng chứng giai đoạn đầu.
 - **Phản ứng kỳ vọng:** Khi nhân viên mở lại ứng dụng, phiên đăng nhập được tự động khôi phục từ lưu trữ bền vững (Durable Store); nhiệm vụ đang làm dở được tự động mở lại với đầy đủ bằng chứng đã thu thập trước thời điểm bị tắt.
-- **Thước đo / Chấp thuận:** Nhân viên không phải đi lại từ đầu các bước GPS, QR hay chụp lại ảnh trước; thời gian phục hồi về đúng trạng thái trước khi tắt $\le 2$ giây.
+- **Thước đo / Chấp thuận:** Nhân viên không phải đi lại từ đầu các khâu đã hoàn thành hợp lệ; thời gian phục hồi về đúng trạng thái trước khi tắt $\le 2$ giây.
 - **Bằng chứng kiểm chứng:** Thử nghiệm bật chế độ "Don't keep activities" trên Android Developer Options và kiểm tra độ bền dữ liệu.
 - **Trạng thái MVP:** **MUST HAVE**
 
