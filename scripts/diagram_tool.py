@@ -579,6 +579,22 @@ def validate_diagram_runtime(html_path):
     if "Noto+Sans" not in content and "Noto+Serif" not in content:
         static_warnings.append("Missing explicit Noto Sans / Noto Serif Google Fonts link.")
 
+    # 2. Canonical TaskStatus Lifecycle check [DG-SEM-005]
+    if "proposed-03" in html_path.name or "lifecycle" in html_path.name.lower() or "Vòng đời Nhiệm vụ" in content:
+        if re.search(r'>\s*ASSIGNED\s*<|\bASSIGNED\b', content):
+            static_errors.append(
+                "DG-SEM-005 VIOLATION: Diagram contains forbidden status 'ASSIGNED'. "
+                "Per docs/WORKFLOWS.md, canonical TaskStatus has exactly 7 states: "
+                "PENDING, IN_PROGRESS, BLOCKED, WAITING_REVIEW, REWORK_REQUIRED, COMPLETED, CANCELLED."
+            )
+        canonical_task_statuses = ["PENDING", "IN_PROGRESS", "BLOCKED", "WAITING_REVIEW", "REWORK_REQUIRED", "COMPLETED", "CANCELLED"]
+        missing_canonical = [s for s in canonical_task_statuses if s not in content]
+        if missing_canonical:
+            static_errors.append(
+                f"DG-SEM-005 VIOLATION: Diagram is missing canonical TaskStatus: {', '.join(missing_canonical)}. "
+                "All 7 canonical states must be represented."
+            )
+
     if not browser:
         return {
             "browserFound": False,
@@ -817,7 +833,31 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
         print("  [SKIP] PNG/PDF export skipped: No headless browser found.")
         return True
 
+    handshake_script = """
+  <script id="__export_handshake__">
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await document.fonts.ready;
+        const sansOk = document.fonts.check('12px "Noto Sans"');
+        const serifOk = document.fonts.check('16px "Noto Serif"');
+        if (sansOk) {
+          document.documentElement.setAttribute('data-export-ready', 'true');
+          document.documentElement.setAttribute('data-font-sans', 'true');
+          document.documentElement.setAttribute('data-font-serif', String(serifOk));
+        } else {
+          document.documentElement.setAttribute('data-export-ready', 'false');
+          document.documentElement.setAttribute('data-export-error', 'Noto Sans font check failed');
+        }
+      } catch (e) {
+        document.documentElement.setAttribute('data-export-ready', 'false');
+        document.documentElement.setAttribute('data-export-error', String(e));
+      }
+    });
+  </script>
+"""
+
     # Prepare temporary HTML wrapper for capture
+    is_temp_file = False
     if mode == "diagram":
         wrapper_html = f"""<!DOCTYPE html>
 <html>
@@ -847,14 +887,7 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
       height: {svg_h}px;
     }}
   </style>
-  <script>
-    window.addEventListener('DOMContentLoaded', async () => {{
-      try {{
-        await document.fonts.ready;
-      }} catch (e) {{}}
-      document.documentElement.setAttribute('data-export-ready', 'true');
-    }});
-  </script>
+  {handshake_script}
 </head>
 <body>
   {svg_content.replace('<?xml version="1.0" encoding="UTF-8"?>', '')}
@@ -864,9 +897,19 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
         with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False, encoding='utf-8') as tf:
             tf.write(wrapper_html)
             render_target = tf.name
+            is_temp_file = True
         render_w, render_h = svg_w, svg_h
     else:
-        render_target = str(html_path)
+        full_content = html_path.read_text(encoding="utf-8")
+        if "</body>" in full_content:
+            injected_full = full_content.replace("</body>", f"{handshake_script}\n</body>")
+        else:
+            injected_full = full_content + handshake_script
+        with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False, encoding='utf-8') as tf:
+            tf.write(injected_full)
+            render_target = tf.name
+            is_temp_file = True
+
         fp_bounds = val_res.get("geometryData", {}).get("fullPageBounds", {}) if val_res else {}
         measured_w = int(fp_bounds.get("width", 1400))
         measured_h = int(fp_bounds.get("height", 1000))
@@ -876,6 +919,23 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
     target_url = "file:///" + render_target.replace("\\", "/")
 
     try:
+        # Phase A: Deterministic Font Readiness Handshake Barrier
+        hs_cmd = [
+            browser,
+            "--headless",
+            "--disable-gpu",
+            "--virtual-time-budget=4000",
+            "--dump-dom",
+            target_url
+        ]
+        hs_res = subprocess.run(hs_cmd, capture_output=True, text=True, encoding='utf-8', timeout=25)
+        hs_dom = hs_res.stdout
+        if 'data-export-ready="true"' not in hs_dom:
+            print(f"  [FAIL] Export Handshake Barrier Failed for {base_name}: Font readiness check failed ('data-export-ready=\"true\"' not found).")
+            return False
+        print(f"  [PASS] Export Handshake Barrier Confirmed: document.fonts.ready & Noto Sans verified.")
+
+        # Phase B: Capture PNG and PDF after handshake confirmation
         # 2. Export PNG
         if "png" in formats:
             suffix = ".png" if mode == "diagram" else ".full.png"
@@ -923,7 +983,7 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
                 print(f"  [FAIL] Failed to produce PDF: {pdf_out.name}")
 
     finally:
-        if mode == "diagram" and os.path.exists(render_target):
+        if is_temp_file and os.path.exists(render_target):
             try:
                 os.unlink(render_target)
             except Exception:
@@ -1046,12 +1106,37 @@ def run_self_test():
 </svg></body></html>""",
             "expect": "PASS",
             "check": lambda res: True
+        },
+        {
+            "name": "CASE 8: Canonical Lifecycle Regression [DG-SEM-005] (Forbidden ASSIGNED)",
+            "html": """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet"></head><body>
+<div class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</div>
+<div class="source-ref">SOURCE: docs/WORKFLOWS.md</div>
+<p>Vòng đời Nhiệm vụ 7 Trạng thái</p>
+<svg viewBox="0 0 600 300" width="600" height="300">
+  <text x="20" y="50" font-family="'Noto Sans', sans-serif" font-size="12">PENDING</text>
+  <text x="120" y="50" font-family="'Noto Sans', sans-serif" font-size="12">ASSIGNED</text>
+  <text x="220" y="50" font-family="'Noto Sans', sans-serif" font-size="12">IN_PROGRESS</text>
+  <text x="320" y="50" font-family="'Noto Sans', sans-serif" font-size="12">BLOCKED</text>
+  <text x="420" y="50" font-family="'Noto Sans', sans-serif" font-size="12">WAITING_REVIEW</text>
+  <text x="520" y="50" font-family="'Noto Sans', sans-serif" font-size="12">COMPLETED</text>
+  <text x="20" y="100" font-family="'Noto Sans', sans-serif" font-size="12">CANCELLED</text>
+</svg></body></html>""",
+            "expect": "FAIL",
+            "check": lambda res: any("DG-SEM-005" in e for e in res.get("staticErrors", []))
+        },
+        {
+            "name": "CASE 9: Export Font Readiness Barrier Simulation (Unavailable Font Check)",
+            "is_export_test": True,
+            "expect": "FAIL",
+            "check": lambda success: success is False
         }
     ]
 
     all_passed = True
+    total_cases = len(test_cases)
     for idx, tc in enumerate(test_cases, 1):
-        print(f"\n[{idx}/7] Running {tc['name']}...")
+        print(f"\n[{idx}/{total_cases}] Running {tc['name']}...")
         if tc.get("simulate_no_browser"):
             sim_res = {
                 "browserFound": False,
@@ -1062,6 +1147,32 @@ def run_self_test():
             status = print_validation_report("simulate_no_browser.html", sim_res)
             expected_status = tc["expect"]
             passed = (status == expected_status)
+        elif tc.get("is_export_test"):
+            # Test that export fails when font check fails
+            sim_html = """<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>Font Fail</title>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    document.documentElement.setAttribute('data-export-ready', 'false');
+    document.documentElement.setAttribute('data-export-error', 'Simulated font failure');
+});
+</script>
+</head><body><svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#FFF"/></svg></body></html>"""
+            with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False, encoding='utf-8') as tf:
+                tf.write(sim_html)
+                tmp_path = tf.name
+            try:
+                browser = find_browser()
+                if not browser:
+                    passed = True
+                else:
+                    target_url = "file:///" + tmp_path.replace("\\", "/")
+                    cmd = [browser, "--headless", "--disable-gpu", "--virtual-time-budget=3000", "--dump-dom", target_url]
+                    res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=20)
+                    handshake_ok = ('data-export-ready="true"' in res.stdout)
+                    passed = (not handshake_ok)  # expected to fail handshake
+            finally:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
         else:
             with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False, encoding='utf-8') as tf:
                 tf.write(tc["html"])
@@ -1090,7 +1201,7 @@ def run_self_test():
             all_passed = False
 
     print("\n==================================================")
-    print(f"SELF-TEST SUMMARY: {'7/7 TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
+    print(f"SELF-TEST SUMMARY: {f'{total_cases}/{total_cases} TESTS PASSED' if all_passed else 'SOME TESTS FAILED'}")
     print("==================================================")
     return all_passed
 

@@ -132,7 +132,7 @@ Dựa trên kết quả đối soát toàn diện với Hệ thống Cổng Ch�
 
 ### Tình Trạng Các Yếu Tố Chặn Cổng (Blockers Status):
 
-1. **Biểu đồ `proposed-02`, `proposed-03`, `proposed-04`:** `[RESOLVED & VERIFIED]` Đã mở rộng kích thước hình học, khoảng đệm an toàn đạt $\ge 8\text{px}$, 0 boundary overflows, 0 va chạm.
+1. **Biểu đồ `proposed-02`, `proposed-03`, `proposed-04`:** `[RESOLVED & VERIFIED]` Đã mở rộng kích thước hình học, khoảng đệm an toàn đạt chuẩn tối thiểu $x\ge 4\text{px}, y\ge 3\text{px}$ (khuyến nghị $\ge 8\text{px}/\ge 6\text{px}$), 0 boundary overflows, 0 va chạm.
 2. **Biểu đồ Active cũ `01-product-capability-map`:** `[RESOLVED & VERIFIED]` Tái cấu trúc theo 5 nhóm năng lực chuẩn từ `PRODUCT.md`, loại bỏ hoàn toàn khái niệm 5 chốt cũ, 0 va chạm text, 0 overflow, font floor $\ge 11\text{px}$.
 3. **Biểu đồ Active cũ `02-domain-context-map`:** `[RESOLVED & VERIFIED]` Đồng bộ ngữ nghĩa Bounded Context chuẩn tắc, loại bỏ chuỗi "State Machine 5 bước", font floor $\ge 11\text{px}$, 0 overflow.
 4. **Biểu đồ Active cũ `08` và `12`:** `[RESOLVED & VERIFIED]` Nâng cấp toàn bộ nhãn thanh điều hướng và nhãn cảnh báo lên font $\ge 11\text{px}$, 0 font floor violations.

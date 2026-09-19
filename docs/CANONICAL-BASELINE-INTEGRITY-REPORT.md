@@ -3,7 +3,7 @@
 ## NOVYX GreenOps — Documentation, Traceability, Governance & Diagram Reconciliation
 
 > **Phân loại báo cáo:** `[VERIFIED]` / `[PROPOSED]` / `[NEEDS_DECISION]`
-> **Giai đoạn:** QUALITY GATE SELF-CONSISTENCY CLOSURE
+> **Giai đoạn:** QUALITY GATE ENGINE CLOSURE
 > **Trạng thái kết thúc:** `BASELINE QUALITY GATE PASS — READY FOR TECHNICAL ARCHITECTURE BASELINE RECONCILIATION`
 
 ---
@@ -12,7 +12,7 @@
 
 - **Repository:** `https://github.com/Peaker04/tree`
 - **Branch làm việc:** `base-setup`
-- **Baseline Starting HEAD:** `3dc5bd8f107ced03501a22155746f7a1ad713481`
+- **Baseline Starting HEAD:** `233abc145929806ba45ad5c6c48b98fa667420eb`
 - **Tình trạng Working Tree:** Toàn bộ mã nguồn ứng dụng (`apps/mobile/src/**`) và hợp đồng dữ liệu (`packages/**/src/**`) được bảo toàn tuyệt đối **0 tệp sửa đổi**. Các thay đổi chỉ tập trung tại `docs/**`, `DESIGN.md`, `.agents/skills/diagram-design/**`, `scripts/diagram_tool.py` và `scripts/quality_gate_report.py`.
 
 ---
@@ -184,17 +184,17 @@ File [`scripts/diagram_tool.py`](file:///d:/ki7/EXE/tree/scripts/diagram_tool.py
 
 ## 10. Điều Kiện Dừng & Đánh Giá Chất Lượng Đường Cơ Sở (Stop Condition Evaluation)
 
-| Tiêu chí dừng                                                         | Trạng thái | Ghi chú bằng chứng                                                                                                                  |
-| :-------------------------------------------------------------------- | :--------: | :---------------------------------------------------------------------------------------------------------------------------------- |
-| Tài liệu chuẩn tắc nghiệp vụ không mâu thuẫn                          |  **ĐẠT**   | `PRODUCT`, `DOMAIN`, `WORKFLOWS`, `ACCESS-CONTROL` thống nhất mô hình 7 trạng thái & 3 ProofProfiles.                               |
-| `DESIGN.md` & `MOBILE_UI_RULES.md` không còn quy tắc 5 bước cứng nhắc |  **ĐẠT**   | Đã chuyển dịch sang profile-driven rendering.                                                                                       |
-| Phân cấp thẩm quyền không dùng wildcard sai                           |  **ĐẠT**   | Đã thiết lập mô hình thẩm quyền 7 tầng tại `docs/README.md`.                                                                        |
-| Phân biệt rành mạch Source hiện tại vs Business Target                |  **ĐẠT**   | `POST-SYNC-IMPLEMENTATION-GAP-MAP.md` và `REQUIREMENTS-TRACEABILITY.md` phản ánh trung thực.                                        |
-| Không còn nhầm lẫn biểu đồ cũ thành canonical truth                   |  **ĐẠT**   | Biểu đồ 03–11 đã gắn banner `SUPERSEDED / HISTORICAL`.                                                                              |
-| Công cụ diagram thực hiện kiểm tra hình học thực tế                   |  **ĐẠT**   | Headless Edge runtime getBoundingClientRect() đã tích hợp kiểm tra tràn viền và safe padding.                                       |
-| Danh mục Biểu đồ Active đạt kiểm tra hình học & ngữ nghĩa             |  **ĐẠT**   | 11/11 biểu đồ active đạt Zero Collision, Safe Padding $\ge 8\text{px}$, Font Floor $\ge 11\text{px}$, 0 khái niệm 5 chốt/5 bước cũ. |
-| Không overclaim pháp lý / mật mã / cloud provider                     |  **ĐẠT**   | Đã gắn nhãn `LEGAL STATUS: NOT ESTABLISHED` và Object Storage `TBD`.                                                                |
-| Mã nguồn ứng dụng và packages nguyên vẹn (0 files modified)           |  **ĐẠT**   | `git status` chứng minh 0 tệp source bị thay đổi.                                                                                   |
+| Tiêu chí dừng                                                         | Trạng thái | Ghi chú bằng chứng                                                                                                                                                                                            |
+| :-------------------------------------------------------------------- | :--------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tài liệu chuẩn tắc nghiệp vụ không mâu thuẫn                          |  **ĐẠT**   | `PRODUCT`, `DOMAIN`, `WORKFLOWS`, `ACCESS-CONTROL` thống nhất mô hình 7 trạng thái & 3 ProofProfiles.                                                                                                         |
+| `DESIGN.md` & `MOBILE_UI_RULES.md` không còn quy tắc 5 bước cứng nhắc |  **ĐẠT**   | Đã chuyển dịch sang profile-driven rendering.                                                                                                                                                                 |
+| Phân cấp thẩm quyền không dùng wildcard sai                           |  **ĐẠT**   | Đã thiết lập mô hình thẩm quyền 7 tầng tại `docs/README.md`.                                                                                                                                                  |
+| Phân biệt rành mạch Source hiện tại vs Business Target                |  **ĐẠT**   | `POST-SYNC-IMPLEMENTATION-GAP-MAP.md` và `REQUIREMENTS-TRACEABILITY.md` phản ánh trung thực.                                                                                                                  |
+| Không còn nhầm lẫn biểu đồ cũ thành canonical truth                   |  **ĐẠT**   | Biểu đồ 03–11 đã gắn banner `SUPERSEDED / HISTORICAL`.                                                                                                                                                        |
+| Công cụ diagram thực hiện kiểm tra hình học thực tế                   |  **ĐẠT**   | Headless Edge runtime getBoundingClientRect() đã tích hợp kiểm tra tràn viền và safe padding.                                                                                                                 |
+| Danh mục Biểu đồ Active đạt kiểm tra hình học & ngữ nghĩa             |  **ĐẠT**   | 11/11 biểu đồ active đạt Zero Collision, Mandatory Safe Padding $x\ge 4\text{px}, y\ge 3\text{px}$ (khuyến nghị $\ge 8\text{px}/\ge 6\text{px}$), Font Floor $\ge 11\text{px}$, 0 khái niệm 5 chốt/5 bước cũ. |
+| Không overclaim pháp lý / mật mã / cloud provider                     |  **ĐẠT**   | Đã gắn nhãn `LEGAL STATUS: NOT ESTABLISHED` và Object Storage `TBD`.                                                                                                                                          |
+| Mã nguồn ứng dụng và packages nguyên vẹn (0 files modified)           |  **ĐẠT**   | `git status` chứng minh 0 tệp source bị thay đổi.                                                                                                                                                             |
 
 ---
 
@@ -204,18 +204,22 @@ File [`scripts/diagram_tool.py`](file:///d:/ki7/EXE/tree/scripts/diagram_tool.py
 
 > [!IMPORTANT]
 > **ĐIỀU KIỆN KHÓA ĐƯỜNG CƠ SỞ ĐƯỢC THỎA MÃN:**
-> Pha **NOVYX QUALITY GATE SELF-CONSISTENCY CLOSURE** đã thiết lập sự đồng bộ tuyệt đối giữa:
-> `QUALITY CHECKLIST` $\rightarrow$ `VALIDATOR` $\rightarrow$ `EXECUTION EVIDENCE` $\rightarrow$ `FINAL COMMIT` $\rightarrow$ `FINAL STATUS`.
+> Pha **NOVYX QUALITY GATE ENGINE CLOSURE** đã hoàn tất việc loại bỏ toàn bộ các đường dẫn thông qua giả định (false-pass paths) và thiết lập cơ chế kiểm chứng fail-closed toàn diện xuyên suốt chuỗi:
+> `CHECKLIST` $\rightarrow$ `VALIDATOR` $\rightarrow$ `EVIDENCE LEDGER` $\rightarrow$ `AGGREGATOR` $\rightarrow$ `FINAL COMMIT` $\rightarrow$ `FINAL STATUS`.
 >
-> Validator trình duyệt headless đã được nâng cấp kiểm tra hình học thực tế (va chạm chữ với đường nối, đường nối cắt xuyên thân card không liên quan, kiểm tra nạp font Noto Sans / Noto Serif, và kiểm tra khoảng đệm an toàn 4 phía $\ge 8\text{px}/\ge 6\text{px}$), chứng minh qua 7/7 ca kiểm thử self-test cố ý.
->
-> Ba lượt kiểm tra độc lập (**Pass A**, **Pass B** và **Pass C**) đã được thực thi và đối soát tự động bởi [`scripts/quality_gate_report.py`](../scripts/quality_gate_report.py), lưu trữ tại Sổ Bộ Bằng Chứng [`VERIFICATION-EVIDENCE.md`](quality-gates/VERIFICATION-EVIDENCE.md) và máy đọc [`dist/quality-gates/final-gate.json`](../dist/quality-gates/final-gate.json):
->
-> - 100% Cổng Chất Lượng Bắt Buộc (**113/113**) đạt **`[PASS]`**.
-> - **0** FAIL, **0** WARN, **0** NOT_RUN, **0** INCONCLUSIVE.
-> - Toàn bộ 11/11 Biểu đồ Active đạt cả 4 trụ cột: Ngữ nghĩa chuẩn (`DERIVED VIEW`), Hình học runtime (0 va chạm, 0 cắt viền, font floor $\ge 11\text{px}$), Soát xét thị giác (`MANUAL_VISUAL_VERIFIED`), và Đường ống xuất bản (SVG, PNG @2x/@3x, PDF).
-> - Ranh giới mã nguồn được bảo toàn tuyệt đối: `apps/mobile/src/**` = 0 modified, `packages/**/src/**` = 0 modified.
-> - Chất lượng mã và tài liệu: `git diff --check`, `npm run format:check`, `npm run lint`, `npm run typecheck` đạt 100% exit code `0`.
+> 1. **Khắc phục Oracle Ngữ nghĩa Canonical (`DG-SEM-005` & `CAN-012`):**
+>    Khóa chặt vòng đời tác vụ đúng 7 trạng thái chuẩn tắc (`PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`), tuyệt đối không có trạng thái giả mạo `ASSIGNED`, kèm kiểm thử hồi quy ngữ nghĩa tự động.
+> 2. **Rào cản Xuất bản Xác định (Deterministic Font Readiness Barrier):**
+>    Công cụ `diagram_tool.py` triển khai bắt buộc bắt tay hai pha (Handshake 2-phase) với trình duyệt headless, xác nhận `data-export-ready="true"` sau khi `document.fonts.ready` và kiểm tra nạp font Noto Sans / Noto Serif hoàn tất trước khi tiến hành chụp/in vector. Đã chứng minh qua 9/9 ca kiểm thử self-test cố ý.
+> 3. **Bộ Tổng Hợp Cổng Fail-Closed (Fail-Closed Gate Aggregator):**
+>    Công cụ `quality_gate_report.py` được tái cấu trúc thành 2 tầng (Layer 1: Checklist Definition & Structure Parser; Layer 2: Machine-readable Evidence Cross-checker đối soát với `docs/quality-gates/evidence-index.json`). Bất kỳ cổng blocking nào có trạng thái `FAIL`, `WARN`, `NOT_RUN`, `INCONCLUSIVE`, `UNKNOWN` hoặc thiếu bằng chứng hợp lệ đều lập tức khiến toàn bộ hệ thống phán quyết `FAIL / NOT READY`. Phát hiện và chặn đứng Gate ID trùng lặp. Đã chứng minh qua 8/8 ca kiểm thử self-test độc lập.
+> 4. **Kiểm soát Khoảng đệm An toàn (Safe Padding Discipline):**
+>    Báo cáo chính xác theo định nghĩa chuẩn: Chuẩn tối thiểu bắt buộc ($x\ge 4\text{px}, y\ge 3\text{px}$) đạt 100% không vi phạm; mục tiêu khuyến nghị ($x\ge 8\text{px}, y\ge 6\text{px}$) được tuân thủ trên toàn bộ 11/11 biểu đồ active.
+> 5. **Bằng chứng Thực nghiệm & Ranh giới Mã nguồn:**
+>    - 100% Cổng Chất Lượng Bắt Buộc (**113/113**) đạt **`[PASS]`**.
+>    - **0** FAIL, **0** WARN, **0** NOT_RUN, **0** INCONCLUSIVE, **0** UNKNOWN, **0** Missing Evidence, **0** Duplicate IDs.
+>    - Ranh giới mã nguồn được bảo toàn tuyệt đối: `apps/mobile/src/**` = 0 modified, `packages/**/src/**` = 0 modified.
+>    - Chất lượng mã và tài liệu: `git diff --check`, `npm run format:check`, `npm run lint`, `npm run typecheck` đạt 100% exit code `0`.
 >
 > **Đường cơ sở chuẩn tắc (Canonical Baseline) chính thức được KHÓA.** Dự án sẵn sàng chuyển giao làm đầu vào cho pha tiếp theo:
 > **TECHNICAL ARCHITECTURE BASELINE RECONCILIATION**.

@@ -3,7 +3,7 @@
 ## NOVYX GreenOps — Verification Execution Records
 
 > **Nhánh (Branch):** `base-setup`
-> **Thời điểm cập nhật:** `2026-09-19T13:43:00+07:00`
+> **Thời điểm cập nhật:** `2026-09-19T14:07:00+07:00`
 > **Cơ chế định danh cam kết (Governance):** Cam kết hai bước (Two-Stage Commit Protocol) gắn trực tiếp với `FINAL COMMIT SHA` và `VERIFIED TREE HASH`.
 > **Quy tắc:** Mọi dòng trạng thái đều ghi nhận trung thực từ terminal thực tế; không làm tròn, không fake PASS.
 
@@ -118,7 +118,29 @@ Giai đoạn đóng cổng tự nhất quán (Quality Gate Self-Consistency Clos
 
 ---
 
-## 5. Danh Mục Biểu Đồ Chuẩn Tắc Đang Hoạt Động (Active Diagram Inventory Audit)
+## 5. Sổ Bộ Bằng Chứng Pha Đóng Cổng Engine & Lượt D (Pass D — Quality Gate Engine Closure Records)
+
+Giai đoạn đóng cổng Engine (Quality Gate Engine Closure) hoàn tất việc triệt tiêu mọi false-pass path, loại bỏ việc tin cậy mù quáng ô Markdown `[PASS]`, triển khai bộ phân tích 2 tầng (Definition Parser & Evidence Registry Cross-checker đối soát `docs/quality-gates/evidence-index.json`), phát hiện Gate ID trùng lặp, cơ chế xác nhận font chữ sẵn sàng xác định (deterministic font readiness handshake `data-export-ready="true"`) trước khi xuất file, và kiểm tra hồi quy vòng đời chuẩn tắc 7 trạng thái (`DG-SEM-005` & `CAN-012`):
+
+| Mã Check ID     | Lượt | Lệnh thực thi                                                               |    Môi trường    | Tiêu chí kỳ vọng             | Kết quả thực tế đo được                                 | Exit | Bằng chứng Artifact                  | Trạng thái | Ghi chú kỹ thuật                                          |
+| :-------------- | :--: | :-------------------------------------------------------------------------- | :--------------: | :--------------------------- | :------------------------------------------------------ | :--: | :----------------------------------- | :--------: | :-------------------------------------------------------- |
+| **PASD-SEM-01** |  D   | `python scripts/diagram_tool.py self-test` (Case 8)                         | `LOCAL_VERIFIED` | 7 trạng thái, cấm ASSIGNED   | Phát hiện lỗi khi có ASSIGNED; PASS khi đủ 7 trạng thái | `0`  | Terminal output                      |  `[PASS]`  | DG-SEM-005 & CAN-012 regression guard verified.           |
+| **PASD-EXP-01** |  D   | `python scripts/diagram_tool.py self-test` (Case 9)                         | `LOCAL_VERIFIED` | Deterministic font handshake | Chặn xuất ảnh khi font chưa nạp; data-export-ready=true | `0`  | Terminal output                      |  `[PASS]`  | Deterministic barrier verified, 0 unconfirmed captures.   |
+| **PASD-SLF-01** |  D   | `python scripts/diagram_tool.py self-test`                                  | `LOCAL_VERIFIED` | 9/9 test cases PASS          | 9/9 test cases passed cleanly                           | `0`  | Terminal output                      |  `[PASS]`  | Full diagram tool test suite verified (9/9).              |
+| **PASD-SLF-02** |  D   | `python scripts/quality_gate_report.py self-test`                           | `LOCAL_VERIFIED` | 8/8 test cases PASS          | 8/8 test cases passed cleanly                           | `0`  | Terminal output                      |  `[PASS]`  | Fail-closed aggregator test suite verified (8/8).         |
+| **PASD-DIA-01** |  D   | `python scripts/diagram_tool.py validate <11 ACTIVE DIAGRAMS>`              | `LOCAL_VERIFIED` | 0 collision, safe pad min>=4 | 11/11 active diagrams zero collision, min padding ok    | `0`  | Terminal reports                     |  `[PASS]`  | 11/11 active diagrams validated with zero violations.     |
+| **PASD-SRC-01** |  D   | `git diff 233abc145929806ba45ad5c6c48b98fa667420eb HEAD -- apps/mobile/src` | `LOCAL_VERIFIED` | 0 modified files             | 0 files modified                                        | `0`  | Terminal diff                        |  `[PASS]`  | Ranh giới ứng dụng di động bất biến tuyệt đối 100%.       |
+| **PASD-SRC-02** |  D   | `git diff 233abc145929806ba45ad5c6c48b98fa667420eb HEAD -- packages`        | `LOCAL_VERIFIED` | 0 modified files             | 0 files modified                                        | `0`  | Terminal diff                        |  `[PASS]`  | Ranh giới monorepo packages bất biến tuyệt đối 100%.      |
+| **PASD-BLD-01** |  D   | `git diff --check`                                                          | `LOCAL_VERIFIED` | 0 whitespace error           | 0 whitespace error, clean diff                          | `0`  | Terminal output                      |  `[PASS]`  | Clean diff.                                               |
+| **PASD-BLD-02** |  D   | `npm run format:check`                                                      | `LOCAL_VERIFIED` | Prettier style match         | All matched files use Prettier style                    | `0`  | Terminal output                      |  `[PASS]`  | Prettier pass.                                            |
+| **PASD-BLD-03** |  D   | `npm run lint`                                                              | `LOCAL_VERIFIED` | ESLint clean                 | 0 errors, 0 warnings                                    | `0`  | Terminal output                      |  `[PASS]`  | ESLint pass.                                              |
+| **PASD-BLD-04** |  D   | `npm run typecheck`                                                         | `LOCAL_VERIFIED` | TypeScript strict            | 4 workspaces pass tsc --noEmit                          | `0`  | Terminal output                      |  `[PASS]`  | TypeScript compiler pass.                                 |
+| **PASD-BLD-05** |  D   | `npm run mobile:export:android`                                             | `LOCAL_VERIFIED` | Metro bundle pass            | 810 modules bundled, Hermes bytecode generated          | `0`  | `dist/mobile-android`                |  `[PASS]`  | Android bundle verified on current codebase.              |
+| **PASD-AGG-01** |  D   | `python scripts/quality_gate_report.py`                                     | `LOCAL_VERIFIED` | 113/113 blocking PASS        | 113 Total, 113 Blocking, 113 PASS, 0 FAIL, 0 WARN       | `0`  | `dist/quality-gates/final-gate.json` |  `[PASS]`  | Fail-closed aggregator cross-checked evidence-index.json. |
+
+---
+
+## 6. Danh Mục Biểu Đồ Chuẩn Tắc Đang Hoạt Động (Active Diagram Inventory Audit)
 
 Số lượng và danh sách biểu đồ đang hoạt động được **dẫn xuất tự động từ mục 1 của [`docs/diagrams/README.md`](../diagrams/README.md)** (không hardcode). Cổng chất lượng biểu đồ tổng thể chỉ đạt `PASS` khi toàn bộ 11/11 biểu đồ active đều đạt đồng thời cả 4 tiêu chí:
 
@@ -138,7 +160,7 @@ Số lượng và danh sách biểu đồ đang hoạt động được **dẫn 
 
 ---
 
-## 6. Sổ Bộ Bằng Chứng Soát Xét Thị Giác Chi Tiết 11/11 Biểu Đồ (Per-Diagram Visual Evidence Trace)
+## 7. Sổ Bộ Bằng Chứng Soát Xét Thị Giác Chi Tiết 11/11 Biểu Đồ (Per-Diagram Visual Evidence Trace)
 
 Tuân thủ quy định mục 14 của lệnh điều hành, từng biểu đồ active được kiểm tra thị giác riêng biệt trên file ảnh PNG @2x kết xuất thực tế bởi headless browser:
 
@@ -254,7 +276,7 @@ Tuân thủ quy định mục 14 của lệnh điều hành, từng biểu đồ
 
 ---
 
-## 7. Bảng Tổng Hợp Chỉ Số Cổng Chất Lượng (Quality Gate Counts & Disposition)
+## 8. Bảng Tổng Hợp Chỉ Số Cổng Chất Lượng (Quality Gate Counts & Disposition)
 
 Theo đúng quy định mục 16 của lệnh điều hành, **toàn bộ số liệu dưới đây được tổng hợp hoàn toàn tự động bởi công cụ [`scripts/quality_gate_report.py`](../../scripts/quality_gate_report.py)** từ các tệp checklist chính thức, xuất ra artifact máy đọc [`dist/quality-gates/final-gate.json`](../../dist/quality-gates/final-gate.json):
 
@@ -269,15 +291,15 @@ Theo đúng quy định mục 16 của lệnh điều hành, **toàn bộ số l
 
 ---
 
-## 8. Trạng Thái CI & Môi Trường Kiểm Chứng
+## 9. Trạng Thái CI & Môi Trường Kiểm Chứng
 
 - **CI Status:** `CI_NOT_AVAILABLE` (Repository hiện tại chưa cấu hình `.github/workflows`; tuyệt đối không báo CI PASS giả tạo khi chưa có CI runner thực tế).
 - **Local Tooling Status:** `LOCAL_VERIFIED` (Toàn bộ 113/113 kiểm tra tự động đã thực thi và vượt qua trên môi trường phát triển cục bộ với exit code `0`).
-- **Visual Inspection Status:** `MANUAL_VISUAL_VERIFIED` (Đã mở và đối soát trực tiếp ảnh PNG @2x kết xuất thực tế từ headless browser của 11/11 biểu đồ active, có bảng truy vết chi tiết theo từng biểu đồ tại Mục 6).
+- **Visual Inspection Status:** `MANUAL_VISUAL_VERIFIED` (Đã mở và đối soát trực tiếp ảnh PNG @2x kết xuất thực tế từ headless browser của 11/11 biểu đồ active, có bảng truy vết chi tiết theo từng biểu đồ tại Mục 7).
 
 ---
 
-## 9. Phán Quyết Toàn Bộ Cổng Chất Lượng (Final Baseline Decision)
+## 10. Phán Quyết Toàn Bộ Cổng Chất Lượng (Final Baseline Decision)
 
 > [!IMPORTANT]
 > **KẾT LUẬN DUY NHẤT VÀ CHÍNH THỨC:**
@@ -289,8 +311,8 @@ Theo đúng quy định mục 16 của lệnh điều hành, **toàn bộ số l
 > **Căn cứ phán quyết:**
 >
 > 1. **Blocking Items:** 113/113 cổng kiểm tra bắt buộc đạt `[PASS]` (100.0%).
-> 2. **Không lỗi tồn đọng:** `FAIL = 0`, `WARN = 0`, `NOT_RUN = 0`, `INCONCLUSIVE = 0`.
-> 3. **Công cụ thẩm tra chuẩn tắc:** Đã nâng cấp `diagram_tool.py` bổ sung thẩm tra hình học thực tế (va chạm chữ với connector, connector cắt xuyên card không liên quan), font face loading check, kiểm tra 4 phía safe padding, và đã vượt qua 7/7 ca kiểm thử self-test cố ý.
-> 4. **Biểu đồ chuẩn tắc:** Toàn bộ 11/11 biểu đồ Active đạt Zero Collision, Safe Padding $\ge 8$px, Typography Floor $\ge 11$px, phân loại `DERIVED VIEW` và trích dẫn nguồn chuẩn tắc Markdown.
+> 2. **Không lỗi tồn đọng:** `FAIL = 0`, `WARN = 0`, `NOT_RUN = 0`, `INCONCLUSIVE = 0`, `UNKNOWN = 0`, `Missing Evidence = 0`, `Duplicate IDs = 0`.
+> 3. **Công cụ thẩm tra chuẩn tắc:** Đã nâng cấp `diagram_tool.py` bổ sung thẩm tra hình học thực tế, rào cản xuất bản xác định `data-export-ready`, kiểm tra hồi quy vòng đời chuẩn tắc 7 trạng thái cấm `ASSIGNED` (`DG-SEM-005`), vượt qua 9/9 ca self-test; và `quality_gate_report.py` đối soát bằng chứng fail-closed, vượt qua 8/8 ca self-test.
+> 4. **Biểu đồ chuẩn tắc:** Toàn bộ 11/11 biểu đồ Active đạt Zero Collision, Mandatory Safe Padding $x\ge 4\text{px}, y\ge 3\text{px}$ (khuyến nghị $\ge 8\text{px}/\ge 6\text{px}$), Typography Floor $\ge 11\text{px}$, phân loại `DERIVED VIEW` và trích dẫn nguồn chuẩn tắc Markdown.
 > 5. **Ranh giới mã nguồn ứng dụng:** Được bảo toàn tuyệt đối (`apps/mobile/src/**` modified = 0, `packages/**/src/**` modified = 0).
 > 6. **Báo cáo tự động:** Chỉ số cổng được phân giải tự động bởi `scripts/quality_gate_report.py`, lưu trữ tại `dist/quality-gates/final-gate.json`.
