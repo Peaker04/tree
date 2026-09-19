@@ -1,7 +1,7 @@
 # NOVYX GreenOps — Bounded Context Decisions & Ubiquitous Language (Phase 3)
 
 > **Tài liệu quyết định ranh giới ngữ cảnh giới hạn và chuẩn hóa từ vựng chuẩn mực**
-> Thuộc chu trình: **Business Baseline Reconciliation — Phase 3**.
+> Thuộc chu trình: **Business Baseline Reconciliation — Phase 3 (Semantic Closure)**.
 > Căn cứ chuẩn tắc:
 > - [`docs/business-reconciliation/02-ACTOR-MODEL-DECISION.md`](02-ACTOR-MODEL-DECISION.md) (Ranh giới 4 tác nhân)
 > - [`docs/business-reconciliation/03-ROLE-NAMING-TAXONOMY.md`](03-ROLE-NAMING-TAXONOMY.md) (Danh xưng 3 tầng)
@@ -50,28 +50,31 @@ Tuân thủ chặt chẽ lý thuyết Domain-Driven Design (DDD) chiến lược
 
 | Ứng viên Ngữ cảnh (Candidate) | Quyết định (Decision) | Phân loại Chiến lược | Tài nguyên Sở hữu (Owns) | Tài nguyên KHÔNG Sở hữu (Does Not Own) | Tác nhân Chính (Primary Actors) | Lý do Quyết định & Căn cứ Nghiệp vụ (Rationale) |
 |---|:---:|:---:|---|---|---|---|
-| **A. Identity & Access Management** | **`ACCEPTED`** | **`GENERIC`** | `User`, `Account`, `RoleAssignment`, `AccountStatus`, Phiên làm việc xác thực. | Nhiệm vụ vận hành (`Task`), Cây xanh (`Tree`), Bản ghi kiểm toán (`AuditEvent`). | Platform Administrator (quản trị), Toàn bộ nhân sự (đăng nhập). | Là miền chung tiêu chuẩn quản lý danh tính, cung cấp cơ chế phân quyền bảo mật cho toàn hệ thống. Cần thiết nhưng không tạo ra lợi thế cạnh tranh riêng biệt. |
-| **B. Tree Asset Registry** | **`ACCEPTED`** | **`SUPPORTING`** | `Tree` (Root Aggregate), `TreeMasterData`, `TreeIdentity` (QR vật lý, tọa độ chuẩn), `CareHistory` (chiếu). | Nhiệm vụ chăm sóc (`Task`), Bằng chứng thi công (`TaskEvidence`), Tài khoản người dùng. | Platform Administrator (quản trị Master Data), Manager, Staff (tra cứu). | Quản lý vòng đời tài sản cây xanh đô thị và hồ sơ pháp lý chăm sóc trọn đời của từng cây. Là tài sản dữ liệu nền tảng phục vụ công tác vận hành. |
-| **C. Work Management / Operations** | **`ACCEPTED`** | **`CORE`** | `Task` (Root Aggregate), `TaskLifecycle` (7 trạng thái), `TaskAssignment`, `BlockedResolution`, `SiteVerification`, `VerificationException`, `TaskEvidence`, `EvidenceAttempt`, `ChecklistSnapshot`, `StructuredFindings`, `FieldIssue`, `ReviewDecision`, `ReworkRequest`, `Cancellation`. | Thuộc tính gốc của Cây xanh, Tài khoản người dùng, Bảng chính sách bằng chứng toàn hệ thống, Sổ kiểm toán. | Operations Manager (điều phối, thẩm định), Field Staff (thực thi ngoài hiện trường). | **Trọng tâm cạnh tranh số 1 của NOVYX**: Đảm bảo quy trình chăm sóc cây đô thị minh bạch 100%, tích hợp khép kín từ giao việc, xác thực hiện trường hai tín hiệu, thu thập bằng chứng đa phiên bản đến thẩm định chất lượng 4 kết luận. |
-| **D. Field Verification & Evidence** | **`MERGED`** *(Hợp nhất vào Work Management)* | N/A *(Nằm trong CORE)* | Được quản lý như các Value Object và Entity thành phần bên trong Aggregate `Task`. | Không hình thành ngữ cảnh độc lập. | Field Staff. | Xác thực hiện trường (`SiteVerification`) và nộp bằng chứng (`TaskEvidence`) gắn liền với một `Task` cụ thể. Nếu tách riêng sẽ vi phạm tính nhất quán giao dịch, sinh xung đột ghi nhận trạng thái và tạo ra phân tán dữ liệu không cần thiết trên mobile offline. |
-| **E. Review & Quality Control** | **`MERGED`** *(Hợp nhất vào Work Management)* | N/A *(Nằm trong CORE)* | Được quản lý như thực thể thẩm định và logic kết thúc bên trong Aggregate `Task`. | Không hình thành ngữ cảnh độc lập. | Operations Manager. | Kết luận thẩm định (`APPROVE`, `REQUEST_REWORK`, `CANCEL`) trực tiếp biến đổi `TaskStatus` và yêu cầu làm lại từng phần trên bằng chứng của Task. Việc hợp nhất bảo đảm toàn bộ chu trình sống của Task do duy nhất một cỗ máy trạng thái kiểm soát. |
+| **A. Identity & Access Management** | **`ACCEPTED`** | **`GENERIC`** | `User`, `Account`, `RoleAssignment`, `AccountStatus`, Phiên làm việc xác thực. | Nhiệm vụ vận hành (`Task`), Cây xanh (`Tree`), Sự kiện kiểm toán (`AuditEvent`). | Platform Administrator (quản trị), Toàn bộ nhân sự (đăng nhập). | Là miền chung tiêu chuẩn quản lý danh tính, cung cấp cơ chế phân quyền bảo mật cho toàn hệ thống. Cần thiết nhưng không tạo ra lợi thế cạnh tranh riêng biệt. |
+| **B. Tree Asset Registry** | **`ACCEPTED`** | **`SUPPORTING`** | `Tree` (Root Aggregate), `TreeMasterData`, `TreeIdentity` (treeId bất biến, qrCode Master Data), `CareHistory` (chiếu). | Nhiệm vụ chăm sóc (`Task`), Bằng chứng thi công (`TaskEvidence`), Tài khoản người dùng. | Platform Administrator (quản trị Master Data & cấp đổi QR), Manager, Staff (tra cứu). | Quản lý vòng đời tài sản cây xanh đô thị và hồ sơ pháp lý chăm sóc trọn đời của từng cây. Là tài sản dữ liệu nền tảng phục vụ công tác vận hành. |
+| **C. Work Management / Operations** | **`ACCEPTED`** | **`CORE`** | `Task` (Root Aggregate), `TaskLifecycle` (7 trạng thái), `TaskAssignment`, `BlockedResolution`, `SiteVerification`, `VerificationException`, `FieldIssue`, `TaskEvidence`, `EvidenceAttempt`, `ChecklistSnapshot`, `StructuredFindings`, `ReviewDecision`, `ReworkRequest`, `Cancellation`. | Thuộc tính gốc của Cây xanh, Tài khoản người dùng, Bảng chính sách bằng chứng toàn hệ thống, Sổ sự kiện kiểm toán. | Operations Manager (điều phối, thẩm định), Field Staff (thực thi ngoài hiện trường). | **Trọng tâm cạnh tranh số 1 của NOVYX**: Đảm bảo quy trình chăm sóc cây đô thị minh bạch 100%, tích hợp khép kín từ giao việc, xác thực hiện trường hai tín hiệu, thu thập bằng chứng đa phiên bản đến thẩm định chất lượng 4 kết luận. |
+| **D. Field Verification & Evidence** | **`MERGED`** *(Hợp nhất vào Work Management)* | N/A *(Nằm trong CORE)* | Được quản lý như các Value Object và Entity thành phần bên trong Aggregate `Task`. | Không hình thành ngữ cảnh độc lập. | Field Staff. | Xác thực hiện trường (`SiteVerification`) và nộp bằng chứng (`TaskEvidence`, `EvidenceAttempt`) cùng tham gia vào các bất biến của `Task`. Việc hợp nhất tránh phân tán dữ liệu và bảo đảm tính tự chủ của chu trình công việc. |
+| **E. Review & Quality Control** | **`MERGED`** *(Hợp nhất vào Work Management)* | N/A *(Nằm trong CORE)* | Được quản lý như logic kết thúc và phán quyết thẩm định bên trong Aggregate `Task`. | Không hình thành ngữ cảnh độc lập. | Operations Manager. | Kết luận thẩm định gồm đúng 4 kết luận (`APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`) trực tiếp biến đổi `TaskStatus` và yêu cầu làm lại từng phần trên bằng chứng của Task (P3-SC-02). Hợp nhất giúp duy nhất một cỗ máy trạng thái kiểm soát chu trình sống. |
 | **F. Policy & Template Governance** | **`ACCEPTED`** | **`SUPPORTING`** | `ProofPolicyMapping` (VERSIONED), `TaskTypeCatalog` (AUDIT-ONLY), `ChecklistTemplate` (VERSIONED), `FindingsSchema` (MVP Canonical Spec). | Thực thể nhiệm vụ đang chạy (`Task`), Bản chụp bằng chứng, Tài khoản nhân sự. | Platform Administrator (ban hành phiên bản), Operations Manager (đọc/chọn danh mục). | Độc lập hóa các quy tắc tiêu chuẩn, danh mục công việc và biểu mẫu khỏi các phiên thực thi cụ thể. Ngăn ngừa triệt để lỗi sửa đổi tiêu chuẩn làm hồi tố sai lệch các nhiệm vụ lịch sử. |
-| **G. Audit & Compliance** | **`ACCEPTED`** | **`SUPPORTING`** | `AuditEvent` (Append-Only Event Stream), Các mô hình đọc tra cứu tuân thủ. | Nghiệp vụ tác vụ, Tài khoản người dùng, Cấu hình chính sách. | System (ghi tự động khi có biến động), Platform Administrator (đọc, lọc, kiểm tra). | Độc lập tuyệt đối khỏi các tác nhân con người; cấm sửa xóa kể cả Admin. Đóng vai trò là bằng chứng pháp lý độc lập bảo vệ tính minh bạch của toàn bộ hệ thống. |
-| **H. Notifications** | **`SUPPORTING ONLY`** *(Từ chối ngữ cảnh riêng)* | N/A *(Read Model ngoại vi)* | `Notification` (bản chiếu đọc dữ liệu tin nhắn gửi tới thiết bị). | Không sở hữu bất kỳ Aggregate độc lập hay nghiệp vụ có trạng thái nào. | Tác nhân nhận thông báo. | Thông báo chỉ là bản chiếu hiển thị tạm thời (Transient Projection) sinh ra từ các sự kiện nghiệp vụ của Work Management và IAM. Cơ chế gửi tin (Push Notification) là giải pháp kỹ thuật hạ tầng, không phải Bounded Context. |
-| **I. Offline / Synchronization** | **`TECHNICAL CONCERN`** *(Từ chối ngữ cảnh riêng)* | N/A *(Hạ tầng kỹ thuật)* | `SyncStatus`, `LocalSubmissionStatus`, Hàng đợi gửi tin cục bộ (Outbox Queue). | Tuyệt đối không sở hữu `TaskStatus` hay dữ liệu nghiệp vụ. | Tầng kết nối mạng thiết bị di động. | Lưu trữ đệm ngoại tuyến và đồng bộ hóa mạng là mối quan tâm thuần túy về kiến trúc kỹ thuật (Technical Concern). Nghiệp vụ không được phép sinh ra trạng thái lai ghép như `OFFLINE_SUBMITTED`. |
+| **G. Audit & Compliance** | **`ACCEPTED`** | **`SUPPORTING`** | Chuỗi sự kiện kiểm toán (`AuditEvent Domain Event Stream`), Các mô hình đọc tra cứu tuân thủ. | Nghiệp vụ tác vụ, Tài khoản người dùng, Cấu hình chính sách. | System (ghi nối tiếp tự động khi có biến động), Platform Administrator (đọc, lọc, kiểm tra). | Độc lập tuyệt đối khỏi các tác nhân con người; cấm sửa xóa kể cả Admin. Cơ chế toàn vẹn kỹ thuật được bảo lưu cho Kiến trúc kỹ thuật / NFR / ADR (P3-SC-05). Đóng vai trò là bằng chứng pháp lý độc lập bảo vệ tính minh bạch. |
+| **H. Notifications** | **`SUPPORTING ONLY`** *(Từ chối ngữ cảnh riêng)* | N/A *(Read Model ngoại vi)* | `Notification` = Bản chiếu dẫn xuất tạm thời (`DERIVED READ MODEL / PROJECTION`), không sở hữu tài nguyên thẩm quyền (P3-SC-04). | Không sở hữu bất kỳ Aggregate độc lập hay nghiệp vụ có trạng thái nào. | Tác nhân nhận thông báo. | Thông báo chỉ là bản chiếu hiển thị tạm thời sinh ra từ các sự kiện nghiệp vụ của Work Management và IAM. Cơ chế gửi tin (Push Notification) là giải pháp kỹ thuật hạ tầng, không phải Bounded Context. |
+| **I. Offline / Synchronization** | **`TECHNICAL CONCERN`** *(Từ chối ngữ cảnh riêng)* | N/A *(Hạ tầng kỹ thuật)* | `SyncStatus`, `LocalSubmissionStatus`, Hàng đợi gửi tin cục bộ (Outbox Queue). Bàn giao cho Kiến trúc kỹ thuật (P3-SC-04). | Tuyệt đối không sở hữu `TaskStatus` hay dữ liệu nghiệp vụ. | Tầng kết nối mạng thiết bị di động. | Lưu trữ đệm ngoại tuyến và đồng bộ hóa mạng là mối quan tâm thuần túy về kiến trúc kỹ thuật (Technical Concern). Nghiệp vụ không được phép sinh ra trạng thái lai ghép như `OFFLINE_SUBMITTED`. |
 
 ---
 
 ## 3. Rationale Chi Tiết Về Quyết Định Hợp Nhất & Loại Bỏ (Detailed Merging Rationale)
 
 ### 3.1. Tại sao hợp nhất "Field Verification & Evidence" và "Review & QC" vào `Work Management`?
-1. **Bảo toàn Ranh giới Nhất quán Cụm Thực thể (Single Aggregate Transactional Boundary)**:
-   - Theo mô hình DDD, `Task` là Aggregate Root. Các hành vi: bắt đầu làm việc (`StartTask`), quét QR (`VerifyQr`), đo GPS (`VerifyGps`), gửi ảnh (`SubmitEvidence`), yêu cầu làm lại (`RequestRework`) và nghiệm thu (`Approve`) đều trực tiếp kiểm tra và làm biến đổi các trường nội tại của `Task` (`status`, `proofProgress`, `evidenceHistory`, `reviewDecision`).
-   - Nếu chia thành 3 ngữ cảnh riêng biệt, hệ thống sẽ buộc phải thực hiện các giao dịch phân tán (Distributed Transactions / Saga) giữa thiết bị di động và máy chủ trong điều kiện mạng chập chờn ngoài hiện trường, dẫn đến rủi ro không đồng nhất dữ liệu nghiêm trọng.
-2. **Loại bỏ Hoàn toàn Xung đột Tác nhân Ghi (Eliminating Conflicting Writers - BC-03)**:
-   - Nếu `Review & QC` là một ngữ cảnh riêng, cả `Work Management` lẫn `Review & QC` đều đòi hỏi quyền ghi lên trường `TaskStatus`. Bằng cách hợp nhất, duy nhất cỗ máy trạng thái của `Work Management` sở hữu và bảo vệ vòng đời 7 trạng thái tất định.
-3. **Phù hợp với Độ phức tạp Thực tế của Sản phẩm (Product Complexity Alignment)**:
-   - NOVYX là ứng dụng điều phối hiện trường chuyên biệt, không phải một hệ sinh thái thương mại điện tử khổng lồ. Việc hợp nhất tạo ra một Bounded Context **`CORE`** mạch lạc, tập trung và dễ bảo trì.
+Tuân thủ kỷ luật **P3-SC-05B**, dự án loại bỏ mọi giả định ép buộc kỹ thuật sớm (như tuyên bố bắt buộc phải có Saga hay Distributed Transactions). Thay vào đó, quyết định hợp nhất dựa trên các căn cứ nghiệp vụ thuần túy:
+
+1. **Cùng Tham Gia Vào Các Bất Biến Của Thực Thể Gốc `Task` (Participating in the Same Task Invariants)**:
+   - Các hành động bắt đầu (`StartTask`), đối soát hiện trường (`SiteVerification`), gửi chứng cứ (`SubmitEvidence`), thẩm định (`ReviewDecision`) đều trực tiếp đọc và biến đổi trạng thái nội tại của `Task` (`status`, `proofProgress`, `evidenceHistory`, `reviewDecision`).
+2. **`Task` Là Chủ Sở Hữu Thẩm Quyền Điều Phối Chu Trình Sống (Authoritative Lifecycle Owner)**:
+   - Việc chuyển dịch giữa 7 trạng thái (`PENDING` $\to$ `IN_PROGRESS` $\to$ `BLOCKED` $\leftrightarrow$ `WAITING_REVIEW` $\to$ `REWORK_REQUIRED` $\to$ `COMPLETED` / `CANCELLED`) đòi hỏi một thẩm quyền quyết định thống nhất, không bị phân tán.
+3. **Tránh Xung Đột Tác Nhân Ghi (Eliminating Conflicting Writers - BC-03)**:
+   - Nếu tách riêng Review thành ngữ cảnh độc lập, cả hai ngữ cảnh sẽ cùng tranh chấp quyền ghi lên trường `TaskStatus`. Hợp nhất bảo đảm duy nhất một cỗ máy trạng thái điều phối chu trình sống.
+4. **Độ Phức Tạp Nghiệp Vụ Thực Tế Không Đòi Hỏi Tách Vi Ngữ Cảnh (Domain Boundary Realism)**:
+   - Việc chia tách nhỏ hơn không mang lại tính tự chủ nghiệp vụ có ý nghĩa cho phạm vi hiện tại của NOVYX, mà chỉ làm phức tạp hóa ranh giới định nghĩa.
 
 ### 3.2. Tại sao "Offline / Sync" không phải là Bounded Context?
 - Đồng bộ hóa là cơ chế truyền tải (Transport Mechanism). Khi nhân viên bấm nộp bài lúc mất mạng, trạng thái kỹ thuật là `LocalSubmissionStatus = PENDING_SYNC`, nhưng về mặt nghiệp vụ hệ thống ghi nhận `TaskStatus` vẫn giữ nguyên là `IN_PROGRESS` (chưa lên `WAITING_REVIEW` trên máy chủ).
@@ -106,7 +109,8 @@ Nguyên tắc bất biến: **Một ngữ cảnh tuyệt đối KHÔNG được 
      - `treeCoordinatesSnapshot`: Tọa độ chuẩn của cây tại lúc giao việc (để đối chiếu GPS $\le 10$m).
      - `checklistTemplateSnapshot`: Nội dung các câu hỏi kiểm tra tại lúc kích hoạt `IN_PROGRESS`.
      - `policyVersionId`: Phiên bản quy tắc bằng chứng áp dụng.
-   - Nếu Tree Asset Registry sau này đo lại tọa độ cây, hoặc Policy cập nhật câu hỏi checklist mới, bản chụp trong Task lịch sử **KHÔNG BAO GIỜ BỊ THAY ĐỔI**.
+     - `qrCodeSnapshot`: Mã QR định danh của cây tại thời điểm giao việc.
+   - Nếu Tree Asset Registry sau này đo lại tọa độ cây hoặc cấp đổi mã `qrCode` mới (do tem hỏng), bản chụp trong Task lịch sử **KHÔNG BAO GIỜ BỊ THAY ĐỔI** (P3-SC-03).
 
 ---
 
@@ -127,12 +131,13 @@ Bảng phân định nghĩa chuẩn tắc 100% không nhập nhằng giữa các
 | **LocalSubmissionStatus** | Technical State | Cờ ghi nhận hồ sơ đang chờ hàng đợi đẩy lên server: `IDLE`, `PENDING_SYNC`. | Thuần túy là trạng thái đệm của mobile app; không gửi vào csdl nghiệp vụ. |
 | **SiteVerification** | Work Management | Hồ sơ xác thực hiện trường gồm hai tín hiệu độc lập: Định danh cây (QR) và Vị trí (GPS $\le 10$m). | Đo GPS hay quét QR độc lập không làm thay đổi trạng thái của Task. |
 | **VerificationException** | Work Management | Cơ chế ghi nhận trở ngại khách quan kèm giải trình: `LOCATION_EXCEPTION`, `IDENTITY_EXCEPTION`. | $\mathbf{\ne SiteVerification\ Passed}$ (Ngoại lệ bắt buộc phải có giải trình để Manager hậu kiểm). |
-| **ReportFieldIssue** | Work Management | Hành động của Staff báo cáo sự cố ách tắc thi công (ví dụ: ong vò vẽ, tường rào khóa) $\to$ chuyển task sang `BLOCKED`. | $\mathbf{\ne StructuredFindings}$ (Sự cố là ách tắc vận hành; Findings là kết quả khám bệnh cây). |
+| **FieldIssue** | Work Management | Bản ghi sự cố ách tắc thi công (ong vò vẽ, tường rào khóa) $\to$ chuyển task sang `BLOCKED`. | $\mathbf{\ne StructuredFindings}$ (Sự cố là ách tắc vận hành; Findings là kết quả khám bệnh cây). |
 | **StructuredFindings** | Work Management | Dữ liệu khám bệnh chuyên sâu (độ nghiêng, mục rỗng, sâu hại) bắt buộc của hồ sơ kiểm định `INSPECTION_PROOF`. | Không bị thay thế bởi `ReportFieldIssue`, `TreeRiskStatus` hay ảnh chụp. |
-| **ReviewDecision** | Work Management | Quyết định thẩm định của Manager tại `WAITING_REVIEW`: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`. | Là phán quyết kích hoạt chuyển trạng thái; không tồn tại trạng thái task mang tên ReviewDecision. |
+| **ReviewDecision** | Work Management | Quyết định thẩm định của Manager tại `WAITING_REVIEW`, gồm đúng 4 kết luận: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL` (P3-SC-02). | Là phán quyết kích hoạt chuyển trạng thái; không tồn tại trạng thái task mang tên ReviewDecision. |
 | **Targeted Rework** | Work Management | Cơ chế yêu cầu làm lại có mục tiêu: chỉ định rõ khâu sai sót, bảo lưu 100% chứng cứ đạt chuẩn cũ. | Không bao giờ bắt công nhân làm lại từ đầu nếu các khâu trước đã đạt chuẩn. |
+| **TreeIdentity** | Tree Asset Registry | Bộ định danh gồm `treeId` (bất biến) và `qrCode` (nhãn Master Data có thể cấp đổi bởi Admin có kiểm toán) (P3-SC-03). | Đổi `qrCode` không làm đổi `treeId` và không làm đổi kết quả quét QR của các task cũ. |
 | **CareHistory** | Tree Asset Registry | Bản chiếu lịch sử chăm sóc pháp lý của cây xanh đô thị. | **CHỈ sinh ra khi task đạt `COMPLETED`**; Task bị Hủy hay đang làm cấm ghi vào CareHistory. |
-| **AuditEvent** | Audit & Compliance | Bản ghi kiểm toán bất biến ghi nhận ai đã làm gì, vào thời điểm nào, trên tài nguyên nào. | Không thuộc quyền sở hữu riêng của Admin; Admin cấm sửa/xóa audit log. |
+| **AuditEvent** | Audit & Compliance | `DOMAIN EVENT` bất biến nối tiếp (`Append-Only`) ghi nhận ai đã làm gì, vào thời điểm nào, trên tài nguyên nào. | Không thuộc quyền sở hữu riêng của Admin; Admin cấm sửa/xóa audit log. |
 
 ---
 
@@ -201,27 +206,60 @@ Nghiệm thu toàn bộ 10 tiêu chí cổng chất lượng khắt khe của Ph
 
 | Gate ID | Tiêu chí Nghiệm thu (Requirement) | Phương pháp Xác minh (Verification Method) | Bằng chứng Cụ thể (Concrete Evidence) | Tính Chặn (Blocking) | Kết quả Nghiệm thu (Result) |
 |---|---|---|---|:---:|:---:|
-| **P3-01** | Mọi Cụm thực thể / Tài nguyên có chủ sở hữu duy nhất | Single Owner Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3: Toàn bộ 30 tài nguyên có đúng 1 Owning Context độc quyền. | **YES** | **PASS** |
+| **P3-01** | Mọi Cụm thực thể / Tài nguyên có chủ sở hữu duy nhất | Single Owner Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3: 100% tài nguyên nghiệp vụ có thẩm quyền có đúng 1 Owning Context độc quyền; bản chiếu dẫn xuất và trạng thái kỹ thuật được phân định phi thẩm quyền (P3-SC-04). | **YES** | **PASS** |
 | **P3-02** | Quyền sở hữu Người dùng & Vai trò rõ ràng | IAM Ownership Inspection | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2: `User`, `Account`, `RoleAssignment` thuộc độc quyền `Identity & Access Management`. | **YES** | **PASS** |
 | **P3-03** | Quyền sở hữu Dữ liệu gốc Cây xanh rõ ràng | Tree Master Data Ownership Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2: `Tree` và `TreeMasterData` thuộc độc quyền `Tree Asset Registry`. | **YES** | **PASS** |
 | **P3-04** | Quyền sở hữu Vận hành Nhiệm vụ giữ vững rõ ràng | Task Operational Ownership Verification | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2: `Task` và chu trình 7 trạng thái thuộc độc quyền `Work Management`. | **YES** | **PASS** |
-| **P3-05** | Quyền sở hữu Chính sách Bằng chứng rõ ràng | Proof Policy Governance Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2: `ProofPolicyMapping`, `ChecklistTemplate` thuộc `Policy & Template Governance`. | **YES** | **PASS** |
-| **P3-06** | Quyền sở hữu Sự kiện Kiểm toán rõ ràng | Audit Event Ownership Check | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2: `AuditEvent` thuộc độc quyền `Audit & Compliance`, cấm Admin sửa xóa. | **YES** | **PASS** |
+| **P3-05** | Quyền sở hữu Chính sách Bằng chứng rõ ràng | Proof Policy Governance Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2: `ProofPolicyMapping`, `ChecklistTemplate`, `TaskTypeCatalog` thuộc `Policy & Template Governance`. | **YES** | **PASS** |
+| **P3-06** | Quyền sở hữu Sự kiện Kiểm toán rõ ràng | Audit Event Ownership Check | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2: `AuditEvent` (`DOMAIN EVENT`) thuộc độc quyền `Audit & Compliance`, cấm Admin sửa xóa. | **YES** | **PASS** |
 | **P3-07** | Không có ngữ cảnh chồng chéo trách nhiệm vô lý | Overlapping Boundary Elimination Audit | Tài liệu này Mục 2 & Mục 3.1: Hợp nhất `Field Verification` và `Review` vào `Work Management`; loại bỏ 100% xung đột ghi. | **YES** | **PASS** |
 | **P3-08** | Quản trị Admin không xâm nhập quy trình thực địa | Non-Invasion Verification | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 8 (Case A): Admin bị DENY 100% trên vận hành tác vụ thực địa. | **YES** | **PASS** |
 | **P3-09** | Quyền tác giả và dữ liệu lịch sử được bảo toàn | Historical Preservation Verification | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 5 & Tài liệu này Mục 5: 6 nguyên tắc bảo toàn lịch sử ngăn chặn mọi hồi tố dữ liệu. | **YES** | **PASS** |
-| **P3-10** | Ngôn ngữ chuẩn tắc được chuẩn hóa toàn diện | Ubiquitous Language Delta Audit | Tài liệu này Mục 6 & Mục 7: Định nghĩa chuẩn 17 thuật ngữ cốt lõi và cấm tuyệt đối 10 phép đồng nhất sai lệch. | **YES** | **PASS** |
+| **P3-10** | Ngôn ngữ chuẩn tắc được chuẩn hóa toàn diện | Ubiquitous Language Delta Audit | Tài liệu này Mục 6 & Mục 7: Định nghĩa chuẩn 18 thuật ngữ cốt lõi và cấm tuyệt đối 10 phép đồng nhất sai lệch. | **YES** | **PASS** |
 
 ---
 
-## 11. Kết Luận Cổng Nghiệm Thu Phase 3 (Phase 3 Exit Gate)
+## 11. Báo Cáo Đóng Khép Ngữ Nghĩa Phase 3 (Phase 3 Semantic Closure Review)
+
+Báo cáo nghiệm thu khắc phục triệt để 5 khiếm khuyết ngữ nghĩa được chỉ ra bởi kiểm toán độc lập:
+
+| Mã Khiếm Khuyết (Defect ID) | Tiêu chí Đóng khép Ngữ nghĩa (Semantic Closure Requirement) | Phương pháp Xác minh (Verification Method) | Bằng chứng Cụ thể (Concrete Evidence) | Kết quả Nghiệm thu (Result) |
+|---|---|---|---|:---:|
+| **P3-SC-01** | Phân loại DDD đơn trị, loại bỏ nhãn kép | Single Classification Discipline Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 2 & 3: `EvidenceAttempt` $\to$ **`ENTITY`**; `FindingsSchema` $\to$ **`POLICY`**; `AuditEvent` $\to$ **`DOMAIN EVENT`**. 0 xuất hiện nhãn kép. P3-SC-NT-01..02 PASS. | **PASS** |
+| **P3-SC-02** | Bảo toàn đầy đủ 4 kết luận thẩm định | Review Outcomes Cardinality Audit | Tài liệu này Mục 2 (Candidate E) & Mục 6: Mọi vị trí liệt kê ReviewDecision đều nêu đủ 4 kết luận: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`. P3-SC-NT-03 PASS. | **PASS** |
+| **P3-SC-03** | Giải quyết mâu thuẫn tính khả biến mã QR | Tree Identity Mutability Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 2, 3, 5 & Tài liệu này Mục 5, 6: `treeId` bất biến vĩnh viễn; `qrCode` khả biến có kiểm soát bởi Admin; đổi mã QR KHÔNG làm đổi kết quả quét QR cũ hay CareHistory. P3-SC-NT-04..05 PASS. | **PASS** |
+| **P3-SC-04** | Làm rõ Notification là bản chiếu dẫn xuất | Derived Read Model Specification Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 3 & Tài liệu này Mục 2 (Candidate H), Mục 10 (P3-01): `Notification` là **`N/A — BẢN CHIẾU DẪN XUẤT`**, phi thẩm quyền, không có 2 owning contexts. P3-SC-NT-06 PASS. | **PASS** |
+| **P3-SC-05** | Loại bỏ can thiệp kỹ thuật quá sớm | Technical Overreach Elimination Audit | [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 4.6 & Tài liệu này Mục 3.1: Loại bỏ áp đặt chữ ký/băm tại AuditEvent; loại bỏ giả định ép buộc Saga/Distributed Transactions tại hợp nhất context. P3-SC-NT-07..08 PASS. | **PASS** |
+
+---
+
+## 12. Thử Nghiệm Phủ Định Đóng Khép Ngữ Nghĩa (Phase 3 Semantic Closure Negative Tests)
+
+Bổ sung 8 kịch bản kiểm thử độc lập kiểm chứng tính chặt chẽ của việc đóng khép ngữ nghĩa Phase 3:
+
+| Mã Ca Kiểm Thử | Phát biểu giả định sai phạm | Kết quả mong đợi | Đánh giá thực tế trong Quy tắc Chốt | Kết luận |
+|---|---|:---:|---|:---:|
+| **P3-SC-NT-01** | EvidenceAttempt đồng thời vừa là Entity vừa là Value Object. | **FAIL** (Vi phạm kỷ luật đơn trị) | Bác bỏ tại [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 2. `EvidenceAttempt` có định danh theo phiên (`attemptNumber`) và được phân loại chuẩn tắc duy nhất là **`ENTITY`**. | **PASS (Đã chặn đứng)** |
+| **P3-SC-NT-02** | AuditEvent bắt buộc phải là Aggregate chỉ vì nó được lưu trữ trong cơ sở dữ liệu. | **FAIL** (Sai lệch khái niệm DDD) | Bác bỏ tại [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 4.6. Mỗi `AuditEvent` là một bản ghi sự kiện bất biến độc lập (**`DOMAIN EVENT`**), không có giao dịch đột biến bên trong. | **PASS (Đã chặn đứng)** |
+| **P3-SC-NT-03** | Quy trình thẩm định của Manager chỉ có 3 kết luận (APPROVE / REQUEST_REWORK / CANCEL). | **FAIL** (Thiếu kết luận chuẩn tắc) | Bác bỏ tại Mục 2 (Candidate E) và Mục 6. ReviewDecision có đúng 4 kết luận dứt điểm, bắt buộc bao gồm `APPROVE_WITH_EXCEPTION`. | **PASS (Đã chặn đứng)** |
+| **P3-SC-NT-04** | Mã `qrCode` gắn trên thân cây là bất biến vĩnh viễn trong mọi hoàn cảnh, không thể cấp đổi. | **FAIL** (Trái thực tế vận hành) | Bác bỏ tại Mục 6 và P3-SC-03. `treeId` là bất biến; `qrCode` là nhãn Master Data có thể cập nhật có kiểm soát khi tem bị hỏng/mất ngoài thực địa. | **PASS (Đã chặn đứng)** |
+| **P3-SC-NT-05** | Khi Admin cấp đổi mã QR của cây, dữ liệu quét mã của các task cũ trong quá khứ bị sửa đổi theo mã mới. | **FAIL** (Vi phạm bảo toàn lịch sử) | Bác bỏ tại Mục 5 (Bản chụp lịch sử) và P3-SC-03. Task cũ lưu giữ bất biến `qrCodeSnapshot` và `TreeIdentityVerification` tại thời điểm quét, cấm hồi tố. | **PASS (Đã chặn đứng)** |
+| **P3-SC-NT-06** | Notification có hai ngữ cảnh cùng tuyên bố sở hữu thẩm quyền (Dual Authoritative Ownership). | **FAIL** (Trái nguyên tắc đơn chủ) | Bác bỏ tại Mục 2 (Candidate H) và P3-SC-04. Notification là bản chiếu dẫn xuất (`DERIVED READ MODEL`), không phải aggregate có thẩm quyền. | **PASS (Đã chặn đứng)** |
+| **P3-SC-NT-07** | Phase 3 bắt buộc mô hình hóa chữ ký số hoặc mã băm mật mã học cho từng AuditEvent. | **FAIL** (Can thiệp kỹ thuật quá sớm) | Bác bỏ tại [`05-DOMAIN-OWNERSHIP-MATRIX.md`](05-DOMAIN-OWNERSHIP-MATRIX.md) Mục 4.6 và P3-SC-05A. Cơ chế bảo toàn toàn vẹn kỹ thuật được bàn giao cho Kiến trúc kỹ thuật / NFR / ADR. | **PASS (Đã chặn đứng)** |
+| **P3-SC-NT-08** | Việc chia tách context bắt buộc phải triển khai mô hình Saga hoặc giao dịch phân tán. | **FAIL** (Ép buộc giải pháp kỹ thuật) | Bác bỏ tại Mục 3.1 và P3-SC-05B. Hợp nhất context dựa trên các bất biến nghiệp vụ của `Task`; giải pháp tích hợp kỹ thuật được xem xét tại Phase 11. | **PASS (Đã chặn đứng)** |
+
+---
+
+## 13. Kết Luận Cổng Nghiệm Thu Phase 3 (Phase 3 Exit Gate)
 
 ```text
 ================================================================================
-PHASE 3 PASS
-— DOMAIN OWNERSHIP RECONCILED
-— BOUNDED CONTEXTS LOCKED
-— UBIQUITOUS LANGUAGE NORMALIZED
+PHASE 3 PASS — SEMANTICALLY CLOSED
+— DOMAIN RESOURCE CLASSIFICATIONS SINGLE-VALUED
+— FOUR REVIEW OUTCOMES PRESERVED
+— TREE IDENTITY MUTABILITY RECONCILED
+— DERIVED READ MODEL OWNERSHIP CLARIFIED
+— TECHNICAL OVERREACH REMOVED
 — READY FOR PHASE 4 AUTHORIZATION & ACTION ELIGIBILITY
 ================================================================================
 ```
