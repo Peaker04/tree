@@ -22,13 +22,15 @@ Các thông số nhận diện đường cơ sở được trích xuất trực 
 
 ### 2.1. Trạng thái Working Tree (P0-03)
 
-Lệnh thực thi: `git status --porcelain`  
-Tại thời điểm khóa baseline, working tree hoàn toàn sạch đối với mã nguồn sản phẩm. Các tệp mới thêm vào chỉ bao gồm Master Plan và tài liệu quản trị quy trình:
-
-```text
-?? docs/NOVYX_Business_Baseline_Reconciliation_Master_Plan.md
-?? docs/business-reconciliation/
-```
+- **Tại thời điểm bắt đầu snapshot capture**: Toàn bộ mã nguồn ứng dụng (`apps/`, `packages/`) hoàn toàn không bị thay đổi (`0 files changed`). Các tài liệu quản trị và Master Plan mới được thêm vào ở trạng thái chưa theo dõi (untracked):
+  ```text
+  ?? docs/NOVYX_Business_Baseline_Reconciliation_Master_Plan.md
+  ?? docs/business-reconciliation/
+  ```
+- **Tại thời điểm hoàn tất đóng băng Phase 0**: Toàn bộ các tài liệu quản trị và snapshot đã được commit chính thức tại commit [`36b036909cbe2efbd635cfb0c1daacebd3cb971a`](https://github.com/Peaker04/tree/commit/36b036909cbe2efbd635cfb0c1daacebd3cb971a).
+- **Kiểm tra trạng thái sạch cuối cùng (Final Clean-State Verification)**:
+  Lệnh thực thi sau commit: `git status --porcelain`
+  Kết quả: Rỗng (`0 untracked / 0 modified`). Working tree đạt trạng thái sạch hoàn toàn, bảo toàn 100% mã nguồn sản phẩm baseline.
 
 ### 2.2. Cam kết Ranh giới Diff — Diff Boundary (P0-07)
 
@@ -135,7 +137,7 @@ Trong mã nguồn thực tế của ứng dụng di động (`apps/mobile/src`),
 |---|---|---|---|:---:|
 | **P0-01** | Branch `base-setup` | Git inspection | `git branch --show-current` = `base-setup` | **PASS** |
 | **P0-02** | Baseline Commit | Git inspection | `git rev-parse HEAD` = `8c21f7c...` | **PASS** |
-| **P0-03** | Working tree sạch | Git inspection | Không có thay đổi ngoài docs Master Plan | **PASS** |
+| **P0-03** | Working tree kiểm soát & sạch sau commit | Git inspection | Baseline code giữ nguyên; untracked docs tại capture; sạch 100% tại commit `36b0369` | **PASS** |
 | **P0-04** | Tree Hash đã lưu | Git inspection | `HEAD^{tree}` = `76090d6...` | **PASS** |
 | **P0-05** | Snapshot canonical docs | Checksum SHA256 | Bảng Mục 3 (20 file canonical) | **PASS** |
 | **P0-06** | Snapshot 16 HTML diagrams | Checksum SHA256 | Bảng Mục 4 (16 file diagram) | **PASS** |
