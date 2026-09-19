@@ -392,3 +392,16 @@ PHASE 1 PASS
 — READY FOR PHASE 2 ADMIN BUSINESS SCOPE
 ================================================================================
 ```
+
+---
+
+## 14. Chỉ Mục Định Danh & Thuật Ngữ Chuẩn Tắc (Canonical Naming Reference)
+
+Mô hình tác nhân tại tài liệu này được đồng bộ chuẩn hóa tên gọi tiếng Anh và nhãn hiển thị tiếng Việt tại tài liệu độc lập:
+👉 [`docs/business-reconciliation/03-ROLE-NAMING-TAXONOMY.md`](03-ROLE-NAMING-TAXONOMY.md)
+
+Bảng đối chiếu nhanh:
+- Mã kỹ thuật `'staff'` $\rightarrow$ **Field Staff** (Nhân viên hiện trường)
+- Mã kỹ thuật `'manager'` $\rightarrow$ **Operations Manager** (Quản lý vận hành)
+- Mã kỹ thuật `'admin'` $\rightarrow$ **Platform Administrator** (Quản trị hệ thống)
+- Tác nhân tự động hóa $\rightarrow$ **System** (Hệ thống tự động)

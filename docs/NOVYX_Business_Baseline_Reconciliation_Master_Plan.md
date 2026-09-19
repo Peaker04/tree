@@ -146,6 +146,7 @@ Admin ≠ Manager
 
 ```text
 02-ACTOR-MODEL-DECISION.md
+03-ROLE-NAMING-TAXONOMY.md (Role Naming & Taxonomy Mini-Phase)
 ```
 
 ## Exit Gate
