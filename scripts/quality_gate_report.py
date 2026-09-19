@@ -9,6 +9,7 @@ Fail-closed Two-Layer Architecture:
 import sys
 import os
 import re
+import ast
 import json
 import hashlib
 import subprocess
@@ -366,6 +367,51 @@ def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None,
                 "evidence_note": "HYBRID gate requires both automated execution and manual inspection records"
             }
 
+    # Status and exit code
+    if ev_status != "PASS" or ev_code != 0:
+        return {
+            "evidence_status": "FAIL",
+            "effective_status": "FAIL",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"Evidence reported {ev_status} with exit code {ev_code}"
+        }
+
+    # Oracle execution validation
+    ev_oracle_exec = evidence.get("oracle_execution")
+    if ev_oracle_exec in ["HARDCODED_PASS", "PARTIALLY_EXECUTED", "NOT_IMPLEMENTED"]:
+        return {
+            "evidence_status": "ORACLE_EXECUTION_FAILURE",
+            "effective_status": "FAIL",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"Rejected: oracle_execution={ev_oracle_exec} violates acceptance criteria"
+        }
+    if gtype == "AUTOMATED" and ev_oracle_exec and ev_oracle_exec != "FULLY_EXECUTED":
+        return {
+            "evidence_status": "ORACLE_EXECUTION_MISMATCH",
+            "effective_status": "FAIL",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"AUTOMATED gate requires oracle_execution=FULLY_EXECUTED (got {ev_oracle_exec})"
+        }
+    elif gtype == "MANUAL" and ev_oracle_exec and ev_oracle_exec != "MANUAL_VERIFIED":
+        return {
+            "evidence_status": "ORACLE_EXECUTION_MISMATCH",
+            "effective_status": "NOT_RUN",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"MANUAL gate requires oracle_execution=MANUAL_VERIFIED (got {ev_oracle_exec})"
+        }
+    elif gtype == "HYBRID" and ev_oracle_exec and ev_oracle_exec != "HYBRID_VERIFIED":
+        return {
+            "evidence_status": "ORACLE_EXECUTION_MISMATCH",
+            "effective_status": "NOT_RUN",
+            "evidence_ref": ev_ref,
+            "is_inherited": False,
+            "evidence_note": f"HYBRID gate requires oracle_execution=HYBRID_VERIFIED (got {ev_oracle_exec})"
+        }
+
     # Definition hash validation
     current_def_hash = compute_definition_hash(gate)
     ev_def_hash = evidence.get("definition_hash")
@@ -376,16 +422,6 @@ def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None,
             "evidence_ref": ev_ref,
             "is_inherited": False,
             "evidence_note": f"Stale evidence: definition hash mismatch (expected {current_def_hash}, got {ev_def_hash})"
-        }
-
-    # Status and exit code
-    if ev_status != "PASS" or ev_code != 0:
-        return {
-            "evidence_status": "FAIL",
-            "effective_status": "FAIL",
-            "evidence_ref": ev_ref,
-            "is_inherited": False,
-            "evidence_note": f"Evidence reported {ev_status} with exit code {ev_code}"
         }
 
     # Artifact validation
@@ -465,31 +501,64 @@ def resolve_effective_status(gate, evidence, current_sha, ancestor_checker=None,
 # STATIC ORACLE COVERAGE AUDIT
 # ==============================================================================
 
-def audit_oracle_coverage():
+def audit_oracle_coverage(runner_path="scripts/run_quality_evidence.py"):
     """
-    Statically inspects scripts/run_quality_evidence.py to detect suspicious patterns:
-    - Direct unconditional return True without validation
-    - Grouped gates returning PASS with no gate-specific validation
-    - Missing gate handlers
+    Performs an AST-based audit of scripts/run_quality_evidence.py.
+    Inspects all check_* functions to detect unvalidated/hardcoded PASS branches:
+    Detects any gate branch whose body has no failure path or unconditionally returns True.
     """
-    runner_path = Path("scripts/run_quality_evidence.py")
-    if not runner_path.exists():
-        return False, "scripts/run_quality_evidence.py missing"
-    lines = runner_path.read_text(encoding="utf-8").splitlines()
+    p = Path(runner_path)
+    if not p.exists():
+        return False, f"{runner_path} missing"
+    try:
+        tree = ast.parse(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        return False, f"Failed to parse AST of {runner_path}: {e}"
+
+    def get_gate_ids_from_test(test_node):
+        gids = []
+        if isinstance(test_node, ast.Compare):
+            left = test_node.left
+            if isinstance(left, ast.Name) and left.id == "gate_id":
+                for comp in test_node.comparators:
+                    if isinstance(comp, ast.Constant) and isinstance(comp.value, str):
+                        gids.append(comp.value)
+                    elif isinstance(comp, (ast.List, ast.Set, ast.Tuple)):
+                        for elt in comp.elts:
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                gids.append(elt.value)
+        return gids
+
+    def branch_can_fail(stmts):
+        for s in stmts:
+            for n in ast.walk(s):
+                if isinstance(n, ast.Return):
+                    val = n.value
+                    if isinstance(val, ast.Tuple) and len(val.elts) > 0:
+                        first = val.elts[0]
+                        if isinstance(first, ast.Constant) and first.value is False:
+                            return True
+                        elif not isinstance(first, ast.Constant):
+                            return True
+                    elif isinstance(val, ast.Constant) and val.value is False:
+                        return True
+                    elif not isinstance(val, ast.Constant):
+                        return True
+        return False
 
     suspicious = []
-    for idx, line in enumerate(lines, 1):
-        s = line.strip()
-        if re.match(r'^elif\s+gate_id\s*==\s*["\']\w+-\d+["\']:\s*return\s+True\s*,', s):
-            suspicious.append(f"Line {idx}: {s}")
-        if re.match(r'^elif\s+gate_id\s*in\s*\[.*?\]:\s*return\s+True\s*,', s):
-            # Check if this group was a blind return True
-            if "verified" in s or "criteria structure verified" in s:
-                suspicious.append(f"Line {idx}: {s}")
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("check_"):
+            for child in ast.walk(node):
+                if isinstance(child, ast.If):
+                    gids = get_gate_ids_from_test(child.test)
+                    if gids:
+                        if not branch_can_fail(child.body):
+                            suspicious.append(f"Function {node.name}, line {child.lineno}: {', '.join(gids)}")
 
     if suspicious:
-        return False, f"Suspicious hardcoded passes detected:\n  " + "\n  ".join(suspicious)
-    return True, "Zero hardcoded return True statements detected in evidence runner"
+        return False, f"AST Audit detected unconditional hardcoded pass branches:\n  " + "\n  ".join(suspicious)
+    return True, "AST Acceptance Oracle Coverage Audit PASSED: 0 hardcoded return True branches across all check functions"
 
 # ==============================================================================
 # AGGREGATION & REPORTING
@@ -590,13 +659,13 @@ def generate_quality_report(registry_path="dist/quality-evidence/evidence-index.
         "rejected_origin": sum(1 for g in all_gates if g["evidence_status"] == "REJECTED_ORIGIN"),
     }
 
-    # Oracle Execution Coverage metrics
-    fully_executed = sum(1 for g in all_gates if g["effective_status"] == "PASS" and g["type"] == "AUTOMATED")
-    hybrid_verified = sum(1 for g in all_gates if g["effective_status"] == "PASS" and g["type"] == "HYBRID")
-    manual_verified = sum(1 for g in all_gates if g["effective_status"] == "PASS" and g["type"] == "MANUAL")
-    partially_executed = 0
-    hardcoded_pass = 0
-    not_implemented_oracle = sum(1 for g in all_gates if g["effective_status"] not in ["PASS", "NOT_APPLICABLE"] and g["blocking"])
+    # Oracle Execution Coverage metrics derived directly from machine evidence records
+    fully_executed = sum(1 for g in all_gates if evidence_index.get(g["id"], {}).get("oracle_execution") == "FULLY_EXECUTED")
+    hybrid_verified = sum(1 for g in all_gates if evidence_index.get(g["id"], {}).get("oracle_execution") == "HYBRID_VERIFIED")
+    manual_verified = sum(1 for g in all_gates if evidence_index.get(g["id"], {}).get("oracle_execution") == "MANUAL_VERIFIED")
+    partially_executed = sum(1 for g in all_gates if evidence_index.get(g["id"], {}).get("oracle_execution") == "PARTIALLY_EXECUTED")
+    hardcoded_pass = sum(1 for g in all_gates if evidence_index.get(g["id"], {}).get("oracle_execution") == "HARDCODED_PASS")
+    not_implemented_oracle = sum(1 for g in all_gates if evidence_index.get(g["id"], {}).get("oracle_execution") in [None, "NOT_IMPLEMENTED"])
 
     oracle_coverage = {
         "fully_executed": fully_executed,
@@ -610,11 +679,16 @@ def generate_quality_report(registry_path="dist/quality-evidence/evidence-index.
 
     # FAIL-CLOSED DECISION RULE:
     # All blocking effective_status == PASS
+    # AND all blocking gate oracle_execution in [FULLY_EXECUTED, MANUAL_VERIFIED, HYBRID_VERIFIED]
     # AND hardcoded_pass == 0
     # AND partially_executed == 0
     # AND not_implemented == 0
     # AND missing_evidence == 0
     # AND duplicate_ids == 0
+    blocking_oracle_valid = all(
+        evidence_index.get(g["id"], {}).get("oracle_execution") in ["FULLY_EXECUTED", "MANUAL_VERIFIED", "HYBRID_VERIFIED"]
+        for g in blocking_gates
+    )
     is_ready = (
         len(blocking_gates) > 0 and
         len(duplicate_ids) == 0 and
@@ -622,6 +696,7 @@ def generate_quality_report(registry_path="dist/quality-evidence/evidence-index.
         partially_executed == 0 and
         not_implemented_oracle == 0 and
         provenance["missing_evidence"] == 0 and
+        blocking_oracle_valid and
         all(g["effective_status"] == "PASS" for g in blocking_gates)
     )
 
@@ -639,6 +714,10 @@ def generate_quality_report(registry_path="dist/quality-evidence/evidence-index.
             failed_reasons.append(f"PARTIALLY_EXECUTED({partially_executed})")
         if not_implemented_oracle > 0:
             failed_reasons.append(f"NOT_IMPLEMENTED({not_implemented_oracle})")
+        if not blocking_oracle_valid:
+            invalid_oracles = [f"{g['id']}({evidence_index.get(g['id'], {}).get('oracle_execution')})"
+                               for g in blocking_gates if evidence_index.get(g["id"], {}).get("oracle_execution") not in ["FULLY_EXECUTED", "MANUAL_VERIFIED", "HYBRID_VERIFIED"]]
+            failed_reasons.append(f"INVALID_ORACLE_EXECUTION({', '.join(invalid_oracles)})")
         for g in blocking_gates:
             if g["effective_status"] != "PASS":
                 failed_reasons.append(f"{g['id']}({g['effective_status']})")
@@ -798,7 +877,7 @@ def run_self_test():
             "id": 5,
             "name": "CASE 5: ancestor + unchanged dependency scope -> inherited PASS",
             "gate": {"id": "C-05", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "dependency_scope": ["docs/WORKFLOWS.md"]},
+            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "oracle_execution": "FULLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "dependency_scope": ["docs/WORKFLOWS.md"]},
             "ancestor_mock": True,
             "scope_mock": True,
             "expect_effective": "PASS",
@@ -808,7 +887,7 @@ def run_self_test():
             "id": 6,
             "name": "CASE 6: ancestor + relevant doc/tool changed -> inheritance rejected",
             "gate": {"id": "C-06", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "dependency_scope": ["docs/WORKFLOWS.md"]},
+            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "oracle_execution": "FULLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "dependency_scope": ["docs/WORKFLOWS.md"]},
             "ancestor_mock": True,
             "scope_mock": False,
             "expect_effective": "FAIL",
@@ -818,7 +897,7 @@ def run_self_test():
             "id": 7,
             "name": "CASE 7: oracle changed -> definition_hash mismatch",
             "gate": {"id": "C-07", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "NEW_ORACLE", "method": "M"},
-            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "definition_hash": "OLD_HASH_123"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "oracle_execution": "FULLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "definition_hash": "OLD_HASH_123"},
             "expect_effective": "FAIL",
             "expect_evidence": "DEFINITION_HASH_MISMATCH"
         },
@@ -826,7 +905,7 @@ def run_self_test():
             "id": 8,
             "name": "CASE 8: AUTOMATED gate with manual-only evidence -> reject",
             "gate": {"id": "C-08", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "MANUAL_REVIEW", "execution_type": "MANUAL_INSPECTION"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "oracle_execution": "MANUAL_VERIFIED", "evidence_origin": "MANUAL_REVIEW", "execution_type": "MANUAL_INSPECTION"},
             "expect_effective": "FAIL",
             "expect_evidence": "TYPE_MISMATCH"
         },
@@ -834,7 +913,7 @@ def run_self_test():
             "id": 9,
             "name": "CASE 9: MANUAL gate without manual review evidence -> NOT_RUN",
             "gate": {"id": "C-09", "declared_status": "PASS", "blocking": True, "type": "MANUAL", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "oracle_execution": "FULLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
             "expect_effective": "NOT_RUN",
             "expect_evidence": "MANUAL_MISSING"
         },
@@ -842,7 +921,7 @@ def run_self_test():
             "id": 10,
             "name": "CASE 10: HYBRID missing one side -> NOT_RUN",
             "gate": {"id": "C-10", "declared_status": "PASS", "blocking": True, "type": "HYBRID", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "oracle_execution": "PARTIALLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
             "expect_effective": "NOT_RUN",
             "expect_evidence": "HYBRID_INCOMPLETE"
         },
@@ -850,7 +929,7 @@ def run_self_test():
             "id": 11,
             "name": "CASE 11: direct final-SHA command exit 0 -> PASS",
             "gate": {"id": "C-11", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "evidence": {"commit_sha": current_sha, "status": "PASS", "exit_code": 0, "oracle_execution": "FULLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
             "expect_effective": "PASS",
             "expect_evidence": "FINAL_SHA_EXECUTED"
         },
@@ -858,7 +937,7 @@ def run_self_test():
             "id": 12,
             "name": "CASE 12: direct final-SHA command exit !=0 -> FAIL",
             "gate": {"id": "C-12", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": current_sha, "status": "FAIL", "exit_code": 1, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
+            "evidence": {"commit_sha": current_sha, "status": "FAIL", "exit_code": 1, "oracle_execution": "PARTIALLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION"},
             "expect_effective": "FAIL",
             "expect_evidence": "FAIL"
         },
@@ -866,7 +945,7 @@ def run_self_test():
             "id": 13,
             "name": "CASE 13: ancestor with modified tool hash -> inheritance rejected (TOOL_HASH_MISMATCH)",
             "gate": {"id": "C-13", "declared_status": "PASS", "blocking": True, "type": "AUTOMATED", "title": "T", "oracle": "O", "method": "M"},
-            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "tool_hashes": {"runner": "old_hash_1"}},
+            "evidence": {"commit_sha": "parent_sha_123", "status": "PASS", "exit_code": 0, "oracle_execution": "FULLY_EXECUTED", "evidence_origin": "DIRECT_EXECUTION", "execution_type": "AUTOMATED_EXECUTION", "allow_inheritance": True, "tool_hashes": {"runner": "old_hash_1"}},
             "ancestor_mock": True,
             "scope_mock": True,
             "tool_hash_mock": {"runner": "new_hash_2"},

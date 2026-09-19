@@ -1312,6 +1312,7 @@ def main():
                 "boundary_overflows": geom.get("boundaryOverflows", []),
                 "safe_padding_violations": geom.get("safePaddingViolations", []),
                 "text_connector_collisions": geom.get("textConnectorCollisions", []),
+                "label_connector_collisions": geom.get("textConnectorCollisions", []),
                 "connector_node_crossings": geom.get("connectorNodeCrossings", []),
                 "clipping_issues": geom.get("clippingIssues", []),
                 "executed_checks": geom.get("executedChecks", [])

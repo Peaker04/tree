@@ -98,4 +98,6 @@ Hệ thống Quality Gates của NOVYX GreenOps bao gồm các tập tài liệu
 8. [`docs/quality-gates/FINAL-GATE-PROTOCOL.md`](FINAL-GATE-PROTOCOL.md)  
    _Giao thức Phán Quyết Cổng Cuối Cùng & Xác thực Hai Lượt (Two-Pass Verification)._ Quy định quy trình Pass A (kiểm tra sau sửa đổi) và Pass B (tái kiểm tra độc lập trên môi trường sạch), checklist khóa đường cơ sở tổng hợp.
 9. `dist/quality-evidence/evidence-index.json`
-   _Sổ Bộ Bằng Chứng Máy Tính Thẩm Quyền (Authoritative Machine Evidence Registry)._ Chứa 100% bản ghi thực thi khách quan (stdout/stderr, exit code, execution time, structured data, SHA, tool hashes) của toàn bộ 113 cổng chất lượng, phục vụ công cụ phán quyết `scripts/quality_gate_report.py`.
+   _Sổ Bộ Bằng Chứng Máy Tính Thẩm Quyền Duy Nhất (Authoritative Machine Evidence Registry)._ Được sinh trực tiếp trên commit SHA cuối cùng (`FINAL_COMMITTED_SHA`) ở trạng thái working tree sạch, chứa 100% bản ghi thực thi khách quan (stdout/stderr, exit code, execution time, structured data, SHA, tool hashes, oracle_execution) của toàn bộ 113 cổng chất lượng, phục vụ công cụ phán quyết `scripts/quality_gate_report.py`.
+10. [`docs/quality-gates/evidence-index.json`](evidence-index.json)
+    _Bản Lưu Lịch Sử Không Thẩm Quyền (Non-Authoritative Historical Snapshot)._ Chỉ phục vụ lưu vết tham chiếu lịch sử; TUYỆT ĐỐI KHÔNG dùng làm căn cứ phán quyết cổng hiện tại. Mọi thẩm quyền bằng chứng máy tính bắt buộc đọc từ `dist/quality-evidence/evidence-index.json`.

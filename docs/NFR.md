@@ -115,31 +115,41 @@ Năm nhóm thuộc tính chất lượng chính (`Quality Attribute Groups`) đ�
 ### QAS-A11Y-01: Tương tác ngoài trời nắng chói & Ngôn ngữ tiếng Việt có dấu
 
 - **ID:** `QAS-A11Y-01`
-- **Thuộc tính chất lượng:** **Usability / Accessibility / Outdoor Readability**
-- **Kịch bản:** Nhân viên thao tác dưới ánh nắng mặt trời trực tiếp gay gắt, một tay cầm máy, một tay cầm dụng cụ chăm sóc cây.
+- **Thuộc tính chất lượng (Quality Attribute):** **Usability / Accessibility / Outdoor Readability** (`[APPROVED REQUIREMENT]`)
+- **Kịch bản vận hành:** Nhân viên thao tác dưới ánh nắng mặt trời trực tiếp gay gắt, một tay cầm máy, một tay cầm dụng cụ chăm sóc cây.
 - **Kích hoạt (Trigger):** Thao tác bấm nút, đọc văn bản hướng dẫn và thông số sai lệch GPS.
-- **Ngữ cảnh (Context):** Màn hình bị chói lóa; văn bản tiếng Việt dài với nhiều dấu thanh.
+- **Ngữ cảnh kiểm thử tham chiếu:** Màn hình bị chói lóa; văn bản tiếng Việt dài với nhiều dấu thanh.
 - **Phản ứng kỳ vọng:**
   - Độ tương phản màu văn bản đạt chuẩn WCAG AA ($\ge 4.5:1$ đối với văn bản thường, $\ge 3:1$ đối với chữ lớn).
   - Vùng chạm (Touch Target) của mọi nút thao tác chính đạt tối thiểu $48 \times 48\text{px}$ (khuyến nghị $48 - 52\text{px}$ chiều cao).
   - Không có hiện tượng cắt cụt chữ tiếng Việt (No ugly text truncation) làm mất nghĩa từ vựng.
-- **Thước đo / Chấp thuận:** Toàn bộ bảng màu tuân thủ nghiêm ngặt `DESIGN.md` (nền `snowWhite`, chữ `forestDepths`, nút bấm `forestDepths` hoặc `limePulse` tương phản cao).
-- **Bằng chứng kiểm chứng:** Kiểm toán trực quan ngoài trời nắng thực tế và đo tỷ lệ tương phản bằng WCAG Contrast Analyzer.
-- **Trạng thái MVP:** **MUST HAVE**
+- **Chỉ tiêu đo lường & Phân loại:**
+  - `[APPROVED REQUIREMENT]`: Tương phản WCAG AA $\ge 4.5:1$, touch target $\ge 48 \times 48\text{px}$.
+  - `[APPROVED REQUIREMENT]`: Toàn bộ bảng màu tuân thủ nghiêm ngặt `DESIGN.md`.
+- **Source:** `[APPROVED REQUIREMENT]`
+- **Stimulus:** Bright sunlight outdoor operation, single-hand touch
+- **Response:** Contrast >= 4.5:1, touch target >= 48x48px, zero text truncation
+- **Context:** Outdoor sunlight, single-hand use, field workflow
+- **Phương thức kiểm chứng (Verification Method):** Kiểm toán trực quan ngoài trời nắng thực tế và đo tỷ lệ tương phản bằng WCAG Contrast Analyzer.
 
 ---
 
 ### QAS-SEC-01: Hết hạn phiên làm việc không làm mất dữ liệu nhập dở
 
 - **ID:** `QAS-SEC-01`
-- **Thuộc tính chất lượng:** **Security & Data Integrity**
-- **Kịch bản:** Access Token của nhân viên hết hạn trong lúc nhân viên đang viết ghi chú hiện trường dài.
+- **Thuộc tính chất lượng (Quality Attribute):** **Security & Data Integrity** (`[APPROVED REQUIREMENT]`)
+- **Kịch bản vận hành:** Access Token của nhân viên hết hạn trong lúc nhân viên đang viết ghi chú hiện trường dài.
 - **Kích hoạt (Trigger):** Server trả về mã lỗi `401 UNAUTHENTICATED`.
-- **Ngữ cảnh (Context):** Nhân viên đang ở màn hình Review chuẩn bị nộp báo cáo.
+- **Ngữ cảnh kiểm thử tham chiếu:** Nhân viên đang ở màn hình Review chuẩn bị nộp báo cáo.
 - **Phản ứng kỳ vọng:** Ứng dụng tự động sử dụng Refresh Token để lấy Access Token mới trong im lặng (Silent Token Refresh); nếu Refresh Token cũng hết hạn, ứng dụng lưu bản nháp form vào local storage trước khi điều hướng về màn hình đăng nhập.
-- **Thước đo / Chấp thuận:** Người dùng không bị mất trắng đoạn ghi chú vừa nhập sau khi đăng nhập lại.
-- **Bằng chứng kiểm chứng:** Giả lập token hết hạn trong network interceptor và kiểm tra form draft tồn lưu; Automated Contract Test.
-- **Trạng thái MVP:** **MUST HAVE**
+- **Chỉ tiêu đo lường & Phân loại:**
+  - `[APPROVED REQUIREMENT]`: Người dùng không bị mất trắng đoạn ghi chú vừa nhập sau khi đăng nhập lại.
+  - `[TARGET SLO]`: Silent token refresh hoàn thành $\le 1$ giây.
+- **Source:** `[APPROVED REQUIREMENT]`
+- **Stimulus:** Access token expires during form editing
+- **Response:** Silent refresh or local draft preserved, zero input loss
+- **Context:** Field inspection review screen, expired token
+- **Phương thức kiểm chứng (Verification Method):** Giả lập token hết hạn trong network interceptor và kiểm tra form draft tồn lưu; Automated Contract Test.
 
 ---
 
