@@ -197,6 +197,13 @@ Admin thực chất làm gì?
 | P2-12 | Admin không tự duyệt công việc do chính mình thực hiện nếu sau này được phép task access |
 | P2-13 | Scope MVP / post-MVP từng capability được đánh dấu rõ |
 
+## Artifact
+
+```text
+docs/business-reconciliation/
+  04-ADMIN-BUSINESS-SCOPE-DECISION.md
+```
+
 ## Exit Gate
 Mỗi Admin capability phải ở đúng một trạng thái:
 
