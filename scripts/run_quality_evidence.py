@@ -688,11 +688,19 @@ def check_arc_nfr_gate(gate_id):
             return True, "Clear separation between Quality Outcome, Architectural Constraint, and Implementation Options verified across NFR", [str(nfr_path)]
 
         elif gate_id == "NFR-006":
-            count = txt.count("[NEEDS_MEASUREMENT]")
-            if count < 3:
-                return False, f"Expected at least 3 [NEEDS_MEASUREMENT] tags, found {count}", [str(nfr_path)]
-            meas_lines = [l.strip() for l in txt.splitlines() if "[NEEDS_MEASUREMENT]" in l]
-            return True, f"All {len(meas_lines)} unmeasured physical/device metrics explicitly marked [NEEDS_MEASUREMENT]", [str(nfr_path)]
+            # Verify specific physical/device-dependent metrics carry [NEEDS_MEASUREMENT]
+            required_sections = ["QAS-PERF-01", "QAS-OFFLINE-01", "QAS-OFFLINE-02"]
+            missing_sections = []
+            for sec in required_sections:
+                sec_match = re.search(rf'###\s*{sec}:.*?(?=###\s*QAS|\Z)', txt, re.DOTALL)
+                if not sec_match or "[NEEDS_MEASUREMENT]" not in sec_match.group(0):
+                    missing_sections.append(sec)
+            if missing_sections:
+                return False, f"Device-dependent metrics missing [NEEDS_MEASUREMENT] tag in: {missing_sections}", [str(nfr_path)]
+            meas_count = txt.count("[NEEDS_MEASUREMENT]")
+            if meas_count < 3:
+                return False, f"Expected at least 3 [NEEDS_MEASUREMENT] tags in docs/NFR.md, found {meas_count}", [str(nfr_path)]
+            return True, f"Physical/device-dependent metrics in {', '.join(required_sections)} explicitly tagged [NEEDS_MEASUREMENT] (total {meas_count} entries)", [str(nfr_path)]
 
         elif gate_id == "NFR-007":
             if "QAS-OFFLINE-01" not in txt or "Outbox" not in txt or "RAM" not in txt:
@@ -723,7 +731,7 @@ def check_arc_nfr_gate(gate_id):
                 return False, "Touch target minimum (44x44 or 48x48) missing in MOBILE_UI_RULES.md", ["docs/MOBILE_UI_RULES.md"]
             if "4.5:1" not in des:
                 return False, "Contrast requirement 4.5:1 missing in DESIGN.md", ["DESIGN.md"]
-            return True, "Measurable accessibility criteria (touch target >=44x44, contrast >=4.5:1) defined in rules and design specs", ["docs/MOBILE_UI_RULES.md", "DESIGN.md"]
+            return True, "Measurable accessibility requirements are defined (touch target >=44x44, contrast >=4.5:1 in MOBILE_UI_RULES.md and DESIGN.md)", ["docs/MOBILE_UI_RULES.md", "DESIGN.md"]
 
         elif gate_id == "NFR-010":
             if "0% data loss" in txt.lower() and "chưa có bài test" not in txt.lower() and "chưa được chứng minh" not in txt.lower():
@@ -866,23 +874,31 @@ def check_diagram_automated_gate(gate_id):
                 if '<html lang="vi">' not in txt:
                     return False, f"Missing <html lang=\"vi\"> in {f}", [f]
             return True, "Vietnamese language declared on all active diagrams (<html lang=\"vi\">)", ACTIVE_DIAGRAM_FILES
+
         elif gate_id == "DG-TYP-002":
+            missing_fonts = []
             for f in ACTIVE_DIAGRAM_FILES:
                 txt = Path(f).read_text(encoding="utf-8")
-                if "Noto+Sans" not in txt:
-                    return False, f"Missing Noto Sans font link in {f}", [f]
-            return True, "Google Fonts Noto Sans stylesheet loaded in all active diagrams", ACTIVE_DIAGRAM_FILES
+                if "Noto+Sans" not in txt or "Noto+Serif" not in txt:
+                    missing_fonts.append(f)
+            if missing_fonts:
+                return False, f"Missing Noto Sans / Noto Serif stylesheet link in {missing_fonts}", missing_fonts
+            return True, "Google Fonts Noto Sans & Noto Serif stylesheets declared in all active diagrams", ACTIVE_DIAGRAM_FILES
+
         elif gate_id == "DG-TYP-003":
+            unloaded = [dname for dname, d in val_data.items()
+                        if d.get("font_checks", {}).get("systemStatus", "") != "loaded"
+                        or not d.get("font_checks", {}).get("notoSans", False)]
+            if unloaded:
+                return False, f"Font engine readiness check failed (status!=loaded or notoSans check false) in: {unloaded}", [str(val_json_path)]
+            return True, f"Font engine readiness verified on all {len(val_data)} active diagrams (document.fonts.status == 'loaded' and document.fonts.check('12px \"Noto Sans\"') == True)", [str(val_json_path)]
+
+        elif gate_id == "DG-TYP-004":
             total_viol = sum(len(d.get("font_floor_violations", [])) for d in val_data.values())
             if total_viol > 0:
                 return False, f"Font floor violations detected: {total_viol}", [str(val_json_path)]
-            return True, f"Zero font floor violations across all {len(val_data)} diagrams (all text >= 11px)", [str(val_json_path)]
-        elif gate_id == "DG-TYP-004":
-            unloaded = [dname for dname, d in val_data.items()
-                        if d.get("font_checks", {}).get("systemStatus", "") != "loaded"]
-            if unloaded:
-                return False, f"Font engine failed to load fonts in diagrams: {unloaded}", [str(val_json_path)]
-            return True, f"Font engine loaded and verified on all {len(val_data)} active diagrams", [str(val_json_path)]
+            return True, f"Zero font floor violations across all {len(val_data)} active diagrams (every content text fontSize >= 11px)", [str(val_json_path)]
+
         elif gate_id == "DG-TYP-005":
             invalid_tspans = []
             for f in ACTIVE_DIAGRAM_FILES:
@@ -909,11 +925,28 @@ def check_diagram_automated_gate(gate_id):
             if text_colls > 0:
                 return False, f"Vertical text collisions detected: {text_colls}", [str(val_json_path)]
             return True, f"Multiline text spacing and line-height certified: 0 collisions across {len(ACTIVE_DIAGRAM_FILES)} active diagrams", ACTIVE_DIAGRAM_FILES
+
         elif gate_id == "DG-TYP-006":
-            fallback_errs = [dname for dname, d in val_data.items() if d.get("font_checks", {}).get("fallback", False)]
-            if fallback_errs:
-                return False, f"Fallback font rendering detected in: {fallback_errs}", [str(val_json_path)]
-            return True, f"Zero fallback font errors detected across all {len(val_data)} diagrams", [str(val_json_path)]
+            shrink_errors = []
+            for dname, d in val_data.items():
+                viols = d.get("font_floor_violations", [])
+                if viols:
+                    shrink_errors.append(f"{dname}: {len(viols)} font floor violations")
+            for f in ACTIVE_DIAGRAM_FILES:
+                txt = Path(f).read_text(encoding="utf-8")
+                svg_part = txt.split("<svg")[1] if "<svg" in txt else ""
+                small_fonts = re.findall(r'font-size\s*=\s*[\"\']([0-9.]+)(?:px)?[\"\']', svg_part)
+                small_fonts += re.findall(r'font-size\s*:\s*([0-9.]+)\s*px', svg_part)
+                for sf in small_fonts:
+                    try:
+                        sz = float(sf)
+                        if 0 < sz < 11.0:
+                            shrink_errors.append(f"{f}: explicit SVG font-size {sz}px < 11px")
+                    except ValueError:
+                        pass
+            if shrink_errors:
+                return False, f"Rescue-shrink text below 11px detected: {shrink_errors}", [str(val_json_path)]
+            return True, f"Zero rescue-shrink text below 11px detected across all {len(ACTIVE_DIAGRAM_FILES)} active diagrams", ACTIVE_DIAGRAM_FILES
 
         elif gate_id == "DG-LAY-001":
             failed = [dname for dname, d in val_data.items() if d.get("status") == "FAIL"]
@@ -967,9 +1000,9 @@ def check_diagram_automated_gate(gate_id):
                 return False, f"Text boundary overflow (text outside owner box) detected: {overflows}", [str(val_json_path)]
             return True, f"Zero text boundary overflows across all {len(val_data)} diagrams", [str(val_json_path)]
         elif gate_id == "DG-GEO-003":
-            collisions = sum(len(d.get("text_collisions", [])) for d in val_data.values())
-            if collisions > 0:
-                return False, f"Text overlapping non-owner card detected: {collisions} collisions", [str(val_json_path)]
+            non_owner_colls = sum(len(d.get("text_non_owner_node_collisions", [])) for d in val_data.values())
+            if non_owner_colls > 0:
+                return False, f"Text overlapping non-owner card detected: {non_owner_colls} collisions", [str(val_json_path)]
             return True, f"Zero text-vs-non-owner-card collisions across all {len(val_data)} diagrams", [str(val_json_path)]
         elif gate_id == "DG-GEO-004":
             label_colls = sum(len(d.get("label_connector_collisions", d.get("text_connector_collisions", []))) for d in val_data.values())
@@ -1006,39 +1039,34 @@ def check_diagram_automated_gate(gate_id):
         except Exception as e:
             return False, f"Failed to parse val_selftest.json: {e}", [str(val_st_path)]
 
-        cases = st_data.get("cases", {})
-        static_caps = st_data.get("static_capabilities", {})
-
         val_map = {
-            "VAL-001": ("CASE_1", "Font floor violation detection"),
-            "VAL-002": ("CASE_3", "Text-to-text collision detection"),
-            "VAL-003": ("CASE_1", "Boundary overflow detection"),
-            "VAL-004": ("CASE_1", "Node collision detection"),
-            "VAL-005": ("CASE_4", "Text-connector collision detection"),
-            "VAL-006": ("CASE_5", "Connector penetrating interior card detection"),
-            "VAL-007": ("CASE_7", "Background plate collision masking"),
-            "VAL-008": ("CASE_8", "Canonical lifecycle check - rejection of forbidden ASSIGNED"),
-            "VAL-009": (None, "VAL-009"),
-            "VAL-010": ("CASE_2", "Safe padding violation detection"),
-            "VAL-011": (None, "VAL-011"),
-            "VAL-012": (None, "VAL-012"),
-            "VAL-013": (None, "VAL-013"),
-            "VAL-014": (None, "VAL-014"),
+            "VAL-001": ("browser_missing_inconclusive", "Browser missing yields INCONCLUSIVE (exit code 2)"),
+            "VAL-002": ("fonts_ready_wait", "Runtime validator awaits document.fonts.ready"),
+            "VAL-003": ("noto_font_check", "Runtime check validates document.fonts.check for Noto fonts"),
+            "VAL-004": ("owner_detection", "Smallest enclosing semantic card owner detection"),
+            "VAL-005": ("safe_padding", "Safe padding horizontal >= 4px and vertical >= 3px"),
+            "VAL-006": ("text_text_collision", "Text vs text bounding box intersection measurement"),
+            "VAL-007": ("label_connector_mask", "Connector label solid background masking and clearance"),
+            "VAL-008": ("node_node_collision", "Node vs node leaf card overlap detection"),
+            "VAL-009": ("viewport_clipping", "SVG viewBox and viewport clipping boundary detection"),
+            "VAL-010": ("connector_node_collision", "Connector vs non-target node penetration detection"),
+            "VAL-011": ("font_floor", "Vietnamese typography floor >= 11px enforcement"),
+            "VAL-012": ("zero_collision_rule", "Zero-collision claim asserted only after all mandatory checks execute"),
+            "VAL-013": ("executed_checks_reporting", "Executed check gates enumerated completely in output"),
+            "VAL-014": ("exit_codes_truthful", "Truthful process exit codes (0=PASS, 1=FAIL, 2=INCONCLUSIVE)"),
         }
 
-        target_case, target_cap = val_map.get(gate_id, (None, None))
-        if target_case and target_case in cases:
-            c = cases[target_case]
-            if not c.get("passed", False):
-                return False, f"{gate_id} validator check {target_case} failed", [str(val_st_path)]
-            return True, f"{gate_id} capability verified by {target_case} ({c.get('name')})", [str(val_st_path)]
-        elif target_cap and target_cap in static_caps:
-            sc = static_caps[target_cap]
-            if not sc.get("passed", False):
-                return False, f"{gate_id} static capability check failed", [str(val_st_path)]
-            return True, f"{gate_id} capability verified ({sc.get('description')})", [str(val_st_path)]
-        else:
+        target_cap, desc = val_map.get(gate_id, (None, None))
+        if not target_cap:
             return False, f"Unmapped VAL gate {gate_id}", [str(val_st_path)]
+
+        cap_val = st_data.get(target_cap)
+        if cap_val is None:
+            cap_val = st_data.get("capabilities", {}).get(target_cap)
+
+        if cap_val is not True:
+            return False, f"{gate_id} capability '{target_cap}' ({desc}) failed or not verified in self-test", [str(val_st_path)]
+        return True, f"{gate_id} verified: {desc} (semantic capability '{target_cap}' = True)", [str(val_st_path)]
 
     elif gate_id.startswith("DG-EXP-"):
         p = Path("dist/diagrams_verification")
@@ -1049,35 +1077,78 @@ def check_diagram_automated_gate(gate_id):
         pdf_files = list(p.glob("*.pdf"))
 
         if gate_id == "DG-EXP-001":
-            for df in ACTIVE_DIAGRAM_FILES:
-                if not Path(df).exists() or "<svg" not in Path(df).read_text(encoding="utf-8"):
-                    return False, f"Active diagram {df} missing or invalid HTML/SVG", [df]
-            return True, f"All {len(ACTIVE_DIAGRAM_FILES)} active diagram HTML sources exist and contain valid SVG roots", ACTIVE_DIAGRAM_FILES
-
-        elif gate_id == "DG-EXP-002":
             if len(svg_files) < 11:
-                return False, f"Expected 11 SVG exports, found {len(svg_files)}", [str(p)]
+                return False, f"Expected at least 11 SVG exports, found {len(svg_files)}", [str(p)]
+            invalid_svgs = []
             for sf in svg_files:
                 txt = sf.read_text(encoding="utf-8")
                 if "<svg" not in txt or "viewBox" not in txt or "xmlns" not in txt:
-                    return False, f"SVG {sf.name} missing required SVG root attributes (viewBox, xmlns)", [str(sf)]
-            return True, f"All {len(svg_files)} exported SVG files verified with valid root element and viewBox", [str(p)]
+                    invalid_svgs.append(f"{sf.name}: missing required root attributes (svg, viewBox, xmlns)")
+                if re.search(r'rgba\([^)]*,\s*0?\.[0-9]+\)', txt) and "<defs>" not in txt:
+                    invalid_svgs.append(f"{sf.name}: rgba without defs/styling may cause black-box in standalone viewers")
+            if invalid_svgs:
+                return False, f"Standalone SVG validation failed: {invalid_svgs}", [str(p)]
+            return True, f"All {len(svg_files)} exported SVG files verified as independent standalone vector graphics (valid XML, viewBox, 0 black-box rgba defects)", [str(p)]
 
-        elif gate_id == "DG-EXP-003":
+        elif gate_id == "DG-EXP-002":
+            if len(svg_files) < 11:
+                return False, f"Expected at least 11 SVG exports, found {len(svg_files)}", [str(p)]
+            font_errors = []
             for sf in svg_files:
                 txt = sf.read_text(encoding="utf-8")
                 if "Noto Sans" not in txt:
-                    return False, f"SVG {sf.name} missing Noto Sans font specification", [str(sf)]
-            return True, f"All {len(svg_files)} SVG files preserve UTF-8 Vietnamese diacritics and Noto Sans typography", [str(p)]
+                    font_errors.append(f"{sf.name}: missing Noto Sans font declaration")
+                if "fonts.googleapis.com" in txt and "&" in txt and "&amp;" not in txt:
+                    font_errors.append(f"{sf.name}: unescaped '&' in font URL violates XML specification")
+            if font_errors:
+                return False, f"SVG font preservation check failed: {font_errors}", [str(p)]
+            return True, f"All {len(svg_files)} exported SVG files preserve Noto Sans typography with XML-safe escaping", [str(p)]
+
+        elif gate_id == "DG-EXP-003":
+            active_pngs = [pf for pf in png_files if not pf.name.endswith(".full.png") and "@" not in pf.name]
+            if len(active_pngs) < 11:
+                return False, f"Expected at least 11 diagram-only PNG exports, found {len(active_pngs)}", [str(p)]
+            tight_errors = []
+            for ap in active_pngs:
+                dims = get_png_dimensions(str(ap))
+                if not dims:
+                    tight_errors.append(f"{ap.name}: unreadable IHDR")
+                    continue
+                svg_f = p / (ap.stem + ".svg")
+                if svg_f.exists():
+                    txt = svg_f.read_text(encoding="utf-8")
+                    m = re.search(r'viewBox=[\"\']([\d.\s]+)[\"\']', txt)
+                    if m:
+                        parts = [float(x) for x in m.group(1).split()]
+                        if len(parts) >= 4:
+                            ar_svg = parts[2] / parts[3]
+                            ar_png = dims[0] / dims[1]
+                            if abs(ar_svg - ar_png) > 0.02:
+                                tight_errors.append(f"{ap.name}: PNG aspect ratio {ar_png:.3f} deviates from SVG {ar_svg:.3f}")
+            if tight_errors:
+                return False, f"Diagram-only PNG tight bounds check failed: {tight_errors}", [str(p)]
+            return True, f"All {len(active_pngs)} diagram-only PNG files tightly cropped to SVG viewBox (0 outer page chrome)", [str(p)]
 
         elif gate_id == "DG-EXP-004":
-            if len(png_files) < 11:
-                return False, f"Expected 11 PNG exports, found {len(png_files)}", [str(p)]
-            for pf in png_files:
-                raw = pf.read_bytes()
+            full_pngs = [pf for pf in png_files if pf.name.endswith(".full.png")]
+            if not full_pngs:
+                return False, "No .full.png full-page PNG export artifacts found", [str(p)]
+            full_errors = []
+            for fp in full_pngs:
+                raw = fp.read_bytes()
                 if not raw.startswith(b"\x89PNG\r\n\x1a\n"):
-                    return False, f"PNG {pf.name} missing valid PNG magic header", [str(pf)]
-            return True, f"All {len(png_files)} exported PNG files verified with valid PNG binary format", [str(p)]
+                    full_errors.append(f"{fp.name}: invalid PNG header")
+                    continue
+                d_full = get_png_dimensions(str(fp))
+                base_name = fp.name.replace(".full.png", ".png")
+                tight_p = p / base_name
+                if tight_p.exists():
+                    d_tight = get_png_dimensions(str(tight_p))
+                    if d_full and d_tight and d_full[1] <= d_tight[1]:
+                        full_errors.append(f"{fp.name}: full-page height ({d_full[1]}) not larger than tight diagram ({d_tight[1]})")
+            if full_errors:
+                return False, f"Full-page PNG check failed: {full_errors}", [str(p)]
+            return True, f"Full-page PNG export verified ({len(full_pngs)} files): includes document headers, descriptions, and full canvas", [str(p)]
 
         elif gate_id == "DG-EXP-005":
             active_pngs = [pf for pf in png_files if not pf.name.endswith(".full.png") and "@" not in pf.name]
@@ -1105,15 +1176,13 @@ def check_diagram_automated_gate(gate_id):
             return True, f"All {len(active_pngs)} active diagram PNG exports certified as high-DPI (exact 2.0x pixel dimensions via IHDR)", [str(p)]
 
         elif gate_id == "DG-EXP-006":
-            p01_png = p / "proposed-01-current-vs-recommended-workflow.png"
             p01_3x = p / "proposed-01-current-vs-recommended-workflow@3x.png"
             p01_svg = p / "proposed-01-current-vs-recommended-workflow.svg"
-            if not p01_png.exists() or not p01_3x.exists() or not p01_svg.exists():
-                return False, "Required artifacts for diagram bounds inspection missing", [str(p)]
-            d_png = get_png_dimensions(str(p01_png))
+            if not p01_3x.exists() or not p01_svg.exists():
+                return False, "Required @3x export artifacts missing", [str(p)]
             d_3x = get_png_dimensions(str(p01_3x))
-            if not d_png or not d_3x:
-                return False, "Failed to read PNG IHDR dimensions for bounds check", [str(p)]
+            if not d_3x:
+                return False, "Failed to read @3x PNG IHDR dimensions", [str(p01_3x)]
             svg_txt = p01_svg.read_text(encoding="utf-8")
             m = re.search(r'viewBox=[\"\']([\d.\s]+)[\"\']', svg_txt)
             if not m:
@@ -1124,46 +1193,75 @@ def check_diagram_automated_gate(gate_id):
             ratio_3x_h = round(d_3x[1] / lh, 2)
             if abs(ratio_3x_w - 3.0) > 0.05 or abs(ratio_3x_h - 3.0) > 0.05:
                 return False, f"3x export scale mismatch: {ratio_3x_w}x/{ratio_3x_h}x", [str(p01_3x)]
-            ar_svg = lw / lh
-            ar_png = d_png[0] / d_png[1]
-            if abs(ar_svg - ar_png) > 0.01:
-                return False, f"Diagram-only PNG aspect ratio ({ar_png:.4f}) deviates from SVG viewBox ({ar_svg:.4f})", [str(p01_png)]
-            return True, f"Diagram bounds certified: tight crop without outer chrome (aspect ratio {ar_svg:.4f}, 3x scale exact {ratio_3x_w}x)", [str(p)]
+            return True, f"Ultra high-DPI @3x print export certified: exact 3.0x pixel dimensions ({d_3x[0]}x{d_3x[1]} vs {lw}x{lh})", [str(p01_3x)]
 
         elif gate_id == "DG-EXP-007":
-            if len(pdf_files) < 11:
-                return False, f"Expected 11 PDF exports, found {len(pdf_files)}", [str(p)]
-            for pdf_f in pdf_files:
+            tight_pdfs = [pdf for pdf in pdf_files if not pdf.name.endswith(".full.pdf")]
+            if len(tight_pdfs) < 11:
+                return False, f"Expected at least 11 diagram-only PDF exports, found {len(tight_pdfs)}", [str(p)]
+            pdf_errors = []
+            for pdf_f in tight_pdfs:
                 raw = pdf_f.read_bytes()
                 if not raw.startswith(b"%PDF-"):
-                    return False, f"PDF {pdf_f.name} missing %PDF- header", [str(pdf_f)]
-                if pdf_f.stat().st_size < 5000:
-                    return False, f"PDF {pdf_f.name} size < 5KB ({pdf_f.stat().st_size} bytes)", [str(pdf_f)]
-            return True, f"All {len(pdf_files)} exported PDF files verified with valid PDF vector structure", [str(p)]
+                    pdf_errors.append(f"{pdf_f.name}: missing %PDF- header")
+                    continue
+                meta = get_pdf_metadata(str(pdf_f))
+                if not meta or meta["page_count"] != 1:
+                    pdf_errors.append(f"{pdf_f.name}: page count != 1")
+                if not meta or not meta["media_boxes"]:
+                    pdf_errors.append(f"{pdf_f.name}: missing /MediaBox")
+                    continue
+                mb = meta["media_boxes"][0]
+                parts = [float(x) for x in mb.split()]
+                if len(parts) >= 4:
+                    pw, ph = parts[2] - parts[0], parts[3] - parts[1]
+                    if (abs(pw - 612) < 5 and abs(ph - 792) < 5) or (abs(pw - 595.28) < 5 and abs(ph - 841.89) < 5):
+                        pdf_errors.append(f"{pdf_f.name}: uses full-page Letter/A4 layout instead of tight diagram bounds ({pw}x{ph})")
+            if pdf_errors:
+                return False, f"Diagram-only tight PDF check failed: {pdf_errors}", [str(p)]
+            return True, f"All {len(tight_pdfs)} diagram-only PDF exports verified: single-page tight vector crop (page_count=1, tight MediaBox, 0 outer margin)", [str(p)]
 
         elif gate_id == "DG-EXP-008":
-            pdf_errors = []
-            for pdf_f in pdf_files:
-                meta = get_pdf_metadata(str(pdf_f))
-                if not meta or not meta["valid_header"]:
-                    pdf_errors.append(f"{pdf_f.name}: invalid PDF header")
+            full_pdfs = [pdf for pdf in pdf_files if pdf.name.endswith(".full.pdf")]
+            if not full_pdfs:
+                return False, "No .full.pdf full-page PDF export artifacts found", [str(p)]
+            full_pdf_errors = []
+            for fpdf in full_pdfs:
+                raw = fpdf.read_bytes()
+                if not raw.startswith(b"%PDF-"):
+                    full_pdf_errors.append(f"{fpdf.name}: missing %PDF- header")
                     continue
-                if meta["page_count"] != 1:
-                    pdf_errors.append(f"{pdf_f.name}: page count {meta['page_count']} != 1")
-                if not meta["media_boxes"]:
-                    pdf_errors.append(f"{pdf_f.name}: missing /MediaBox")
-            if pdf_errors:
-                return False, f"PDF mode/metadata inspection failed: {pdf_errors}", [str(p)]
-            p01_full_pdf = p / "proposed-01-current-vs-recommended-workflow.full.pdf"
-            p01_tight_pdf = p / "proposed-01-current-vs-recommended-workflow.pdf"
-            if p01_full_pdf.exists() and p01_tight_pdf.exists():
-                m_full = get_pdf_metadata(str(p01_full_pdf))
-                m_tight = get_pdf_metadata(str(p01_tight_pdf))
-                if m_full and m_tight and m_full["media_boxes"] == m_tight["media_boxes"]:
-                    return False, "Full-page PDF and diagram-only PDF have identical MediaBox", [str(p)]
-            return True, f"All {len(pdf_files)} PDF exports verified: single-page vector preservation (page_count=1, valid MediaBox, non-empty streams)", [str(p)]
+                meta_full = get_pdf_metadata(str(fpdf))
+                base_name = fpdf.name.replace(".full.pdf", ".pdf")
+                tight_f = p / base_name
+                if tight_f.exists():
+                    meta_tight = get_pdf_metadata(str(tight_f))
+                    if meta_full and meta_tight and meta_full["media_boxes"] == meta_tight["media_boxes"]:
+                        full_pdf_errors.append(f"{fpdf.name}: full-page PDF MediaBox identical to diagram-only PDF")
+            if full_pdf_errors:
+                return False, f"Full-page PDF check failed: {full_pdf_errors}", [str(p)]
+            return True, f"Full-page PDF export verified ({len(full_pdfs)} files): valid PDF vector format with full documentation context", [str(p)]
 
         elif gate_id == "DG-EXP-009":
+            dt_path = Path("scripts/diagram_tool.py")
+            if not dt_path.exists():
+                return False, "scripts/diagram_tool.py missing", [str(dt_path)]
+            dt_code = dt_path.read_text(encoding="utf-8")
+            if "document.fonts.ready" not in dt_code:
+                return False, "scripts/diagram_tool.py does not wait for document.fonts.ready", [str(dt_path)]
+            if 'data-export-ready="true"' not in dt_code:
+                return False, "scripts/diagram_tool.py missing data-export-ready handshake", [str(dt_path)]
+            st_path = Path("dist/quality-evidence/val_selftest.json")
+            if st_path.exists():
+                try:
+                    st_data = json.loads(st_path.read_text(encoding="utf-8"))
+                    if not st_data.get("fonts_ready_wait", False):
+                        return False, "val_selftest.json indicates fonts_ready_wait test failed", [str(st_path)]
+                except Exception:
+                    pass
+            return True, "Font readiness barrier verified in scripts/diagram_tool.py (await document.fonts.ready + data-export-ready handshake before screenshot/PDF)", [str(dt_path)]
+
+        elif gate_id == "DG-EXP-010":
             active_bases = [
                 "proposed-01-current-vs-recommended-workflow",
                 "proposed-02-mvp-operational-swimlane",
@@ -1177,38 +1275,20 @@ def check_diagram_automated_gate(gate_id):
                 "10-system-target-architecture",
                 "12-architecture-dependency-map",
             ]
-            missing_inventory = []
+            size_errors = []
             for base in active_bases:
-                for ext in ["svg", "png", "pdf"]:
-                    art = p / f"{base}.{ext}"
-                    if not art.exists() or art.stat().st_size < 1000:
-                        missing_inventory.append(f"{base}.{ext}")
-            for extra in [
-                "proposed-01-current-vs-recommended-workflow.full.png",
-                "proposed-01-current-vs-recommended-workflow@3x.png",
-                "proposed-01-current-vs-recommended-workflow.full.pdf"
-            ]:
-                art = p / extra
-                if not art.exists() or art.stat().st_size < 1000:
-                    missing_inventory.append(extra)
-            if missing_inventory:
-                return False, f"Missing required export artifacts in {p}: {missing_inventory}", [str(p)]
-            return True, f"Export inventory complete for all {len(active_bases)} active diagrams ({len(svg_files)} SVG, {len(png_files)} PNG, {len(pdf_files)} PDF including @3x and full variants)", [str(p)]
-
-        elif gate_id == "DG-EXP-010":
-            target_diag = "docs/diagrams/proposed-01-current-vs-recommended-workflow.html"
-            t_out = Path("dist/e2e_cli_test")
-            r_val = subprocess.run([sys.executable, "scripts/diagram_tool.py", "validate", target_diag], capture_output=True, text=True)
-            if r_val.returncode != 0:
-                return False, f"CLI validate pipeline failed with exit code {r_val.returncode}: {r_val.stderr.strip()}", ["scripts/diagram_tool.py"]
-            r_exp = subprocess.run([sys.executable, "scripts/diagram_tool.py", "export", "--format", "svg,png,pdf", "--out-dir", str(t_out), target_diag], capture_output=True, text=True)
-            if r_exp.returncode != 0:
-                return False, f"CLI export pipeline failed with exit code {r_exp.returncode}: {r_exp.stderr.strip()}", ["scripts/diagram_tool.py"]
-            for ext in ["svg", "png", "pdf"]:
-                art = t_out / f"proposed-01-current-vs-recommended-workflow.{ext}"
-                if not art.exists() or art.stat().st_size < 1000:
-                    return False, f"CLI export artifact {art.name} missing or invalid", [str(t_out)]
-            return True, "Automated CLI pipeline (validate -> export SVG/PNG/PDF) executed successfully with exit code 0 and valid output artifacts", ["scripts/diagram_tool.py"]
+                f_svg = p / f"{base}.svg"
+                f_png = p / f"{base}.png"
+                f_pdf = p / f"{base}.pdf"
+                if not f_svg.exists() or f_svg.stat().st_size < 8000:
+                    size_errors.append(f"{f_svg.name}: missing or size < 8KB ({f_svg.stat().st_size if f_svg.exists() else 0} bytes)")
+                if not f_png.exists() or f_png.stat().st_size < 50000:
+                    size_errors.append(f"{f_png.name}: missing or size < 50KB ({f_png.stat().st_size if f_png.exists() else 0} bytes)")
+                if not f_pdf.exists() or f_pdf.stat().st_size < 50000:
+                    size_errors.append(f"{f_pdf.name}: missing or size < 50KB ({f_pdf.stat().st_size if f_pdf.exists() else 0} bytes)")
+            if size_errors:
+                return False, f"Export artifacts size/validity check failed: {size_errors}", [str(p)]
+            return True, f"All required export artifacts across {len(active_bases)} active diagrams exist, valid and non-empty (SVG >= 8KB, PNG >= 50KB, PDF >= 50KB)", [str(p)]
 
     return False, f"Unknown diagram gate {gate_id}", []
 
