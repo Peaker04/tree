@@ -1,11 +1,13 @@
 <!doctype html>
+<!-- SOURCE: apps/mobile/src/screens/MobileApp.tsx, apps/mobile/src/services/greenOpsService.ts -->
+<!-- PROFILE: NOVYX GreenOps -->
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>09 - NOVYX System Current State</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -25,8 +27,8 @@
         --color-rule-solid: #e2e0d8;
         --color-danger: #dc2626;
         --color-amber: #d97706;
-        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
-        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Noto Serif', Georgia, serif;
         --font-mono: 'Geist Mono', ui-monospace, monospace;
       }
 
@@ -59,7 +61,7 @@
       h1 {
         font-family: var(--font-serif);
         font-size: 2.1rem;
-        font-weight: 400;
+        font-weight: 600;
         letter-spacing: -0.02em;
         line-height: 1.15;
         color: var(--color-ink);
@@ -73,6 +75,18 @@
         margin-bottom: 1.75rem;
       }
 
+      .status-pill {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(220, 38, 38, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(220, 38, 38, 0.25);
+        margin-bottom: 1rem;
+      }
+
       svg {
         width: 100%;
         display: block;
@@ -84,6 +98,7 @@
   </head>
   <body>
     <div class="frame">
+      <div class="status-pill">HISTORICAL AS-IS ARCHITECTURE</div>
       <p class="eyebrow">09 · AS-IS Architecture · Baseline Commit 2f9a26b</p>
       <h1>Hiện trạng Kiến trúc Hệ thống (System Current State)</h1>
       <p class="desc">
@@ -91,7 +106,7 @@
         ngoại tuyến lưu trên RAM.
       </p>
 
-      <svg viewBox="0 0 1020 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="as-title as-desc">
+      <svg viewBox="0 0 1020 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="as-title as-desc">
         <title id="as-title">NOVYX AS-IS Architecture</title>
         <desc id="as-desc">Sơ đồ hiện trạng kiến trúc ứng dụng di động tại commit baseline 2f9a26b.</desc>
 
@@ -110,34 +125,34 @@
         <g transform="translate(50, 40)">
           <rect x="0" y="0" width="420" height="240" rx="8" fill="#FFF" stroke="#DC2626" stroke-width="2" />
           <rect x="20" y="-12" width="220" height="24" rx="4" fill="#DC2626" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
             MONOLITHIC COORDINATOR
           </text>
 
-          <text x="24" y="34" font-family="'Geist', sans-serif" font-size="16" font-weight="600" fill="#112116">
+          <text x="24" y="34" font-family="'Noto Sans', sans-serif" font-size="16" font-weight="600" fill="#112116">
             MobileApp.tsx (2.054 dòng)
           </text>
-          <text x="24" y="52" font-family="'Geist', sans-serif" font-size="11" fill="#DC2626">
+          <text x="24" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
             Quá tải trách nhiệm &amp; Nắm giữ toàn bộ State
           </text>
           <line x1="24" y1="62" x2="396" y2="62" stroke="#E2E0D8" />
 
-          <text x="24" y="85" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+          <text x="24" y="85" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
             • Chứa mã JSX inline cho màn Login và Quên MK
           </text>
-          <text x="24" y="105" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+          <text x="24" y="105" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
             • Quản lý 14 biến React useState cấp cao
           </text>
-          <text x="24" y="125" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+          <text x="24" y="125" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
             • Tự đấu nối toàn bộ callback đột biến (mutations)
           </text>
-          <text x="24" y="145" font-family="'Geist', sans-serif" font-size="11" fill="#DC2626">
+          <text x="24" y="145" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
             • Prop-drilling &gt; 30 props xuống StaffArea / ManagerArea
           </text>
-          <text x="24" y="165" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+          <text x="24" y="165" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
             • Điều khiển chuyển đổi màn hình bằng switch cục bộ
           </text>
-          <text x="24" y="195" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
+          <text x="24" y="195" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">
             apps/mobile/src/screens/MobileApp.tsx
           </text>
         </g>
@@ -147,7 +162,7 @@
           <rect
             x="0"
             y="0"
-            width="200"
+            width="230"
             height="90"
             rx="6"
             fill="#F0EFEA"
@@ -155,13 +170,13 @@
             stroke-width="1.5"
             stroke-dasharray="4,4"
           />
-          <text x="16" y="28" font-family="'Geist', sans-serif" font-size="13" font-weight="600" fill="#DC2626">
+          <text x="16" y="28" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#DC2626">
             LoginScreen.tsx
           </text>
-          <text x="16" y="46" font-family="'Geist Mono', monospace" font-size="9" fill="#DC2626">
+          <text x="16" y="48" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
             [DEAD CODE - 300 DÒNG]
           </text>
-          <text x="16" y="66" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+          <text x="16" y="70" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
             Không được import / sử dụng
           </text>
         </g>
@@ -169,36 +184,36 @@
         <!-- DOMAIN HELPER: mobileWorkflow.ts -->
         <g transform="translate(520, 150)">
           <rect x="0" y="0" width="440" height="130" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="20" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+          <text x="20" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="600" fill="#112116">
             mobileWorkflow.ts (295 dòng)
           </text>
-          <text x="20" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+          <text x="20" y="46" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
             Bộ hàm thuần tính toán gaps và lọc mảng
           </text>
           <line x1="20" y1="56" x2="420" y2="56" stroke="#E2E0D8" />
-          <text x="20" y="76" font-family="'Geist', sans-serif" font-size="11" fill="#DC2626">
+          <text x="20" y="76" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
             • Enum StaffStep gộp cả Nav (HOME, WORK) và Proof (GPS, QR)
           </text>
-          <text x="20" y="96" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+          <text x="20" y="96" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
             • getNextProofStep, getTaskProofGaps, upsertPhotoEvidence
           </text>
-          <text x="20" y="116" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+          <text x="20" y="116" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
             • Chưa có lớp Entity đóng gói bảo vệ Invariants
           </text>
         </g>
 
         <!-- COMPONENT 2: Overloaded greenOpsService.ts -->
         <g transform="translate(50, 330)">
-          <rect x="0" y="0" width="910" height="240" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
-          <rect x="20" y="-12" width="220" height="24" rx="4" fill="#D97706" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+          <rect x="0" y="0" width="910" height="250" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
+          <rect x="20" y="-12" width="230" height="24" rx="4" fill="#D97706" />
+          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
             OVERLOADED HYBRID FACADE
           </text>
 
-          <text x="24" y="36" font-family="'Geist', sans-serif" font-size="16" font-weight="600" fill="#112116">
+          <text x="24" y="36" font-family="'Noto Sans', sans-serif" font-size="16" font-weight="600" fill="#112116">
             greenOpsService.ts (856 dòng)
           </text>
-          <text x="24" y="54" font-family="'Geist', sans-serif" font-size="11" fill="#D97706">
+          <text x="24" y="54" font-family="'Noto Sans', sans-serif" font-size="11" fill="#D97706">
             Ôm đồm 5 vai trò kỹ thuật và nghiệp vụ khác nhau trong một file
           </text>
           <line x1="24" y1="64" x2="886" y2="64" stroke="#E2E0D8" />
@@ -206,76 +221,118 @@
           <!-- 4 Sub columns in greenOpsService -->
           <g transform="translate(24, 80)">
             <!-- Col 1 -->
-            <rect x="0" y="0" width="200" height="130" rx="4" fill="#FBFBF9" stroke="#E2E0D8" />
-            <text x="14" y="24" font-family="'Geist', sans-serif" font-size="12" font-weight="600">1. REST Client</text>
-            <text x="14" y="44" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Gọi HTTP fetch /v1/...
-            </text>
-            <text x="14" y="60" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Xử lý ApiSuccess / Error
-            </text>
-            <text x="14" y="76" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Tạo FormData multipart
-            </text>
-            <text x="14" y="96" font-family="'Geist Mono', monospace" font-size="9" fill="#112116">
-              [INFRASTRUCTURE]
-            </text>
+            <g transform="translate(0, 0)">
+              <rect x="0" y="0" width="200" height="142" rx="4" fill="#FBFBF9" stroke="#E2E0D8" />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="600">
+                1. REST Client
+              </text>
+              <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Gọi HTTP fetch /v1/...
+              </text>
+              <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Xử lý ApiSuccess / Error
+              </text>
+              <text x="14" y="86" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Tạo FormData multipart
+              </text>
+              <text
+                x="14"
+                y="112"
+                font-family="'Geist Mono', monospace"
+                font-size="11"
+                font-weight="600"
+                fill="#112116"
+              >
+                [INFRASTRUCTURE]
+              </text>
+            </g>
 
             <!-- Col 2 -->
-            <rect x="220" y="0" width="200" height="130" rx="4" fill="rgba(220,38,38,0.05)" stroke="#DC2626" />
-            <text x="234" y="24" font-family="'Geist', sans-serif" font-size="12" font-weight="600" fill="#DC2626">
-              2. RAM Cache (Rủi ro)
-            </text>
-            <text x="234" y="44" font-family="'Geist Mono', monospace" font-size="10" fill="#DC2626">
-              let snapshot = ...;
-            </text>
-            <text x="234" y="60" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Lưu trên biến RAM
-            </text>
-            <text x="234" y="80" font-family="'Geist', sans-serif" font-size="10" font-weight="600" fill="#DC2626">
-              MẤT SẠCH KHI KILL APP
-            </text>
-            <text x="234" y="96" font-family="'Geist Mono', monospace" font-size="9" fill="#DC2626">[BLOCKER GAP]</text>
+            <g transform="translate(220, 0)">
+              <rect x="0" y="0" width="200" height="142" rx="4" fill="rgba(220,38,38,0.05)" stroke="#DC2626" />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="600" fill="#DC2626">
+                2. RAM Cache (Rủi ro)
+              </text>
+              <text x="14" y="46" font-family="'Geist Mono', monospace" font-size="11" fill="#DC2626">
+                let snapshot = ...;
+              </text>
+              <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Lưu trên biến RAM
+              </text>
+              <text x="14" y="86" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
+                MẤT SẠCH KHI KILL APP
+              </text>
+              <text
+                x="14"
+                y="112"
+                font-family="'Geist Mono', monospace"
+                font-size="11"
+                font-weight="600"
+                fill="#DC2626"
+              >
+                [BLOCKER GAP]
+              </text>
+            </g>
 
             <!-- Col 3 -->
-            <rect x="440" y="0" width="200" height="130" rx="4" fill="#FBFBF9" stroke="#E2E0D8" />
-            <text x="454" y="24" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
-              3. Session Manager
-            </text>
-            <text x="454" y="44" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Lưu trữ token phiên
-            </text>
-            <text x="454" y="60" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Ép role admin về Manager
-            </text>
-            <text x="454" y="76" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Đăng nhập, đăng xuất
-            </text>
-            <text x="454" y="96" font-family="'Geist Mono', monospace" font-size="9" fill="#112116">[APPLICATION]</text>
+            <g transform="translate(440, 0)">
+              <rect x="0" y="0" width="200" height="142" rx="4" fill="#FBFBF9" stroke="#E2E0D8" />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="600">
+                3. Session Manager
+              </text>
+              <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Lưu trữ token phiên
+              </text>
+              <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Ép role admin về Manager
+              </text>
+              <text x="14" y="86" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Đăng nhập, đăng xuất
+              </text>
+              <text
+                x="14"
+                y="112"
+                font-family="'Geist Mono', monospace"
+                font-size="11"
+                font-weight="600"
+                fill="#112116"
+              >
+                [APPLICATION]
+              </text>
+            </g>
 
             <!-- Col 4 -->
-            <rect x="660" y="0" width="200" height="130" rx="4" fill="#FBFBF9" stroke="#E2E0D8" />
-            <text x="674" y="24" font-family="'Geist', sans-serif" font-size="12" font-weight="600">
-              4. Domain Projector
-            </text>
-            <text x="674" y="44" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              buildCareHistory()
-            </text>
-            <text x="674" y="60" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Map completed tasks
-            </text>
-            <text x="674" y="76" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Nhận fallbackTask từ UI
-            </text>
-            <text x="674" y="96" font-family="'Geist Mono', monospace" font-size="9" fill="#112116">
-              [DOMAIN LEAKAGE]
-            </text>
+            <g transform="translate(660, 0)">
+              <rect x="0" y="0" width="200" height="142" rx="4" fill="#FBFBF9" stroke="#E2E0D8" />
+              <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="600">
+                4. Domain Projector
+              </text>
+              <text x="14" y="46" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                buildCareHistory()
+              </text>
+              <text x="14" y="66" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Map completed tasks
+              </text>
+              <text x="14" y="86" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+                Nhận fallbackTask từ UI
+              </text>
+              <text
+                x="14"
+                y="112"
+                font-family="'Geist Mono', monospace"
+                font-size="11"
+                font-weight="600"
+                fill="#112116"
+              >
+                [DOMAIN LEAKAGE]
+              </text>
+            </g>
           </g>
         </g>
 
         <!-- Arrows indicating tight coupling -->
         <line x1="260" y1="280" x2="260" y2="330" stroke="#DC2626" stroke-width="1.8" marker-end="url(#arr-red)" />
-        <text x="268" y="310" font-family="'Geist Mono', monospace" font-size="10" fill="#DC2626">
+        <text x="268" y="310" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
           Direct Hybrid Coupling
         </text>
       </svg>

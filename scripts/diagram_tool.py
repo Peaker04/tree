@@ -192,7 +192,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 return { element: r, rect: b };
             })
             .filter(c => {
-                return c.rect.width > 20 && c.rect.height > 14 &&
+                return c.rect.width > 15 && c.rect.height > 8 &&
                        c.rect.width < (svgRect.width * 0.95) &&
                        c.rect.height < (svgRect.height * 0.95);
             });
@@ -274,16 +274,56 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
 
             // D. Semantic owner detection (VAL-004) & Safe padding (VAL-005)
-            // Find candidate containing cards
-            const containingCards = cardRects.filter(card => {
-                const cr = card.rect;
-                return (t1.rect.left >= cr.left - 4 && t1.rect.right <= cr.right + 25 &&
-                        t1.rect.top >= cr.top - 4 && t1.rect.bottom <= cr.bottom + 25);
-            });
+            let ownerCard = null;
 
-            // Sort by area ascending to get the tightest enclosing card
-            containingCards.sort((a, b) => (a.rect.width * a.rect.height) - (b.rect.width * b.rect.height));
-            const ownerCard = containingCards.length > 0 ? containingCards[0] : null;
+            // Priority 1: Explicit metadata (VAL-004)
+            const explicitOwnerId = t1.element.getAttribute('data-owner-id') ||
+                                   t1.element.getAttribute('data-label-for') ||
+                                   (t1.element.parentElement ? t1.element.parentElement.getAttribute('data-owner-id') : null);
+            if (explicitOwnerId) {
+                const matched = cardRects.find(c => c.element.id === explicitOwnerId);
+                if (matched) ownerCard = matched;
+            }
+
+            // Priority 2: Smallest sibling rect in same group containing text center
+            if (!ownerCard) {
+                const parentG = t1.element.closest('g');
+                if (parentG) {
+                    const siblingRects = Array.from(parentG.querySelectorAll(':scope > rect'));
+                    const midY = (t1.rect.top + t1.rect.bottom) / 2;
+                    const midX = (t1.rect.left + t1.rect.right) / 2;
+                    const candidateSiblings = [];
+                    for (const r of siblingRects) {
+                        const matched = cardRects.find(c => c.element === r);
+                        if (matched) {
+                            const cr = matched.rect;
+                            if (midY >= cr.top - 4 && midY <= cr.bottom + 4 &&
+                                midX >= cr.left - 6 && midX <= cr.right + 6) {
+                                candidateSiblings.push(matched);
+                            }
+                        }
+                    }
+                    candidateSiblings.sort((a, b) => (a.rect.width * a.rect.height) - (b.rect.width * b.rect.height));
+                    if (candidateSiblings.length > 0) {
+                        ownerCard = candidateSiblings[0];
+                    }
+                }
+            }
+
+            // Priority 3: Geometric center containment (midX, midY strictly within card)
+            if (!ownerCard) {
+                const midX = (t1.rect.left + t1.rect.right) / 2;
+                const midY = (t1.rect.top + t1.rect.bottom) / 2;
+                const candidateCards = cardRects.filter(card => {
+                    const cr = card.rect;
+                    return (midX >= cr.left - 4 && midX <= cr.right + 4 &&
+                            midY >= cr.top - 4 && midY <= cr.bottom + 4);
+                });
+                candidateCards.sort((a, b) => (a.rect.width * a.rect.height) - (b.rect.width * b.rect.height));
+                if (candidateCards.length > 0) {
+                    ownerCard = candidateCards[0];
+                }
+            }
 
             if (ownerCard) {
                 const cr = ownerCard.rect;
@@ -293,12 +333,15 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const padTop = t1.rect.top - cr.top;
 
                 // Hard boundary overflow
-                if (padRight < -1 || padBottom < -1) {
+                if (padRight < -1 || padBottom < -1 || padLeft < -2 || padTop < -2) {
                     results.boundaryOverflows.push({
                         text: t1.text.substring(0, 35),
                         ownerId: ownerCard.element.id || 'card',
                         cardBounds: { width: Math.round(cr.width), height: Math.round(cr.height) },
-                        overflow: { x: Math.max(0, Math.round(-padRight)), y: Math.max(0, Math.round(-padBottom)) }
+                        overflow: {
+                            x: Math.max(0, Math.round(-padRight), Math.round(-padLeft)),
+                            y: Math.max(0, Math.round(-padBottom), Math.round(-padTop))
+                        }
                     });
                 } else if (padRight < 4 || padLeft < 2) {
                     // Safe padding violation: text pressed right against card boundary
@@ -311,6 +354,12 @@ window.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         }
+
+        // Full-page dimensions for dynamic export scaling (Section 25)
+        results.fullPageBounds = {
+            width: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth, 1200),
+            height: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, 800)
+        };
 
         outputResult(results);
     } catch (err) {
@@ -562,7 +611,7 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
         print("  [SKIP] PNG/PDF export skipped: No headless browser found.")
         return True
 
-    # Prepare temporary HTML wrapper for diagram-only capture
+    # Prepare temporary HTML wrapper for capture
     if mode == "diagram":
         wrapper_html = f"""<!DOCTYPE html>
 <html>
@@ -592,6 +641,14 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
       height: {svg_h}px;
     }}
   </style>
+  <script>
+    window.addEventListener('DOMContentLoaded', async () => {{
+      try {{
+        await document.fonts.ready;
+      }} catch (e) {{}}
+      document.documentElement.setAttribute('data-export-ready', 'true');
+    }});
+  </script>
 </head>
 <body>
   {svg_content.replace('<?xml version="1.0" encoding="UTF-8"?>', '')}
@@ -604,7 +661,13 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
         render_w, render_h = svg_w, svg_h
     else:
         render_target = str(html_path)
-        render_w, render_h = 1600, 1200
+        # Dynamically calculate full-page dimensions (Section 25)
+        fp_bounds = val_res.get("geometryData", {}).get("fullPageBounds", {}) if val_res else {}
+        measured_w = int(fp_bounds.get("width", 1400))
+        measured_h = int(fp_bounds.get("height", 1000))
+        # Ensure sufficient viewport height to include entire banner, diagram, and legends without cut-off
+        render_w = max(1400, measured_w)
+        render_h = max(900, measured_h + 80)
 
     target_url = "file:///" + render_target.replace("\\", "/")
 
@@ -620,6 +683,7 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
                 browser,
                 "--headless",
                 "--disable-gpu",
+                "--virtual-time-budget=3000",
                 f"--force-device-scale-factor={scale}",
                 f"--window-size={render_w},{render_h}",
                 f"--screenshot={str(png_out)}",
@@ -627,7 +691,7 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
             ]
             subprocess.run(cmd, capture_output=True, timeout=30)
             if png_out.exists():
-                print(f"  [OK] Exported PNG ({mode} @{scale}x): {png_out.name}")
+                print(f"  [OK] Exported PNG ({mode} @{scale}x): {png_out.name} ({render_w}x{render_h})")
             else:
                 print(f"  [FAIL] Failed to produce PNG: {png_out.name}")
 
@@ -640,7 +704,9 @@ def export_diagram(html_path, out_dir=None, formats=None, mode="diagram", scale=
                 browser,
                 "--headless",
                 "--disable-gpu",
+                "--virtual-time-budget=3000",
                 "--no-pdf-header-footer",
+                f"--window-size={render_w},{render_h}",
                 f"--print-to-pdf={str(pdf_out)}",
                 target_url
             ]

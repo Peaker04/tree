@@ -39,19 +39,19 @@ Mọi thay đổi trên repository (dù chỉ là docs hoặc scripts) đều ph
 
 Toàn bộ repository được quét định kỳ để phát hiện các khái niệm sơ khai ban đầu đã bị bãi bỏ:
 
-| Chuỗi truy quét                          |       Phân loại trạng thái       | Đánh giá hiện trạng trong repo                                                                      | Hành động bắt buộc                                                                  |
-| :--------------------------------------- | :------------------------------: | :-------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
-| `"5-step"`                               |    `HISTORICAL` / `REPAIRED`     | Chỉ còn xuất hiện trong các báo cáo audit đối soát lịch sử.                                         | Giữ nguyên trong ngữ cảnh audit; cấm đưa vào tài liệu target.                       |
-| `"5 bước"`                               | `HISTORICAL` / `STALE_IN_ACTIVE` | Còn xuất hiện trong biểu đồ active `02-domain-context-map.html` (dòng 138: "State Machine 5 bước"). | **CHẶN CỔNG DIAGRAM**: Bắt buộc sửa biểu đồ 02.                                     |
-| `"5 chốt"`                               |        `STALE_IN_ACTIVE`         | Còn xuất hiện trong biểu đồ active `01-product-capability-map.html` (5 chốt cứng).                  | **CHẶN CỔNG DIAGRAM**: Bắt buộc sửa biểu đồ 01.                                     |
-| `"5/5"`                                  |           `HISTORICAL`           | Đã bị loại khỏi `DESIGN.md` và `MOBILE_UI_RULES.md`.                                                | Cấm tái xuất hiện trong các tài liệu thiết kế.                                      |
-| `"GPS → QR"` / `"GPS -> QR"`             |           `STALE_RULE`           | Đã được chuẩn hóa thành độc lập thứ tự trong `WORKFLOWS.md` và `DESIGN.md`.                         | Cấm ép cứng thứ tự tuần tự trong form UI.                                           |
-| `"FULL_PROOF"` / `"LIGHT_PROOF"`         |        `OBSOLETE_CONCEPT`        | Đã được thay thế hoàn toàn bởi 3 `ProofProfiles` ngữ nghĩa chuẩn tắc.                               | Cấm sử dụng trong hợp đồng DTO tương lai.                                           |
-| `"tamper-evident"` / `"giá trị pháp lý"` |          `FALSE_CLAIM`           | Đã xóa khỏi `PRODUCT.md` và `WORKFLOWS.md`; bổ sung disclaimer pháp lý.                             | Cấm tái đưa vào khi chưa có hạ tầng mật mã / thẩm định pháp lý.                     |
-| `"S3"` / `"GCS"` / `"storage.novyx"`     |     `UNAPPROVED_ASSUMPTION`      | Đã chuyển về `Provider: TBD / NEEDS_DECISION` trong `ARCHITECTURE.md`.                              | Cấm hardcode tên miền hoặc SDK cloud cụ thể trong code.                             |
-| `"CANONICAL CONTRACT"` (trên Diagram)    |       `MISCLASSIFICATION`        | Đã đổi nhãn thành `DERIVED VIEW` trên toàn bộ biểu đồ active.                                       | Tuyệt đối không để diagram tự xưng là Canonical Contract.                           |
-| `"CURRENTLY_IMPLEMENTED"`                |       `MISCLASSIFICATION`        | Đã hạ cấp `BR-04`, `BR-06`, `BR-08`, `BR-11`, `BR-12` sang `PARTIALLY_IMPLEMENTED`.                 | Chỉ được nâng cấp khi có bằng chứng code và runtime test đầy đủ.                    |
-| `"READY FOR TECHNICAL ARCHITECTURE"`     |         `PREMATURE_PASS`         | Commit trước ghi nhận READY nhưng thực tế Cổng Biểu đồ và RTM còn tồn đọng lỗi.                     | **HẠ CẤP BẮT BUỘC**: Chuyển thành `NOT READY — QUALITY GATE REVALIDATION REQUIRED`. |
+| Chuỗi truy quét                          |    Phân loại trạng thái    | Đánh giá hiện trạng trong repo                                                                      | Hành động bắt buộc                                                              |
+| :--------------------------------------- | :------------------------: | :-------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------ |
+| `"5-step"`                               | `HISTORICAL` / `REPAIRED`  | Chỉ còn xuất hiện trong các báo cáo audit đối soát lịch sử.                                         | Giữ nguyên trong ngữ cảnh audit; cấm đưa vào tài liệu target.                   |
+| `"5 bước"`                               | `HISTORICAL` / `REPAIRED`  | Đã loại bỏ hoàn toàn khỏi biểu đồ active `02-domain-context-map.html`; chỉ còn trong audit log.     | Tuân thủ hợp đồng Bounded Context chuẩn tắc.                                    |
+| `"5 chốt"`                               | `HISTORICAL` / `REPAIRED`  | Đã loại bỏ hoàn toàn khỏi biểu đồ active `01-product-capability-map.html`; chỉ còn trong audit log. | Tuân thủ 5 nhóm năng lực chuẩn tắc từ `PRODUCT.md`.                             |
+| `"5/5"`                                  |        `HISTORICAL`        | Đã bị loại khỏi `DESIGN.md` và `MOBILE_UI_RULES.md`.                                                | Cấm tái xuất hiện trong các tài liệu thiết kế.                                  |
+| `"GPS → QR"` / `"GPS -> QR"`             |        `STALE_RULE`        | Đã được chuẩn hóa thành độc lập thứ tự trong `WORKFLOWS.md` và `DESIGN.md`.                         | Cấm ép cứng thứ tự tuần tự trong form UI.                                       |
+| `"FULL_PROOF"` / `"LIGHT_PROOF"`         |     `OBSOLETE_CONCEPT`     | Đã được thay thế hoàn toàn bởi 3 `ProofProfiles` ngữ nghĩa chuẩn tắc.                               | Cấm sử dụng trong hợp đồng DTO tương lai.                                       |
+| `"tamper-evident"` / `"giá trị pháp lý"` |       `FALSE_CLAIM`        | Đã xóa khỏi `PRODUCT.md` và `WORKFLOWS.md`; bổ sung disclaimer pháp lý.                             | Cấm tái đưa vào khi chưa có hạ tầng mật mã / thẩm định pháp lý.                 |
+| `"S3"` / `"GCS"` / `"storage.novyx"`     |  `UNAPPROVED_ASSUMPTION`   | Đã chuyển về `Provider: TBD / NEEDS_DECISION` trong `ARCHITECTURE.md`.                              | Cấm hardcode tên miền hoặc SDK cloud cụ thể trong code.                         |
+| `"CANONICAL CONTRACT"` (trên Diagram)    |    `MISCLASSIFICATION`     | Đã đổi nhãn thành `DERIVED VIEW` trên toàn bộ biểu đồ active.                                       | Tuyệt đối không để diagram tự xưng là Canonical Contract.                       |
+| `"CURRENTLY_IMPLEMENTED"`                |    `MISCLASSIFICATION`     | Đã hạ cấp `BR-04`, `BR-06`, `BR-08`, `BR-11`, `BR-12` sang `PARTIALLY_IMPLEMENTED`.                 | Chỉ được nâng cấp khi có bằng chứng code và runtime test đầy đủ.                |
+| `"READY FOR TECHNICAL ARCHITECTURE"`     | `BASELINE_GATE_RECONCILED` | Toàn bộ Cổng Biểu đồ và RTM đã được sửa chữa và tái thẩm định thành công ở Pass B.                  | Sẵn sàng cho pha Technical Architecture Baseline Reconciliation theo giao thức. |
 
 ---
 
@@ -59,7 +59,7 @@ Toàn bộ repository được quét định kỳ để phát hiện các khái 
 
 Một pha kỹ thuật chỉ được phép bắt đầu viết code khi và chỉ khi:
 
-1. [ ] Toàn bộ các cổng `CAN-001..015`, `RTM-001..015`, `ARC-001..006`, `NFR-001..010` đạt `[PASS]`.
-2. [ ] Toàn bộ 11 biểu đồ Active trong `docs/quality-gates/DIAGRAM-QUALITY-CHECKLIST.md` đạt `[PASS]` (0 collision, 0 overflow, font floor $\ge 11\text{px}$, không còn chuỗi 5 bước cũ).
-3. [ ] Các Architecture Decision Records (ADRs) cho Clean Architecture và Offline Persistence đã được Product Owner / Tech Lead phê duyệt chính thức (`ACCEPTED`).
-4. [ ] Bản kế hoạch thực thi kỹ thuật (`implementation_plan.md`) đã được phê duyệt bằng văn bản.
+1. [x] Toàn bộ các cổng `CAN-001..015`, `RTM-001..015`, `ARC-001..006`, `NFR-001..010` đạt `[PASS]`.
+2. [x] Toàn bộ 11 biểu đồ Active trong `docs/quality-gates/DIAGRAM-QUALITY-CHECKLIST.md` đạt `[PASS]` (0 collision, 0 overflow, font floor $\ge 11\text{px}$, không còn chuỗi 5 bước cũ).
+3. [ ] Các Architecture Decision Records (ADRs) cho Clean Architecture và Offline Persistence đã được Product Owner / Tech Lead phê duyệt chính thức (`ACCEPTED`) (Thực hiện tại pha tiếp theo).
+4. [ ] Bản kế hoạch thực thi kỹ thuật (`implementation_plan.md`) đã được phê duyệt bằng văn bản (Thực hiện tại pha tiếp theo).

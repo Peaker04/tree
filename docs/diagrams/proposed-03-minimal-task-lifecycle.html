@@ -1,13 +1,13 @@
 <!doctype html>
+<!-- SOURCE: docs/WORKFLOWS.md, docs/DOMAIN.md -->
+<!-- PROFILE: NOVYX GreenOps -->
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PROPOSED 03 — Vòng đời Nhiệm vụ Tối giản Tất định (7 Trạng thái)</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <title>03 - Vòng đời Nhiệm vụ Tối giản Tất định (7 Trạng thái)</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,600;0,700;1,600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -29,8 +29,8 @@
         --color-lime: #84cc16;
         --color-amber: #d97706;
         --color-danger: #dc2626;
-        --font-sans: 'Noto Sans', 'Segoe UI', Arial, sans-serif;
-        --font-serif: 'Noto Serif', 'Times New Roman', serif;
+        --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Noto Serif', Georgia, serif;
         --font-mono: 'Geist Mono', ui-monospace, monospace;
       }
 
@@ -46,31 +46,35 @@
       }
 
       .frame {
-        max-width: 1180px;
+        max-width: 1200px;
         width: 100%;
         margin: 0 auto;
       }
+
       .badge-container {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.75rem;
       }
+
       .badge-proposed {
         display: inline-block;
         font-family: var(--font-mono);
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        background: #166534;
-        color: #fff;
-        padding: 4px 10px;
-        border-radius: 4px;
+        padding: 0.25rem 0.6rem;
+        border-radius: 9999px;
+        background: rgba(22, 101, 52, 0.1);
+        color: var(--color-accent);
+        border: 1px solid rgba(22, 101, 52, 0.25);
       }
+
       .source-ref {
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: var(--color-muted);
       }
 
@@ -78,16 +82,16 @@
         font-family: var(--font-serif);
         font-size: 2.1rem;
         font-weight: 600;
-        letter-spacing: -0.01em;
-        line-height: 1.2;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
         color: var(--color-ink);
         margin-bottom: 0.5rem;
       }
 
       .desc {
-        font-size: 0.95rem;
+        font-size: 0.92rem;
         color: var(--color-muted);
-        line-height: 1.55;
+        line-height: 1.5;
         margin-bottom: 1.75rem;
       }
 
@@ -113,7 +117,7 @@
         Waiting_Review, và hai trạng thái kết thúc (COMPLETED và CANCELLED).
       </p>
 
-      <svg viewBox="0 0 1140 700" xmlns="http://www.w3.org/2000/svg" role="img">
+      <svg viewBox="0 0 1180 700" xmlns="http://www.w3.org/2000/svg" role="img">
         <title>Vòng đời Nhiệm vụ Tối giản Tất định</title>
         <desc>Máy trạng thái 7 trạng thái của Task theo hợp đồng nghiệp vụ chuẩn tắc</desc>
         <defs>
@@ -134,15 +138,23 @@
         <rect width="100%" height="100%" fill="#FBFBF9" />
 
         <!-- START CIRCLE & CreateTask -->
-        <circle cx="45" cy="260" r="10" fill="#112116" />
-        <line x1="55" y1="260" x2="105" y2="260" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
-        <text x="35" y="235" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+        <circle cx="25" cy="255" r="10" fill="#112116" />
+        <line x1="35" y1="255" x2="105" y2="255" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
+        <text
+          x="68"
+          y="240"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#166534"
+        >
           CreateTask
         </text>
 
         <!-- STATE 1: PENDING -->
-        <g transform="translate(110, 205)">
-          <rect x="0" y="0" width="160" height="110" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="2" />
+        <g transform="translate(105, 200)">
+          <rect x="0" y="0" width="155" height="110" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="2" />
           <text x="14" y="28" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#112116">
             PENDING
           </text>
@@ -157,18 +169,26 @@
         </g>
 
         <!-- Arrow PENDING -> IN_PROGRESS -->
-        <line x1="270" y1="260" x2="335" y2="260" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
-        <rect x="272" y="236" width="62" height="18" rx="3" fill="#FFF" />
-        <text x="275" y="250" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+        <line x1="260" y1="255" x2="360" y2="255" stroke="#112116" stroke-width="2" marker-end="url(#arr)" />
+        <rect x="270" y="243" width="80" height="24" rx="4" fill="#FFF" stroke="#166534" stroke-width="1" />
+        <text
+          x="310"
+          y="259"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#166534"
+        >
           StartTask
         </text>
 
         <!-- STATE 2: IN_PROGRESS -->
-        <g transform="translate(340, 195)">
+        <g transform="translate(360, 195)">
           <rect
             x="0"
             y="0"
-            width="190"
+            width="195"
             height="130"
             rx="8"
             fill="#F0EFEA"
@@ -182,7 +202,7 @@
           <text x="14" y="50" font-family="'Noto Sans', sans-serif" font-size="12" fill="#166534">
             Đang thi công thực địa
           </text>
-          <line x1="14" y1="60" x2="176" y2="60" stroke="#E2E0D8" stroke-width="1" />
+          <line x1="14" y1="60" x2="181" y2="60" stroke="#E2E0D8" stroke-width="1" />
           <text x="14" y="80" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
             • Xác thực Site (QR/GPS)
           </text>
@@ -195,22 +215,30 @@
         </g>
 
         <!-- Arrow IN_PROGRESS -> WAITING_REVIEW -->
-        <line x1="530" y1="260" x2="605" y2="260" stroke="#166534" stroke-width="2" marker-end="url(#arr-green)" />
-        <rect x="532" y="236" width="70" height="18" rx="3" fill="#FFF" />
-        <text x="534" y="250" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+        <line x1="555" y1="255" x2="675" y2="255" stroke="#166534" stroke-width="2" marker-end="url(#arr-green)" />
+        <rect x="575" y="243" width="80" height="24" rx="4" fill="#FFF" stroke="#166534" stroke-width="1" />
+        <text
+          x="615"
+          y="259"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#166534"
+        >
           Submit
         </text>
 
         <!-- STATE 3: WAITING_REVIEW -->
-        <g transform="translate(610, 190)">
-          <rect x="0" y="0" width="195" height="140" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
+        <g transform="translate(675, 190)">
+          <rect x="0" y="0" width="200" height="140" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
           <text x="14" y="28" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#112116">
             WAITING_REVIEW
           </text>
           <text x="14" y="50" font-family="'Noto Sans', sans-serif" font-size="12" fill="#D97706">
             Chờ Quản lý thẩm định
           </text>
-          <line x1="14" y1="60" x2="181" y2="60" stroke="#E2E0D8" stroke-width="1" />
+          <line x1="14" y1="60" x2="186" y2="60" stroke="#E2E0D8" stroke-width="1" />
           <text x="14" y="78" font-family="'Noto Sans', sans-serif" font-size="12" fill="#112116">
             4 Kết luận thẩm định:
           </text>
@@ -224,14 +252,22 @@
         </g>
 
         <!-- Arrow WAITING_REVIEW -> COMPLETED -->
-        <line x1="805" y1="260" x2="880" y2="260" stroke="#166534" stroke-width="2.5" marker-end="url(#arr-green)" />
-        <rect x="810" y="235" width="66" height="20" rx="3" fill="#FFF" />
-        <text x="815" y="250" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
+        <line x1="875" y1="255" x2="980" y2="255" stroke="#166534" stroke-width="2.5" marker-end="url(#arr-green)" />
+        <rect x="895" y="243" width="65" height="24" rx="4" fill="#FFF" stroke="#166534" stroke-width="1" />
+        <text
+          x="927"
+          y="259"
+          text-anchor="middle"
+          font-family="'Noto Sans', sans-serif"
+          font-size="12"
+          font-weight="700"
+          fill="#166534"
+        >
           Duyệt
         </text>
 
         <!-- STATE 4: COMPLETED (TERMINAL) -->
-        <g transform="translate(885, 195)">
+        <g transform="translate(980, 195)">
           <rect x="0" y="0" width="165" height="130" rx="8" fill="#166534" />
           <rect x="4" y="4" width="157" height="122" rx="6" fill="none" stroke="#84CC16" stroke-width="1.5" />
           <text x="14" y="30" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#FFF">
@@ -254,20 +290,28 @@
 
         <!-- REWORK LOOPBACK -->
         <path
-          d="M 700 330 L 700 460 L 560 460"
+          d="M 775 330 L 775 460 L 605 460"
           fill="none"
           stroke="#D97706"
           stroke-width="2"
           marker-end="url(#arr-amber)"
         />
-        <rect x="635" y="385" width="130" height="22" rx="4" fill="#D97706" />
-        <text x="642" y="401" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+        <rect x="695" y="385" width="160" height="24" rx="4" fill="#D97706" />
+        <text
+          x="775"
+          y="401"
+          text-anchor="middle"
+          font-family="'Noto Sans', sans-serif"
+          font-size="11"
+          font-weight="700"
+          fill="#FFF"
+        >
           RequestRework (Lý do)
         </text>
 
         <!-- STATE 5: REWORK_REQUIRED -->
-        <g transform="translate(340, 410)">
-          <rect x="0" y="0" width="215" height="105" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
+        <g transform="translate(360, 410)">
+          <rect x="0" y="0" width="245" height="105" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" />
           <text x="14" y="26" font-family="'Geist Mono', monospace" font-size="13" font-weight="700" fill="#D97706">
             REWORK_REQUIRED
           </text>
@@ -284,41 +328,57 @@
 
         <!-- Resubmit from REWORK_REQUIRED to WAITING_REVIEW -->
         <path
-          d="M 445 515 L 445 555 L 730 555 L 730 335"
+          d="M 480 515 L 480 560 L 810 560 L 810 335"
           fill="none"
           stroke="#166534"
           stroke-width="2"
           stroke-dasharray="4,4"
           marker-end="url(#arr-green)"
         />
-        <rect x="540" y="543" width="95" height="22" rx="4" fill="#166534" />
-        <text x="546" y="559" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+        <rect x="580" y="548" width="140" height="24" rx="4" fill="#166534" />
+        <text
+          x="650"
+          y="564"
+          text-anchor="middle"
+          font-family="'Noto Sans', sans-serif"
+          font-size="11"
+          font-weight="700"
+          fill="#FFF"
+        >
           Resubmit (Nộp lại)
         </text>
 
         <!-- EXCEPTION BRANCH: BLOCKED (STATE 6) -->
         <path
-          d="M 435 195 L 435 105 L 340 105"
+          d="M 460 195 L 460 95 L 320 95"
           fill="none"
           stroke="#DC2626"
           stroke-width="1.8"
           stroke-dasharray="4,4"
           marker-end="url(#arr-red)"
         />
-        <rect x="365" y="93" width="135" height="22" rx="4" fill="#DC2626" />
-        <text x="372" y="109" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#FFF">
+        <rect x="350" y="83" width="145" height="24" rx="4" fill="#DC2626" />
+        <text
+          x="422"
+          y="99"
+          text-anchor="middle"
+          font-family="'Noto Sans', sans-serif"
+          font-size="11"
+          font-weight="700"
+          fill="#FFF"
+        >
           ReportFieldIssue
         </text>
 
-        <g transform="translate(130, 50)">
-          <rect x="0" y="0" width="205" height="110" rx="6" fill="#FFF" stroke="#DC2626" stroke-width="2" />
+        <g transform="translate(100, 45)">
+          <rect x="0" y="0" width="215" height="110" rx="6" fill="#FFF" stroke="#DC2626" stroke-width="2" />
           <text x="14" y="26" font-family="'Geist Mono', monospace" font-size="13" font-weight="700" fill="#DC2626">
             BLOCKED (ĐÌNH CHỈ)
           </text>
           <text x="14" y="48" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
             Vào duy nhất từ IN_PROGRESS
           </text>
-          <line x1="14" y1="56" x2="191" y2="56" stroke="#E2E0D8" stroke-width="1" />
+          <line x1="14" y1="56" x2="201" y2="56" stroke="#E2E0D8" stroke-width="1" />
           <text x="14" y="74" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
             Manager giải quyết qua 3 lối:
           </text>
@@ -329,34 +389,50 @@
 
         <!-- BLOCKED Exit 1: RESUME -> back to IN_PROGRESS -->
         <path
-          d="M 235 160 L 235 180 L 340 215"
+          d="M 230 155 L 230 175 L 360 215"
           fill="none"
           stroke="#166534"
           stroke-width="1.8"
           marker-end="url(#arr-green)"
         />
-        <rect x="240" y="172" width="55" height="18" rx="3" fill="#FFF" />
-        <text x="243" y="186" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+        <rect x="235" y="168" width="70" height="22" rx="3" fill="#FFF" stroke="#166534" stroke-width="1" />
+        <text
+          x="270"
+          y="183"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#166534"
+        >
           RESUME
         </text>
 
         <!-- BLOCKED Exit 2: REASSIGN -> back to PENDING -->
-        <path d="M 180 160 L 180 200" fill="none" stroke="#68756B" stroke-width="1.8" marker-end="url(#arr)" />
-        <rect x="135" y="172" width="60" height="18" rx="3" fill="#FFF" />
-        <text x="138" y="186" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+        <path d="M 160 155 L 160 200" fill="none" stroke="#68756B" stroke-width="1.8" marker-end="url(#arr)" />
+        <rect x="120" y="168" width="80" height="22" rx="3" fill="#FFF" stroke="#68756B" stroke-width="1" />
+        <text
+          x="160"
+          y="183"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#68756B"
+        >
           REASSIGN
         </text>
 
         <!-- CANCELLED BRANCH (STATE 7: TERMINAL) -->
-        <g transform="translate(680, 50)">
-          <rect x="0" y="0" width="185" height="100" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.8" />
+        <g transform="translate(720, 45)">
+          <rect x="0" y="0" width="195" height="105" rx="6" fill="#F0EFEA" stroke="#DC2626" stroke-width="1.8" />
           <text x="14" y="26" font-family="'Geist Mono', monospace" font-size="14" font-weight="700" fill="#DC2626">
             CANCELLED
           </text>
           <text x="14" y="48" font-family="'Noto Sans', sans-serif" font-size="12" fill="#68756B">
             Hủy từ mọi state chưa đóng
           </text>
-          <line x1="14" y1="56" x2="171" y2="56" stroke="#E2E0D8" stroke-width="1" />
+          <line x1="14" y1="56" x2="181" y2="56" stroke="#E2E0D8" stroke-width="1" />
           <text x="14" y="74" font-family="'Geist Mono', monospace" font-size="11" fill="#DC2626">
             [TERMINAL: VOID]
           </text>
@@ -367,31 +443,47 @@
 
         <!-- BLOCKED Exit 3 -> CANCELLED -->
         <line
-          x1="335"
-          y1="85"
-          x2="675"
-          y2="85"
+          x1="315"
+          y1="80"
+          x2="715"
+          y2="80"
           stroke="#DC2626"
           stroke-width="1.8"
           stroke-dasharray="4,4"
           marker-end="url(#arr-red)"
         />
-        <rect x="470" y="74" width="75" height="20" rx="3" fill="#FFF" />
-        <text x="475" y="89" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
+        <rect x="475" y="68" width="90" height="24" rx="3" fill="#FFF" stroke="#DC2626" stroke-width="1" />
+        <text
+          x="520"
+          y="84"
+          text-anchor="middle"
+          font-family="'Noto Sans', sans-serif"
+          font-size="11"
+          font-weight="600"
+          fill="#DC2626"
+        >
           Hủy sự cố
         </text>
 
         <!-- Cancel from WAITING_REVIEW / REWORK to CANCELLED -->
         <path
-          d="M 770 190 L 770 155"
+          d="M 800 190 L 800 155"
           fill="none"
           stroke="#DC2626"
           stroke-width="1.5"
           stroke-dasharray="4,4"
           marker-end="url(#arr-red)"
         />
-        <rect x="745" y="165" width="50" height="18" rx="3" fill="#FFF" />
-        <text x="750" y="179" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">
+        <rect x="765" y="162" width="70" height="22" rx="3" fill="#FFF" stroke="#DC2626" stroke-width="1" />
+        <text
+          x="800"
+          y="177"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#DC2626"
+        >
           CANCEL
         </text>
       </svg>

@@ -4,8 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>02 - NOVYX Domain Context Map</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -21,13 +23,12 @@
         --color-paper-2: #f0efea;
         --color-ink: #112116;
         --color-muted: #68756b;
-        --color-soft: #8a968d;
         --color-rule: rgba(17, 33, 22, 0.08);
         --color-rule-solid: #e2e0d8;
         --color-accent: #166534;
         --color-lime: #84cc16;
-        --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
-        --font-serif: 'Instrument Serif', Georgia, serif;
+        --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Noto Serif', Georgia, serif;
         --font-mono: 'Geist Mono', ui-monospace, monospace;
       }
 
@@ -39,39 +40,53 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 2.5rem 1.5rem;
+        padding: 2rem 1.5rem;
       }
 
       .frame {
-        max-width: 1100px;
+        max-width: 1140px;
         width: 100%;
         margin: 0 auto;
       }
-      .eyebrow {
+      .badge-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 0.6rem;
+      }
+      .badge-derived {
         font-family: var(--font-mono);
         font-size: 0.72rem;
-        font-weight: 500;
-        letter-spacing: 0.16em;
+        font-weight: 600;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
+        color: #fff;
+        background: #166534;
+        padding: 4px 10px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+      .source-ref {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
         color: var(--color-muted);
-        margin-bottom: 0.5rem;
       }
 
       h1 {
         font-family: var(--font-serif);
         font-size: 2.1rem;
-        font-weight: 400;
-        letter-spacing: -0.02em;
-        line-height: 1.15;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
         color: var(--color-ink);
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.4rem;
       }
 
       .desc {
-        font-size: 0.92rem;
+        font-size: 0.95rem;
         color: var(--color-muted);
-        line-height: 1.5;
-        margin-bottom: 1.75rem;
+        line-height: 1.55;
+        margin-bottom: 1.5rem;
       }
 
       svg {
@@ -85,13 +100,17 @@
   </head>
   <body>
     <div class="frame">
-      <p class="eyebrow">02 · Strategic Domain-Driven Design · Target Context Map</p>
-      <h1>Bản đồ Ngữ cảnh Bounded Contexts NOVYX</h1>
+      <div class="badge-container">
+        <span class="badge-derived">DERIVED VIEW — CANONICAL BUSINESS BASELINE</span>
+        <span class="source-ref">SOURCE: docs/DOMAIN.md &amp; docs/WORKFLOWS.md</span>
+      </div>
+      <h1>Bản đồ Ngữ cảnh Bounded Contexts (Context Map)</h1>
       <p class="desc">
-        Mô hình hóa quan hệ Upstream/Downstream giữa Core Domain (Xác thực hiện trường) và các Subdomain vệ tinh.
+        Mô hình hóa quan hệ Upstream/Downstream giữa Core Domain (Xác thực hiện trường &amp; Hồ sơ Bằng chứng) và các
+        Subdomain vệ tinh.
       </p>
 
-      <svg viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ctx-title ctx-desc">
+      <svg viewBox="0 0 1200 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ctx-title ctx-desc">
         <title id="ctx-title">NOVYX Bounded Context Map</title>
         <desc id="ctx-desc">Mối quan hệ và luồng sự kiện giữa các Bounded Context trong hệ thống NOVYX GreenOps.</desc>
 
@@ -107,187 +126,242 @@
         <rect width="100%" height="100%" fill="#FBFBF9" />
 
         <!-- CENTER: CORE DOMAIN (Field Work Verification) -->
-        <g transform="translate(340, 200)">
+        <g transform="translate(390, 200)">
           <rect
             x="0"
             y="0"
-            width="320"
-            height="200"
+            width="370"
+            height="215"
             rx="10"
             fill="rgba(132,204,22,0.08)"
             stroke="#84CC16"
             stroke-width="2.5"
           />
-          <rect x="20" y="-12" width="130" height="22" rx="4" fill="#166534" />
-          <text x="30" y="3" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+          <rect x="20" y="-12" width="140" height="24" rx="4" fill="#166534" />
+          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
             CORE CONTEXT
           </text>
 
-          <text x="24" y="34" font-family="'Geist', sans-serif" font-size="16" font-weight="600" fill="#112116">
+          <text x="24" y="32" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
             Field Work Verification
           </text>
-          <text x="24" y="52" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
-            Xác thực 5 chốt bằng chứng hiện trường
+          <text x="24" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Xác thực hiện trường &amp; 3 Hồ sơ Bằng chứng ngữ nghĩa
           </text>
-          <line x1="24" y1="62" x2="296" y2="62" stroke="rgba(17,33,22,0.08)" />
+          <line x1="24" y1="62" x2="346" y2="62" stroke="rgba(17,33,22,0.08)" />
 
-          <text x="24" y="82" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#166534">
+          <text x="24" y="82" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
             OWNED AGGREGATES &amp; VALUES:
           </text>
-          <text x="24" y="102" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • ProofWorkflow (State Machine 5 bước)
+          <text x="24" y="104" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • SiteVerification (GPS &lt;= 10m &amp; Quét QR; thứ tự độc lập)
           </text>
-          <text x="24" y="122" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • GpsVerification (Tọa độ, bán kính &lt;= 10m)
+          <text x="24" y="124" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • ProofProfilePolicy (CHANGE, SERVICE, INSPECTION)
           </text>
-          <text x="24" y="142" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • QrVerification (Đối soát 100% mã cây)
+          <text x="24" y="144" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • TaskEvidence (Ảnh hiện trường độc quyền, checklist)
           </text>
-          <text x="24" y="162" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • TaskEvidence (Before/After Photos, URI)
+          <text x="24" y="164" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • FieldIssueReport (Kẹt hiện trường -&gt; BLOCKED)
           </text>
-          <text x="24" y="182" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • TechnicalChecklist (Tích 100% hoàn thành)
+          <text x="24" y="184" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • ReworkAttempt (Làm lại có mục tiêu, bảo toàn lịch sử)
           </text>
         </g>
 
         <!-- TOP: WORK MANAGEMENT CONTEXT -->
-        <g transform="translate(340, 30)">
-          <rect x="0" y="0" width="320" height="110" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="20" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+        <g transform="translate(375, 30)">
+          <rect x="0" y="0" width="400" height="115" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <text x="20" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
             Work Management Context
           </text>
-          <text x="20" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
-            Sở hữu Task Lifecycle (Pending -> In_Progress -> Completed)
+          <text x="20" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Sở hữu Vòng đời Task 7 trạng thái tất định (PENDING..COMPLETED)
           </text>
-          <text x="20" y="70" font-family="'Geist Mono', monospace" font-size="10" fill="#112116">
-            Aggregates: Task, Assignment, Deadline
+          <text x="20" y="70" font-family="'Geist Mono', monospace" font-size="11" fill="#112116">
+            Aggregates: Task, Assignment, Deadline, ProofProfile
           </text>
-          <text x="20" y="90" font-family="'Geist Mono', monospace" font-size="10" fill="#84CC16">
+          <text x="20" y="92" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
             [UPSTREAM - Cung cấp Task cho Verification]
           </text>
         </g>
 
         <!-- LEFT: TREE ASSET REGISTRY -->
-        <g transform="translate(40, 200)">
-          <rect x="0" y="0" width="240" height="180" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="18" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+        <g transform="translate(30, 200)">
+          <rect x="0" y="0" width="250" height="190" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <text x="18" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
             Tree Asset Registry
           </text>
-          <text x="18" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+          <text x="18" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
             Hồ sơ tài sản cây xanh
           </text>
-          <line x1="18" y1="56" x2="222" y2="56" stroke="rgba(17,33,22,0.08)" />
-          <text x="18" y="76" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
+          <line x1="18" y1="58" x2="232" y2="58" stroke="rgba(17,33,22,0.08)" />
+          <text x="18" y="80" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
             • Tree (Id, QrCode, Lat, Lng)
           </text>
-          <text x="18" y="96" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • Health &amp; Risk Status
+          <text x="18" y="102" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Tình trạng sức khỏe &amp; rủi ro
           </text>
-          <text x="18" y="116" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • CareHistory (Projection)
+          <text x="18" y="124" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • CareHistory (Chỉ task COMPLETED)
           </text>
-          <text x="18" y="150" font-family="'Geist Mono', monospace" font-size="10" fill="#68756B">
-            [UPSTREAM - Tra cứu]
+          <text x="18" y="160" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
+            [UPSTREAM - Tra cứu đối soát]
           </text>
         </g>
 
         <!-- RIGHT: REVIEW & QUALITY CONTROL -->
-        <g transform="translate(720, 200)">
-          <rect x="0" y="0" width="240" height="180" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="18" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
+        <g transform="translate(870, 200)">
+          <rect x="0" y="0" width="270" height="190" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <text x="18" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
             Review &amp; QC Context
           </text>
-          <text x="18" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+          <text x="18" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
             Cổng thẩm định chất lượng
           </text>
-          <line x1="18" y1="56" x2="222" y2="56" stroke="rgba(17,33,22,0.08)" />
-          <text x="18" y="76" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • ReviewAudit (Thẩm định 5 chốt)
+          <line x1="18" y1="58" x2="252" y2="58" stroke="rgba(17,33,22,0.08)" />
+          <text x="18" y="80" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • ReviewAudit (Thẩm định hồ sơ)
           </text>
-          <text x="18" y="96" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • ApprovalGate (Khóa khi thiếu gap)
+          <text x="18" y="102" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • 4 Kết luận: Approve/Rework/Cancel
           </text>
-          <text x="18" y="116" font-family="'Geist', sans-serif" font-size="11" fill="#112116">
-            • ReworkOrder (Kèm rejectReason)
+          <text x="18" y="124" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • ReworkOrder (Kèm reworkReason)
           </text>
-          <text x="18" y="150" font-family="'Geist Mono', monospace" font-size="10" fill="#166534">
-            [DOWNSTREAM - Thẩm định]
+          <text x="18" y="160" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            [DOWNSTREAM - Thẩm định kết luận]
           </text>
         </g>
 
         <!-- BOTTOM: OPERATIONAL NOTIFICATIONS & PLATFORM -->
-        <g transform="translate(180, 470)">
-          <rect x="0" y="0" width="640" height="130" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.2" />
-          <text x="24" y="28" font-family="'Geist', sans-serif" font-size="14" font-weight="600" fill="#112116">
-            Operational Notifications &amp; Platform Generic Contexts
+        <g transform="translate(240, 480)">
+          <rect x="0" y="0" width="670" height="135" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.2" />
+          <text x="24" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
+            Operational Alerts &amp; Platform Generic Contexts
           </text>
-          <text x="24" y="46" font-family="'Geist', sans-serif" font-size="11" fill="#68756B">
+          <text x="24" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
             Truyền phát sự kiện vận hành, quản lý phiên và điều phối phần cứng thiết bị
           </text>
-          <line x1="24" y1="56" x2="616" y2="56" stroke="rgba(17,33,22,0.08)" />
+          <line x1="24" y1="58" x2="646" y2="58" stroke="rgba(17,33,22,0.08)" />
 
-          <g transform="translate(24, 70)">
-            <text x="0" y="12" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#112116">
+          <g transform="translate(24, 75)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#112116">
               Notifications
             </text>
-            <text x="0" y="28" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
+            <text x="0" y="32" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
               Lắng nghe Domain Events
             </text>
           </g>
-          <g transform="translate(220, 70)">
-            <text x="0" y="12" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#112116">
+          <g transform="translate(230, 75)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#112116">
               Identity &amp; Session
             </text>
-            <text x="0" y="28" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              JWT, vai trò Staff/Manager
+            <text x="0" y="32" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              JWT, vai trò Staff / Manager
             </text>
           </g>
-          <g transform="translate(420, 70)">
-            <text x="0" y="12" font-family="'Geist', sans-serif" font-size="11" font-weight="600" fill="#112116">
+          <g transform="translate(450, 75)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#112116">
               Device Context
             </text>
-            <text x="0" y="28" font-family="'Geist', sans-serif" font-size="10" fill="#68756B">
-              Quyền Camera &amp; GPS thiết bị
+            <text x="0" y="32" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Quyền Camera &amp; Location SDK 57
             </text>
           </g>
         </g>
 
-        <!-- ARROWS -->
+        <!-- ARROWS & LABELS (WITH SAFE BACKGROUND PILLS) -->
         <!-- Work Mgmt -> Verification (Assign task) -->
-        <line x1="500" y1="140" x2="500" y2="195" stroke="#166534" stroke-width="2" marker-end="url(#arrow-green)" />
-        <text x="506" y="170" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">TaskAssigned</text>
+        <line x1="575" y1="145" x2="575" y2="195" stroke="#166534" stroke-width="2" marker-end="url(#arrow-green)" />
+        <rect x="520" y="156" width="110" height="22" rx="3" fill="#FFF" stroke="#166534" stroke-width="1" />
+        <text
+          x="575"
+          y="171"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#166534"
+        >
+          TaskAssigned
+        </text>
 
         <!-- Tree Registry -> Verification (Coordinates & QR) -->
-        <line x1="280" y1="290" x2="335" y2="290" stroke="#68756B" stroke-width="1.5" marker-end="url(#arrow)" />
-        <text x="288" y="282" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">TreeFacts</text>
+        <line x1="280" y1="295" x2="385" y2="295" stroke="#68756B" stroke-width="1.8" marker-end="url(#arrow)" />
+        <rect x="295" y="284" width="75" height="22" rx="3" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
+        <text
+          x="332"
+          y="299"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#68756B"
+        >
+          TreeFacts
+        </text>
 
         <!-- Verification -> Review & QC (Submit evidence) -->
-        <line x1="660" y1="290" x2="715" y2="290" stroke="#166534" stroke-width="2" marker-end="url(#arrow-green)" />
-        <text x="664" y="282" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">SubmitProof</text>
+        <line x1="760" y1="295" x2="865" y2="295" stroke="#166534" stroke-width="2" marker-end="url(#arrow-green)" />
+        <rect x="770" y="284" width="96" height="22" rx="3" fill="#FFF" stroke="#166534" stroke-width="1" />
+        <text
+          x="818"
+          y="299"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#166534"
+        >
+          SubmitProof
+        </text>
 
         <!-- Review & QC -> Work Mgmt (Approved / ReworkRequired) -->
         <path
-          d="M 840 200 L 840 85 L 665 85"
+          d="M 1000 200 L 1000 85 L 780 85"
           fill="none"
           stroke="#68756B"
-          stroke-width="1.5"
+          stroke-width="1.8"
           marker-end="url(#arrow)"
         />
-        <text x="740" y="78" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">ReviewDecision</text>
+        <rect x="830" y="74" width="115" height="22" rx="3" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
+        <text
+          x="887"
+          y="89"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#68756B"
+        >
+          ReviewDecision
+        </text>
 
         <!-- Verification / Review -> Notifications -->
         <line
-          x1="500"
-          y1="400"
-          x2="500"
-          y2="465"
+          x1="575"
+          y1="415"
+          x2="575"
+          y2="475"
           stroke="#68756B"
-          stroke-width="1.5"
+          stroke-width="1.8"
           stroke-dasharray="4,4"
           marker-end="url(#arrow)"
         />
-        <text x="506" y="440" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">DomainEvents</text>
+        <rect x="525" y="435" width="100" height="22" rx="3" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
+        <text
+          x="575"
+          y="450"
+          text-anchor="middle"
+          font-family="'Geist Mono', monospace"
+          font-size="11"
+          font-weight="600"
+          fill="#68756B"
+        >
+          DomainEvents
+        </text>
       </svg>
     </div>
   </body>

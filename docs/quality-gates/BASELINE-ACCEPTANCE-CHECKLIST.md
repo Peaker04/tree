@@ -13,7 +13,7 @@
 | :---------- | :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------ | :--------------------------------- | :------: | :--------: | :-----------------: |
 | **CAN-001** | Phân cấp Thẩm quyền Tài liệu    | `docs/README.md` định nghĩa đủ 7 tầng (A-G); không chứa phát biểu cào bằng "mọi docs/*.md đều là canonical".                    | Đối soát tĩnh văn bản                             | `docs/README.md`                   | BLOCKER  |  **YES**   |      `[PASS]`       |
 | **CAN-002** | Phân tách Target vs As-Is       | Không tài liệu nào mô tả tính năng chưa code như đã hoàn thành; không coi code hiện tại là chuẩn mục tiêu nếu vi phạm hợp đồng. | Đối soát chéo giữa `WORKFLOWS.md` và `GAP-MAP.md` | `POST-SYNC-GAP-MAP.md`             | BLOCKER  |  **YES**   |      `[PASS]`       |
-| **CAN-003** | Thẩm quyền Biểu đồ dẫn xuất     | Biểu đồ mang phân loại `DERIVED VIEW`, trích dẫn `SOURCE: docs/...`, không định nghĩa luật nghiệp vụ ngoài Markdown.            | Kiểm tra metadata trong header HTML diagram       | `docs/diagrams/*.html`             | BLOCKER  |  **YES**   |      `[WARN]`       |
+| **CAN-003** | Thẩm quyền Biểu đồ dẫn xuất     | Biểu đồ mang phân loại `DERIVED VIEW`, trích dẫn `SOURCE: docs/...`, không định nghĩa luật nghiệp vụ ngoài Markdown.            | Kiểm tra metadata trong header HTML diagram       | `docs/diagrams/*.html`             | BLOCKER  |  **YES**   |      `[PASS]`       |
 | **CAN-004** | Nhận diện Tài liệu Lịch sử      | Tài liệu/biểu đồ cũ (`03`, `04`, `05`, `06`, `11`) có banner `[SUPERSEDED / HISTORICAL]` và chỉ định tài liệu thay thế.         | Kiểm tra thẻ cảnh báo đầu file                    | `docs/diagrams/03..11`             |  MAJOR   |  **YES**   |      `[PASS]`       |
 | **CAN-005** | Phân loại Kiến trúc Đề xuất     | Clean Architecture / Ports & Adapters trong `ARCHITECTURE.md` được ghi rõ `[PROPOSED TARGET]` chờ duyệt ADR.                    | Kiểm tra nhãn trạng thái kiến trúc                | `docs/ARCHITECTURE.md`             | CRITICAL |  **YES**   |      `[PASS]`       |
 | **CAN-006** | Quản lý Quyết định Mở           | Các mục chưa chốt mang nhãn `[NEEDS_DECISION]` hoặc `TBD`; không gán trạng thái hoàn tất giả tạo.                               | Grep nhãn trạng thái quyết định                   | `docs/ARCHITECTURE.md`, `NFR.md`   |  MAJOR   |  **YES**   |      `[PASS]`       |
@@ -50,14 +50,14 @@
 - **Requirement:** Toàn bộ biểu đồ trực quan (Diagrams) phải được định danh là góc nhìn dẫn xuất, trích dẫn tài liệu Markdown nguồn và không bao giờ tự sở hữu luật nghiệp vụ.
 - **Authority / Source:** [`docs/README.md`](../README.md) & [`docs/diagrams/README.md`](../diagrams/README.md).
 - **Acceptance Oracle:**
-  1. Header mọi biểu đồ active hiển thị huy hiệu: `DERIVED VIEW — CANONICAL BUSINESS BASELINE` (hoặc `PROPOSED ARCHITECTURE`).
-  2. Có dòng chú thích nguồn cụ thể: `SOURCE: docs/<FILE>.md`.
+  1. Header mọi biểu đồ active hiển thị huy hiệu: `DERIVED VIEW — CANONICAL BUSINESS BASELINE` (hoặc `PROPOSED TARGET ARCHITECTURE` cho sơ đồ kiến trúc đề xuất).
+  2. Có dòng chú thích nguồn cụ thể: `SOURCE: docs/<FILE>.md` (hoặc commit AS-IS đối ứng).
   3. Không có biểu đồ active nào định nghĩa trạng thái hoặc luật rẽ nhánh mâu thuẫn với Markdown Tầng A.
 - **Verification Method:** Quét DOM runtime của 100% file HTML trong `docs/diagrams/`.
 - **Required Evidence:** Báo cáo trích xuất metadata từ `scripts/diagram_tool.py validate`.
 - **Severity / Blocking:** `BLOCKER` / `YES`.
-- **Execution Status:** `[WARN]`.  
-  _(Ghi chú: Nhóm `proposed-01..04` đã có đầy đủ nhãn và SOURCE; tuy nhiên nhóm biểu đồ active cũ `01`, `02`, `07`, `08`, `10`, `12` còn thiếu trích dẫn SOURCE rõ ràng theo chuẩn mới)._
+- **Execution Status:** `[PASS]`.
+  _(Ghi chú: Đã bổ sung đầy đủ huy hiệu DERIVED VIEW và trích dẫn SOURCE chuẩn tắc cho 100% biểu đồ active: `01`, `02`, `07`, `08`, `09`, `10`, `12`, `proposed-01..04`)._
 
 ---
 

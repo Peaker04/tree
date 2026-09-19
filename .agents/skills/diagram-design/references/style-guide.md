@@ -1,229 +1,95 @@
-# Style Guide
+<!-- diagram-design-profile
+name: NOVYX GreenOps
+slug: novyx
+source-url: DESIGN.md
+created: 2026-09-19
+updated: 2026-09-19
+notes: Active and authoritative visual profile for NOVYX GreenOps diagrams
+-->
+# Style Guide — NOVYX GreenOps Authoritative Profile
 
-**The single source of truth for colors, typography, and tokens.** Every diagram draws from this — not from hex values inlined in other reference files. If you want to change the visual skin of Diagram Design, change this file.
+**The single authoritative source of truth for diagram colors, typography, spacing, and tokens in NOVYX GreenOps.**
 
-Default skin is a cool editorial palette — white-smoke paper, jet-black ink, atomic-tangerine accent, blue-slate muted. It's designed to look good out of the box; swap these values (or run [`onboarding.md`](onboarding.md)) and every new diagram inherits the new skin without touching any type-specific logic.
-
-To generate your own from a website URL, see [`onboarding.md`](onboarding.md).
+> **Authority & Provenance:**
+> - Derived directly from project visual authority: [`DESIGN.md`](../../../../DESIGN.md) & `@novyx/ui`.
+> - Project Marker: `.diagram-design` in repository root selects `profile: novyx`.
+> - Localization standard: [`localization-vi.md`](localization-vi.md) (Vietnamese diacritic safety).
+> - Strict geometry & validation oracle: [`scripts/diagram_tool.py`](../../../../scripts/diagram_tool.py).
 
 ---
 
-## Tokens
+## 1. Tokens
 
 ### Semantic roles
 
-Every token is referred to by **semantic role**, not by its hex value. Type references (`type-*.md`) and SKILL.md say `accent`, not `#f7591f`.
+Every diagram token is referred to by **semantic role**. Exact hex values adhere strictly to `DESIGN.md`:
 
-| Role | Purpose | Default (light) | Default (dark) |
-|---|---|---|---|
-| `paper` | Page background, default node fill | `#f5f5f5` (white-smoke) | `#2d3142` (jet-black) |
-| `paper-2` | Diagram container bg, secondary fill | `#ececec` | `#393e53` |
-| `ink` | Primary text, primary stroke | `#2d3142` (jet-black) | `#f5f5f5` (white-smoke) |
-| `muted` | Secondary text, default arrow stroke | `#4f5d75` (blue-slate) | `#bfc0c0` (silver) |
-| `soft` | Sublabels, boundary labels | `#7a8399` | `#8e98ac` |
-| `rule` | Hairline borders | `rgba(45,49,66,0.12)` | `rgba(245,245,245,0.12)` |
-| `rule-solid` | Stronger borders, baselines | `#bfc0c0` (silver) | `rgba(191,192,192,0.25)` |
-| `accent` | Focal / 1–2 max per diagram | `#eb6c36` (atomic-tangerine) | `#f08a59` |
-| `accent-tint` | Fill for accent-bordered boxes | `rgba(235,108,54,0.08)` | `rgba(240,138,89,0.10)` |
-| `link` | HTTP/API calls, external arrows | `#2e5aa8` | `#6a95d8` |
+| Role | Purpose | Light Theme (Default) | Dark Theme | Source Token (`DESIGN.md`) |
+|---|---|---|---|---|
+| `paper` | Page background, canvas | `#fcfcf7` | `#112116` | `colors.snowWhite` |
+| `diagram-canvas` | High-contrast standalone diagram canvas | `#fbfbf9` | `#0d1710` | Derived high-contrast canvas |
+| `paper-2` | Container bg, lane fill, stepper track | `#eeeee9` | `#1a2e21` | `colors.warmStone` |
+| `card` | Card / node surface with high contrast | `#ffffff` | `#15261b` | High-contrast card surface |
+| `ink` | Primary text, titles, high-contrast borders | `#13231a` | `#fcfcf7` | `colors.ink` (`forestDepths`) |
+| `muted` | Secondary text, descriptions, default lines | `#64748b` | `#94a3b8` | `colors.pewter` |
+| `soft` | Sublabels, boundary labels, metadata | `#94a3b8` | `#64748b` | `colors.muted` |
+| `rule` | Hairline dividers (1px) | `rgba(19,35,26,0.12)` | `rgba(252,252,247,0.12)` | `colors.hairlineBorder` at opacity |
+| `rule-solid` | Solid borders, baselines | `#e6ede3` | `#23412a` | `colors.hairlineBorder` solid |
+| `accent` | Authority stroke, primary decision gates | `#1c3a13` | `#84cc16` | `colors.forestDepths` |
+| `accent-focal` | Punctuation badge, active step highlight | `#d3fa99` | `#84cc16` | `colors.limePulse` |
+| `accent-tint` | Verified step bg, success badge bg | `#e7f6df` | `rgba(132,204,22,0.15)` | `colors.primarySoft` |
+| `success` | Approved terminal state, positive paths | `#236236` | `#4ade80` | `colors.primaryDark` |
+| `warning` | Waiting review, overdue warning | `#9f7115` | `#fbbf24` | `colors.amber` |
+| `warning-tint` | Waiting review card fill, banner bg | `#fffae0` | `rgba(217,119,6,0.15)` | `colors.amberSoft` |
+| `danger` | Rework required, blocked issues, prohibited | `#c92c4a` | `#f87171` | `colors.danger` |
+| `danger-tint` | Error banner bg, rework callout fill | `#fff1f2` | `rgba(220,38,38,0.15)` | `colors.dangerSoft` |
+| `link` / `info` | In-progress tasks, GPS in-progress | `#1c7890` | `#38bdf8` | `colors.sky` |
+| `info-tint` | In-progress badge bg, info card fill | `#eef8fb` | `rgba(28,120,144,0.15)` | `colors.skySoft` |
 
-> **Brand palette source:** this skin maps to a five-color brand palette — `jet-black #2d3142`, `silver #bfc0c0`, `white-smoke #f5f5f5`, `atomic-tangerine #eb6c36`, `blue-slate #4f5d75`. The `soft`, `rule`, and `link` tokens are derived (lighter slate, ink-at-opacity, and a saturated variant in the blue-slate hue family) to cover roles the brand palette doesn't name directly.
-
-> **Note:** The pre-baked example HTML files in `assets/` were built under an earlier skin. Regenerating them against the current `style-guide.md` is a v5.1 task. New diagrams the skill produces will use the tokens above.
-
-### Inversion rule (light → dark)
-
-Any `rgba(28,25,23, X)` in light becomes `rgba(250,247,242, X)` in dark. Same opacities, RGB flipped. The accent gets a slight hue-shift brighter to read on dark paper.
-
-### Series palette (multi-series chart types only)
-
-A small set of desaturated, editorial-tone colors for chart types that genuinely need to distinguish multiple overlapping entities (currently: **radar**). The "1-focal" rule still holds — `accent` is reserved for the focal series; the palette below covers the rest.
-
-| Token | Light | Dark | Notes |
-|---|---|---|---|
-| `series-1` | `#7c8f6f` (sage) | `#9caf8f` | Non-focal series |
-| `series-2` | `#5e7a9b` (dusty-blue) | `#82a0c0` | Non-focal series |
-| `series-3` | `#b8915a` (mustard) | `#d3ad7a` | Non-focal series |
-| `series-4` | `#9c6b50` (rust-brown) | `#b88670` | Non-focal series |
-| `series-5` | `#6e6479` (slate) | `#8d8298` | Non-focal series |
-
-Fills sit at `0.18` opacity light, `0.22` dark; strokes use the full color. **Don't backfill these tokens to non-chart types** — architecture, swimlane, etc. continue to use muted-ink variants. The series palette is opt-in for diagrams where overlapping shapes demand distinguishable color, not a license to add color elsewhere.
-
-### Terminal skin (opt-in alternate)
-
-A self-contained palette for the terminal-window primitive (see [primitive-terminal.md](primitive-terminal.md)) — a CLI-chrome register for dev-tool posts and technical social cards. It does not replace the default skin above and isn't affected by onboarding; it's a second, fixed skin you opt into per-diagram.
-
-| Token | Hex | Purpose |
-|---|---|---|
-| `terminal-page` | `#0a0a0a` | Page background behind the window |
-| `terminal-paper` | `#141414` | Window body, node fill |
-| `terminal-bar` | `#1b1b1b` | Titlebar strip |
-| `terminal-border` | `#2b2b2b` | Window border, hairlines |
-| `terminal-ink` | `#f5f5f5` | Primary text, primary stroke (same white-smoke as default `ink`) |
-| `terminal-muted` | `#9a9a9a` | Secondary text, sublabels, ring stroke |
-| `terminal-soft` | `#5c5c5c` | Tertiary — inactive dots, spokes |
-| `terminal-accent` | `#ff5a36` | The one accent — focal station, prompt sign, active dot |
-| `terminal-accent-tint` | `rgba(255,90,54,0.12)` | Fill for accent-bordered boxes |
-
-**1-accent rule still holds.** Everything that isn't `terminal-ink` or `terminal-muted`/`terminal-soft` should be `terminal-accent` — never introduce a second hue.
+> [!IMPORTANT]
+> **No false token aliases:** If referencing a token from `DESIGN.md`, use its exact hex value (e.g. `snowWhite` is `#fcfcf7`). If a diagram requires a derived print/readability color, name it with its own semantic token (e.g. `diagram-canvas` is `#fbfbf9`). Never state `#fbfbf9 = snowWhite`.
 
 ---
 
-## Typography
+## 2. Vietnamese Typography Rules
 
 | Role | Family | Size | Weight | Usage |
 |---|---|---|---|---|
-| `title` | Instrument Serif | 1.75rem | 400 | Page H1 |
-| `node-name` | Geist (sans) | 12px | 600 | Human-readable labels |
-| `sublabel` | Geist Mono | 9px | 400 | Port, protocol, URL, field type |
-| `eyebrow` | Geist Mono | 7–8px | 500, tracked 0.18em, uppercase | Type tags, axis labels |
-| `arrow-label` | Geist Mono | 8px | 400, tracked 0.06em | Arrow annotations |
-| `callout` | Instrument Serif *italic* | 14px | 400 | Editorial asides only |
+| `title` | `Noto Serif`, Georgia, serif | 1.75rem–2.1rem | 600 | Page H1 |
+| `subtitle` | `Noto Sans`, system-ui, sans-serif | 0.92rem–1.0rem | 400 | Page description (`muted`) |
+| `node-name` | `Noto Sans`, system-ui, sans-serif | 12px–16px | 600–700 | Primary node headers |
+| `body` | `Noto Sans`, system-ui, sans-serif | 11px–12px | 400 | Node bullet points and descriptions |
+| `sublabel` | `Geist Mono`, monospace | 11px | 500–600 | Technical IDs, enum values, DTOs |
+| `badge` | `Geist Mono` / `Noto Sans` | 11px | 600–700 | Status badges, gate pills (uppercase) |
+| `arrow-label` | `Geist Mono` / `Noto Sans` | 11px–12px | 600 | Transition annotations with background pill |
 
-### Font stack
-
-```html
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
-```
-
-### Korean labels
-
-Geist and Instrument Serif carry no Hangul. A Korean `<text>` element extends its own family — never swap the skin:
-
-```svg
-<text font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">결제 서비스</text>
-```
-
-Both Noto faces ship in the font link above, so the web font resolves before any locally installed one and the same file renders identically on macOS, Windows, and a reviewer's browser. The local families follow it for offline viewing. Page titles need the serif equivalent — `'Instrument Serif', 'Noto Serif KR', serif` — or a mixed Latin/Korean title resolves Hangul through the platform's generic serif and the two halves disagree. Google's `css2` endpoint slices Korean by unicode-range, so a diagram with a handful of Korean labels downloads only the slices it touches. The four templates carry both faces because a new diagram may contain Hangul; the shipped Latin-only examples keep the shorter link, since a file with no Hangul has nothing to resolve.
-
-**Width budget.** Measure per character, not per script: **every Unicode wide or full-width character costs 1em, every other character costs its face's Latin advance** (0.60em sans, 0.62em mono), and nonspacing/enclosing marks cost nothing. Sum over the string and multiply by the font size for the text width, then add padding and round the box up to the next multiple of 4. `verify-treemap.py` enforces exactly this text width for treemap cell labels; the padding and rounding are authoring convention, and no other type carries an automatic check, so on those the budget is yours to hold.
-
-Counting by script is the trap. `주문 v2.1` is two full-width syllables and five narrow characters; a formula that tallies Hangul, Latin letters, and spaces silently drops `2`, `.`, and `1` and sizes the box for four of its seven characters. Every rendered character costs something — measure per character, never per script.
-
-Three rules follow from Hangul metrics:
-
-- **Sublabels stay Latin.** Ports, protocols, field types, and URLs are Latin anyway — keep `Geist Mono` there and don't translate them. Hangul in a 9px mono sublabel is unreadable and has no mono face to fall back to.
-- **Floor of 12px.** Hangul goes muddy below 12px. If a Korean name doesn't fit at 12px, cut the name — don't shrink the type.
-- **Arrow labels, eyebrows, and legend text switch register.** Those slots are 7–8px Geist Mono, uppercase and tracked, which Hangul has neither a face nor legibility for. A Korean label in one of those slots becomes 12px sans at weight 500 with no tracking and no uppercase transform, and its mask rect grows to match (16px tall, width from the budget above, still rounded to a multiple of 4). Latin labels in the same diagram keep the mono treatment.
-
-**Load-bearing rule:** Mono is for *technical* content (ports, commands, URLs, field types). Names go in Geist sans. Page title is Instrument Serif. Italic Instrument Serif is reserved for annotation callouts (see [primitive-annotation.md](primitive-annotation.md)). **Never JetBrains Mono** as a blanket "dev" font.
-
-### Traditional Chinese labels
-
-Geist and Instrument Serif carry no Han. A Traditional Chinese `<text>` element extends its own family — never swap the skin:
-
-```svg
-<text font-family="'Geist', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif">請求項比對</text>
-```
-
-Both Noto TC faces ship in the font link above, so the web font resolves before any locally installed one and the same file renders identically on macOS, Windows, and a reviewer's browser. The local families follow it for offline viewing. Page titles need the serif equivalent — `'Instrument Serif', 'Noto Serif TC', serif` — or a mixed Latin/Han title resolves Han through the platform's generic serif and the two halves disagree. Google's `css2` endpoint slices Chinese by unicode-range, so a diagram with a handful of Chinese labels downloads only the slices it touches.
-
-**Width budget.** The per-character contract above is unchanged: every Unicode wide or full-width character costs 1em, every other character costs its face's Latin advance, and nonspacing marks cost nothing. Full-width punctuation — `（）「」，。：` — is wide and costs 1em as well, which is the part most often dropped.
-
-Counting by script is the trap. `請求項 v2.1` is three full-width characters and five narrow ones; a formula that tallies Han and Latin letters silently drops `2`, `.`, and `1` and sizes the box for six of its nine characters.
-
-Three rules follow from Han metrics, mirroring the Hangul ones:
-
-- **Sublabels stay Latin.** Ports, protocols, field types, and URLs are Latin anyway — keep `Geist Mono` there and don't translate them. Han in a 9px mono sublabel is unreadable and has no mono face to fall back to. A sublabel that is prose rather than a value may be Chinese, but it then switches register by the third rule below.
-- **Floor of 12px.** Han packs more strokes than Hangul into the same em box, so the 12px floor binds at least as hard here. If a Chinese name doesn't fit at 12px, cut the name — don't shrink the type.
-- **Arrow labels, eyebrows, and legend text switch register.** Those slots are 7–8px Geist Mono, uppercase and tracked, which Han has neither a face nor legibility for. A Chinese label in one of those slots becomes 12px sans at weight 500 with no tracking and no uppercase transform, and its mask rect grows to match (16px tall, width from the budget above, still rounded to a multiple of 4). Latin labels in the same diagram keep the mono treatment.
-
-Simplified Chinese takes the same three rules with the Simplified stack (`'Noto Sans SC'`, `'PingFang SC'`, `'Microsoft YaHei'`). That face does not ship in the link, so Simplified labels still resolve through whatever the viewer has locally.
-
-### Cyrillic labels
-
-Geist and Geist Mono ship Cyrillic (`cyrillic` and `cyrillic-ext` on Google Fonts), so names, sublabels, arrow labels, eyebrows, and legend text in Bulgarian, Russian, Ukrainian, or Serbian keep the Latin treatment: same faces, sizes, tracking, and uppercase. There is no register switch: Hangul and Han switch register because Geist Mono has no face for them, and Geist Mono does cover Cyrillic.
-
-Instrument Serif carries no Cyrillic. A page title extends its family — `'Instrument Serif', 'Noto Serif', serif` — or a mixed Latin/Cyrillic title resolves Cyrillic through whatever face comes next and the two halves disagree. Noto Serif ships in the font link above, upright and italic, so an italic callout in Cyrillic takes the same stack.
-
-**Noto Serif goes ahead of the CJK serifs.** When a stack also lists `'Noto Serif KR'` or `'Noto Serif TC'`, put `'Noto Serif'` ahead of them. Google Fonts slices Cyrillic into those faces as well, so a stack that reaches a CJK face first draws its Cyrillic from it. That is why the templates put `'Noto Serif'` between `'Instrument Serif'` and `'Noto Serif KR'`; Noto Serif has no Hangul or Han, so Korean and Chinese titles pass straight through it.
-
-**Width budget.** The per-character contract above is unchanged: every character costs its face's Latin advance (0.60em sans, 0.62em mono). It fits Geist Mono exactly and Geist sans only on average. Geist Mono is monospaced: a Cyrillic glyph advances exactly as far as a Latin one, so sublabels, arrow labels, eyebrows, legend text, and their mask rects are sized as for Latin. Geist sans is not. Its wide Cyrillic letters, capitals and lowercase alike (such as `Ж Ш Щ Ю Ы`, `ж ш щ ы ю`), run well past the 0.60em average: `Шкаф ODF-2` at 12px is budgeted at 72px and draws at about 76. Rounding the box up to a multiple of 4 recovers at most 3px, so it is not the remedy. Leave the overshoot in the box padding and measure a Cyrillic sans name in the browser — `verify-treemap.py` holds the budget, not the drawn width, so it will not catch the overshoot.
-
-Counting by script is still the trap. `Шкаф ODF-2` is four Cyrillic letters, a space, three Latin letters, a hyphen, and a digit; a formula that tallies Cyrillic letters, Latin letters, and spaces silently drops `-` and `2` and sizes the box for eight of its ten characters.
-
-**Preserve printed labels.** A label the reader matches against a physical thing — a cabinet, a splice closure, a port map — carries the exact printed string. Don't transliterate it and don't re-case it; if one has to sit in an uppercase slot such as an eyebrow, drop the transform for that label rather than re-case the printed string. `Шкаф ODF-2` stays `Шкаф ODF-2`, not `Shkaf ODF-2`.
+### Hard Typography Requirements:
+1. **Typography Floor:** Strictly $\ge 11\text{px}$ for all Vietnamese text. Never use 7px–9px font sizes.
+2. **Vietnamese Diacritic Line Height:** Multi-line text must use `<tspan>` with `dy="1.35em"` to `1.5em"` (recommended `1.4em`) to prevent accent collision.
+3. **No ForeignObject:** Use static SVG `<tspan>` with pre-calculated line wrapping for full standalone portability.
+4. **Never Shrink Font to Save a Box:** Wrap text into multiple lines, widen the box, and reposition neighbor nodes.
 
 ---
 
-## Stroke, radius, spacing
+## 3. Geometry & Safe Padding Constraints
 
-| Token | Value | Use |
-|---|---|---|
-| `stroke-thin` | `0.8` | Tag-box outlines, leaf nodes |
-| `stroke-default` | `1` | Most strokes |
-| `stroke-strong` | `1.2` | Emphasis strokes |
-| `radius-sm` | `4` | Small tags |
-| `radius-md` | `6` | Node boxes |
-| `radius-lg` | `8` | Containers, rings |
-| `grid` | `4` | Every coord, size, and gap is divisible by 4 (hard rule) |
+Every text label inside a semantic owner card or pill MUST satisfy:
+- $\text{text.left} \ge \text{owner.left} + \text{paddingLeft}$ ($\text{paddingLeft} \ge 6\text{px}$, min hard floor $4\text{px}$)
+- $\text{text.right} \le \text{owner.right} - \text{paddingRight}$ ($\text{paddingRight} \ge 6\text{px}$, min hard floor $4\text{px}$)
+- $\text{text.top} \ge \text{owner.top} + \text{paddingTop}$ ($\text{paddingTop} \ge 4\text{px}$)
+- $\text{text.bottom} \le \text{owner.bottom} - \text{paddingBottom}$ ($\text{paddingBottom} \ge 4\text{px}$)
 
----
+### Content-Driven Sizing Formula:
+$$\text{Box Width} \ge \text{measuredTextWidth} + 2 \times \text{safeHorizontalPadding}$$
+$$\text{Box Height} \ge \text{measuredTextHeight} + 2 \times \text{safeVerticalPadding}$$
 
-## Node type → treatment
-
-Semantic role combinations — reference these by name in type specs.
-
-| Type | Fill | Stroke |
-|---|---|---|
-| `focal` (1–2 max) | `accent-tint` | `accent` |
-| `backend` | `#ffffff` (white) | `ink` |
-| `store` | `ink @ 0.05` | `muted` |
-| `external` | `ink @ 0.03` | `ink @ 0.30` |
-| `input` | `muted @ 0.10` | `soft` |
-| `optional` | `ink @ 0.02` | `ink @ 0.20` dashed `4,3` |
-| `security` | `accent @ 0.05` | `accent @ 0.50` dashed `4,4` |
+For multi-line cards:
+$$\text{Box Height} \ge \text{headerHeight} + (\text{lineCount} \times \text{lineHeight}) + 2 \times \text{paddingY}$$
 
 ---
 
-## Customizing the skin
+## 4. Connector & Arrow Collision Rules
 
-Four options:
-
-1. **Run onboarding** — see [`onboarding.md`](onboarding.md). Drop a URL; the skill extracts the palette + fonts and rewrites this file.
-2. **Edit by hand** — change the hex values in the tables above. Run the pre-output taste gate afterward to verify the accent still reads as "focal" against the new paper color.
-3. **Brand handoff** — paste your existing design-token JSON into a new section here and map its tokens to the semantic roles above.
-4. **Client profiles** — save and switch named skins, or bind one to a project, using [`profiles.md`](profiles.md).
-
-### Constraints (don't break these)
-
-- **Contrast**: `ink` must hit WCAG AA on `paper`. `muted` must hit AA on `paper` for 11px+ text.
-- **One accent**: pick one color for `accent`. Two accents erases the focal signal.
-- **No rainbow palette**: if your brand ships 8 colors, pick 3 (paper, ink, accent). The rest become `muted` variants.
-- **Serif + sans + mono**: three families, not more. If brand typography is all sans, keep Instrument Serif for `title` and `callout` anyway — the contrast is load-bearing.
-- **Paper is warm-neutral, not pure white**: pure white turns the design sterile. Pick a cream, bone, or light grey with a hint of warmth.
-- **Dot pattern is optional, not default**: the 22×22 dot pattern is an opt-in "dotted paper" variant (good for long-form editorial hero diagrams). The default background is a clean `paper` fill, no pattern. When the pattern is enabled, it should sit at ~10% opacity of `ink` on `paper` — visible but quiet.
-- **Container is clean by default**: the diagram sits directly on the page paper, no secondary container background or border. A framed variant (`paper-2` bg + `rule` border + 8px radius + padding) is available as an opt-in for card-heavy layouts, but don't reach for it by default — the extra chrome fights the figure.
-
----
-
-## NOVYX Local Visual Profile (Seed + Linear)
-
-> **Source of Truth:** [`DESIGN.md`](../../../../DESIGN.md) & `@novyx/ui`.
-> This profile maps diagram semantic roles directly to NOVYX project design tokens. All NOVYX architecture, workflow, and lifecycle diagrams MUST reference this profile.
-
-### Color Mapping (Project Tokens → Diagram Semantic Roles)
-
-| Diagram Semantic Role | NOVYX Token Name | Exact Hex / Value | Purpose & Usage in Diagrams |
-|:---|:---|:---|:---|
-| `paper` | `colors.snowWhite` | `#fcfcf7` | Diagram canvas background, primary page background |
-| `paper-2` | `colors.warmStone` | `#eeeee9` | Subtle container background, alternate section fill, stepper track |
-| `card` | `colors.card` | `#fffffb` | Clean card / node surface with high contrast against `paper` |
-| `ink` | `colors.ink` | `#13231a` | Primary text, titles, high-contrast borders and active arrows |
-| `muted` | `colors.pewter` | `#64748b` | Body copy, secondary descriptions, passive connector lines |
-| `soft` | `colors.muted` | `#94a3b8` | Metadata, captions, disabled states, subtle annotations |
-| `rule` | `colors.hairlineBorder` | `rgba(19,35,26,0.12)` | Hairline dividers, subtle card borders (1px) |
-| `rule-solid` | `colors.hairlineBorder` | `#e6ede3` | Solid 1px card boundary lines and table outlines |
-| `accent` | `colors.forestDepths` | `#1c3a13` | Brand authority stroke, primary decision gates, focal CTA |
-| `accent-focal` | `colors.limePulse` | `#d3fa99` | Punctuation badge, current step indicator, active focal pill |
-| `accent-tint` | `colors.primarySoft` | `#e7f6df` | Verified step background, success badge background |
-| `success` | `colors.primaryDark` | `#236236` | Approved terminal state, verified checkmarks, positive paths |
-| `warning` | `colors.amber` | `#9f7115` | Waiting review, overdue warning, caution callout |
-| `warning-tint` | `colors.amberSoft` | `#fffae0` | Waiting review card fill, warning banner background |
-| `danger` | `colors.danger` | `#c92c4a` | Rework required, rejected terminal state, blocked issues |
-| `danger-tint` | `colors.dangerSoft` | `#fff1f2` | Error banner background, rework callout fill |
-| `link` / `info` | `colors.sky` | `#1c7890` | In-progress tasks, GPS in-progress, system API sync paths |
-| `info-tint` | `colors.skySoft` | `#eef8fb` | In-progress badge background, info card fill |
-
-> [!NOTE]
-> Do NOT use `#f5f5f5` or `#2d3142` (upstream generic skin) in NOVYX diagrams. Always use `#fcfcf7` (`snowWhite`) and `#13231a` (`ink`) to maintain strict fidelity with `DESIGN.md`.
+1. Arrow labels must have opaque background pills (`<rect fill="#FFF" ...>`) to prevent the connector line from crossing through the text.
+2. Endpoints of connectors must terminate cleanly at node borders; lines must not pass through unrelated cards or text blocks.
+3. Connectors between columns must maintain minimum 16px clearance from neighbor cards.

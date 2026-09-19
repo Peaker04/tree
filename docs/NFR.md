@@ -17,12 +17,13 @@ Hệ thống loại bỏ hoàn toàn các tuyên bố chung chung (như "ứng d
 - **Kịch bản vận hành:** Nhân viên hoặc Quản lý thao tác cuộn nhanh danh sách nhiệm vụ hoặc danh mục cây trên thiết bị Android ngoài thực địa.
 - **Kích hoạt (Trigger):** Thao tác cuộn nhanh (Fling scroll) hoặc nhập từ khóa tìm kiếm.
 - **Ngữ cảnh kiểm thử tham chiếu:** Thiết bị Android phân khúc phổ thông (tham chiếu `[PROPOSED BENCHMARK]`: RAM 3GB–4GB, danh sách 200–1.000 bản ghi).
-- **Phản ứng kỳ vọng:** Giao diện duy trì độ mượt mà ổn định, không bị đơ giật; bộ nhớ RAM không tăng đột biến gây OOM crash.
+- **Mục tiêu chất lượng (Quality Outcome):** Duy trì bộ nhớ có giới hạn (bounded-memory) và giao diện phản hồi mượt mà cho các danh sách lớn; không bị đơ giật hoặc crash OOM trên thiết bị hạn chế tài nguyên.
+- **Ràng buộc kiến trúc (Architecture Constraint):** Bắt buộc sử dụng cơ chế ảo hóa danh sách (virtualized collection); nghiêm cấm render danh sách tăng trưởng không giới hạn bằng `ScrollView` kết hợp `map()`.
+- **Tùy chọn kỹ thuật triển khai (Implementation Option):** `FlatList` / `SectionList` tiêu chuẩn của React Native với `windowSize` tối ưu và `keyExtractor` ổn định (hoặc `FlashList` nếu profiling thực tế yêu cầu).
 - **Chỉ tiêu đo lường & Phân loại:**
-  - `[APPROVED REQUIREMENT]`: Bắt buộc sử dụng cơ chế ảo hóa danh sách; nghiêm cấm render danh sách không giới hạn bằng `ScrollView` kết hợp `map()`.
-  - `[TARGET SLO]`: Tỷ lệ khung hình rơi (Dropped frames) $< 5\%$; thời gian phản hồi khung hình hướng tới $\le 16.6\text{ms}$ (60 FPS).
-  - `[NEEDS_MEASUREMENT]`: Ngưỡng tải chính xác (200 vs 1.000 bản ghi) cần đo đạc thực tế trên thiết bị mục tiêu ở pha sau.
-- **Tùy chọn kỹ thuật tham chiếu (Reference Implementation Option):** `FlatList` với `windowSize` tối ưu và `keyExtractor` ổn định (hoặc `FlashList` nếu profiling yêu cầu).
+  - `[TARGET SLO]`: Tỷ lệ khung hình rơi (Dropped frames) $< 5\%$; thời gian kết xuất khung hình hướng tới $\le 16.6\text{ms}$ (60 FPS).
+  - `[BENCHMARK CONTEXT]`: Thiết bị Android phổ thông RAM 3GB–4GB, danh sách tham chiếu 200–1.000 bản ghi.
+  - `[NEEDS_MEASUREMENT]`: Ngưỡng tải chính xác và giới hạn bộ nhớ cụ thể cần đo đạc thực nghiệm trên thiết bị mục tiêu ở pha Kiến trúc kỹ thuật.
 - **Phương thức kiểm chứng (Verification Method):** Đo đạc qua React Native DevTools / Systrace trên máy ảo và thiết bị thật.
 
 ---
