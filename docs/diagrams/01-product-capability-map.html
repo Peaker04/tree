@@ -77,16 +77,28 @@
         margin-bottom: 1.75rem;
       }
 
-      .status-pill {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 9999px;
-        font-size: 11px;
+      .badge-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 0.6rem;
+      }
+      .badge-derived {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
         font-weight: 600;
-        background: rgba(22, 101, 52, 0.1);
-        color: #166534;
-        border: 1px solid rgba(22, 101, 52, 0.25);
-        margin-bottom: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #fff;
+        background: #166534;
+        padding: 4px 10px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+      .source-ref {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--color-muted);
       }
 
       svg {
@@ -100,7 +112,10 @@
   </head>
   <body>
     <div class="frame">
-      <div class="status-pill">DERIVED VIEW — APPROVED BUSINESS BASELINE</div>
+      <div class="badge-container">
+        <span class="badge-derived">CANONICAL CURRENT-STATE — DERIVED VIEW</span>
+        <span class="source-ref">SOURCE: docs/PRODUCT.md &amp; docs/DOMAIN.md</span>
+      </div>
       <p class="eyebrow">01 · Business Capability Map · Canonical Baseline</p>
       <h1>Bản đồ Năng lực Nghiệp vụ NOVYX GreenOps</h1>
       <p class="desc">
@@ -132,7 +147,7 @@
           stroke="#84CC16"
           stroke-width="2"
         />
-        <rect x="50" y="16" width="240" height="24" rx="4" fill="#112116" />
+        <rect x="50" y="16" width="310" height="24" rx="4" fill="#112116" />
         <text
           x="62"
           y="32"
@@ -142,7 +157,7 @@
           fill="#84CC16"
           letter-spacing="0.08em"
         >
-          CORE DOMAIN · PHẠM VI LÕI
+          CAP-01 · CORE DOMAIN · PHẠM VI LÕI
         </text>
         <text x="50" y="64" font-family="'Noto Sans', sans-serif" font-size="16" font-weight="600" fill="#112116">
           Xác thực tác nghiệp hiện trường (Field Work Verification)
@@ -325,7 +340,7 @@
           <g transform="translate(0, 0)">
             <rect x="0" y="0" width="212" height="166" rx="6" fill="#FFF" stroke="#E2E0D8" />
             <text x="16" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Work Management
+              CAP-02 · Work Mgmt
             </text>
             <text x="16" y="42" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">
               Quản lý nhiệm vụ
@@ -349,7 +364,7 @@
           <g transform="translate(229, 0)">
             <rect x="0" y="0" width="212" height="166" rx="6" fill="#FFF" stroke="#E2E0D8" />
             <text x="16" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Tree Asset Registry
+              CAP-03 · Tree Registry
             </text>
             <text x="16" y="42" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">
               Hồ sơ tài sản cây
@@ -373,7 +388,7 @@
           <g transform="translate(458, 0)">
             <rect x="0" y="0" width="212" height="166" rx="6" fill="#FFF" stroke="#E2E0D8" />
             <text x="16" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Review &amp; Quality Control
+              CAP-04 · Review &amp; QC
             </text>
             <text x="16" y="42" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">
               Kiểm duyệt chất lượng
@@ -397,7 +412,7 @@
           <g transform="translate(688, 0)">
             <rect x="0" y="0" width="212" height="166" rx="6" fill="#FFF" stroke="#E2E0D8" />
             <text x="16" y="26" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Operational Alerts
+              CAP-05 · Alerts
             </text>
             <text x="16" y="42" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">
               Thông báo vận hành
@@ -438,7 +453,7 @@
           <g transform="translate(0, 0)">
             <rect x="0" y="0" width="212" height="130" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
             <text x="16" y="24" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Identity &amp; Session
+              CAP-06 · Identity
             </text>
             <text x="16" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
               Đăng nhập vai trò Staff/Manager,
@@ -455,7 +470,7 @@
           <g transform="translate(229, 0)">
             <rect x="0" y="0" width="212" height="130" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
             <text x="16" y="24" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Contextual Permissions
+              CAP-07 · Permissions
             </text>
             <text x="16" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
               Xin quyền Camera &amp; GPS đúng
@@ -472,7 +487,7 @@
           <g transform="translate(458, 0)">
             <rect x="0" y="0" width="212" height="130" rx="6" fill="#FBFBF9" stroke="#E2E0D8" />
             <text x="16" y="24" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="600" fill="#112116">
-              Resilient Local Cache
+              CAP-08 · Offline Cache
             </text>
             <text x="16" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
               Lưu snapshot và ảnh ngoại tuyến,

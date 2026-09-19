@@ -144,18 +144,25 @@ File [`scripts/diagram_tool.py`](file:///d:/ki7/EXE/tree/scripts/diagram_tool.py
 ### Kết Quả Kiểm Chứng Thực Nghiệm:
 
 ```
-[PASS] validate proposed-01: 51 texts, 13 nodes — Zero Collision, Zero Overflow, Zero Clipping.
-[PASS] validate proposed-02: 59 texts, 21 nodes — Zero Collision, Zero Overflow, Zero Clipping.
-[PASS] validate proposed-03: 43 texts, 19 nodes — Zero Collision, Zero Overflow, Zero Clipping.
-[PASS] validate proposed-04: 44 texts, 12 nodes — Zero Collision, Zero Overflow, Zero Clipping.
+[PASS] validate 01-product-capability-map: 38 texts, 18 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate 02-domain-context-map: 45 texts, 18 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate 07-action-eligibility-security-matrix: 64 texts, 22 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate 08-role-information-architecture: 39 texts, 13 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate 09-system-current-state: 67 texts, 21 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate 10-system-target-architecture: 55 texts, 17 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate 12-architecture-dependency-map: 44 texts, 16 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate proposed-01-current-vs-recommended-workflow: 51 texts, 13 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate proposed-02-mvp-operational-swimlane: 59 texts, 21 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate proposed-03-minimal-task-lifecycle: 43 texts, 19 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
+[PASS] validate proposed-04-proof-policy-and-rework: 44 texts, 12 nodes — Zero Collision, Zero Overflow, Zero Clipping, Safe Padding OK.
 
-[PASS] export smoke-test proposed-01:
-  - SVG: proposed-01-current-vs-recommended-workflow.svg (14,605 bytes)
-  - PNG diagram @2x: proposed-01-current-vs-recommended-workflow.png (262,317 bytes)
-  - PNG diagram @3x: proposed-01-current-vs-recommended-workflow@3x.png (415,487 bytes)
-  - PDF diagram: proposed-01-current-vs-recommended-workflow.pdf (292,443 bytes)
-  - PNG full-page @2x: proposed-01-current-vs-recommended-workflow.full.png (349,998 bytes)
-  - PDF full-page: proposed-01-current-vs-recommended-workflow.full.pdf (384,221 bytes)
+[PASS] export suite regeneration: 56 artifacts generated in dist/diagrams_verification/
+  - 11 Standalone SVG files (*.svg, valid XML, Google Fonts embedded, rgba sanitized)
+  - 11 Diagram-only PNG files (*.png @2x, tight crop)
+  - 1 High-res Diagram PNG (proposed-01@3x.png @3x, 3180x2040px)
+  - 11 Full-page PNG files (*.full.png @2x, complete visual context)
+  - 11 Diagram-only PDF files (*.pdf, vector, 0-margin)
+  - 11 Full-page PDF files (*.full.pdf, printable document)
 ```
 
 ---

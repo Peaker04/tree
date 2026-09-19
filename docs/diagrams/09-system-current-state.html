@@ -75,16 +75,28 @@
         margin-bottom: 1.75rem;
       }
 
-      .status-pill {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 9999px;
-        font-size: 11px;
+      .badge-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 0.6rem;
+      }
+      .badge-asis {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
         font-weight: 600;
-        background: rgba(220, 38, 38, 0.1);
-        color: #dc2626;
-        border: 1px solid rgba(220, 38, 38, 0.25);
-        margin-bottom: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #fff;
+        background: #dc2626;
+        padding: 4px 10px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+      .source-ref {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--color-muted);
       }
 
       svg {
@@ -98,7 +110,13 @@
   </head>
   <body>
     <div class="frame">
-      <div class="status-pill">HISTORICAL AS-IS ARCHITECTURE</div>
+      <div class="badge-container">
+        <span class="badge-asis">CANONICAL CURRENT-STATE — HISTORICAL AS-IS</span>
+        <span class="source-ref"
+          >SOURCE: apps/mobile/src/screens/MobileApp.tsx, apps/mobile/src/services/greenOpsService.ts (Baseline:
+          2f9a26b)</span
+        >
+      </div>
       <p class="eyebrow">09 · AS-IS Architecture · Baseline Commit 2f9a26b</p>
       <h1>Hiện trạng Kiến trúc Hệ thống (System Current State)</h1>
       <p class="desc">

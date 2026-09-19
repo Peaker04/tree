@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "recorded_at": "2026-09-19T13:42:00+07:00",
+  "recorded_at": "2026-09-19T18:48:00+07:00",
   "reviewer": "Antigravity Lead Verifier",
   "review_scope": "Active Diagram Visual Inspection (11 Active Diagrams)",
   "active_diagrams": [
@@ -26,8 +26,8 @@
     {
       "diagram": "proposed-02-mvp-operational-swimlane.html",
       "artifact_path": "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
-      "dimensions": "2600x1400px",
-      "file_size": 282739,
+      "dimensions": "2520x1600px",
+      "file_size": 283719,
       "result": "PASS",
       "checked_gates": [
         "DG-VIS-001",
@@ -40,13 +40,13 @@
         "DG-LAY-007"
       ],
       "findings": "Làn swimlane Nhân viên / Quản lý phân tách rõ ràng; các thẻ card mở rộng chứa chữ thoáng đãng; 2 nhãn rẽ nhánh 11px sắc nét; không có connector cắt xuyên nội thất card.",
-      "artifact_sha256": "bd493bb79bc383f00235e4f55ed0f9a72f6c8b7c7c2257c27de78096de5af454"
+      "artifact_sha256": "e9a98e512c36bd4e91797c4656d9213a4b6dceeb2d12d7214ee03636c70e4421"
     },
     {
       "diagram": "proposed-03-minimal-task-lifecycle.html",
       "artifact_path": "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
-      "dimensions": "2200x1200px",
-      "file_size": 192911,
+      "dimensions": "2360x1400px",
+      "file_size": 192813,
       "result": "PASS",
       "checked_gates": [
         "DG-VIS-001",
@@ -59,12 +59,12 @@
         "DG-LAY-007"
       ],
       "findings": "7 trạng thái tạo chu trình khép kín; đường loop ngược RequestRework có nhãn pill che chắn; 3 lối thoát sự cố BLOCKED màu hổ phách cảnh báo rõ rệt; marker gắn chính xác.",
-      "artifact_sha256": "02ab656c0bf3ba939e74b38044b1baccbda4f418e3f19547b1e043a1008d1c2e"
+      "artifact_sha256": "06870886ff685b3649726ff1306c1d6e96bf4f6cac53fdd6e4836d01404cfa28"
     },
     {
       "diagram": "proposed-04-proof-policy-and-rework.html",
       "artifact_path": "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
-      "dimensions": "2600x1500px",
+      "dimensions": "2360x1480px",
       "file_size": 427284,
       "result": "PASS",
       "checked_gates": [
@@ -78,13 +78,13 @@
         "DG-LAY-007"
       ],
       "findings": "3 cột đại diện cho 3 Profile (CHANGE, SERVICE, INSPECTION) định dạng chuẩn; khối Rework giải thích cơ chế lưu vết đa phiên bản rõ ràng; không tràn mép hay dính viền.",
-      "artifact_sha256": "2fbcd5db9f3f29e6618334036277b60bfeb4d85d7255fed3bab5572f74227f03"
+      "artifact_sha256": "1c1c9e9e9b9d593c0fc6e498408017b9a44201b47f03c45339ce423bba8416e1"
     },
     {
       "diagram": "01-product-capability-map.html",
       "artifact_path": "dist/diagrams_verification/01-product-capability-map.png",
-      "dimensions": "2500x1400px",
-      "file_size": 254186,
+      "dimensions": "2000x1380px",
+      "file_size": 253026,
       "result": "PASS",
       "checked_gates": [
         "DG-VIS-001",
@@ -97,13 +97,13 @@
         "DG-LAY-007"
       ],
       "findings": "5 nhóm năng lực chuẩn từ PRODUCT.md; phân cấp Core Domain nổi bật với viền xanh lá đậm; nhãn phụ và mô tả cỡ chữ 11-20px; khoảng cách giữa các card tối thiểu 16px.",
-      "artifact_sha256": "43dae1c5162e8f73417f634bf1400b7a391127bad7fd359d727982b19eecaf5f"
+      "artifact_sha256": "3f33d2bb602936a56cc5dd2f6cbe1b556ac2ada47a41b02d4a29cd3e821da981"
     },
     {
       "diagram": "02-domain-context-map.html",
       "artifact_path": "dist/diagrams_verification/02-domain-context-map.png",
-      "dimensions": "2300x1300px",
-      "file_size": 231361,
+      "dimensions": "2400x1360px",
+      "file_size": 231853,
       "result": "PASS",
       "checked_gates": [
         "DG-VIS-001",
@@ -116,12 +116,12 @@
         "DG-LAY-007"
       ],
       "findings": "Quan hệ Upstream/Downstream hiển thị chuẩn xác; nhãn quan hệ U/D và Customer-Supplier nằm trên pill có nền che chắn; không còn chuỗi 5 bước lỗi thời.",
-      "artifact_sha256": "8865631b9ac6ab09afac39bbab6e2550c23a7f7d76ad834d95b23823642eaf7d"
+      "artifact_sha256": "63e5e696220dcae2cf6051486eef5b6d57484127e4012046808841a6951d4486"
     },
     {
       "diagram": "07-action-eligibility-security-matrix.html",
       "artifact_path": "dist/diagrams_verification/07-action-eligibility-security-matrix.png",
-      "dimensions": "2500x1300px",
+      "dimensions": "2480x1340px",
       "file_size": 285472,
       "result": "PASS",
       "checked_gates": [
@@ -140,8 +140,8 @@
     {
       "diagram": "08-role-information-architecture.html",
       "artifact_path": "dist/diagrams_verification/08-role-information-architecture.png",
-      "dimensions": "2400x1400px",
-      "file_size": 269206,
+      "dimensions": "2240x1340px",
+      "file_size": 269189,
       "result": "PASS",
       "checked_gates": [
         "DG-VIS-001",
@@ -154,12 +154,12 @@
         "DG-LAY-007"
       ],
       "findings": "Cấu trúc thanh điều hướng Notched Bottom Nav 5 vị trí thể hiện chính xác; toàn bộ nhãn đạt 11px-16px; cây màn hình phân nhánh rành mạch.",
-      "artifact_sha256": "16471c90cfaa6ac80aef77c85a07e1de4a3f7976abf9eb8a37d121804e79c7d1"
+      "artifact_sha256": "418676258330b8b1a48eb2982deba164f27584f425bbd454da56f3ec281fc196"
     },
     {
       "diagram": "09-system-current-state.html",
       "artifact_path": "dist/diagrams_verification/09-system-current-state.png",
-      "dimensions": "2300x1300px",
+      "dimensions": "2040x1260px",
       "file_size": 221957,
       "result": "PASS",
       "checked_gates": [
@@ -178,7 +178,7 @@
     {
       "diagram": "10-system-target-architecture.html",
       "artifact_path": "dist/diagrams_verification/10-system-target-architecture.png",
-      "dimensions": "2300x1300px",
+      "dimensions": "2120x1480px",
       "file_size": 219596,
       "result": "PASS",
       "checked_gates": [
@@ -197,7 +197,7 @@
     {
       "diagram": "12-architecture-dependency-map.html",
       "artifact_path": "dist/diagrams_verification/12-architecture-dependency-map.png",
-      "dimensions": "2000x1200px",
+      "dimensions": "2120x1300px",
       "file_size": 144457,
       "result": "PASS",
       "checked_gates": [
