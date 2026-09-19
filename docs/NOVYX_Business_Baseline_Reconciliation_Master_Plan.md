@@ -312,6 +312,27 @@ B. Governance Action Matrix
 | P4-11 | Break-glass tách riêng normal authorization |
 | P4-12 | Read permission và mutate permission không bị gộp |
 
+## Artifact
+
+```text
+docs/business-reconciliation/
+  07-AUTHORIZATION-ACTION-ELIGIBILITY.md
+```
+
+## Exit Gate
+
+```text
+P4 PASS
+```
+
+Chỉ khi:
+- Operational matrix hoàn chỉnh (Field Staff, Operations Manager)
+- Governance matrix hoàn chỉnh (Platform Administrator)
+- System authority matrix xác định rõ technical automation vs human authority
+- Task action × Task status matrix xác định chính xác 7 domain states và terminal state immutability
+- Separation of Duties và 4-factor eligibility formula được thực thi đầy đủ
+- Quality gates P4-01..P4-12 đều PASS có bằng chứng đối soát.
+
 ## Quality test
 
 ```text
