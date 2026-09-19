@@ -16,7 +16,7 @@
 > - Branch: `base-setup`
 > - Starting Commit HEAD: [`95d84d921b32b4c09cad1be5f64f618f21dc1cf6`](https://github.com/Peaker04/tree/commit/95d84d921b32b4c09cad1be5f64f618f21dc1cf6)
 > - Starting Tree Hash: `ac608d879ac4f79b2d5680a79e8a913127f8c1f6`
-> - Trạng thái: **PHASE 2 PASS** (100% tiêu chuẩn P2-01..P2-13 có bằng chứng nghiệm thu nhị phân, 0 TBD/MAYBE).
+> - Trạng thái: **PHASE 2 PASS — SEMANTICALLY CLOSED** (100% tiêu chuẩn P2-01..P2-13 và SC-01..SC-04 có bằng chứng nghiệm thu nhị phân, 0 TBD/MAYBE).
 
 ---
 
@@ -80,16 +80,26 @@ Mọi năng lực ứng viên của Quản trị hệ thống bắt buộc phả
 - **Tài nguyên làm chủ**: Thực thể Phân quyền người dùng (`UserRoleAssignment`).
 - **Phạm vi đọc (Read Scope)**: Bảng phân quyền vai trò hiện tại và lịch sử thay đổi vai trò của toàn bộ người dùng.
 - **Phạm vi ghi (Write Scope)**: Cập nhật trường `role` của người dùng.
+- **Quy tắc Khởi tạo Nền tảng (Bootstrap Rule)**:
+  1. *Thiết lập Admin đầu tiên*: Platform Administrator đầu tiên được xác lập thông qua quy trình khởi tạo có kiểm soát (controlled bootstrap) trong giai đoạn thiết lập môi trường/hệ thống ban đầu.
+  2. *Bản chất của Bootstrap*: Bootstrap TUYỆT ĐỐI KHÔNG PHẢI là tự đăng ký (self-registration), không phải do Manager nâng lên, không phải do Staff tự phong, và không phải luồng sử dụng thông thường trong ứng dụng.
+  3. *Lưu vết khởi tạo*: Quy trình bootstrap bắt buộc phải tạo bản ghi khởi tạo kiểm toán bất biến (auditable initialization record).
+- **Quy tắc Gán vai trò Chuẩn tắc trong MVP (Normal MVP Role Assignment)**:
+  1. Sau khi bootstrap, một Platform Administrator hiện hữu có toàn quyền gán một người dùng đang ở trạng thái `ACTIVE` vào bất kỳ vai trò nào: `staff`, `manager`, hoặc `admin`.
+  2. Việc gán thêm Admin mới được thực hiện trực tiếp bởi Admin hiện hữu và bắt buộc lưu vết kiểm toán đầy đủ.
+  3. Cơ chế phê duyệt kép (Dual-Admin / Four-Eyes Approval) KHÔNG phải là điều kiện bắt buộc chưa chốt của MVP, mà được phân loại rõ ràng là biện pháp tăng cường bảo mật tại giai đoạn **`NEXT SECURITY HARDENING`**.
+  4. Tuyệt đối không tạo ra các vai trò con người mới chưa được duyệt như: `Owner`, `Super Admin`, hay `Security Approver`.
 - **Điều kiện tiên quyết (Preconditions)**: Tài khoản mục tiêu phải tồn tại và đang ở trạng thái `ACTIVE`; Vai trò yêu cầu phải thuộc tập `{'staff', 'manager', 'admin'}`; Phải có lý do điều chuyển công tác bằng văn bản.
 - **Ranh giới cấm (Forbidden Actions)**:
-  - **CẤM TỰ NÂNG QUYỀN (ADM-SOD-01)**: Admin không được tự gán quyền cho chính mình mà không qua cơ chế phê duyệt kép (Dual-Admin Approval nếu có từ 2 Admin trở lên).
-  - CẤM Manager gán hoặc thay đổi vai trò của bất kỳ ai.
+  - **CẤM TỰ THAY ĐỔI VAI TRÒ (ADM-SOD-01)**: Admin không được tự ý nâng hoặc thay đổi vai trò của chính mình thông qua lệnh `AssignRole` thông thường.
+  - CẤM Quản lý vận hành (Manager) gán hoặc thay đổi vai trò của bất kỳ ai.
+  - CẤM Tác nhân tự động hóa (System) tự ý gán hoặc nâng quyền vai trò cho người dùng.
   - CẤM ghi đè làm mất vết lịch sử vai trò cũ.
 - **Yêu cầu lưu vết kiểm toán (Audit Requirement)**: Audit Event bắt buộc: `actorId`, `targetUserId`, `oldRole`, `newRole`, `timestamp`, `reason`.
 - **Yêu cầu quản lý phiên bản (Versioning)**: `AUDIT-ONLY` (Mọi thay đổi vai trò đều tạo ra bản ghi lịch sử bất biến; tuyệt đối không cập nhật đè).
 - **Ràng buộc Phân tách Trách nhiệm (SoD)**: Thay đổi vai trò của một người từ `staff` lên `manager` không làm thay đổi quyền tác giả của họ trong các báo cáo chăm sóc cây cũ khi họ còn là Staff.
 - **Phân loại trạng thái**: **`MVP`** (Bắt buộc).
-- **Lý do (Rationale)**: Cốt lõi của mô hình kiểm soát truy cập (Access Control); giải quyết dứt điểm khoảng trống vô chủ phân quyền.
+- **Lý do (Rationale)**: Cốt lõi của mô hình kiểm soát truy cập (Access Control); giải quyết dứt điểm khoảng trống vô chủ phân quyền với quy tắc khởi tạo tất định.
 
 ---
 
@@ -179,12 +189,14 @@ Mọi năng lực ứng viên của Quản trị hệ thống bắt buộc phả
 - **Tài nguyên làm chủ**: Danh mục Loại công việc (`TaskTypeCatalog`).
 - **Phạm vi đọc (Read Scope)**: Toàn bộ danh mục TaskType.
 - **Phạm vi ghi (Write Scope)**: Thêm mới loại công việc, kích hoạt/ngưng kích hoạt (`ACTIVE` / `INACTIVE`) loại công việc.
-- **Điều kiện tiên quyết (Preconditions)**: Mỗi loại công việc mới bắt buộc phải được gắn kèm một hồ sơ bằng chứng chuẩn (`ProofProfile`) trước khi kích hoạt.
+- **Điều kiện tiên quyết (Preconditions)**: Mỗi loại công việc mới bắt buộc phải được định danh bằng mã ổn định (`TaskTypeId`) và được gắn kèm một hồ sơ bằng chứng chuẩn (`ProofProfile`) trước khi kích hoạt.
 - **Ranh giới cấm (Forbidden Actions)**:
   - CẤM Quản lý vận hành (Manager) tự ý gõ tay hoặc tạo ra các TaskType tùy tiện ngoài danh mục đã duyệt.
-  - CẤM xóa bỏ (Hard Delete) một TaskType nếu đã có nhiệm vụ trong quá khứ tham chiếu đến nó (chỉ được chuyển sang `INACTIVE` để không cho chọn mới).
-- **Yêu cầu lưu vết kiểm toán (Audit Requirement)**: Lưu vết `actorId`, `taskTypeId`, `action`, `proofProfileMapping`, `timestamp`.
-- **Yêu cầu quản lý phiên bản (Versioning)**: `VERSIONED` / `AUDIT-ONLY`.
+  - CẤM xóa bỏ vật lý (Hard Delete) một TaskType nếu đã có nhiệm vụ trong quá khứ tham chiếu đến nó (chỉ được chuyển sang trạng thái `INACTIVE` để không cho chọn mới).
+  - CẤM sửa đổi trực tiếp ý nghĩa nghiệp vụ của một TaskType đã dùng trong lịch sử (khi cần thay thế ngữ nghĩa, bắt buộc phải tạo một TaskType mới thay vì sửa đè lên TaskType cũ).
+- **Yêu cầu lưu vết kiểm toán (Audit Requirement)**: Lưu vết `actorId`, `taskTypeId`, `action`, `proofProfileMapping`, `timestamp`, `reason`.
+- **Yêu cầu quản lý phiên bản (Versioning)**: **`AUDIT-ONLY`** (Toàn bộ thao tác thêm mới và bật/tắt trạng thái `ACTIVE`/`INACTIVE` đều được lưu vết kiểm toán bất biến; các tham chiếu nhiệm vụ lịch sử luôn được giải quyết toàn vẹn thông qua mã định danh ổn định).
+  - *Lưu ý phân tách rạch ròi*: Quy tắc ánh xạ `TaskType → ProofProfile Mapping` là tài nguyên độc lập thuộc CAP-ADM-08 và được quản lý theo cơ chế **`VERSIONED`**.
 - **Ràng buộc Phân tách Trách nhiệm (SoD)**: Admin thiết lập danh mục loại việc; Manager chỉ được quyền lựa chọn trong danh mục đang `ACTIVE` để giao việc.
 - **Phân loại trạng thái**: **`MVP`** (Bắt buộc).
 - **Lý do (Rationale)**: Bảo đảm tính đồng nhất của hệ thống quản lý chất lượng; ngăn chặn tình trạng tạo công việc tùy tiện làm sai lệch báo cáo tổng hợp.
@@ -198,7 +210,7 @@ Mọi năng lực ứng viên của Quản trị hệ thống bắt buộc phả
 - **Tài nguyên làm chủ**: Bảng quy tắc chính sách bằng chứng (`ProofProfilePolicyMapping`).
 - **Phạm vi đọc (Read Scope)**: Bảng quy tắc chính sách toàn hệ thống.
 - **Phạm vi ghi (Write Scope)**: Cập nhật quy tắc ánh xạ cho các nhiệm vụ tạo mới trong tương lai.
-- **Điều kiện tiên quyết (Preconditions)**: Phải qua hội đồng kỹ thuật đô thị phê duyệt; Phải có phiên bản chính sách rõ ràng (`PolicyVersion`).
+- **Điều kiện tiên quyết (Preconditions)**: Phải có phiên bản chính sách rõ ràng (`PolicyVersion`); Platform Administrator sở hữu thẩm quyền ban hành phiên bản chính sách mới; Mọi thay đổi chính sách bắt buộc phải có lý do kỹ thuật rõ ràng (`reason`) và lưu vết kiểm toán đầy đủ. (Nếu tổ chức có quy trình thẩm định nội bộ bên ngoài, đó là tiền đề quản trị tổ chức nằm ngoài mô hình tác nhân phần mềm, không tạo thêm tác nhân mới trong hệ thống).
 - **Ranh giới cấm (Forbidden Actions)**:
   - **CẤM TUYỆT ĐỐI (DR-MVP-02)**: Quản lý vận hành (Manager) CẤM tùy tiện hạ cấp `ProofProfile` của một nhiệm vụ đơn lẻ để châm chước cho nhân viên.
   - CẤM áp dụng hồi tố (No Retroactive Mutation): Thay đổi chính sách bằng chứng không được làm thay đổi yêu cầu bằng chứng của các nhiệm vụ đã tạo hoặc đã hoàn thành trong quá khứ.
@@ -227,11 +239,22 @@ Mọi năng lực ứng viên của Quản trị hệ thống bắt buộc phả
 ---
 
 ### 3.10. CAP-ADM-10: Quản Trị Mẫu Ghi Nhận Bệnh Trạng (Findings Template Governance)
-- **Tên năng lực**: Findings Template Governance (Quản trị mẫu ghi nhận sâu bệnh & rủi ro).
-- **Mục đích nghiệp vụ**: Định nghĩa cấu trúc dữ liệu thu thập chuyên sâu cho hồ sơ kiểm định (`INSPECTION_PROOF`), bao gồm danh mục phân loại sâu bệnh, mức độ nghiêng của thân cây, mức độ mục rỗng gốc cây.
-- **Tài nguyên làm chủ**: Biểu mẫu ghi nhận chuyên sâu (`FindingsTemplateSchema`).
+- **Tên năng lực**: Findings Template Governance (Quản trị mẫu ghi nhận sâu bệnh & rủi ro động).
+- **Mục đích nghiệp vụ**: Cung cấp công cụ cho Quản trị hệ thống (Platform Administrator) tự tạo lập, chỉnh sửa, phân bản phiên bản (`versioning`) và bật/tắt các biểu mẫu thu thập dữ liệu rủi ro/sâu bệnh tùy biến động (Dynamic Findings Template Builder) cho hồ sơ kiểm định (`INSPECTION_PROOF`).
+- **Tài nguyên làm chủ**: Biểu mẫu ghi nhận chuyên sâu tùy biến (`DynamicFindingsTemplateSchema`).
 - **Phân loại trạng thái**: **`NEXT`** (Dành cho phiên bản tiếp theo).
-- **Lý do (Rationale)**: Trong phạm vi MVP, việc ghi nhận sự cố và kiểm tra sâu bệnh đã được đáp ứng đầy đủ thông qua hệ thống phân loại rủi ro hiện có (`TreeRiskStatus`: *healthy, abnormal, overdue, pest_risk, leaning*), ghi chú sự cố (`ReportFieldIssue`) và ảnh chụp thực địa. Việc xây dựng một công cụ quản trị biểu mẫu động (Dynamic Form Builder) cho Findings là chưa cần thiết ở giai đoạn khởi đầu, tránh làm phức tạp hóa kiến trúc.
+- **Lý do & Bảo toàn Ngữ nghĩa Bắt buộc (Mandatory Semantic Distinction - SC-01)**:
+  1. *Ngữ nghĩa bất biến của INSPECTION_PROOF*: Theo tài liệu chuẩn tắc [`docs/DOMAIN.md`](../DOMAIN.md) và [`docs/WORKFLOWS.md`](../WORKFLOWS.md), hồ sơ kiểm định bắt buộc gồm 3 thành phần không thể tách rời:
+     $$\text{INSPECTION\_PROOF} = \text{Site Verification} + \text{Structured Findings} + \text{Condition Photo(s)}$$
+  2. *Phân biệt giữa Thu thập dữ liệu và Quản trị mẫu động*:
+     - **Thành phần A: Structured Findings (Ghi nhận bệnh trạng có cấu trúc)**: Là yêu cầu **BẮT BUỘC trong MVP** đối với mọi nhiệm vụ áp dụng `INSPECTION_PROOF`. Trong MVP, hệ thống áp dụng một lược đồ bệnh trạng chuẩn tắc cố định (Fixed Canonical Structured Findings Schema).
+     - **Thành phần B: Findings Template Governance (Quản trị mẫu động)**: Là khả năng cho phép Admin tự ý kéo thả, tạo mới hoặc cấu hình biểu mẫu bệnh trạng tùy biến. Chỉ có Thành phần B này được xếp vào **`NEXT`**.
+  3. *Nguyên tắc cấm thay thế suy diễn (Non-Substitution Invariants)*:
+     - `ReportFieldIssue` (Báo cáo sự cố ách tắc) **KHÔNG PHẢI** là sự thay thế cho Structured Findings.
+     - `TreeRiskStatus` (Trạng thái rủi ro tổng quan) **KHÔNG PHẢI** là sự thay thế cho Structured Findings.
+     - `Condition Photos` (Ảnh chụp hiện trạng) **KHÔNG PHẢI** là sự thay thế cho Structured Findings.
+     - Việc `Findings Template Governance` ở trạng thái `NEXT` tuyệt đối **KHÔNG ĐƯỢC SUY DIỄN** rằng Structured Findings là tùy chọn trong MVP.
+  4. Lược đồ cố định của MVP không cho phép Admin chỉnh sửa động qua giao diện; tính năng quản trị biểu mẫu tùy biến sẽ được phát triển tại giai đoạn `NEXT`.
 
 ---
 
@@ -313,7 +336,7 @@ Tái khẳng định bằng chứng nhị phân: Quản trị hệ thống (Plat
 
 Dự án thiết lập 7 quy tắc Phân tách Trách nhiệm (Separation of Duties) cụ thể cho vai trò Quản trị hệ thống:
 
-- **ADM-SOD-01 (Cấm tự cấp quyền - No Self-Role Escalation)**: Admin tuyệt đối không được tự ý nâng quyền của chính mình hoặc tự tạo thêm tài khoản Admin thứ hai mà không có sự xác nhận của quy trình phê duyệt độc lập.
+- **ADM-SOD-01 (Cấm tự thay đổi vai trò - No Self-Role Mutation)**: Admin tuyệt đối không được tự ý nâng hoặc thay đổi vai trò của chính mình thông qua lệnh `AssignRole` thông thường. Việc phân quyền cho Admin khác được thực hiện trực tiếp bởi một Platform Administrator hiện hữu (với kiểm toán lưu vết bắt buộc); cơ chế phê duyệt kép (Dual-Admin Approval) được định vị là biện pháp tăng cường bảo mật tại giai đoạn **`NEXT SECURITY HARDENING`**.
 - **ADM-SOD-02 (Cấm ghi đè tác giả lịch sử - No Authorship Rewriting)**: Thao tác thay đổi vai trò hoặc khóa tài khoản của Admin tuyệt đối không được làm thay đổi hoặc xóa bỏ tên người thực hiện ban đầu trong các bản ghi lịch sử chăm sóc cây (`CareHistory`) và hồ sơ bằng chứng đã nộp.
 - **ADM-SOD-03 (Bảo toàn bất biến nhật ký kiểm toán - Immutable Audit Log)**: Admin hoàn toàn không có quyền sửa đổi (edit), xóa bỏ (delete) hoặc chèn dữ liệu giả mạo vào sổ nhật ký kiểm toán (`AuditTrail`). Mọi hành vi xâm phạm tính toàn vẹn của log đều bị hệ thống chặn đứng.
 - **ADM-SOD-04 (Quyền quản trị không suy diễn quyền tác vụ - Governance Does Not Imply Operations)**: Thẩm quyền quản trị nền tảng của Admin tuyệt đối không bao hàm quyền can thiệp, sửa đổi hay duyệt các nhiệm vụ vận hành thực địa của Manager.
@@ -376,7 +399,7 @@ Tổng hợp phân loại chính thức toàn bộ 13 năng lực nghiệp vụ 
 | **CAP-ADM-07** | TaskType Catalog Governance | **`MVP`** | Chuẩn hóa danh mục loại công việc; ngăn chặn việc tạo loại task tùy tiện. | **YES** |
 | **CAP-ADM-08** | ProofProfile Policy Governance | **`MVP`** | Xương sống kiểm soát chất lượng; khóa cứng quy tắc bằng chứng, cấm hạ cấp tùy tiện. | **YES** |
 | **CAP-ADM-09** | Checklist Template Governance | **`MVP`** | Tiêu chuẩn kỹ thuật; ban hành biểu mẫu kiểm tra hiện trường có quản lý phiên bản. | **YES** |
-| **CAP-ADM-10** | Findings Template Governance | **`NEXT`** | Biểu mẫu khám bệnh chuyên sâu; trong MVP đã có hệ thống Risk Status và ghi chú sự cố. | NO |
+| **CAP-ADM-10** | Findings Template Governance | **`NEXT`** | Quản trị mẫu động dành cho NEXT; MVP bắt buộc áp dụng lược đồ Structured Findings chuẩn tắc cố định (không suy diễn tùy chọn). | NO |
 | **CAP-ADM-11** | Break-Glass Access | **`NEXT`** | Cơ chế khẩn cấp rủi ro cao; MVP đã có 3 lối thoát an toàn của Manager để giải tỏa ách tắc. | NO |
 | **CAP-ADM-12** | Security Notifications | **`NEXT`** | Hệ thống cảnh báo tức thời; MVP đã ghi nhận đầy đủ 100% vào sổ kiểm toán Audit Trail. | NO |
 | **CAP-ADM-13** | Platform System Configuration | **`REJECTED`** | Mơ hồ và sai lệch ranh giới; cấu hình hạ tầng/server/secrets thuộc DevOps bên ngoài. | NO |
@@ -407,6 +430,20 @@ Kiểm thử chủ động trên 10 kịch bản sai phạm phổ biến nhằm 
 | **CASE I: Admin quản trị cấu hình server, database, secret keys** | Màn hình Admin có mục đổi connection string database. | **FAIL** (Bị cấm) | Bị bác bỏ tại Mục 3.13 (CAP-ADM-13 `REJECTED`). Cấu hình hạ tầng thuộc DevOps bên ngoài. | **PASS (Đã chặn đứng)** |
 | **CASE J: Đổi Master Data cây xanh làm mất bối cảnh bằng chứng cũ** | Đổi tọa độ cây làm sai lệch kết quả đối soát GPS của task đã nghiệm thu. | **FAIL** (Bị cấm) | Bị chặn đứng tại Mục 3.6 và Mục 8. Tọa độ thực tế của task cũ được bảo lưu bất biến. | **PASS (Đã chặn đứng)** |
 
+### 10.1. Thử Nghiệm Phủ Định Đóng Khép Ngữ Nghĩa (Semantic Closure Negative Tests SC-NT-01..07)
+
+Bổ sung 7 kịch bản kiểm thử độc lập giải quyết dứt điểm các khiếm khuyết ngữ nghĩa (Semantic Defects SC-01..SC-04):
+
+| Mã Kiểm Thử | Phát biểu giả định sai phạm | Kết quả mong đợi | Đánh giá thực tế trong Quy tắc Chốt | Kết luận |
+|---|---|:---:|---|:---:|
+| **SC-NT-01** | Findings Template Governance là NEXT đồng nghĩa Structured Findings là tùy chọn trong MVP. | **FAIL** (Sai lệch ngữ nghĩa) | Bác bỏ bởi Mục 3.10 (SC-01). `INSPECTION_PROOF` trong MVP bắt buộc phải có `Structured Findings` theo lược đồ chuẩn tắc cố định. Biểu mẫu động là NEXT không làm suy yếu yêu cầu thu thập dữ liệu MVP. | **PASS (Đã chặn đứng)** |
+| **SC-NT-02** | TaskType có thể vừa là VERSIONED vừa là AUDIT-ONLY mà không có sự phân biệt rạch ròi. | **FAIL** (Vi phạm tính đơn quyết định) | Bác bỏ bởi Mục 3.7 và Mục 7 (SC-02). Danh mục `TaskType Catalog` là `AUDIT-ONLY`; riêng ánh xạ `TaskType → ProofProfile Mapping` là `VERSIONED`. Không có tài nguyên nào mang nhãn kép mâu thuẫn. | **PASS (Đã chặn đứng)** |
+| **SC-NT-03** | Manager có thể tạo tài khoản Admin đầu tiên. | **FAIL** (Bị cấm tuyệt đối) | Bác bỏ bởi Mục 3.2 (SC-03 Bootstrap Rule) và ADM-SOD-05. Manager hoàn toàn không có quyền phân quyền hay can thiệp khởi tạo hệ thống. | **PASS (Đã chặn đứng)** |
+| **SC-NT-04** | Người dùng Staff có thể tự phong quyền (self-promote) lên Admin. | **FAIL** (Bị cấm tuyệt đối) | Bác bỏ bởi Mục 3.2 (SC-03 Bootstrap Rule) và ADM-SOD-01. Staff không có quyền gán vai trò; Admin không được tự sửa vai trò của chính mình. | **PASS (Đã chặn đứng)** |
+| **SC-NT-05** | Tác nhân tự động hóa (System) tự động cấp quyền Admin. | **FAIL** (Bị cấm tuyệt đối) | Bác bỏ bởi Mục 3.2 và ADM-SOD-06. Mọi quyền Admin phải do Admin hiện hữu gán hoặc qua controlled bootstrap, không có quyền tự phong tự động. | **PASS (Đã chặn đứng)** |
+| **SC-NT-06** | Bổ sung tác nhân "Hội đồng kỹ thuật đô thị" vào quy trình phê duyệt ProofProfile mà không qua phê duyệt Actor Model. | **FAIL** (Sai lệch ranh giới tác nhân) | Bác bỏ tại Mục 3.8 (SC-04). Platform Administrator sở hữu thẩm quyền ban hành chính sách; quy trình thẩm định bên ngoài (nếu có) là tiền đề tổ chức ngoài hệ thống, không sinh thêm tác nhân trong mô hình. | **PASS (Đã chặn đứng)** |
+| **SC-NT-07** | Ý nghĩa nghiệp vụ của một TaskType đã được tham chiếu lịch sử có thể bị sửa đổi trực tiếp (in-place mutation). | **FAIL** (Vi phạm tính toàn vẹn lịch sử) | Bác bỏ bởi Mục 3.7 và Mục 8 (SC-02 Historical Preservation). Thay đổi ngữ nghĩa bắt buộc phải tạo TaskType mới, giữ nguyên vẹn tham chiếu lịch sử. | **PASS (Đã chặn đứng)** |
+
 ---
 
 ## 11. Bảng Bằng Chứng Nghiệm Thu Cổng Phase 2 (Phase 2 Evidence Table)
@@ -429,14 +466,28 @@ Kiểm thử chủ động trên 10 kịch bản sai phạm phổ biến nhằm 
 
 ---
 
-## 12. Kết Luận Cổng Nghiệm Thu Phase 2 (Phase 2 Exit Gate)
+## 12. Báo Cáo Đóng Khép Ngữ Nghĩa Phase 2 (Phase 2 Semantic Closure Review)
+
+Báo cáo nghiệm thu khắc phục 4 khiếm khuyết ngữ nghĩa được chỉ ra bởi kiểm toán độc lập:
+
+| Defect ID | Tiêu chí đóng khép ngữ nghĩa (Semantic Closure Requirement) | Phương pháp xác minh (Verification Method) | Bằng chứng cụ thể (Evidence) | Kết quả nghiệm thu (Result) |
+|---|---|---|---|:---:|
+| **SC-01** | Bảo toàn Structured Findings độc lập với quản trị mẫu động | Semantic Invariant & Distinction Audit | Mục 3.10: Tách bạch rõ Thành phần A (Structured Findings bắt buộc trong MVP với fixed canonical schema) và Thành phần B (Dynamic Findings Template Governance là `NEXT`). Khẳng định `ReportFieldIssue`, `TreeRiskStatus`, và ảnh chụp KHÔNG thay thế cho Structured Findings. SC-NT-01 PASS. | **PASS** |
+| **SC-02** | Quyết định quản lý phiên bản TaskType rõ ràng, đơn nhất | Unambiguous Single-Decision Audit | Mục 3.7 & Mục 7: Danh mục `TaskType Catalog` là **`AUDIT-ONLY`** (mã định danh ổn định, cấm hard delete khi đã tham chiếu, thay đổi ngữ nghĩa phải tạo mới). Tách độc lập `TaskType → ProofProfile Mapping` là **`VERSIONED`**. 0 xuất hiện của `VERSIONED / AUDIT-ONLY`. SC-NT-02 & SC-NT-07 PASS. | **PASS** |
+| **SC-03** | Khởi tạo Admin đầu tiên và phân quyền Admin chuẩn tắc tất định | Deterministic Bootstrap & Role Grant Audit | Mục 3.2: Xác lập rõ Quy tắc Khởi tạo (Controlled Bootstrap tạo bản ghi kiểm toán khởi tạo; không phải tự đăng ký hay Staff/Manager phong). Quy tắc gán vai trò bình thường cho phép Admin hiện hữu gán `staff`, `manager`, `admin` có lưu vết. Dual-Admin approval chốt là `NEXT SECURITY HARDENING`. SC-NT-03, SC-NT-04, SC-NT-05 PASS. | **PASS** |
+| **SC-04** | Loại bỏ tác nhân quản trị chưa được duyệt ("Hội đồng kỹ thuật đô thị") | Actor Model Boundary Conformance Audit | Mục 3.8: Loại bỏ hoàn toàn cụm "hội đồng kỹ thuật đô thị". Thẩm quyền ban hành thuộc về Platform Administrator với `reason` và audit log bắt buộc; thẩm định ngoài (nếu có) là tiền đề tổ chức ngoài mô hình tác nhân. Không tạo thêm vai trò mới. SC-NT-06 PASS. | **PASS** |
+
+---
+
+## 13. Kết Luận Cổng Nghiệm Thu Phase 2 (Phase 2 Exit Gate)
 
 ```text
 ================================================================================
-PHASE 2 PASS
-— PLATFORM ADMINISTRATOR SCOPE LOCKED
-— ADMIN CAPABILITIES CLASSIFIED (9 MVP, 3 NEXT, 0 RESERVED, 1 REJECTED)
-— GOVERNANCE OWNERSHIP DEFINED
-— READY FOR PHASE 3 DOMAIN OWNERSHIP & BOUNDED CONTEXT RECONCILIATION
+PHASE 2 PASS — SEMANTICALLY CLOSED
+— STRUCTURED FINDINGS MVP SEMANTICS PRESERVED
+— TASKTYPE VERSIONING DECISION UNAMBIGUOUS
+— ADMIN BOOTSTRAP GOVERNANCE DEFINED
+— UNSUPPORTED GOVERNANCE ACTOR REMOVED
+— READY FOR PHASE 3 DOMAIN OWNERSHIP
 ================================================================================
 ```
