@@ -263,8 +263,8 @@ là Generic/Supporting contexts riêng, thay vì đẩy Admin vào Core Field Ve
 ## Artifact
 
 ```text
-03-DOMAIN-OWNERSHIP-MATRIX.md
-04-BOUNDED-CONTEXT-DECISIONS.md
+05-DOMAIN-OWNERSHIP-MATRIX.md
+06-BOUNDED-CONTEXT-DECISIONS.md
 ```
 
 ---
