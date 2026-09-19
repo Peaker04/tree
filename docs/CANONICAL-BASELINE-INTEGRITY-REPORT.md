@@ -2,9 +2,9 @@
 
 ## NOVYX GreenOps — Documentation, Traceability, Governance & Diagram Reconciliation
 
-> **Phân loại báo cáo:** `[VERIFIED]` / `[PROPOSED]` / `[NEEDS_DECISION]`  
-> **Giai đoạn:** CANONICAL BASELINE INTEGRITY REPAIR  
-> **Trạng thái kết thúc:** `READY FOR TECHNICAL ARCHITECTURE BASELINE RECONCILIATION`
+> **Phân loại báo cáo:** `[VERIFIED]` / `[PROPOSED]` / `[NEEDS_DECISION]`
+> **Giai đoạn:** CANONICAL BASELINE INTEGRITY REPAIR & QUALITY GATE ESTABLISHMENT
+> **Trạng thái kết thúc:** `NOT READY — QUALITY GATE REVALIDATION REQUIRED` (Sẵn sàng cho pha Final Baseline Repair)
 
 ---
 
@@ -182,21 +182,31 @@ File [`scripts/diagram_tool.py`](file:///d:/ki7/EXE/tree/scripts/diagram_tool.py
 
 ---
 
-## 10. Điều Kiện Dừng (Stop Condition Evaluation)
+## 10. Điều Kiện Dừng & Đánh Giá Chất Lượng Đường Cơ Sở (Stop Condition Evaluation)
 
-| Tiêu chí dừng                                                         | Trạng thái | Ghi chú bằng chứng                                                                                    |
-| :-------------------------------------------------------------------- | :--------: | :---------------------------------------------------------------------------------------------------- |
-| Tài liệu chuẩn tắc nghiệp vụ không mâu thuẫn                          |  **ĐẠT**   | `PRODUCT`, `DOMAIN`, `WORKFLOWS`, `ACCESS-CONTROL` thống nhất mô hình 7 trạng thái & 3 ProofProfiles. |
-| `DESIGN.md` & `MOBILE_UI_RULES.md` không còn quy tắc 5 bước cứng nhắc |  **ĐẠT**   | Đã chuyển dịch sang profile-driven rendering.                                                         |
-| Phân cấp thẩm quyền không dùng wildcard sai                           |  **ĐẠT**   | Đã thiết lập mô hình thẩm quyền 7 tầng tại `docs/README.md`.                                          |
-| Phân biệt rành mạch Source hiện tại vs Business Target                |  **ĐẠT**   | `POST-SYNC-IMPLEMENTATION-GAP-MAP.md` và `REQUIREMENTS-TRACEABILITY.md` phản ánh trung thực.          |
-| Không còn nhầm lẫn biểu đồ cũ thành canonical truth                   |  **ĐẠT**   | Biểu đồ 03–11 đã gắn banner `SUPERSEDED / HISTORICAL`.                                                |
-| Công cụ diagram thực hiện kiểm tra hình học thực tế                   |  **ĐẠT**   | Headless Edge runtime getBoundingClientRect() cho kết quả Zero Collision.                             |
-| Không overclaim pháp lý / mật mã / cloud provider                     |  **ĐẠT**   | Đã gắn nhãn `LEGAL STATUS: NOT ESTABLISHED` và Object Storage `TBD`.                                  |
-| Mã nguồn ứng dụng và packages nguyên vẹn (0 files modified)           |  **ĐẠT**   | `git status` chứng minh 0 tệp source bị thay đổi.                                                     |
+| Tiêu chí dừng                                                         |  Trạng thái  | Ghi chú bằng chứng                                                                                                                                         |
+| :-------------------------------------------------------------------- | :----------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tài liệu chuẩn tắc nghiệp vụ không mâu thuẫn                          |   **ĐẠT**    | `PRODUCT`, `DOMAIN`, `WORKFLOWS`, `ACCESS-CONTROL` thống nhất mô hình 7 trạng thái & 3 ProofProfiles.                                                      |
+| `DESIGN.md` & `MOBILE_UI_RULES.md` không còn quy tắc 5 bước cứng nhắc |   **ĐẠT**    | Đã chuyển dịch sang profile-driven rendering.                                                                                                              |
+| Phân cấp thẩm quyền không dùng wildcard sai                           |   **ĐẠT**    | Đã thiết lập mô hình thẩm quyền 7 tầng tại `docs/README.md`.                                                                                               |
+| Phân biệt rành mạch Source hiện tại vs Business Target                |   **ĐẠT**    | `POST-SYNC-IMPLEMENTATION-GAP-MAP.md` và `REQUIREMENTS-TRACEABILITY.md` phản ánh trung thực.                                                               |
+| Không còn nhầm lẫn biểu đồ cũ thành canonical truth                   |   **ĐẠT**    | Biểu đồ 03–11 đã gắn banner `SUPERSEDED / HISTORICAL`.                                                                                                     |
+| Công cụ diagram thực hiện kiểm tra hình học thực tế                   |   **ĐẠT**    | Headless Edge runtime getBoundingClientRect() đã tích hợp kiểm tra tràn viền và safe padding.                                                              |
+| Danh mục Biểu đồ Active đạt kiểm tra hình học & ngữ nghĩa             | **CHƯA ĐẠT** | **BLOCKER**: 6 biểu đồ active (`proposed-02`, `proposed-03`, `proposed-04`, `01`, `02`, `08`, `12`) phát hiện lỗi tràn viền, va chạm chữ hoặc font < 10px. |
+| Không overclaim pháp lý / mật mã / cloud provider                     |   **ĐẠT**    | Đã gắn nhãn `LEGAL STATUS: NOT ESTABLISHED` và Object Storage `TBD`.                                                                                       |
+| Mã nguồn ứng dụng và packages nguyên vẹn (0 files modified)           |   **ĐẠT**    | `git status` chứng minh 0 tệp source bị thay đổi.                                                                                                          |
 
-**KẾT LUẬN CUỐI CÙNG:**
+---
 
-### `READY FOR TECHNICAL ARCHITECTURE BASELINE RECONCILIATION`
+## 11. KẾT LUẬN CUỐI CÙNG (FINAL BASELINE STATUS)
 
-Repository đã đạt trạng thái đường cơ sở tin cậy, nhất quán và sẵn sàng bước vào giai đoạn tái điều hòa kiến trúc kỹ thuật.
+### `NOT READY — QUALITY GATE REVALIDATION REQUIRED`
+
+> [!CAUTION]
+> **ĐIỀU KIỆN PHỦ ĐỊNH KÍCH HOẠT:**
+> Việc thiết lập hệ thống Cổng Chất Lượng ([`docs/quality-gates/`](quality-gates/README.md)) và nâng cấp công cụ kiểm tra hình học runtime đã bộc lộ các lỗi thực tế còn tồn đọng trong Danh mục Biểu đồ Active (chữ tràn viền, nhãn dính sát mép, cỡ chữ 8–9px, và tàn dư chuỗi "5 chốt" / "5 bước" trong các sơ đồ kiến trúc 01 và 02).
+> Theo **Giao thức Cổng Cuối Cùng** (`FINAL-GATE-PROTOCOL.md`), dự án **KHÔNG ĐƯỢC PHÉP** tuyên bố READY khi các cổng bắt buộc còn bị FAIL.
+>
+> **Hành động tiếp theo:** Đường cơ sở chuyển sang trạng thái:
+> **`READY FOR FINAL BASELINE REPAIR`**
+> để thực hiện sửa chữa dứt điểm toàn bộ các biểu đồ active trước khi bước vào Technical Architecture.

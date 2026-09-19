@@ -132,15 +132,36 @@ window.addEventListener('DOMContentLoaded', async () => {
         const vbWidth = vb && vb.width > 0 ? vb.width : svg.clientWidth;
         const vbHeight = vb && vb.height > 0 ? vb.height : svg.clientHeight;
 
+        // Check specific Vietnamese font faces (VAL-003)
+        const notoSansLoaded = document.fonts.check('12px "Noto Sans"');
+        const notoSerifLoaded = document.fonts.check('16px "Noto Serif"');
+
         const results = {
             fontsLoaded: document.fonts.status === 'loaded',
             fontCount: document.fonts.size,
+            fontChecks: {
+                notoSans: notoSansLoaded,
+                notoSerif: notoSerifLoaded,
+                systemStatus: document.fonts.status
+            },
             svgBounds: { width: Math.round(svgRect.width), height: Math.round(svgRect.height) },
             viewBox: { width: vbWidth, height: vbHeight },
             textCollisions: [],
             boundaryOverflows: [],
+            safePaddingViolations: [],
+            nodeCollisions: [],
             clippingIssues: [],
             fontFloorViolations: [],
+            executedChecks: [
+                'VAL-002: await document.fonts.ready',
+                'VAL-003: document.fonts.check font faces',
+                'VAL-004: tightest enclosing owner detection',
+                'VAL-005: safe padding & boundary overflow',
+                'VAL-006: text vs text collision',
+                'VAL-008: node vs node overlap',
+                'VAL-009: SVG viewport clipping'
+            ],
+            skippedChecks: [],
             stats: { totalTexts: 0, totalNodes: 0 }
         };
 
@@ -171,13 +192,43 @@ window.addEventListener('DOMContentLoaded', async () => {
                 return { element: r, rect: b };
             })
             .filter(c => {
-                // Must be smaller than 85% of SVG to be a meaningful card/box
-                return c.rect.width > 30 && c.rect.height > 20 &&
-                       c.rect.width < (svgRect.width * 0.90) &&
-                       c.rect.height < (svgRect.height * 0.90);
+                return c.rect.width > 20 && c.rect.height > 14 &&
+                       c.rect.width < (svgRect.width * 0.95) &&
+                       c.rect.height < (svgRect.height * 0.95);
             });
 
-        // 3. Collision and Boundary checks
+        // 3. Node vs Node Overlap check (VAL-008)
+        for (let i = 0; i < cardRects.length; i++) {
+            const c1 = cardRects[i];
+            for (let j = i + 1; j < cardRects.length; j++) {
+                const c2 = cardRects[j];
+                // Skip nested groups (parent containing child)
+                const c1ContainsC2 = (c1.rect.left <= c2.rect.left + 2 && c1.rect.right >= c2.rect.right - 2 &&
+                                      c1.rect.top <= c2.rect.top + 2 && c1.rect.bottom >= c2.rect.bottom - 2);
+                const c2ContainsC1 = (c2.rect.left <= c1.rect.left + 2 && c2.rect.right >= c1.rect.right - 2 &&
+                                      c2.rect.top <= c1.rect.top + 2 && c2.rect.bottom >= c1.rect.bottom - 2);
+                if (c1ContainsC2 || c2ContainsC1) continue;
+
+                // Documented exclusion (VAL-010): Section header badge tab sitting on top border of container
+                const isHeaderBadge = (c1.rect.height <= 36 && Math.abs(c1.rect.top - c2.rect.top) <= 25 && c1.rect.width < c2.rect.width) ||
+                                      (c2.rect.height <= 36 && Math.abs(c2.rect.top - c1.rect.top) <= 25 && c2.rect.width < c1.rect.width);
+                if (isHeaderBadge) continue;
+
+                const ovX = Math.max(0, Math.min(c1.rect.right, c2.rect.right) - Math.max(c1.rect.left, c2.rect.left));
+                const ovY = Math.max(0, Math.min(c1.rect.bottom, c2.rect.bottom) - Math.max(c1.rect.top, c2.rect.top));
+                if (ovX > 4 && ovY > 4) {
+                    results.nodeCollisions.push({
+                        nodeA: c1.element.id || `rect-${i}`,
+                        nodeB: c2.element.id || `rect-${j}`,
+                        overlap: { width: Math.round(ovX), height: Math.round(ovY) },
+                        coordsA: { x: Math.round(c1.rect.left - svgRect.left), y: Math.round(c1.rect.top - svgRect.top) },
+                        coordsB: { x: Math.round(c2.rect.left - svgRect.left), y: Math.round(c2.rect.top - svgRect.top) }
+                    });
+                }
+            }
+        }
+
+        // 4. Text checks
         for (let i = 0; i < textData.length; i++) {
             const t1 = textData[i];
 
@@ -202,17 +253,15 @@ window.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            // C. Text vs Text overlap
+            // C. Text vs Text overlap (VAL-006)
             for (let j = i + 1; j < textData.length; j++) {
                 const t2 = textData[j];
                 if (!t1.text || !t2.text) continue;
                 if (t1.element.contains(t2.element) || t2.element.contains(t1.element)) continue;
 
-                // Screen overlap
                 const overlapX = Math.max(0, Math.min(t1.rect.right, t2.rect.right) - Math.max(t1.rect.left, t2.rect.left));
                 const overlapY = Math.max(0, Math.min(t1.rect.bottom, t2.rect.bottom) - Math.max(t1.rect.top, t2.rect.top));
 
-                // Threshold: more than 3px in both dimensions
                 if (overlapX > 3 && overlapY > 3) {
                     results.textCollisions.push({
                         textA: t1.text.substring(0, 30),
@@ -224,25 +273,41 @@ window.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // D. Text vs Owning Node Boundary overflow
-            // Find if text is logically inside a card (by top-left being inside card with some padding)
-            for (const card of cardRects) {
+            // D. Semantic owner detection (VAL-004) & Safe padding (VAL-005)
+            // Find candidate containing cards
+            const containingCards = cardRects.filter(card => {
                 const cr = card.rect;
-                const isInsideStart = (t1.rect.left >= cr.left - 4 && t1.rect.left <= cr.right) &&
-                                     (t1.rect.top >= cr.top - 4 && t1.rect.top <= cr.bottom);
-                if (isInsideStart) {
-                    // Check if right or bottom spills outside card
-                    const spillX = t1.rect.right - cr.right;
-                    const spillY = t1.rect.bottom - cr.bottom;
-                    if (spillX > 6 || spillY > 6) {
-                        results.boundaryOverflows.push({
-                            text: t1.text.substring(0, 30),
-                            cardWidth: Math.round(cr.width),
-                            cardHeight: Math.round(cr.height),
-                            overflow: { x: Math.max(0, Math.round(spillX)), y: Math.max(0, Math.round(spillY)) }
-                        });
-                    }
-                    break;
+                return (t1.rect.left >= cr.left - 4 && t1.rect.right <= cr.right + 25 &&
+                        t1.rect.top >= cr.top - 4 && t1.rect.bottom <= cr.bottom + 25);
+            });
+
+            // Sort by area ascending to get the tightest enclosing card
+            containingCards.sort((a, b) => (a.rect.width * a.rect.height) - (b.rect.width * b.rect.height));
+            const ownerCard = containingCards.length > 0 ? containingCards[0] : null;
+
+            if (ownerCard) {
+                const cr = ownerCard.rect;
+                const padRight = cr.right - t1.rect.right;
+                const padBottom = cr.bottom - t1.rect.bottom;
+                const padLeft = t1.rect.left - cr.left;
+                const padTop = t1.rect.top - cr.top;
+
+                // Hard boundary overflow
+                if (padRight < -1 || padBottom < -1) {
+                    results.boundaryOverflows.push({
+                        text: t1.text.substring(0, 35),
+                        ownerId: ownerCard.element.id || 'card',
+                        cardBounds: { width: Math.round(cr.width), height: Math.round(cr.height) },
+                        overflow: { x: Math.max(0, Math.round(-padRight)), y: Math.max(0, Math.round(-padBottom)) }
+                    });
+                } else if (padRight < 4 || padLeft < 2) {
+                    // Safe padding violation: text pressed right against card boundary
+                    results.safePaddingViolations.push({
+                        text: t1.text.substring(0, 35),
+                        ownerId: ownerCard.element.id || 'card',
+                        padding: { left: Math.round(padLeft), right: Math.round(padRight), top: Math.round(padTop), bottom: Math.round(padBottom) },
+                        minExpected: 4
+                    });
                 }
             }
         }
@@ -353,19 +418,24 @@ def print_validation_report(html_name, val_result):
         print(f"  [FAIL] {e}")
 
     if not val_result["browserFound"]:
-        print("  [WARN] Headless browser not found. Skipping runtime geometry collision validation.")
-        return not has_errors
+        print("  [INCONCLUSIVE] Headless browser not found. Skipping runtime geometry collision validation.")
+        print("  ==> RESULT: [INCONCLUSIVE] VAL-001 requirement failed: cannot certify zero collision without browser runtime.")
+        return "INCONCLUSIVE"
 
     if not geom or "error" in geom:
         print(f"  [FAIL] Runtime geometry error: {geom.get('error', 'Unknown error')}")
-        return False
+        return "FAIL"
 
-    print(f"  [PASS] Font Engine Status: loaded={geom.get('fontsLoaded')} (Loaded faces: {geom.get('fontCount')})")
+    font_checks = geom.get("fontChecks", {})
+    print(f"  [PASS] Font Engine: loaded={geom.get('fontsLoaded')} (Noto Sans: {font_checks.get('notoSans')}, Noto Serif: {font_checks.get('notoSerif')}, Loaded faces: {geom.get('fontCount')})")
     print(f"  [INFO] Evaluated SVG elements: {geom['stats']['totalTexts']} texts, {geom['stats']['totalNodes']} nodes.")
+    print(f"  [INFO] Executed Checks: {len(geom.get('executedChecks', []))} active validation gates.")
 
     # Check collisions
     collisions = geom.get("textCollisions", [])
     overflows = geom.get("boundaryOverflows", [])
+    padding_viols = geom.get("safePaddingViolations", [])
+    node_collisions = geom.get("nodeCollisions", [])
     clippings = geom.get("clippingIssues", [])
     font_floors = geom.get("fontFloorViolations", [])
 
@@ -377,13 +447,29 @@ def print_validation_report(html_name, val_result):
     else:
         print("  [PASS] Zero Text vs Text collision.")
 
+    if node_collisions:
+        has_errors = True
+        print(f"  [FAIL] Node vs Node Collisions ({len(node_collisions)} detected):")
+        for nc in node_collisions:
+            print(f"         - \"{nc['nodeA']}\" [x:{nc['coordsA']['x']}, y:{nc['coordsA']['y']}] overlaps \"{nc['nodeB']}\" [x:{nc['coordsB']['x']}, y:{nc['coordsB']['y']}] (Overlap: {nc['overlap']['width']}x{nc['overlap']['height']}px)")
+    else:
+        print("  [PASS] Zero Node vs Node unintended overlap.")
+
     if overflows:
         has_errors = True
         print(f"  [FAIL] Boundary Overflows ({len(overflows)} detected):")
         for o in overflows:
-            print(f"         - \"{o['text']}\" overflows parent card by {o['overflow']['x']}px x {o['overflow']['y']}px")
+            print(f"         - \"{o['text']}\" in card [{o.get('ownerId', '')} ({o['cardBounds']['width']}x{o['cardBounds']['height']}px)] spills by {o['overflow']['x']}px x {o['overflow']['y']}px")
     else:
         print("  [PASS] Zero Node Boundary overflow.")
+
+    if padding_viols:
+        # Undersized container warning / safe padding violation
+        print(f"  [WARN] Safe Padding Violations ({len(padding_viols)} detected - tight content box):")
+        for pv in padding_viols:
+            print(f"         - \"{pv['text']}\" in card [{pv.get('ownerId', '')}]: rightPad={pv['padding']['right']}px, leftPad={pv['padding']['left']}px (min expected: {pv['minExpected']}px)")
+    else:
+        print("  [PASS] Safe padding maintained for all content labels.")
 
     if clippings:
         has_errors = True
@@ -403,10 +489,10 @@ def print_validation_report(html_name, val_result):
 
     if not has_errors:
         print(f"  ==> RESULT: [VERIFIED PASS] Zero Visual Collision & Fully Validated.")
+        return "PASS"
     else:
         print(f"  ==> RESULT: [FAIL] Issues detected requiring diagram geometry repair.")
-
-    return not has_errors
+        return "FAIL"
 
 def get_svg_dimensions(svg_content):
     """
@@ -603,18 +689,21 @@ def main():
 
     # Route command
     if args.command == "validate":
-        all_ok = True
+        overall_status = "PASS"
         for d in args.diagrams:
             p = Path(d)
             if not p.exists():
                 print(f"Error: File not found: {d}")
-                all_ok = False
+                overall_status = "FAIL"
                 continue
             res = validate_diagram_runtime(p)
-            passed = print_validation_report(p.name, res)
-            if not passed:
-                all_ok = False
-        sys.exit(0 if all_ok else 1)
+            status = print_validation_report(p.name, res)
+            if status == "FAIL":
+                overall_status = "FAIL"
+            elif status == "INCONCLUSIVE" and overall_status != "FAIL":
+                overall_status = "INCONCLUSIVE"
+        exit_code = 0 if overall_status == "PASS" else (2 if overall_status == "INCONCLUSIVE" else 1)
+        sys.exit(exit_code)
 
     elif args.command == "export":
         formats = [f.strip().lower() for f in args.format.split(",") if f.strip()]
@@ -637,14 +726,17 @@ def main():
         sys.exit(1)
 
     if args.validate_only:
-        all_ok = True
+        overall_status = "PASS"
         for d in diagrams:
             p = Path(d)
             res = validate_diagram_runtime(p)
-            passed = print_validation_report(p.name, res)
-            if not passed:
-                all_ok = False
-        sys.exit(0 if all_ok else 1)
+            status = print_validation_report(p.name, res)
+            if status == "FAIL":
+                overall_status = "FAIL"
+            elif status == "INCONCLUSIVE" and overall_status != "FAIL":
+                overall_status = "INCONCLUSIVE"
+        exit_code = 0 if overall_status == "PASS" else (2 if overall_status == "INCONCLUSIVE" else 1)
+        sys.exit(exit_code)
     else:
         formats = []
         if args.svg or (args.svg is None and not (args.png or args.pdf)):

@@ -1,0 +1,36 @@
+# CỔNG KIỂM TRA KIẾN TRÚC & CHỈ TIÊU PHI CHỨC NĂNG
+
+## Architecture & NFR Quality Checklist (ARC-001..006, NFR-001..010)
+
+> **Mục tiêu:** Kiểm soát kỷ luật phân cấp kiến trúc và chỉ tiêu phi chức năng; đảm bảo mọi đề xuất kiến trúc (TO-BE) đều được gắn nhãn `[PROPOSED]` cho đến khi có Architecture Decision Record (ADR) được phê duyệt; mọi chỉ tiêu kỹ thuật NFR được phân loại chính xác giữa yêu cầu bắt buộc và chỉ tiêu ước lượng (benchmark/SLO).  
+> **Tài liệu thẩm quyền:** [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md), [`docs/NFR.md`](../NFR.md), [`AGENTS.md`](../../AGENTS.md).
+
+---
+
+## 1. Cổng Quản Trị Kiến Trúc (Architecture Governance - ARC)
+
+| Mã ID       | Hạng mục kiểm tra              | Acceptance Oracle                                                                                                                       | Phương pháp kiểm chứng              | Bằng chứng yêu cầu       |  Mức độ  | Khóa cổng? | Trạng thái hiện tại |
+| :---------- | :----------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------- | :------: | :--------: | :-----------------: |
+| **ARC-001** | Bằng Chứng Hiện Trạng AS-IS    | Mô tả kiến trúc hiện tại phản ánh chính xác cấu trúc monolithic hiện hữu của `apps/mobile` (2.054 dòng, 1 service lớn).                 | Đối soát mã nguồn `apps/mobile/src` | `ARCHITECTURE.md` mục 2  | BLOCKER  |  **YES**   |      `[PASS]`       |
+| **ARC-002** | Phân Loại Đề Xuất TO-BE        | Mô hình Clean Architecture / Ports & Adapters được gắn nhãn `[PROPOSED TARGET ARCHITECTURE]` và chưa xem là quyết định đã khóa.         | Kiểm tra tiêu đề và nhãn            | `ARCHITECTURE.md` mục 3  | CRITICAL |  **YES**   |      `[PASS]`       |
+| **ARC-003** | Tính Trung Lập Về Nhà Cung Cấp | Không hardcode dịch vụ AWS S3 hay Google Cloud Storage; định danh trung lập `Backend Object Storage (Provider: TBD / NEEDS_DECISION)`.  | Tìm kiếm chuỗi S3/GCS trong docs    | `ARCHITECTURE.md`        |  MAJOR   |  **YES**   |      `[PASS]`       |
+| **ARC-004** | Tính Mở Của Động Cơ Lưu Trữ    | Không tuyên bố SQLite hay WatermelonDB là lựa chọn duy nhất đã khóa; định danh `Offline Persistence Engine: NEEDS_DECISION`.            | Kiểm tra phần Persistence           | `ARCHITECTURE.md` mục 4  |  MAJOR   |  **YES**   |      `[PASS]`       |
+| **ARC-005** | Hợp Đồng API Được Duyệt        | Các endpoint mở rộng mới (`/tasks/{id}/start`, `/tasks/{id}/block`) được đánh dấu `[PROPOSED CONTRACT]` chờ đồng bộ `@novyx/contracts`. | Đối chiếu với `@novyx/contracts`    | `packages/contracts/src` | BLOCKER  |  **YES**   |      `[PASS]`       |
+| **ARC-006** | Trạng Thái Vòng Đời ADR        | Mọi quyết định kiến trúc mang một trong 4 trạng thái chuẩn: `PROPOSED`, `ACCEPTED`, `REJECTED`, `SUPERSEDED`.                           | Rà soát danh mục ADR                | Bảng theo dõi ADR        | CRITICAL |  **YES**   |      `[PASS]`       |
+
+---
+
+## 2. Cổng Quản Trị Chỉ Tiêu Phi Chức Năng (NFR Governance)
+
+| Mã ID       | Hạng mục kiểm tra                 | Acceptance Oracle                                                                                                                               | Phương pháp kiểm chứng            | Bằng chứng yêu cầu   |  Mức độ  | Khóa cổng? | Trạng thái hiện tại |
+| :---------- | :-------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- | :------------------- | :------: | :--------: | :-----------------: |
+| **NFR-001** | Thuộc Tính Chất Lượng Rõ Ràng     | Từng mục NFR định nghĩa rõ thuộc tính chất lượng (Performance, Reliability, Usability, Security, Maintainability).                              | Rà soát cột Quality Attribute     | Cột 1 bảng NFR       | CRITICAL |  **YES**   |      `[PASS]`       |
+| **NFR-002** | Kịch Bản Kiểm Thử Có Cấu Trúc     | Kịch bản NFR gồm đủ: Nguồn kích hoạt (Source), Bối cảnh (Context), Kích thích (Stimulus), và Phản hồi đo đạc (Response).                        | Rà soát cấu trúc kịch bản         | Bảng kịch bản QAS    |  MAJOR   |  **YES**   |      `[PASS]`       |
+| **NFR-003** | Phân Loại Mục Tiêu Đo Lường       | Mỗi chỉ số kỹ thuật bắt buộc mang đúng một phân loại chuẩn: `[APPROVED]`, `[TARGET SLO]`, `[PROPOSED BENCHMARK]`, `[NEEDS_DECISION]`.           | Kiểm tra nhãn trạng thái          | Cột 2 bảng NFR       | BLOCKER  |  **YES**   |      `[PASS]`       |
+| **NFR-004** | Loại Bỏ Benchmark Tùy Ý           | Các con số ước lượng (ví dụ: RAM 3-4GB, 200-1000 items, dropped frames <5%) không được gọi là "yêu cầu nghiệp vụ bắt buộc".                     | Rà soát phân loại cột 2           | `docs/NFR.md`        | BLOCKER  |  **YES**   |      `[PASS]`       |
+| **NFR-005** | Tách Biệt Phương Án Hiện Thực     | Tách bạch giữa mục tiêu chất lượng (ví dụ: cuộn mượt) và tùy chọn thư viện (ví dụ: `FlatList` vs `FlashList`).                                  | Rà soát cột Reference Option      | Cột 3 bảng NFR       |  MAJOR   |  **YES**   |      `[PASS]`       |
+| **NFR-006** | Gắn Nhãn Chỉ Tiêu Chưa Đo Đạc     | Mọi chỉ số hiệu năng chưa chạy benchmark thực tế trên thiết bị vật lý bắt buộc phải gắn `[NEEDS_MEASUREMENT]`.                                  | Rà soát trạng thái đo đạc         | Cột 2 bảng NFR       | CRITICAL |  **YES**   |      `[PASS]`       |
+| **NFR-007** | Phân Biệt Ngoại Tuyến (Offline)   | Phân biệt rõ rệt giữa hành vi mong muốn (lưu bền vững trên đĩa) và hiện trạng mã nguồn (fallback biến RAM `snapshot`).                          | Rà soát mục NFR-REL-01            | `docs/NFR.md`        | BLOCKER  |  **YES**   |      `[PASS]`       |
+| **NFR-008** | Phương Pháp Kiểm Chứng Khả Thi    | Từng NFR chỉ rõ công cụ đo: Chrome DevTools Profiler, Expo Perf Monitor, Flipper, hoặc Network Throttling.                                      | Rà soát cột Verification Method   | Cột 4 bảng NFR       | CRITICAL |  **YES**   |      `[PASS]`       |
+| **NFR-009** | Tiêu Chí Tiếp Cận Đo Được         | Khả năng tiếp cận ngoài trời (Accessibility) có tiêu chí cụ thể: Touch target $\ge 44 \times 44\text{px}$, độ tương phản $\ge 4.5:1$ (WCAG AA). | Đo kích thước CSS/JSX và contrast | `DESIGN.md`          | BLOCKER  |  **YES**   |      `[PASS]`       |
+| **NFR-010** | Cấm Báo Cáo Không Mất Dữ Liệu Giả | Tuyệt đối KHÔNG báo PASS mục "Không mất dữ liệu (0% Data Loss)" khi chưa thực hiện kiểm thử ngắt tiến trình đột ngột (OS Kill).                 | Thực thi kiểm thử OS kill offline | Kết quả test offline | BLOCKER  |  **YES**   |      `[PASS]`       |
