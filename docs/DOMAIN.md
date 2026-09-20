@@ -22,12 +22,13 @@ Dựa trên phân tích giá trị nghiệp vụ và các quyết định phân 
 | * Tree Asset Registry: Quản lý hồ sơ cây xanh, dữ liệu gốc, CareHistory chiếu     |
 | * Policy & Template Governance: Danh mục TaskType, ánh xạ ProofProfile, Checklist |
 | * Audit & Compliance: Sổ nhật ký kiểm toán bất biến append-only, sự kiện kiểm toán|
-| * Operational Notifications: Mô hình đọc dẫn xuất (Derived Read Model) cảnh báo   |
 +-----------------------------------------------------------------------------------+
 | [GENERIC SUBDOMAIN - Miền dùng chung]                                             |
 | * Identity & Access Management (IAM): Tài khoản, danh tính, vai trò người dùng     |
 +-----------------------------------------------------------------------------------+
-| [TECHNICAL CLIENT CONCERNS - Tầng kỹ thuật hỗ trợ (Không phải Bounded Context)]   |
+| [DERIVED READ MODELS & TECHNICAL CONCERNS - Mô hình dẫn xuất & Kỹ thuật]          |
+| - Operational Notifications: Mô hình đọc dẫn xuất (Derived Read Model / Projection)|
+|   (Authoritative Owning Context: N/A; kỹ thuật phát tin bảo lưu cho Kiến trúc)    |
 | - Mobile Offline Resilience, Durable Outbox & Client Sync Transport               |
 | - Contextual Device Hardware Adapters (GPS, Camera)                               |
 +-----------------------------------------------------------------------------------+
@@ -44,9 +45,17 @@ Mỗi Bounded Context sở hữu một tập hợp thực thể độc quyền v
 | **`Work Management`** | **CORE** | Quản lý toàn vẹn chu trình tác nghiệp từ tạo việc đến đóng việc; điều phối phân công; thu thập Site Verification và Proof; xử lý sự cố `BLOCKED`; thẩm định nghiệm thu 4 kết luận; điều phối làm lại có mục tiêu. | `Task` (Root Aggregate), `TaskAssignment`, `TaskLifecycle`, `SiteVerification`, `VerificationException`, `FieldIssue`, `TaskEvidence`, `EvidenceAttempt` *(Entity)*, `StructuredFindings`, `ChecklistSnapshot`, `ReviewDecision`, `ReworkRequest`, `Cancellation`. | Nhận `treeId` từ Tree Registry; nhận `policyVersionId` từ Policy Governance; phát sinh sự kiện kiểm toán sang Audit & Compliance; chiếu kết quả `COMPLETED` sang `CareHistory`. |
 | **`Tree Asset Registry`** | SUPPORTING | Sổ bộ quản trị tài sản cây xanh đô thị, mã định danh `treeId`, mã tem `qrCode`, tọa độ chuẩn trắc địa, thuộc tính thực vật học và bản chiếu Lịch sử chăm sóc chính thức. | `Tree` (Root Aggregate), `TreeMasterData`, `TreeIdentity`, `CareHistory` *(Projection Read-Model)*. | Độc lập về mặt dữ liệu gốc; cung cấp dữ liệu tra cứu cho Work Management. Không sở hữu tiến trình thi công. |
 | **`Policy & Template Governance`** | SUPPORTING | Quản trị các quy chuẩn lâm sinh, danh mục loại việc, quy tắc ánh xạ bắt buộc sang hồ sơ bằng chứng, và phiên bản các biểu mẫu kiểm tra kỹ thuật. | `TaskTypeCatalog` *(Audit-only Resource)*, `ProofPolicyMapping` *(Versioned Policy Resource)*, `ChecklistTemplate` *(Versioned Resource)*, `FindingsSchema` *(Policy)*. | Cung cấp hợp đồng và biểu mẫu snapshot cho Work Management khi tạo/bắt đầu task. Không tham gia vận hành tác nghiệp. |
-| **`Audit & Compliance`** | SUPPORTING | Lưu trữ và bảo vệ chuỗi sự kiện kiểm toán độc lập, bất biến (Append-only), phục vụ thanh tra, giám sát an ninh và điều tra sự cố. | `AuditEvent` *(Domain Event / Tamper-evident Store)*. | Ghi nhận sự kiện từ toàn bộ các context; chỉ cung cấp giao diện đọc/lọc cho Platform Administrator. Cấm sửa/xóa log. |
+| **`Audit & Compliance`** | SUPPORTING | Lưu trữ và bảo vệ chuỗi sự kiện kiểm toán độc lập, bất biến (Append-only), phục vụ thanh tra, giám sát an ninh và điều tra sự cố. | `AuditEvent` *(Domain Event / Append-only audit record)*. | Ghi nhận sự kiện từ toàn bộ các context; chỉ cung cấp giao diện đọc/lọc cho Platform Administrator. Cấm sửa/xóa log. Cơ chế toàn vẹn kỹ thuật / tamper-evidence được bảo lưu cho Kiến trúc kỹ thuật / NFR / ADR. |
 | **`Identity & Access Management`** | GENERIC | Quản trị vòng đời tài khoản người dùng, cấp phát định danh, gán vai trò và quản lý trạng thái tài khoản. | `User` (Aggregate Root), `Account`, `RoleAssignment`, `AccountStatus`. | Cung cấp thông tin xác thực danh tính cho toàn hệ thống. Khi khóa tài khoản, chỉ phát thông tin `USER_NOT_OPERATIONALLY_AVAILABLE` chứ không tự ý can thiệp Task. |
-| **`Operational Notifications`** | DERIVED | Mô hình đọc dẫn xuất (Read Model) tiếp nhận sự kiện vòng đời công việc để phát thông báo hiển thị cho người dùng. | `Notification` *(Derived Read-Model Projection)*. | Nhận sự kiện từ Work Management, IAM, Audit; không phải là aggregate thẩm quyền gốc. |
+
+### 2.1. Mô hình đọc dẫn xuất & Quan ngại kỹ thuật (Derived Read Models & Technical Concerns)
+
+- **Operational Notifications (Mô hình đọc dẫn xuất / Phóng chiếu phi thẩm quyền):**
+  - **Bản chất nghiệp vụ:** `Notification` là một mô hình đọc dẫn xuất (Derived Read Model / Projection), **tuyệt đối KHÔNG PHẢI là một Bounded Context độc lập** và không sở hữu bất kỳ Aggregate độc lập hay thực thể thẩm quyền gốc nào (`Authoritative Owning Context: N/A — non-authoritative projection`).
+  - **Nguồn sự kiện:** Lắng nghe và tiếp nhận sự kiện từ Work Management, IAM, và các sự kiện kiểm toán/quản trị được phê duyệt để phát cảnh báo hiển thị cho người dùng.
+  - **Bảo lưu kỹ thuật:** Cơ chế kỹ thuật phân phối thông báo (Push notifications, WebSocket, in-app messaging) được **BẢO LƯU CHO KIẾN TRÚC KỸ THUẬT (DEFERRED TO ARCHITECTURE)**.
+- **Offline / Synchronization (Hạ tầng kỹ thuật):**
+  - Lưu trữ đệm ngoại tuyến (`Durable Outbox`) và cơ chế vận chuyển gói tin đồng bộ là mối quan tâm thuần túy về hạ tầng kỹ thuật (`Technical Client Concern`), không phải Bounded Context nghiệp vụ.
 
 ---
 
@@ -88,7 +97,7 @@ Policy & Template Governance
  └── FindingsSchema (Policy Resource - Fixed in MVP)
 
 Audit & Compliance
- └── AuditEvent (Domain Event - Append-only Record)
+ └── AuditEvent (Domain Event - Append-only Record / Immutable business audit intent)
 ```
 
 ---
@@ -108,11 +117,11 @@ Audit & Compliance
 | **SiteVerification** | Xác thực hiện trường gồm hai tín hiệu độc lập: Định danh cây qua QR và Vị trí qua GPS ($\le 10$m). Thứ tự linh hoạt, không đổi TaskStatus. | Value Object | Work Management | Phục vụ đối soát trung thực hiện trường. |
 | **VerificationException** | Cờ ngoại lệ có kiểm soát khi gặp sự cố khách quan: `LOCATION_EXCEPTION`, `IDENTITY_EXCEPTION`, `EVIDENCE_INTEGRITY_EXCEPTION`. | Value Object | Work Management | Cho phép tiếp tục nhưng bắt buộc giải trình để hậu kiểm. |
 | **FieldIssue** | Báo cáo sự cố hiện trường do nhân viên gửi khi bị cản trở $\to$ chuyển task sang `BLOCKED`. | Entity | Work Management | Bắt buộc có ảnh hiện trường và lý do cản trở. |
-| **ReviewDecision** | Quyết định thẩm định của Quản lý tại `WAITING_REVIEW`: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`. | Value Object | Work Management | Chuẩn tắc đúng 4 kết luận dứt điểm. |
+| **ReviewDecision** | Quyết định thẩm định của Quản lý tại `WAITING_REVIEW`: `APPROVE` (qua lệnh `ApproveTask`), `REQUEST_REWORK` (qua lệnh `RequestRework`), `APPROVE_WITH_EXCEPTION` (qua lệnh `ApproveWithException`), `CANCEL` (qua lệnh `CancelTask`). | Value Object | Work Management | Chuẩn tắc đúng 4 kết luận dứt điểm. |
 | **Targeted Rework** | Làm lại có mục tiêu: Quản lý chỉ định rõ khâu sai sót; bảo lưu bằng chứng hợp lệ cũ; nộp theo phiên bản đa nỗ lực (`EvidenceAttempt`). | Workflow Rule | Work Management | Cấm xóa sạch bằng chứng cũ của nhân viên. |
 | **CareHistory** | Bản chiếu lịch sử chăm sóc chính thức của cây. **DUY NHẤT sinh ra khi Task đạt `COMPLETED`**. Bảo lưu cờ ngoại lệ nếu có. | Read-Model Projection | Tree Asset Registry | Task Hủy hoặc chưa hoàn thành cấm vào CareHistory. |
 | **EvidenceAttempt** | Phiên nộp bằng chứng độc lập (`Attempt 1`, `Attempt 2`), lưu giữ đầy đủ bằng chứng, timestamp và tác giả. | Entity | Work Management | Bảo toàn lịch sử phục vụ kiểm toán và làm lại có mục tiêu. |
-| **AuditEvent** | Bản ghi sự kiện kiểm toán bất biến, lưu vết tác nhân, hành động, đối tượng, thời điểm và lý do. | Domain Event | Audit & Compliance | Lưu trong kho Append-Only, cấm sửa/xóa. |
+| **AuditEvent** | Bản ghi sự kiện kiểm toán bất biến, lưu vết tác nhân, hành động, đối tượng, thời điểm và lý do. | Domain Event | Audit & Compliance | Lưu trong kho Append-Only, cấm sửa/xóa. Cơ chế toàn vẹn kỹ thuật bảo lưu cho NFR/ADR. |
 | **LocalSubmissionStatus** | Trạng thái đồng bộ máy khách: `PENDING_SYNC`, `SYNCED`, `SYNC_FAILED`. | Technical State | Client Outbox | Tách biệt 100% với `TaskStatus`. |
 
 ---
@@ -160,8 +169,8 @@ BLOCKED ───┴─────────────(CancelTask)───
    ▼                                                │
 WAITING_REVIEW ──────────(CancelTask)───────────────┤
    │        │                                       │
-(Approve/   │ (RequestRework)                       │
- ApproveExc)│                                       │
+(ApproveTask/│ (RequestRework)                       │
+ApproveWithExc)                                     │
    │        ▼                                       │
    │  REWORK_REQUIRED ───(CancelTask)───────────────┤
    │        │                                       │

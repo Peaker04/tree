@@ -40,7 +40,7 @@ Bảng tổng hợp toàn diện các điểm sai lệch, mâu thuẫn hoặc th
 | **DFT-02** | `PRODUCT.md` | Đăng nhập phân quyền chỉ ghi nhận 2 vai trò vận hành `Staff` và `Manager` (dòng 167). | Hệ thống hỗ trợ 3 vai trò con người chuẩn tắc: `Field Staff`, `Operations Manager`, `Platform Administrator` và tác nhân kỹ thuật `System`. | **REPLACE** |
 | **DFT-03** | `PRODUCT.md` | Bản đồ năng lực thiếu hoàn toàn các năng lực Quản trị nền tảng của Admin. | Bổ sung 9 năng lực Admin MVP (`CAP-ADM-01..09`), ghi nhận 3 năng lực NEXT (`CAP-ADM-10..12`) và 1 năng lực REJECTED (`CAP-ADM-13`). | **ADD** |
 | **DFT-04** | `PRODUCT.md` | Chưa có ranh giới cấm can thiệp vận hành của Admin. | Khẳng định rõ ranh giới: Admin **hoàn toàn không có thẩm quyền vận hành nhiệm vụ thông thường** (Zero normal task operations). | **ADD** |
-| **DFT-05** | `DOMAIN.md` | Phân chia 8 Bounded Contexts rời rạc, coi Verification và Review & QC là các ngữ cảnh tách rời; Identity & Session là Generic. | Rút gọn thành 4 Contexts nghiệp vụ chuẩn: Core (`Work Management` tích hợp Verification và Review), Supporting (`Tree Asset Registry`, `Policy & Template Governance`, `Audit & Compliance`, `Operational Notifications`), Generic (`Identity & Access Management`). Bỏ việc coi Offline/Hardware là Bounded Context miền. | **REPLACE** |
+| **DFT-05** | `DOMAIN.md` | Phân chia 8 Bounded Contexts rời rạc, coi Verification và Review & QC là các ngữ cảnh tách rời; Identity & Session là Generic. | Rút gọn thành các Contexts nghiệp vụ chuẩn: Core (`Work Management` tích hợp Verification và Review), Supporting (`Tree Asset Registry`, `Policy & Template Governance`, `Audit & Compliance`), Generic (`Identity & Access Management`). `Operational Notifications` là Derived Read Model (Owning Context: N/A). Bỏ việc coi Offline/Hardware là Bounded Context miền. | **REPLACE** |
 | **DFT-06** | `DOMAIN.md` | Ghi `qrCode` và `location` của `Tree` là bất biến tuyệt đối (`Immutable`) (dòng 83–84). | `treeId` là bất biến duy nhất; `qrCode` là duy nhất nhưng có thể cấp đổi (`ReplaceTreeQrCode`); tọa độ chuẩn có thể hiệu chỉnh (`UpdateCanonicalCoordinates`) và **không phải là khóa duy nhất**. | **REPLACE** |
 | **DFT-07** | `DOMAIN.md` | Thiếu định nghĩa phân định tài nguyên sở hữu: `TaskTypeCatalog` (Audit-only) vs `ProofPolicyMapping` (Versioned policy); `AuditEvent` là Domain Event bất biến. | Xác lập rõ ràng đơn vị sở hữu đơn nhất (Single Authoritative Ownership) cho từng tài nguyên theo Phase 3. | **ADD** |
 | **DFT-08** | `ACCESS-CONTROL.md`| Admin ghi là `OUT OF MVP / RESERVED`, cấm tạo màn hình hoặc tính năng Admin trong MVP (dòng 15). | Platform Administrator là vai trò Quản trị nền tảng `ACTIVE` trong MVP với phạm vi `PLATFORM_GOVERNANCE_SCOPE`. | **REPLACE** |
@@ -71,8 +71,9 @@ Tài liệu [`docs/PRODUCT.md`](file:///d:/ki7/EXE/tree/docs/PRODUCT.md) đã đ
 Tài liệu [`docs/DOMAIN.md`](file:///d:/ki7/EXE/tree/docs/DOMAIN.md) đã được đồng bộ hóa hoàn tất:
 - **Bounded Contexts:** Chuẩn hóa theo kiến trúc Phase 3:
   - Core: `Work Management` (hợp nhất tác nghiệp hiện trường, xác thực và thẩm định).
-  - Supporting: `Tree Asset Registry`, `Policy & Template Governance`, `Audit & Compliance`, `Operational Notifications`.
+  - Supporting: `Tree Asset Registry`, `Policy & Template Governance`, `Audit & Compliance`.
   - Generic: `Identity & Access Management`.
+  - Derived Read Model: `Operational Notifications` (Mô hình đọc dẫn xuất / Phóng chiếu phi thẩm quyền; Owning Context: N/A; chuyển giao kỹ thuật bảo lưu cho Kiến trúc).
   - Tách biệt hoàn toàn tầng kỹ thuật Mobile Offline & Hardware ra khỏi Bounded Contexts miền.
 - **Quyền sở hữu tài nguyên độc quyền (Single Authoritative Ownership):** Mỗi Aggregate/Entity thuộc đúng 1 context sở hữu (ví dụ: `EvidenceAttempt` là Entity trong Work Management; `TaskTypeCatalog` là Audit-only resource trong Policy Governance; `AuditEvent` là Domain Event trong Audit & Compliance).
 - **Ngữ nghĩa định danh Cây xanh:** `treeId` là bất biến duy nhất; `qrCode` là duy nhất có thể cấp đổi (`ReplaceTreeQrCode`); tọa độ chuẩn có thể cập nhật (`UpdateCanonicalCoordinates`) và **không phải là khóa duy nhất danh tính**.
@@ -199,33 +200,81 @@ Toàn bộ các yêu cầu nghiệp vụ mới xuất hiện trong quá trình c
 | **P6-01** | Actor names identical | Đối soát văn bản trên cả 5 tài liệu | `Field Staff`, `Operations Manager`, `Platform Administrator`, `System` xuất hiện đồng nhất 100% trên 5 tài liệu. | **YES** | **PASS** |
 | **P6-02** | Role taxonomy identical | Phân loại phân tầng vai trò | Operational (`staff`, `manager`), Governance (`admin`), Technical (`System`). Không kế thừa cấp bậc. | **YES** | **PASS** |
 | **P6-03** | Capability IDs identical | Đối soát mã định danh năng lực | `CAP-01..05` (Operational) và `CAP-ADM-01..13` (Governance) giữ nguyên định danh và ngữ nghĩa trên cả 5 tài liệu. | **YES** | **PASS** |
-| **P6-04** | Command names identical | Đối soát từ vựng thao tác | `CreateTask`, `StartTask`, `SubmitEvidence`, `ReviewApprove`, `ProvisionUser`, `AssignRole`... đồng nhất. | **YES** | **PASS** |
-| **P6-05** | Resource ownership identical | Kiểm tra ma trận sở hữu | Bounded Context sở hữu độc quyền: IAM sở hữu User/Account; Tree Registry sở hữu Tree; Work Management sở hữu Task. | **YES** | **PASS** |
+| **P6-04** | Command names identical | Đối soát từ vựng thao tác trên cả 5 tài liệu | Chuẩn hóa 100% từ vựng lệnh theo Phase 4: `CreateTask`, `StartTask`, `VerifyGps`, `VerifyQr`, `ReportFieldIssue`, `SubmitEvidence`, `ResumeBlockedTask`, `ReassignTask`, `CancelTask`, `ApproveTask`, `ApproveWithException`, `RequestRework`, `ResubmitRework`, `ProvisionUser`, `AssignRole`... Không tồn tại bí danh trôi dạt (`ReviewApprove` $\to$ `ApproveTask`, `ReviewRequestRework` $\to$ `RequestRework`). Có Bảng đối soát chi tiết tại Mục 12.1. | **YES** | **PASS** |
+| **P6-05** | Resource ownership identical | Kiểm tra ma trận sở hữu tài nguyên độc quyền | Bounded Context sở hữu độc quyền: IAM sở hữu User/Account; Tree Asset Registry sở hữu Tree/TreeMasterData; Work Management sở hữu Task/SiteVerification/TaskEvidence/ReviewDecision; Policy sở hữu Template/Policy; Audit sở hữu AuditEvent (Append-only). `Operational Notifications` xác định rõ là Derived Read Model (Owning Context: N/A). | **YES** | **PASS** |
 | **P6-06** | MVP status identical | Rà soát trạng thái triển khai | Admin là `ACTIVE IN MVP`. `CAP-ADM-01..09` là `MVP`; `CAP-ADM-10..12` là `NEXT`; `CAP-ADM-13` là `REJECTED`. | **YES** | **PASS** |
 | **P6-07** | No contradictory Admin scope | Rà soát ranh giới cấm của Admin | Cả 5 tài liệu đều xác định rõ Admin có zero operational task authority (`P4-09`), cấm duyệt hoặc can thiệp task. | **YES** | **PASS** |
 | **P6-08** | No Admin RESERVED contradiction | Quét toàn văn từ khóa | Xóa bỏ hoàn toàn tuyên bố Admin là `RESERVED` / `OUT_OF_MVP` ở cấp vai trò trên cả 5 tài liệu. | **YES** | **PASS** |
 | **P6-09** | No silent promotion proposed $\to$ canonical | Đối soát nguồn gốc quyết định | 100% nội dung đồng bộ đều truy xuất được nguồn gốc từ các Phase 1, 2, 3, 4 hoặc 5 đã đóng băng. | **YES** | **PASS** |
 | **P6-10** | Every new business requirement in RTM | Đối soát delta yêu cầu sang RTM | Toàn bộ 16 yêu cầu nghiệp vụ mới (`BR-ACT-01`, `BR-ADM-01..13`, `BR-DOM-01..04`) đều đã được tích hợp vào RTM. | **YES** | **PASS** |
 
+### 12.1. Command Consistency Table (Bảng Đối Soát Tính Nhất Quán Của Tập Lệnh Chuẩn Tắc)
+
+Bảng đối soát chứng minh cùng một tên lệnh mang chính xác cùng một ngữ nghĩa hành vi trên toàn bộ 5 tài liệu chuẩn tắc (chỉ bao gồm các lệnh được tham chiếu xuyên suốt nhiều tài liệu, không tồn tại bí danh):
+
+| Canonical Command | PRODUCT | DOMAIN | ACCESS | WORKFLOWS | RTM | Result |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| `CreateTask` | CAP-02 | Mục 6, 9 | CMD-OP-01 | WF-01, HO-01 | BR-12 | **PASS** |
+| `AssignTask` | CAP-02 | Mục 2, 4 | Mục 2 | WF-01 | BR-10 | **PASS** |
+| `StartTask` | CAP-01 | Mục 4, 6, 9 | CMD-OP-02 | WF-02, HO-02 | BR-03 | **PASS** |
+| `VerifyGps` | CAP-01 | Mục 4 | CMD-OP-03 | WF-03 | BR-01 | **PASS** |
+| `ReportLocationException` | CAP-01 | Mục 4 | CMD-OP-04 | WF-03 | BR-01b | **PASS** |
+| `VerifyQr` | CAP-01 | Mục 4 | CMD-OP-05 | WF-03 | BR-02 | **PASS** |
+| `ReportIdentityException` | CAP-01 | Mục 4 | CMD-OP-06 | WF-03 | BR-02b | **PASS** |
+| `CaptureProofEvidence` | CAP-01 | Mục 4 | CMD-OP-07 | WF-04 | BR-04/04b/04c | **PASS** |
+| `ReportFieldIssue` | CAP-01 | Mục 4, 6, 9 | CMD-OP-08 | WF-08, HO-03 | BR-05 | **PASS** |
+| `SubmitEvidence` | CAP-01 | Mục 4, 6 | CMD-OP-09 | WF-05, HO-05 | BR-06 | **PASS** |
+| `ResumeBlockedTask` | CAP-02 | Mục 6, 9 | CMD-OP-14 | WF-08, HO-04 | BR-05b | **PASS** |
+| `ReassignTask` | CAP-02 | Mục 6, 9 | CMD-OP-15/16 | WF-08, HO-04 | BR-10 | **PASS** |
+| `CancelTask` | CAP-02 | Mục 6, 9 | CMD-OP-17 | WF-09, HO-09 | BR-09 | **PASS** |
+| `ApproveTask` | CAP-04 | Mục 4, 6 | CMD-OP-10 | WF-06, HO-08 | BR-07 | **PASS** |
+| `ApproveWithException` | CAP-04 | Mục 4, 6, 9 | CMD-OP-11 | WF-06, HO-08 | BR-07b | **PASS** |
+| `RequestRework` | CAP-04 | Mục 4, 6, 9 | CMD-OP-12 | WF-07, HO-06 | BR-08 | **PASS** |
+| `ResubmitRework` | CAP-01 | Mục 4, 6 | CMD-OP-13 | WF-07, HO-07 | BR-08b | **PASS** |
+| `ViewCareHistory` | CAP-03 | Mục 4 | Mục 4 | Mục 3 | BR-11/13 | **PASS** |
+| `ProvisionUser` | CAP-ADM-01 | Mục 4 | CMD-ADM-01 | WF-10 | BR-ADM-01 | **PASS** |
+| `AssignRole` | CAP-ADM-02 | Mục 4 | CMD-ADM-02 | WF-11, HO-12 | BR-ADM-02 | **PASS** |
+| `SuspendAccount` | CAP-ADM-03 | Mục 4 | CMD-ADM-03 | WF-12, HO-10 | BR-ADM-03 | **PASS** |
+| `ActivateAccount` | CAP-ADM-03 | Mục 4 | CMD-ADM-04 | WF-12 | BR-ADM-03 | **PASS** |
+| `DisableAccount` | CAP-ADM-03 | Mục 4 | CMD-ADM-05 | WF-12 | BR-ADM-03 | **PASS** |
+| `UnlockAccount` | CAP-ADM-04 | Mục 4 | CMD-ADM-06 | WF-10 | BR-ADM-04 | **PASS** |
+| `ResetCredentialSetup` | CAP-ADM-04 | Mục 4 | CMD-ADM-07 | WF-10 | BR-ADM-04 | **PASS** |
+| `ViewAuditLog` | CAP-ADM-05 | Mục 4 | CMD-ADM-08 | WF-17 | BR-ADM-05 | **PASS** |
+| `FilterAuditLog` | CAP-ADM-05 | Mục 4 | CMD-ADM-09 | WF-17 | BR-ADM-05 | **PASS** |
+| `CreateTree` | CAP-ADM-06 | Mục 4 | CMD-ADM-10 | WF-13 | BR-ADM-06 | **PASS** |
+| `UpdateTreeMasterData` | CAP-ADM-06 | Mục 4 | CMD-ADM-11 | WF-13 | BR-ADM-06 | **PASS** |
+| `ReplaceTreeQrCode` | CAP-ADM-06 | Mục 5 | CMD-ADM-12 | WF-13 | BR-ADM-06b | **PASS** |
+| `UpdateCanonicalCoordinates` | CAP-ADM-06 | Mục 5 | CMD-ADM-13 | WF-13 | BR-ADM-06c | **PASS** |
+| `RetireTree` | CAP-ADM-06 | Mục 4 | CMD-ADM-14 | WF-13 | BR-ADM-06d | **PASS** |
+| `CreateTaskType` | CAP-ADM-07 | Mục 4 | CMD-ADM-15 | WF-14 | BR-ADM-07 | **PASS** |
+| `DeactivateTaskType` | CAP-ADM-07 | Mục 4 | CMD-ADM-16 | WF-14 | BR-ADM-07 | **PASS** |
+| `ActivateTaskType` | CAP-ADM-07 | Mục 4 | CMD-ADM-17 | WF-14 | BR-ADM-07 | **PASS** |
+| `PublishProofPolicyVersion` | CAP-ADM-08 | Mục 4 | CMD-ADM-18 | WF-15 | BR-ADM-08 | **PASS** |
+| `PublishChecklistTemplateVersion`| CAP-ADM-09 | Mục 4 | CMD-ADM-19 | WF-16 | BR-ADM-09 | **PASS** |
+
 ---
 
-## 13. Residual Phase-7 Work (Công việc Còn lại Ấn định cho Phase 7)
+## 13. Residual Phase-7 Work (Ranh Giới Bàn Giao Phase 7 Chuẩn Tắc)
 
 Phase 6 đã hoàn thành xuất sắc mục tiêu **Đồng bộ hóa Ngữ nghĩa Quyết định (Decision Synchronization)** và thỏa mãn đầy đủ tiêu chí `P6-10` (toàn bộ yêu cầu có mặt trong RTM và có thể truy vết).
 
-Phần công việc kiểm chứng chi tiết được bàn giao cho **Phase 7 (RTM Expansion & Acceptance Oracle Hardening)** bao gồm:
-1. **Tôi luyện Tiêu chuẩn Nghiệm thu Nhị phân (Binary Acceptance Oracles):** Chuyển đổi các định nghĩa `TO_BE_HARDENED_IN_PHASE_7` của `BR-ADM-01..13` và `BR-DOM-01..04` thành các biểu thức logic nhị phân kiểm thử được độc lập.
-2. **Xác lập Hợp đồng Kỹ thuật Mục tiêu (Target Contract Mappings):** Quy định chi tiết các Request/Response DTO cho các lệnh quản trị của Admin trong `@novyx/contracts`.
-3. **Thiết kế Kịch bản Kiểm thử Kiểm toán (Audit Verification Test Scenarios):** Đặc tả chi tiết các ca kiểm thử tự động cho cơ chế meta-audit và tính bất biến append-only của kho lưu trữ.
+Phần công việc kiểm chứng chi tiết được bàn giao cho **Phase 7 (RTM Expansion & Acceptance Oracle Hardening)** tuân thủ nghiêm ngặt ranh giới nghiệp vụ:
+1. **Thay thế các đánh dấu `TO_BE_HARDENED_IN_PHASE_7`:** Chuyển đổi toàn bộ các yêu cầu thành các tiêu chuẩn nghiệm thu nhị phân tất định (Deterministic Binary Business Acceptance Oracles).
+2. **Xác định các ca kiểm thử nghiệp vụ (Positive & Negative Business Cases):** Định nghĩa rõ ràng cho từng bộ: Tác nhân (`Actor`) + Lệnh (`Command`) + Tài nguyên (`Resource`) + Trạng thái (`State`) + Điều kiện tiên quyết (`Preconditions`) + Kết quả mong đợi (`Expected Result`) + Hành vi cấm/lỗi (`Forbidden/Error Behavior`).
+3. **Đặc tả kỳ vọng kiểm toán (Audit Expectations):** Định nghĩa kết quả kiểm toán dưới dạng các kết quả nghiệp vụ quan sát được (`Observable Business Outcomes`).
+4. **Bảo tồn tính độc lập với cài đặt kỹ thuật (Preserve Implementation Independence):**
+   - Phase 7 **TUYỆT ĐỐI KHÔNG** quy định: hình dạng DTO cụ thể trong `@novyx/contracts`, TypeScript interfaces, cấu trúc phong bì API (API envelope formats), trường cơ sở dữ liệu (Database schema), giao thức truyền tải mạng (Transport protocol), hoặc cơ chế kỹ thuật chống giả mạo (Cryptographic tamper-evidence mechanism).
+   - Sự căn chỉnh hợp đồng kỹ thuật chi tiết (`@novyx/contracts` DTOs, request/response envelopes, runtime schemas) được bảo lưu cho **Phase 11 ADR / Post-ADR Implementation**.
+   - Cơ chế kỹ thuật toàn vẹn / tamper-evidence được bảo lưu cho **NFR / Security Architecture / ADR**.
 
 ---
 
 ## 14. Source Boundary Verification (Kiểm soát Ranh giới Mã nguồn)
 
 Thực hiện kiểm tra ranh giới nghiêm ngặt trước khi kết thúc Phase 6:
-- `git diff --name-only 550f9cdba681b1de0f717573afbb28c79d0217e7 HEAD -- apps packages`: **0 diff** (Tuyệt đối không sửa mã nguồn).
-- `git diff --name-only 550f9cdba681b1de0f717573afbb28c79d0217e7 HEAD -- docs/diagrams`: **0 diff** (Tuyệt đối không sửa sơ đồ).
-- `git diff --name-only 550f9cdba681b1de0f717573afbb28c79d0217e7 HEAD -- docs/ARCHITECTURE.md docs/NFR.md docs/TESTING.md DESIGN.md`: **0 diff** (Không can thiệp kiến trúc hay NFR).
+- `git diff --name-only 7a0c4a66e5fa75996fc2a39b2a1b5961258c8225 HEAD -- apps packages`: **0 diff** (Tuyệt đối không sửa mã nguồn).
+- `git diff --name-only 7a0c4a66e5fa75996fc2a39b2a1b5961258c8225 HEAD -- docs/diagrams`: **0 diff** (Tuyệt đối không sửa sơ đồ).
+- `git diff --name-only 7a0c4a66e5fa75996fc2a39b2a1b5961258c8225 HEAD -- docs/ARCHITECTURE.md docs/NFR.md docs/TESTING.md DESIGN.md`: **0 diff** (Không can thiệp kiến trúc hay NFR).
 - Danh sách tập tin thay đổi được kiểm soát:
   1. `docs/PRODUCT.md`
   2. `docs/DOMAIN.md`
@@ -234,3 +283,28 @@ Thực hiện kiểm tra ranh giới nghiêm ngặt trước khi kết thúc Pha
   5. `docs/REQUIREMENTS-TRACEABILITY.md`
   6. `docs/business-reconciliation/09-CANONICAL-DOCUMENT-RECONCILIATION-REPORT.md`
   7. `docs/NOVYX_Business_Baseline_Reconciliation_Master_Plan.md` (Cập nhật trạng thái Phase 6)
+
+---
+
+## 15. Phase 6 Semantic Closure (Khóa Ngữ Nghĩa Chuẩn Tắc Phase 6)
+
+| ID | Khiếm khuyết (Defect) | Bằng chứng Khắc phục Chuẩn tắc (Resolution Evidence) | Kết quả (Result) |
+|:---:|---|---|:---:|
+| **P6-SC-01** | Operational Notifications incorrectly promoted to Canonical Bounded Context | Đưa `Operational Notifications` ra khỏi bảng Canonical Bounded Contexts trong `DOMAIN.md`. Khẳng định `Notification` là Derived Read Model / Projection với Authoritative Owning Context: N/A; cơ chế phát tin kỹ thuật bảo lưu cho Kiến trúc kỹ thuật. Số lượng Bounded Contexts chuẩn tắc giữ đúng: Core (`Work Management`), Supporting (`Tree Asset Registry`, `Policy & Template Governance`, `Audit & Compliance`), Generic (`Identity & Access Management`). | **PASS** |
+| **P6-SC-02** | AuditEvent technical tamper-evidence mechanism reintroduced | Loại bỏ toàn bộ từ ngữ mang tính cơ chế kỹ thuật ("Tamper-evident Store", "hash chain", v.v.) khỏi `DOMAIN.md` và `PRODUCT.md`. Định nghĩa `AuditEvent` thuần túy ở cấp độ miền nghiệp vụ: `Append-only audit record / immutable business audit intent` với bất biến cấm sửa/xóa bởi tác nhân con người; tuyên bố rõ ràng cơ chế toàn vẹn kỹ thuật / tamper-evidence được bảo lưu cho Kiến trúc kỹ thuật / NFR / ADR. | **PASS** |
+| **P6-SC-03** | Canonical command vocabulary drift from frozen Phase 4 | Chuẩn hóa toàn bộ từ vựng lệnh thẩm định trên cả 5 tài liệu chuẩn tắc và báo cáo đối soát: `ReviewApprove` $\to$ `ApproveTask`, `ReviewApproveWithException` $\to$ `ApproveWithException`, `ReviewRequestRework` $\to$ `RequestRework`. Giữ nguyên tính bền vững của Requirement ID (`BR-07`, `BR-07b`, `BR-08`). Xây dựng Bảng đối soát tính nhất quán của tập lệnh trên toàn bộ tài liệu (`P6-04` Recheck PASS). | **PASS** |
+| **P6-SC-04** | Phase-7 handoff contains technical implementation work that belongs to later Architecture / Post-ADR phases | Viết lại ranh giới bàn giao Phase 7 trong Báo cáo đối soát: Loại bỏ việc giao định nghĩa DTO `@novyx/contracts` và kiểm thử cài đặt cơ chế tamper-evidence cho Phase 7. Xác định rõ ràng Phase 7 chỉ tôi luyện các tiêu chuẩn nghiệm thu nhị phân (Binary Business Acceptance Oracles) độc lập với cài đặt; các cơ chế DTO / API envelope / Database schema / Cryptographic tamper-evidence được bảo lưu cho Kiến trúc kỹ thuật / Phase 11 ADR. | **PASS** |
+
+---
+
+## 16. Semantic Closure Negative Tests (Kiểm Thử Phủ Định Khóa Ngữ Nghĩa P6-SC-NT-01..07)
+
+| Mã Kiểm Thử | Giả định / Kịch bản Sai lệch Bị Phủ Định | Kết quả Mong đợi | Đánh giá Thực tế sau Đồng bộ Phase 6 | Kết luận |
+|:---:|---|:---:|---|:---:|
+| **P6-SC-NT-01** | "Notification has its own canonical bounded context because notifications appear in the product." | **`FAIL` (Bị chặn)** | Bác bỏ: `Notification` là Derived Read Model / Projection, không sở hữu aggregate độc lập, Authoritative Owning Context: N/A, giao vận bảo lưu cho Kiến trúc. | **PASS** |
+| **P6-SC-NT-02** | "AuditEvent requires a tamper-evident implementation as part of the canonical business domain." | **`FAIL` (Bị chặn)** | Bác bỏ: Nghiệp vụ chỉ yêu cầu ý đồ lưu trữ append-only và bất biến cấm sửa/xóa; cơ chế cryptographic/tamper-evident bảo lưu cho NFR/ADR. | **PASS** |
+| **P6-SC-NT-03** | "RTM uses ReviewApprove while ACCESS uses ApproveTask." | **`FAIL` (Bị chặn)** | Bác bỏ: Cả RTM và ACCESS-CONTROL (cùng toàn bộ tài liệu chuẩn) đều dùng thống nhất duy nhất tên lệnh `ApproveTask`. | **PASS** |
+| **P6-SC-NT-04** | "ApproveWithException and ReviewApproveWithException are treated as two commands." | **`FAIL` (Bị chặn)** | Bác bỏ: Chỉ tồn tại duy nhất một lệnh chuẩn tắc `ApproveWithException`, không có lệnh kép hay bí danh. | **PASS** |
+| **P6-SC-NT-05** | "Stable BR ID requires preserving an obsolete command alias." | **`FAIL` (Bị chặn)** | Bác bỏ: Mã yêu cầu `BR-07`, `BR-07b`, `BR-08` giữ nguyên vẹn trong khi từ vựng lệnh bên trong được chuẩn hóa đồng bộ sang `ApproveTask`, `ApproveWithException`, `RequestRework`. | **PASS** |
+| **P6-SC-NT-06** | "Phase 7 must define exact @novyx/contracts DTO shapes." | **`FAIL` (Bị chặn)** | Bác bỏ: Phase 7 chỉ định nghĩa Business Acceptance Oracles độc lập cài đặt; DTO shapes thuộc thẩm quyền Phase 11 ADR / Implementation. | **PASS** |
+| **P6-SC-NT-07** | "Phase 7 must select a cryptographic tamper-evidence mechanism." | **`FAIL` (Bị chặn)** | Bác bỏ: Lựa chọn cơ chế mật mã bảo lưu cho NFR / Security Architecture / ADR, không thuộc phạm vi Phase 7 business RTM hardening. | **PASS** |

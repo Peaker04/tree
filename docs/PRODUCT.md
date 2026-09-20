@@ -102,9 +102,11 @@ Hệ thống năng lực của NOVYX GreenOps được phân tách rành mạch 
 |    - ProofProfile Policy Mapping (Ánh xạ bắt buộc TaskType -> ProofProfile)       |
 |    - Checklist Template Versioning (Quản trị phiên bản biểu mẫu kiểm tra)         |
 | 5. Audit & Compliance                                                             |
-|    - Tamper-evident Audit Trail (Sổ nhật ký kiểm toán bất biến append-only)        |
+|    - Append-only Audit Trail (Sổ nhật ký kiểm toán bất biến append-only)           |
 |    - Audit Log Inspection & Filter (Thanh tra, tra cứu và xuất dữ liệu kiểm toán)  |
-| 6. Operational Notifications (Derived Read Model)                                 |
++-----------------------------------------------------------------------------------+
+| [DERIVED READ MODEL - Mô hình đọc dẫn xuất (Không phải Bounded Context)]          |
+| 6. Operational Notifications (Derived Read Model / Projection)                    |
 |    - Task Lifecycle Alerts (Việc mới, yêu cầu làm lại, phê duyệt, sự cố tạm dừng)  |
 +-----------------------------------------------------------------------------------+
 | [GENERIC DOMAIN - Quản trị Danh tính & Phân quyền (IAM)]                          |
@@ -123,7 +125,7 @@ Hệ thống năng lực của NOVYX GreenOps được phân tách rành mạch 
 | **CAP-02** | **Work Management** | Work Management (Core) | Operations Manager, Field Staff | `Task`, `TaskAssignment`, `TaskType` | **MUST HAVE** |
 | **CAP-03** | **Tree Asset Registry** | Tree Asset Registry | Operations Manager, Field Staff | `Tree`, `CareHistory` (Chỉ tạo khi `COMPLETED`) | **MUST HAVE** |
 | **CAP-04** | **Review & Quality Control** | Work Management (Core) | Operations Manager | `Task`, `ReviewDecision`, `ReworkRequest` | **MUST HAVE** |
-| **CAP-05** | **Operational Notifications** | Notifications (Read Model) | System, Field Staff, Operations Manager | `Notification` | **MUST HAVE** |
+| **CAP-05** | **Operational Notifications** | Derived Read Model (N/A) | System, Field Staff, Operations Manager | `Notification` | **MUST HAVE** |
 
 ### 3.2. Bảng chi tiết năng lực quản trị nền tảng (Platform Administrator Capabilities)
 

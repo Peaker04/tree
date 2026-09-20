@@ -96,9 +96,9 @@ Vòng đời của thực thể `Task` trong phiên bản MVP bao gồm chính x
 | `BLOCKED` | `ResumeBlockedTask` | Operations Manager | Trở ngại thực địa đã được tháo gỡ; cho cùng nhân viên cũ tiếp tục. | `IN_PROGRESS` | Staff nhận thông báo tiếp tục công việc (`HO-04`). |
 | `BLOCKED` | `ReassignTask` *(Case B)* | Operations Manager | Nhân viên cũ không thể tiếp tục; chọn nhân sự mới `ACTIVE`. | `PENDING` | Chuyển về `PENDING`; **bảo toàn quyền tác giả bằng chứng cũ**. |
 | `BLOCKED` | `CancelTask` | Operations Manager | Sự cố bất khả kháng không thể thi công; bắt buộc có lý do. | `CANCELLED` | Đóng task vĩnh viễn; bảo toàn vết sự cố phục vụ kiểm toán. |
-| `WAITING_REVIEW` | `ReviewApprove` | Operations Manager | 100% bằng chứng đạt chuẩn; `actor.userId != assignedStaffId`. | `COMPLETED` | **Terminal Success**; sinh bản ghi Lịch sử chăm sóc `CareHistory` (`HO-08`). |
-| `WAITING_REVIEW` | `ReviewApproveWithException` | Operations Manager | Việc làm thật, có ngoại lệ không thể tái tạo; Quản lý chịu trách nhiệm kèm lý do. | `COMPLETED` | **Terminal Success**; sinh `CareHistory` mang cờ `HAS_EXCEPTION`. |
-| `WAITING_REVIEW` | `ReviewRequestRework` | Operations Manager | Sai sót kỹ thuật; chỉ rõ khâu sai (`targetedArea`) + nhập lý do cụ thể. | `REWORK_REQUIRED` | Đẩy task lên đầu danh sách Staff; bảo lưu bằng chứng cũ (`HO-06`). |
+| `WAITING_REVIEW` | `ApproveTask` | Operations Manager | 100% bằng chứng đạt chuẩn; `actor.userId != assignedStaffId`. | `COMPLETED` | **Terminal Success**; sinh bản ghi Lịch sử chăm sóc `CareHistory` (`HO-08`). |
+| `WAITING_REVIEW` | `ApproveWithException` | Operations Manager | Việc làm thật, có ngoại lệ không thể tái tạo; Quản lý chịu trách nhiệm kèm lý do. | `COMPLETED` | **Terminal Success**; sinh `CareHistory` mang cờ `HAS_EXCEPTION`. |
+| `WAITING_REVIEW` | `RequestRework` | Operations Manager | Sai sót kỹ thuật; chỉ rõ khâu sai (`targetedArea`) + nhập lý do cụ thể. | `REWORK_REQUIRED` | Đẩy task lên đầu danh sách Staff; bảo lưu bằng chứng cũ (`HO-06`). |
 | `WAITING_REVIEW` | `CancelTask` | Operations Manager | Phát hiện gian lận hoặc kế hoạch bị hủy bỏ; bắt buộc nhập lý do. | `CANCELLED` | Đóng task vĩnh viễn; bảo toàn lịch sử phục vụ kiểm toán. |
 | `REWORK_REQUIRED` | `ResubmitRework` | Field Staff | `assignedStaffId == actor.userId`; đã bổ sung đúng khâu bị từ chối. | `WAITING_REVIEW` | Ghép bằng chứng cũ và khâu mới sửa thành `Attempt 2` gửi lại Quản lý (`HO-07`). |
 | `REWORK_REQUIRED` | `CancelTask` | Operations Manager | Khi nhân sự không thể khắc phục sửa chữa; bắt buộc có lý do. | `CANCELLED` | Đóng task vĩnh viễn; bảo toàn toàn bộ lịch sử nộp và thẩm định. |
@@ -154,10 +154,10 @@ Vòng đời của thực thể `Task` trong phiên bản MVP bao gồm chính x
 - **Quy trình:**
   1. Quản lý mở hàng đợi thẩm định, đối soát toàn bộ bằng chứng ảnh, checklist, kết quả khám bệnh, tọa độ GPS và ảnh tem QR.
   2. Quản lý ban hành **chính xác 1 trong 4 quyết định dứt điểm**:
-     - **`APPROVE` $\to$ `COMPLETED`:** Nghiệm thu đạt chuẩn 100%. Nhiệm vụ đóng vĩnh viễn và sinh bản ghi Lịch sử chăm sóc chính thức (`CareHistory`) (`HO-08`).
-     - **`APPROVE_WITH_EXCEPTION` $\to$ `COMPLETED`:** Công việc làm thật, có ngoại lệ không thể tái tạo; Quản lý bảo lãnh trách nhiệm kèm lý do bắt buộc. Sinh bản ghi `CareHistory` mang cờ `HAS_EXCEPTION`.
-     - **`REQUEST_REWORK` $\to$ `REWORK_REQUIRED`:** Sai sót kỹ thuật; chỉ rõ khâu hỏng và nhập lý do. Chuyển sang `WF-07`.
-     - **`CANCEL` $\to$ `CANCELLED`:** Phát hiện gian lận hoặc kế hoạch bị hủy bỏ. Chuyển sang `WF-09`.
+     - **`APPROVE` (lệnh `ApproveTask`) $\to$ `COMPLETED`:** Nghiệm thu đạt chuẩn 100%. Nhiệm vụ đóng vĩnh viễn và sinh bản ghi Lịch sử chăm sóc chính thức (`CareHistory`) (`HO-08`).
+     - **`APPROVE_WITH_EXCEPTION` (lệnh `ApproveWithException`) $\to$ `COMPLETED`:** Công việc làm thật, có ngoại lệ không thể tái tạo; Quản lý bảo lãnh trách nhiệm kèm lý do bắt buộc. Sinh bản ghi `CareHistory` mang cờ `HAS_EXCEPTION`.
+     - **`REQUEST_REWORK` (lệnh `RequestRework`) $\to$ `REWORK_REQUIRED`:** Sai sót kỹ thuật; chỉ rõ khâu hỏng và nhập lý do. Chuyển sang `WF-07`.
+     - **`CANCEL` (lệnh `CancelTask`) $\to$ `CANCELLED`:** Phát hiện gian lận hoặc kế hoạch bị hủy bỏ. Chuyển sang `WF-09`.
 - **Quy tắc:** Người thi công không bao giờ được tự duyệt việc của mình (`DR-HARD-02`). 100% task phải do Quản lý con người duyệt, cấm duyệt tự động `Auto-approval` (`DR-POL-01`).
 
 ### WF-07: Targeted Rework Loop (Vòng lặp sửa chữa có trọng tâm)
@@ -266,7 +266,7 @@ Vòng đời của thực thể `Task` trong phiên bản MVP bao gồm chính x
 - **Mã quy trình:** `WF-17`
 - **Tác nhân:** Platform Administrator (`admin`) $\to$ System.
 - **Quy trình:** Admin mở phân hệ nhật ký kiểm toán, thiết lập bộ lọc (thời gian, tác nhân, hành vi, tài nguyên) và xem danh sách bản ghi toàn vẹn từ kho lưu trữ Append-Only.
-- **Quy tắc:** Kho kiểm toán là bất biến vĩnh viễn (`ADM-SOD-03`); không tồn tại bất kỳ API nào cho phép sửa/xóa log. Quyền xem kiểm toán độc lập hoàn toàn với quyền can thiệp dữ liệu.
+- **Quy tắc:** Kho kiểm toán là bất biến vĩnh viễn (`ADM-SOD-03`); không tồn tại bất kỳ API nào cho phép sửa/xóa log. Quyền xem kiểm toán độc lập hoàn toàn với quyền can thiệp dữ liệu. Cơ chế toàn vẹn kỹ thuật / tamper-evidence được bảo lưu cho Kiến trúc kỹ thuật / NFR / ADR.
 
 ---
 
@@ -299,11 +299,11 @@ Vòng đời của thực thể `Task` trong phiên bản MVP bao gồm chính x
 | **HO-01** | `Work Management` | Operations Manager | `Work Management` | Field Staff | Quản lý bấm `CreateTask` | Thực thể `Task` kèm `treeId`, loại việc, deadline | *(Khởi tạo)* | `PENDING` |
 | **HO-02** | `Work Management` | Field Staff | `Work Management` | Hiện trường / Tự làm | Nhân viên bấm `StartTask` ngoài thực địa | Bắt đầu phiên thi công, snapshot checklist | `PENDING` | `IN_PROGRESS` |
 | **HO-03** | `Work Management` | Field Staff | `Work Management` | Operations Manager | Nhân viên gặp trở ngại bấm `ReportFieldIssue` | Thực thể `FieldIssue` kèm ảnh hiện trường & lý do | `IN_PROGRESS` | `BLOCKED` |
-| **HO-04** | `Work Management` | Operations Manager | `Work Management` | Field Staff (cũ/mới) | Quản lý giải quyết sự cố (`Resume` / `Reassign`) | Lệnh mở lại hoặc điều chuyển kèm bảo toàn bằng chứng | `BLOCKED` | `IN_PROGRESS` hoặc `PENDING` |
+| **HO-04** | `Work Management` | Operations Manager | `Work Management` | Field Staff (cũ/mới) | Quản lý giải quyết sự cố (`ResumeBlockedTask` / `ReassignTask`) | Lệnh mở lại hoặc điều chuyển kèm bảo toàn bằng chứng | `BLOCKED` | `IN_PROGRESS` hoặc `PENDING` |
 | **HO-05** | `Work Management` | Field Staff | `Work Management` | Operations Manager | Nhân viên hoàn tất thu thập bấm `SubmitEvidence` | Gói hồ sơ nghiệm thu (`SiteVerification` + Bằng chứng) | `IN_PROGRESS` | `WAITING_REVIEW` |
 | **HO-06** | `Work Management` | Operations Manager | `Work Management` | Field Staff | Quản lý phát hiện sai sót bấm `RequestRework` | Thực thể `ReworkRequest` kèm chỉ định khâu hỏng | `WAITING_REVIEW` | `REWORK_REQUIRED` |
 | **HO-07** | `Work Management` | Field Staff | `Work Management` | Operations Manager | Nhân viên sửa xong bấm `ResubmitRework` | Gói hồ sơ bổ sung phiên mới (`Attempt 2`) | `REWORK_REQUIRED` | `WAITING_REVIEW` |
-| **HO-08** | `Work Management` | Operations Manager | `Tree Asset Registry` | Cây xanh mục tiêu | Quản lý bấm `Approve` hoặc `ApproveWithException` | Bản ghi kỹ thuật chính thức chiếu sang `CareHistory` | `WAITING_REVIEW` | `COMPLETED` |
+| **HO-08** | `Work Management` | Operations Manager | `Tree Asset Registry` | Cây xanh mục tiêu | Quản lý bấm `ApproveTask` hoặc `ApproveWithException` | Bản ghi kỹ thuật chính thức chiếu sang `CareHistory` | `WAITING_REVIEW` | `COMPLETED` |
 | **HO-09** | `Work Management` | Operations Manager | `Audit & Compliance` | Sổ nhật ký kiểm toán | Quản lý bấm `CancelTask` | Thực thể `Cancellation` kèm lý do hủy văn bản | Phi kết thúc | `CANCELLED` |
 | **HO-10** | `Identity & Access` | Platform Administrator | `Work Management` | Operations Manager | Admin khóa tài khoản nhân sự (`SuspendAccount`) | Thông tin sự kiện `USER_NOT_OPERATIONALLY_AVAILABLE` | `ACTIVE` | `SUSPENDED` |
 | **HO-11** | Mọi Ngữ cảnh | Mọi Tác nhân | `Audit & Compliance` | Sổ nhật ký kiểm toán | Thực thi bất kỳ lệnh quản trị hoặc quyết định duyệt | Dữ liệu `AuditEvent` bất biến (`Append-Only`) | *N/A* | *N/A* |

@@ -467,7 +467,13 @@ docs/business-reconciliation/
 ## Exit Gate
 
 ```text
-P6 PASS
+P6 PASS — SEMANTICALLY CLOSED
+— NOTIFICATIONS RESTORED AS NON-AUTHORITATIVE READ MODEL
+— AUDIT TECHNICAL MECHANISM DEFERRED
+— CANONICAL COMMAND VOCABULARY NORMALIZED
+— PHASE 7 BUSINESS-ORACLE BOUNDARY CORRECTED
+— CANONICAL BUSINESS BASELINE FROZEN
+— READY FOR PHASE 7 RTM ACCEPTANCE ORACLES
 ```
 
 Chỉ khi:
@@ -475,8 +481,12 @@ Chỉ khi:
 - Thuật ngữ tác nhân, phân tầng vai trò, định danh năng lực và lệnh thao tác nhất quán 100%
 - Platform Administrator là vai trò Quản trị nền tảng hoạt động thực tế trong MVP (`ACTIVE IN MVP`), sở hữu 9 năng lực quản trị cốt lõi, không có thẩm quyền vận hành thực địa
 - Vòng đời 7 trạng thái, 3 ProofProfiles, CareHistory chỉ sinh từ COMPLETED và tính bất biến của trạng thái đóng được bảo vệ tuyệt đối
+- Bounded Contexts giữ đúng chuẩn tắc (Core: Work Management, Supporting: Tree Asset Registry, Policy & Template Governance, Audit & Compliance, Generic: IAM); Operational Notifications là Derived Read Model (Owning Context: N/A)
+- Toàn bộ cơ chế toàn vẹn kỹ thuật / tamper-evidence của AuditEvent được bảo lưu cho NFR/ADR; kho kiểm toán là append-only
+- Từ vựng lệnh thẩm định được chuẩn hóa dứt điểm (`ApproveTask`, `ApproveWithException`, `RequestRework`), bảo toàn Requirement ID
+- Ranh giới Phase 7 tập trung 100% vào Binary Business Acceptance Oracles độc lập cài đặt; DTOs và tamper-evidence kỹ thuật bảo lưu cho Architecture/ADR
 - Toàn bộ delta nghiệp vụ mới xuất hiện từ Phase 1–5 đều được tích hợp đầy đủ vào RTM (`BR-ACT-01`, `BR-ADM-01..13`, `BR-DOM-01..04`)
-- Cả 10 tiêu chí nghiệm thu P6-01..P6-10 và 16 bài kiểm thử phủ định P6-NT-01..16 đều PASS có bằng chứng đối soát trong báo cáo 09.
+- Cả 10 tiêu chí nghiệm thu P6-01..P6-10, 16 bài kiểm thử phủ định P6-NT-01..16, 4 khiếm khuyết P6-SC-01..04 và 7 bài kiểm thử phủ định P6-SC-NT-01..07 đều PASS có bằng chứng đối soát trong báo cáo 09.
 
 ---
 
