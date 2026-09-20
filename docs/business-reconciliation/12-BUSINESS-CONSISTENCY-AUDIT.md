@@ -141,6 +141,10 @@ Nguồn xác thực: [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE
 Nguồn xác thực: [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE/tree/docs/business-reconciliation/07-AUTHORIZATION-ACTION-ELIGIBILITY.md) (Mục 7.2 & 7.3).
 Đảm bảo bao phủ **22 / 22 hành vi quản trị nền tảng** phân định rõ ranh giới MVP, NEXT, và REJECTED:
 
+> **Phân định rõ ràng giữa Token Lịch Sử Phase 4 và Chiếu Chuẩn Tắc Hiện Tại:**
+> - Trong quyết định lịch sử Phase 4 ([07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE/tree/docs/business-reconciliation/07-AUTHORIZATION-ACTION-ELIGIBILITY.md)), khe `GV-07` mang token `RecoverAccount`.
+> - Trong văn bản chuẩn tắc hiện tại ([ACCESS-CONTROL.md](file:///d:/ki7/EXE/tree/docs/ACCESS-CONTROL.md) Bảng 4.1 và [REQUIREMENTS-TRACEABILITY.md](file:///d:/ki7/EXE/tree/docs/REQUIREMENTS-TRACEABILITY.md) `BR-ADM-04`), hành vi này đã được chuẩn hóa đồng bộ thành **`ResetCredentialSetup`** (Cấp lại liên kết thiết lập thông tin xác thực an toàn). Token lịch sử `RecoverAccount` được bảo lưu nguyên vẹn trong Quyết định 07 như chứng tích lịch sử và được chiếu chuẩn tắc thành `ResetCredentialSetup` trong đường cơ sở hiện tại.
+
 | Mã GV | Tên Hành vi Quản trị (Canonical Action) | Field Staff | Operations Manager | Platform Admin | Phân loại & Ranh giới | Ngữ cảnh sở hữu |
 | :---: | :--- | :---: | :---: | :---: | :---: | :--- |
 | **GV-01** | `ProvisionUser` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-01`) | Identity & Access Management |
@@ -149,7 +153,7 @@ Nguồn xác thực: [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE
 | **GV-04** | `SuspendAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-03`) | Identity & Access Management |
 | **GV-05** | `DisableAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-03`) | Identity & Access Management |
 | **GV-06** | `UnlockAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-04`) | Identity & Access Management |
-| **GV-07** | `RecoverAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-04`) | Identity & Access Management |
+| **GV-07** | `ResetCredentialSetup` *(Token lịch sử: `RecoverAccount`)* | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-04`) | Identity & Access Management |
 | **GV-08** | `ViewAuditLog` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-05`) | Audit & Compliance |
 | **GV-09** | `FilterAuditLog` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-05`) | Audit & Compliance |
 | **GV-10** | `CreateTree` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-06`) | Tree Asset Registry |
@@ -172,33 +176,35 @@ Nguồn xác thực: [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE
 
 Nguồn xác thực: [REQUIREMENTS-TRACEABILITY.md](file:///d:/ki7/EXE/tree/docs/REQUIREMENTS-TRACEABILITY.md).
 RTM định nghĩa 43 yêu cầu với **37 tên token lệnh tường minh**:
-- 32 lệnh trùng khớp hoàn toàn với các định danh trong `OP-xx` và `GV-xx`.
-- **5 lệnh xuất hiện tường minh trong RTM nhưng không mang mã OP/GV độc lập:**
+- 33 lệnh trùng khớp hoàn toàn với các định danh trong `OP-xx` và `GV-xx` (bao gồm `ResetCredentialSetup` ứng với khe `GV-07`).
+- **4 lệnh xuất hiện tường minh trong RTM mang tính bổ sung (không mang mã OP/GV độc lập):**
   1. `ReportLocationException` (`BR-01b` — Báo cáo ngoại lệ vị trí thực địa khi GPS $> 10$m)
   2. `ReportIdentityException` (`BR-02b` — Báo cáo ngoại lệ danh tính tem QR bị hỏng/mất)
   3. `LookupTreeByQr` (`BR-13` — Tra cứu nhanh hồ sơ cây xanh qua quét mã QR)
   4. `ProjectCareHistory` (`BR-11` — Tự động chiếu dữ liệu lịch sử chăm sóc từ task `COMPLETED`)
-  5. `ResetCredentialSetup` (`BR-ADM-04` — Cấp lại liên kết thiết lập thông tin xác thực an toàn, đi kèm `UnlockAccount`)
 
 ---
 
 ### 4.5. Phép Hợp Nhất & Khử Trùng Lặp Danh Mục Lệnh (Union Deduplicated Command Registry)
 
 Bằng phương pháp hợp nhất và đối soát khử trùng lặp định danh giữa hai tập hợp:
-$$\text{Union Unique Commands} = \{\text{Frozen Authorization Actions (44)}\} \cup \{\text{Canonical RTM Commands (37)}\}$$
+$$\text{Union Unique Commands} = \{\text{Frozen Canonical Authorization Actions (44)}\} \cup \{\text{Canonical RTM Commands (37)}\}$$
 
 Thống kê chính xác từ script phân tích tự động:
-- **Số lượng hành vi phân quyền đóng băng (Authorization Actions):** **44** (22 Vận hành `OP-01..22` + 22 Quản trị `GV-01..22`)
+- **Số lượng hành vi phân quyền đóng băng (Authorization Actions):** **44** (22 Vận hành `OP-01..22` + 22 Quản trị `GV-01..22`, với `GV-07` được chiếu chuẩn tắc là `ResetCredentialSetup`)
 - **Số lượng token lệnh tường minh trong RTM (RTM Explicit Commands):** **37**
-- **Số lượng lệnh độc nhất trong toàn hệ thống (Union Unique Commands):** **49**
+- **Số lượng lệnh độc nhất trong toàn hệ thống (Union Unique Commands):** **48**
 
 ```text
 TỔNG SỐ LỆNH VẬN HÀNH OP-01..22:       22
-TỔNG SỐ HÀNH VI QUẢN TRỊ GV-01..22:    22 (19 MVP, 2 NEXT, 1 REJECTED)
-TỔNG SỐ LỆNH RTM BỔ SUNG:              5
+TỔNG SỐ HÀNH VI QUẢN TRỊ GV-01..22:    22 (19 MVP, 2 NEXT, 1 REJECTED — GV-07: ResetCredentialSetup)
+TỔNG SỐ LỆNH RTM BỔ SUNG:              4 (ReportLocationException, ReportIdentityException, LookupTreeByQr, ProjectCareHistory)
 --------------------------------------------------
-TỔNG SỐ LỆNH HỢP NHẤT ĐỘC NHẤT (UNION): 49
+TỔNG SỐ LỆNH HỢP NHẤT ĐỘC NHẤT (UNION): 48
 ```
+
+> **Ghi chú đối soát F10-01 (Legacy Token Reconciliation):**
+> Trong Quyết định 07 (Phase 4), mã `GV-07` sử dụng tên token `RecoverAccount`. Khi đồng bộ tài liệu chuẩn tắc tại Phase 6, hành vi này được định danh thống nhất là `ResetCredentialSetup` (khớp [ACCESS-CONTROL.md](file:///d:/ki7/EXE/tree/docs/ACCESS-CONTROL.md) `CMD-ADM-07` và [REQUIREMENTS-TRACEABILITY.md](file:///d:/ki7/EXE/tree/docs/REQUIREMENTS-TRACEABILITY.md) `BR-ADM-04`). `RecoverAccount` được lưu giữ như một chứng tích kế thừa (legacy token), không phải là lệnh độc lập thứ hai bên cạnh `ResetCredentialSetup`. Do đó, tập hợp lệnh hợp nhất độc nhất toàn hệ thống chuẩn xác là **48 lệnh**.
 
 ---
 
@@ -217,9 +223,9 @@ Hệ thống xác lập chính xác mô hình **3 vai trò con người** và **
 
 ---
 
-## 6. Ma Trận Quyền Lệnh Hợp Nhất Đầy Đủ (Full Consolidated Role / Action Matrix: 49 Lệnh)
+## 6. Ma Trận Quyền Lệnh Hợp Nhất Đầy Đủ (Full Consolidated Role / Action Matrix: 48 Lệnh)
 
-Bảng đối soát ma trận phân quyền thực tế trên toàn bộ **49 lệnh chuẩn tắc** của hệ thống:
+Bảng đối soát ma trận phân quyền thực tế trên toàn bộ **48 lệnh chuẩn tắc** của hệ thống:
 
 | STT | Mã Lệnh / Tên Lệnh | Field Staff | Operations Manager | Platform Admin | System | Ngữ cảnh sở hữu | Tài nguyên miền | Trạng thái phạm vi | Kết quả |
 | :---: | :--- | :---: | :---: | :---: | :---: | :--- | :--- | :---: | :---: |
@@ -251,7 +257,7 @@ Bảng đối soát ma trận phân quyền thực tế trên toàn bộ **49 l�
 | 26 | `GV-04: SuspendAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `AccountStatus` | MVP (CAP-ADM-03) | **PASS** |
 | 27 | `GV-05: DisableAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `AccountStatus` | MVP (CAP-ADM-03) | **PASS** |
 | 28 | `GV-06: UnlockAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `Account` | MVP (CAP-ADM-04) | **PASS** |
-| 29 | `GV-07: RecoverAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `Account` | MVP (CAP-ADM-04) | **PASS** |
+| 29 | `GV-07: ResetCredentialSetup` *(Token lịch sử: `RecoverAccount`)* | DENY | DENY | **ALLOW** | DENY | Identity & Access | `Account` | MVP (CAP-ADM-04) | **PASS** |
 | 30 | `GV-08: ViewAuditLog` | DENY | DENY | **ALLOW** | DENY | Audit & Compliance | `AuditEvent` | MVP (CAP-ADM-05) | **PASS** |
 | 31 | `GV-09: FilterAuditLog` | DENY | DENY | **ALLOW** | DENY | Audit & Compliance | `AuditEvent` | MVP (CAP-ADM-05) | **PASS** |
 | 32 | `GV-10: CreateTree` | DENY | DENY | **ALLOW** | DENY | Tree Asset Registry | `Tree` | MVP (CAP-ADM-06) | **PASS** |
@@ -271,14 +277,13 @@ Bảng đối soát ma trận phân quyền thực tế trên toàn bộ **49 l�
 | 46 | `RTM-02: ReportIdentityException` | **ALLOW** | DENY | **DENY** | DENY | Work Management | `VerificationException` | MVP (BR-02b) | **PASS** |
 | 47 | `RTM-03: LookupTreeByQr` | **ALLOW** | **ALLOW** | DENY | DENY | Tree Asset Registry | `Tree, CareHistory` | MVP (BR-13) | **PASS** |
 | 48 | `RTM-04: ProjectCareHistory` | DENY | DENY | DENY | **DETERMINISTIC** | Tree Asset Registry | `CareHistory projection` | MVP (BR-11) | **PASS** |
-| 49 | `RTM-05: ResetCredentialSetup` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `Account` | MVP (BR-ADM-04) | **PASS** |
 
 ---
 
 ## 7. Kiểm Toán Ma Trận Năng Lực Quản Trị (Capability Matrix Audit)
 
 Phân định rạch ròi giữa **Số lượng Năng lực (13 Capabilities)** và **Số lượng Lệnh (Commands)**:
-- **9 Năng lực MVP:** `CAP-ADM-01` đến `CAP-ADM-09` (Bao gồm 19 lệnh quản trị MVP `GV-01..19` và `ResetCredentialSetup`).
+- **9 Năng lực MVP:** `CAP-ADM-01` đến `CAP-ADM-09` (Bao gồm 19 lệnh quản trị MVP `GV-01..19`, trong đó `GV-07` chuẩn hóa là `ResetCredentialSetup`).
 - **3 Năng lực NEXT:** `CAP-ADM-10` (Dynamic Findings), `CAP-ADM-11` (Break-Glass), `CAP-ADM-12` (Security Notifications).
 - **1 Năng lực BỊ BÁC BỎ (REJECTED):** `CAP-ADM-13` (Platform System Configuration).
 
@@ -287,7 +292,7 @@ Phân định rạch ròi giữa **Số lượng Năng lực (13 Capabilities)**
 | **CAP-ADM-01** | User Provisioning | Platform Admin | Identity & Access Management | `User`, `Account` | **MVP** | `ProvisionUser` | **PASS** |
 | **CAP-ADM-02** | Role Assignment | Platform Admin | Identity & Access Management | `RoleAssignment` | **MVP** | `AssignRole` | **PASS** |
 | **CAP-ADM-03** | Account Lifecycle | Platform Admin | Identity & Access Management | `AccountStatus` | **MVP** | `SuspendAccount`, `ActivateAccount`, `DisableAccount` | **PASS** |
-| **CAP-ADM-04** | Account Recovery / Unlock | Platform Admin | Identity & Access Management | `Account` | **MVP** | `UnlockAccount`, `RecoverAccount`, `ResetCredentialSetup` | **PASS** |
+| **CAP-ADM-04** | Account Recovery / Unlock | Platform Admin | Identity & Access Management | `Account` | **MVP** | `UnlockAccount`, `ResetCredentialSetup` *(Token lịch sử: `RecoverAccount`)* | **PASS** |
 | **CAP-ADM-05** | Audit Log Inspection | Platform Admin | Audit & Compliance | `AuditEvent` | **MVP** | `ViewAuditLog`, `FilterAuditLog` | **PASS** |
 | **CAP-ADM-06** | Tree Master Data Governance | Platform Admin | Tree Asset Registry | `Tree`, `TreeMasterData`, `TreeIdentity` | **MVP** | `CreateTree`, `UpdateTreeMasterData`, `ReplaceTreeQrCode`, `UpdateCanonicalCoordinates`, `RetireTree` | **PASS** |
 | **CAP-ADM-07** | TaskType Catalog Governance | Platform Admin | Policy & Template Governance | `TaskTypeCatalog` | **MVP** | `CreateTaskType`, `ActivateTaskType`, `DeactivateTaskType` | **PASS** |
@@ -543,7 +548,7 @@ Kiểm toán xác nhận Phase 9 hoạt động ở chế độ kiểm toán đ�
 
 | Cổng kiểm soát | Câu hỏi kiểm toán chuẩn tắc | Phương pháp xác minh | Bằng chứng kiểm toán cụ thể | Mâu thuẫn chặn | Kết quả |
 | :--- | :--- | :--- | :--- | :---: | :---: |
-| **P9-01** | Có hành động nào không có tác nhân sở hữu rõ ràng? | Rà soát danh mục phân quyền đầy đủ: 22 lệnh `OP-01..22`, 22 hành vi `GV-01..22` và 5 lệnh RTM (Tổng hợp 49 lệnh độc nhất) | 100% 49 lệnh đều có tác nhân sở hữu thẩm quyền đơn nhất (Staff, Manager, Admin, System), ngữ cảnh sở hữu và trạng thái phạm vi xác định. 0 lệnh vô chủ, 0 lệnh TBD, 0 lệnh tranh chấp thẩm quyền. | 0 | **PASS** |
+| **P9-01** | Có hành động nào không có tác nhân sở hữu rõ ràng? | Rà soát danh mục phân quyền đầy đủ: 22 lệnh `OP-01..22`, 22 hành vi `GV-01..22` (với `GV-07` chiếu chuẩn tắc là `ResetCredentialSetup`) và 4 lệnh RTM bổ sung (Tổng hợp 48 lệnh chuẩn tắc độc nhất) | 100% 48 lệnh đều có tác nhân sở hữu thẩm quyền đơn nhất (Staff, Manager, Admin, System), ngữ cảnh sở hữu và trạng thái phạm vi xác định. 0 lệnh vô chủ, 0 lệnh TBD, 0 lệnh tranh chấp thẩm quyền. Token lịch sử `RecoverAccount` từ Phase 4 được bảo lưu như chứng tích kế thừa, không tính là lệnh riêng biệt thứ 49. | 0 | **PASS** |
 | **P9-02** | Admin có vô tình trở thành superuser nghiệp vụ không? | Đối soát ranh giới phân quyền tại `ACCESS-CONTROL.md`, Quyết định 07 và Biểu đồ 07 | Platform Admin bị **DENY 100%** trên toàn bộ các lệnh tác nghiệp Task (`OP-03..15`, `OP-17..21`). Khả năng vượt quyền khẩn cấp (`Break-Glass` / `GV-21` / `CAP-ADM-11`) bị khóa chặt ở nhóm NEXT. | 0 | **PASS** |
 | **P9-03** | Operations Manager có bị tước mất quyền vận hành cần thiết không? | Kiểm tra quyền hạn tại 7 trạng thái của Task và toàn bộ các lệnh quản lý | Manager bảo lưu trọn vẹn quyền: `ViewAssignedTask` (ALLOW), `ViewOperationalTask`, `CreateTask`, `AssignTask`, `ReassignTask` (`PENDING`/`BLOCKED`), `ResumeBlockedTask`, `CancelTask` (mọi trạng thái nonterminal), `ViewReviewQueue`, `ReviewTask`, 4 kết luận duyệt tại `WAITING_REVIEW`, và `ViewCareHistory` (ALLOW). `AUTHORIZED_OPERATIONAL_SCOPE` duy trì tính trừu tượng. | 0 | **PASS** |
 | **P9-04** | Luồng làm việc của Field Staff có bị phức tạp hóa bởi Admin không? | Kiểm tra sơ đồ swimlane `proposed-02` và luồng `WF-01..09` | Luồng hiện trường chuẩn tắc chỉ tương tác giữa Manager, Staff và System. Hoàn toàn không có bước duyệt hay phụ thuộc đồng bộ nào từ Admin trong quy trình tác nghiệp. | 0 | **PASS** |

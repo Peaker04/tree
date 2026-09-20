@@ -236,9 +236,10 @@ $$\text{ACTION ELIGIBILITY} = \text{ACTOR ROLE} \land \text{RESOURCE SCOPE} \lan
   - System: Tự động hóa tất định, không suy xét chủ quan.
 - **Danh mục phân quyền đóng băng (Authorization Provenance):**
   - **22 Lệnh Vận hành Chuẩn tắc (`OP-01..OP-22`):** Độ bao phủ đạt 22/22 (Khớp 100% Quyết định 07, `ViewAssignedTask` Quản lý ALLOW, `ViewCareHistory` phục hồi).
-  - **22 Hành vi Quản trị Chuẩn tắc (`GV-01..GV-22`):** Độ bao phủ đạt 22/22 (19 MVP, 2 NEXT, 1 REJECTED).
-  - **5 Lệnh RTM Bổ sung:** `ReportLocationException`, `ReportIdentityException`, `LookupTreeByQr`, `ProjectCareHistory`, `ResetCredentialSetup`.
-  - **Tổng hợp danh mục lệnh độc nhất toàn hệ thống:** **Đúng 49 lệnh độc nhất**.
+  - **22 Hành vi Quản trị Chuẩn tắc (`GV-01..GV-22`):** Độ bao phủ đạt 22/22 (19 MVP, 2 NEXT, 1 REJECTED). Trong đó, khe `GV-07` chiếu chuẩn tắc thành `ResetCredentialSetup` (chuẩn hóa thay thế token lịch sử `RecoverAccount` tại Phase 4).
+  - **Khóa cứng Năng lực CAP-ADM-04:** Gồm chính xác 2 lệnh chuẩn tắc `UnlockAccount` và `ResetCredentialSetup`. Token lịch sử `RecoverAccount` từ Quyết định 07 được bảo lưu dưới dạng chứng tích kế thừa bị thay thế (`SUPERSEDED`), không phải lệnh độc lập thứ ba.
+  - **4 Lệnh RTM Bổ sung:** `ReportLocationException` (`BR-01b`), `ReportIdentityException` (`BR-02b`), `LookupTreeByQr` (`BR-13`), `ProjectCareHistory` (`BR-11`).
+  - **Tổng hợp danh mục lệnh độc nhất toàn hệ thống:** **Đúng 48 lệnh độc nhất** (22 OP + 22 GV chiếu chuẩn tắc + 4 RTM bổ sung).
 
 ---
 
@@ -324,7 +325,7 @@ Bảng giá trị băm mật mã học SHA-256 xác lập bằng chứng đóng 
 | `docs/business-reconciliation/09-CANONICAL-DOCUMENT-RECONCILIATION-REPORT.md` | `680a3e10967cda33d023bb3e7ba2beab80a6d04aab09f801394d325194c7d629` |
 | `docs/business-reconciliation/10-RTM-ACCEPTANCE-ORACLE-REPORT.md` | `7efb5310b78ccb162929f25c32bb00082f7e724664c360f3377afca8d8409a36` |
 | `docs/business-reconciliation/11-DIAGRAM-SUITE-RECONCILIATION-REPORT.md` | `3e69688e04496dc5dcd2669974e48a4d26569c4e9396b329e2d945a8855111f5` |
-| `docs/business-reconciliation/12-BUSINESS-CONSISTENCY-AUDIT.md` | `ea205719c1e7d8b4312042664cdf9aa5d823831ee369b76dc753a8b9308b50ca` |
+| `docs/business-reconciliation/12-BUSINESS-CONSISTENCY-AUDIT.md` | `280fc4251b372833291d68a34def5032eee2a851dc9371f412f3ae8225e97ff4` |
 
 ---
 
