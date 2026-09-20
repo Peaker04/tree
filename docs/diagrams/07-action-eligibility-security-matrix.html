@@ -278,7 +278,7 @@
             <rect x="580" y="6" width="80" height="26" rx="3" fill="rgba(220,38,38,0.08)" />
             <text x="620" y="23" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#DC2626">DENY</text>
             <text x="690" y="23" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Mọi trạng thái nonterminal (PENDING, IN_PROGRESS, BLOCKED, WAITING_REVIEW, REWORK)
+              Nonterminal: PENDING, IN_PROGRESS, BLOCKED, WAITING_REVIEW, REWORK_REQUIRED
             </text>
           </g>
         </g>
@@ -354,10 +354,10 @@
           <g transform="translate(0, 188)">
             <rect id="gov-row-3" x="0" y="0" width="1150" height="46" fill="#FFF" stroke="#E2E0D8" />
             <text x="18" y="24" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-              CAP-ADM-05 (Audit Inspection &amp; Export)
+              CAP-ADM-05 (Audit Log Inspection)
             </text>
             <text x="18" y="38" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              InspectAuditTrail, ExportAuditReport
+              ViewAuditLog, FilterAuditLog
             </text>
             <rect x="280" y="10" width="80" height="26" rx="3" fill="rgba(22,101,52,0.12)" />
             <text x="320" y="27" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">ALLOW</text>
@@ -401,16 +401,16 @@
             NĂNG LỰC NGOÀI PHẠM VI MVP (NEXT · CHƯA KÍCH HOẠT)
           </text>
           <text x="16" y="46" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • <tspan font-family="'Geist Mono', monospace" font-weight="600">UseBreakGlass (CAP-ADM-10):</tspan> DENY ở mọi luồng MVP thông thường
+            • <tspan font-family="'Geist Mono', monospace" font-weight="600">ManageDynamicFindingsTemplate (CAP-ADM-10):</tspan> Chưa kích hoạt tại MVP
           </text>
           <text x="26" y="64" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            (Cơ chế khẩn cấp chưa kích hoạt; khi mở trong tương lai bắt buộc có audit severity cao)
+            (Bảo lưu giai đoạn NEXT; MVP áp dụng Fixed Canonical Schema cho StructuredFindings)
           </text>
           <text x="16" y="86" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • <tspan font-family="'Geist Mono', monospace" font-weight="600">Dynamic Findings Template (CAP-ADM-11):</tspan> Chưa hỗ trợ tạo schema động
+            • <tspan font-family="'Geist Mono', monospace" font-weight="600">UseBreakGlass (CAP-ADM-11):</tspan> DENY ở mọi luồng MVP thông thường
           </text>
           <text x="16" y="108" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • <tspan font-family="'Geist Mono', monospace" font-weight="600">Security Governance Notifications (CAP-ADM-12):</tspan> Chưa có kênh cảnh báo riêng
+            • <tspan font-family="'Geist Mono', monospace" font-weight="600">Security &amp; Governance Notifications (CAP-ADM-12):</tspan> Chưa có kênh cảnh báo riêng
           </text>
           <text x="16" y="130" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626" font-weight="600">
             • CAP-ADM-13: Cấu hình hệ thống trực tiếp (BỊ BÁC BỎ HOÀN TOÀN)

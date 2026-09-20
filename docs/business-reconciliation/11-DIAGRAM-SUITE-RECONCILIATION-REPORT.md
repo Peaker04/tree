@@ -448,15 +448,50 @@ Hệ thống biểu đồ đã được đồng bộ hoàn toàn với đường
 
 ---
 
+## 21. Đóng Ngữ Nghĩa Phase 8 (Phase 8 Semantic Closure)
+
+### 21.1 Lịch Sử Đóng Băng & Kiểm Toán (Audit Trail)
+- **Initial Phase-8 commit:** `a800fae967046a6617cd4901967af777980c7b03` (Chứa 3 khuyết tật ngữ nghĩa thứ cấp tại các biểu đồ dẫn xuất).
+- **Closure commit:** Ghi nhận tại commit đóng ngữ nghĩa hiện tại (`docs(diagrams): close phase 8 semantic mapping gaps`).
+- **Nguyên tắc bảo tồn lịch sử:** Không xóa bỏ hay che giấu các khuyết tật ban đầu của commit `a800fae`; toàn bộ 3 khuyết tật được giải quyết minh bạch thông qua closure patch có bằng chứng xác minh.
+
+### 21.2 Bảng Đối Soát Khuyết Tật Ngữ Nghĩa (Semantic Closure Defect Table)
+
+| Defect | Canonical Evidence | Affected Diagram | Correction | Recheck | Result |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **P8-SC-01** | `docs/REQUIREMENTS-TRACEABILITY.md` (BR-ADM-10, BR-ADM-11), `docs/business-reconciliation/04-ADMIN-BUSINESS-SCOPE-DECISION.md`. Định danh chuẩn tắc: `CAP-ADM-10` = Findings Template Governance (`ManageDynamicFindingsTemplate`, NEXT); `CAP-ADM-11` = Break-Glass Access (`UseBreakGlass`, NEXT); `CAP-ADM-12` = Security & Governance Notifications (NEXT); `CAP-ADM-13` = Platform System Configuration (REJECTED). | `docs/diagrams/01-product-capability-map.html`, `docs/diagrams/07-action-eligibility-security-matrix.html` | Hoán đổi vị trí và chuẩn hóa mapping: `CAP-ADM-10` là Findings Template Governance (NEXT, MVP dùng Fixed Schema), `CAP-ADM-11` là Break-Glass Access (NEXT, khóa tại MVP). Khẳng định rõ ràng: Structured Findings là **BẮT BUỘC** trong MVP (`INSPECTION_PROOF = Site Verification + Structured Findings + Condition Photo(s)`), việc hoãn `CAP-ADM-10` chỉ áp dụng cho Dynamic/Admin-configurable template governance. | Quét mã nguồn SVG/HTML: 0 liên kết đảo ngược, 0 xuất hiện `CAP-ADM-10` gắn với Break-Glass, 0 xuất hiện `CAP-ADM-11` gắn với Dynamic Template. Kiểm tra hình học đạt `[PASS]`. | **CLOSED** |
+| **P8-SC-02** | `docs/REQUIREMENTS-TRACEABILITY.md` (BR-ADM-05 danh mục lệnh chuẩn tắc: `ViewAuditLog`, `FilterAuditLog`), `docs/business-reconciliation/04-ADMIN-BUSINESS-SCOPE-DECISION.md`. RTM không định nghĩa lệnh `InspectAuditTrail` hay `ExportAuditReport`. | `docs/diagrams/01-product-capability-map.html`, `docs/diagrams/07-action-eligibility-security-matrix.html` (đồng thời dọn sạch tại `02-domain-context-map.html` và `08-role-information-architecture.html`) | Thay thế toàn bộ từ vựng command-level bằng đúng cặp lệnh chuẩn tắc: `ViewAuditLog`, `FilterAuditLog`. Loại bỏ hoàn toàn `InspectAuditTrail` và các quy định ngụ ý lệnh Export (`ExportAuditReport`). Nhãn năng lực khái niệm giữ là `Audit Log Inspection`. Tuyệt đối không tự ý thêm lệnh Export vào RTM chuẩn tắc. | Quét mã nguồn 16 biểu đồ: 0 lệnh `InspectAuditTrail`, 0 lệnh `ExportAuditReport`. Toàn bộ danh pháp khớp 100% RTM. Kiểm tra hình học đạt `[PASS]`. | **CLOSED** |
+| **P8-SC-03** | `docs/DOMAIN.md`, `docs/WORKFLOWS.md`, `docs/ACCESS-CONTROL.md`. Danh mục 7 trạng thái chuẩn tắc của `TaskStatus`: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`. Không tồn tại token alias/shorthand `REWORK`. | `docs/diagrams/07-action-eligibility-security-matrix.html` (và bảng catalog tại `docs/diagrams/README.md`) | Thay thế token viết tắt `REWORK` thành token enum chuẩn tắc `REWORK_REQUIRED` trong danh sách các trạng thái nonterminal đủ điều kiện cho lệnh `CancelTask` (`Nonterminal: PENDING, IN_PROGRESS, BLOCKED, WAITING_REVIEW, REWORK_REQUIRED`). Rút gọn tiền tố dẫn để tránh tràn viewBox SVG. Cấm sử dụng alias/shorthand cho enum tokens trong ma trận phân quyền. | Quét ma trận phân quyền: 0 token `REWORK` độc lập làm alias cho `REWORK_REQUIRED`. `scripts/diagram_tool.py validate` đạt `[PASS]` (0 viewport overflow, right edge an toàn 95px). | **CLOSED** |
+
+### 21.3 Thử Nghiệm Phủ Định Bắt Buộc (Negative Tests Verification)
+
+| Mã kiểm thử | Tình huống đầu vào (Given) | Kỳ vọng chuẩn tắc (Expected) | Kết quả thực tế (Actual) | Đánh giá |
+| :--- | :--- | :--- | :--- | :--- |
+| **SC-NT-01** | Biểu đồ hiển thị `CAP-ADM-10` là Break-Glass Access. | **FAIL** (Bị từ chối / cấm tuyệt đối) | Không còn xuất hiện trên toàn bộ suite. Biểu đồ 01 và 07 hiển thị `CAP-ADM-10` = Findings Template Governance. | **PASS** |
+| **SC-NT-02** | Biểu đồ hiển thị `CAP-ADM-11` là Dynamic Findings Template. | **FAIL** (Bị từ chối / cấm tuyệt đối) | Không còn xuất hiện trên toàn bộ suite. Biểu đồ 01 và 07 hiển thị `CAP-ADM-11` = Break-Glass Access. | **PASS** |
+| **SC-NT-03** | Biểu đồ công bố lệnh `ExportAuditReport` trong khi RTM không có lệnh này. | **FAIL** (Bị từ chối / cấm tuyệt đối) | Loại bỏ hoàn toàn; 0 lệnh `ExportAuditReport` trong toàn bộ mã nguồn biểu đồ. | **PASS** |
+| **SC-NT-04** | Biểu đồ dùng `InspectAuditTrail` làm executable command thay vì `ViewAuditLog` / `FilterAuditLog`. | **FAIL** (Bị từ chối / cấm tuyệt đối) | Toàn bộ command vocabulary đã chuyển về `ViewAuditLog, FilterAuditLog`. | **PASS** |
+| **SC-NT-05** | Ma trận phân quyền sử dụng `TaskStatus` `REWORK`. | **FAIL** (Bị từ chối / cấm tuyệt đối) | Token `REWORK` viết tắt bị xóa bỏ; ma trận dùng chuẩn xác `REWORK_REQUIRED`. | **PASS** |
+| **SC-NT-06** | `CAP-ADM-10` thuộc nhóm NEXT khiến biểu đồ diễn giải Structured Findings là tùy chọn trong MVP. | **FAIL** (Bị từ chối / cấm tuyệt đối) | Biểu đồ ghi chú rõ: MVP dùng Fixed Canonical Schema bắt buộc cho INSPECTION_PROOF; chỉ có Dynamic Template Governance là NEXT. | **PASS** |
+
+### 21.4 Tái Thẩm Định Các Cổng Kiểm Soát Bị Ảnh Hưởng (Recheck Affected P8 Gates)
+
+- **P8-01 (Biểu đồ 01 — Active Admin Capability Semantics):** **PASS**. 9 năng lực MVP giữ nguyên; `CAP-ADM-10` (Findings Template Governance) và `CAP-ADM-11` (Break-Glass Access) nằm đúng vị trí trong khối NEXT; `CAP-ADM-05` dùng đúng từ vựng `ViewAuditLog, FilterAuditLog` và nhãn `Audit Log Inspection`.
+- **P8-03 (Biểu đồ 07 — Authorization Semantics):** **PASS**. Ma trận phân quyền phản ánh chuẩn xác `CancelTask` trên các trạng thái nonterminal với đầy đủ token `REWORK_REQUIRED`; phân quyền `CAP-ADM-05` bám sát `ViewAuditLog, FilterAuditLog`; phân quyền NEXT thể hiện đúng `ManageDynamicFindingsTemplate` (CAP-ADM-10) và `UseBreakGlass` (CAP-ADM-11).
+- **P8-11 (Terminology Consistency & Authority):** **PASS**. Toàn bộ danh pháp vai trò, trạng thái nhiệm vụ (`TaskStatus`), và danh mục lệnh quản trị khớp hoàn toàn với RTM và Domain Model chuẩn tắc.
+- **P8-12 (No Diagram Creates New Business Truth):** **PASS**. Không tự ý sáng tác lệnh audit export hoặc biến đổi mô hình phân quyền; biểu đồ hoàn toàn là derived view tuân thủ canonical sources.
+- **P8-NT-15 (No New Business Requirement):** **PASS**. Biểu đồ không phát sinh yêu cầu mới ngoài RTM đã freeze tại Phase 7.
+- **P8-NT-16 (Derived View Banner & Discipline):** **PASS**. Toàn bộ biểu đồ active bảo tồn banner `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
+
+---
+
 ## KẾT LUẬN & TRẠNG THÁI CUỐI CÙNG (FINAL STATUS)
 
 ```
-PHASE 8 PASS
-— DIAGRAM SUITE RECONCILED
-— ACTOR AND DOMAIN VIEWS ALIGNED
-— AUTHORIZATION AND IA VIEWS ALIGNED
-— HISTORICAL AND AS-IS VIEWS PRESERVED
-— ARCHITECTURE-UNRESOLVED CONTENT DEFERRED
-— DIAGRAMS REMAIN DERIVED VIEWS
+PHASE 8 PASS — SEMANTICALLY CLOSED
+— CAPABILITY IDS RECONCILED
+— AUDIT COMMAND VOCABULARY RECONCILED
+— TASK STATUS TERMINOLOGY RECONCILED
+— DERIVED VIEWS MATCH FROZEN CANONICAL SOURCES
 — READY FOR PHASE 9 BUSINESS CONSISTENCY AUDIT
 ```
