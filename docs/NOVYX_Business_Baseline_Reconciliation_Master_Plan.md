@@ -533,6 +533,25 @@ Admin quản lý user hiệu quả.
 | P7-11 | No vague words like “appropriate”, “secure”, “good” without metric |
 | P7-12 | No implementation technology baked into business requirement |
 
+## Artifact
+
+```text
+docs/business-reconciliation/
+  10-RTM-ACCEPTANCE-ORACLE-REPORT.md
+```
+
+## Exit Gate
+
+```text
+PHASE 7 PASS
+— RTM REQUIREMENTS HARDENED
+— ACCEPTANCE ORACLES BINARY
+— POSITIVE AND NEGATIVE CASES DEFINED
+— AUDIT EXPECTATIONS TRACEABLE
+— IMPLEMENTATION INDEPENDENCE PRESERVED
+— READY FOR PHASE 8 DIAGRAM SUITE RECONCILIATION
+```
+
 ---
 
 # PHASE 8 — DIAGRAM SUITE RECONCILIATION
