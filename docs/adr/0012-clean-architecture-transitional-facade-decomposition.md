@@ -1,7 +1,21 @@
 # ADR 0012: Clean Architecture Layering & Transitional Facade (`greenOpsService`) Decomposition
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+- **ACCEPTED:**
+  - Pragmatic Clean Architecture (Ports & Adapters) within the monorepo structure.
+  - Strict authority boundary locked:
+    - **Server Application / Domain Core = AUTHORITATIVE:** Sole arbiter of state transitions, invariants, SoD, and audit logging.
+    - **Mobile Local Model = LOCAL / ADVISORY / OFFLINE BUFFER:** Manages SQLite draft integrity, Outbox queue buffering, and UI ergonomics without security authority.
+  - Unidirectional dependency flow: `Presentation → Application → Domain Core`; `Infrastructure` implements ports/interfaces defined by inner layers.
+  - Decomposition of `greenOpsService.ts` into single-responsibility adapters (`SqliteTaskRepository`, `RestApiAdapter`, `OutboxQueue`, `AuthService`) and `MobileApp.tsx` into standalone screen modules.
+- **NOT ACCEPTED / STILL OPEN (Implementation Decisions):**
+  - Arbitrary file line-count targets.
+  - Exact class, interface, or provider names.
+  - Separate npm packages per Bounded Context (avoided as unnecessary friction).
+  - Separate microservices per Bounded Context (explicitly rejected).
 
 ## Context
 The current mobile codebase (`apps/mobile`) operates as a client-side monolith with heavy architectural coupling:
@@ -144,6 +158,6 @@ Option B eliminates technical debt, provides rock-solid unit testability for bus
 - None. Fully aligns with `ARCHITECTURE.md` target intent and frozen business baseline.
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option B (Pragmatic Clean Architecture Layering & Facade Decomposition).
+- [x] **APPROVE** Option B (Pragmatic Clean Architecture Layering & Facade Decomposition).
 - [ ] **REJECT** and mandate alternative option.
 - [ ] **REQUEST_REVISION** with specific modifications.

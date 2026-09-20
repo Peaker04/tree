@@ -1,7 +1,19 @@
 # ADR 0007: Multi-Tier Authorization & Action Eligibility Enforcement Architecture
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+- **ACCEPTED:**
+  - Three-tier defense-in-depth authorization architecture:
+    - **Tier 1 (Client Presentation Guard):** Evaluates eligibility for UX ergonomics, button disabling, and offline guidance; strictly ADVISORY ONLY (never a security boundary).
+    - **Tier 2 (Server Request Boundary Middleware):** Coarse gate enforcing authentication, account freshness (`accountStatus === 'ACTIVE'`), and broad role gating (e.g., blocking Admin from operational task routes).
+    - **Tier 3 (Application / Domain Core):** Sole authoritative gate enforcing fine-grained business eligibility.
+  - Action Eligibility Formula formally locked:
+    $$\text{ACTION ELIGIBILITY} = \text{ACTOR ROLE} \land \text{RESOURCE SCOPE} \land \text{DOMAIN STATE} \land \text{BUSINESS PRECONDITIONS}$$
+  - Separation of Duties (`SoD-02`) strictly locked: Reviewer must NOT be a historical evidence/submission author ($\text{reviewerId} \notin \text{task.getHistoricalSubmissionAuthorIds()}$). The rule must NEVER be reduced to a naive check against current `assignedStaffId`.
+- **NOT ACCEPTED:**
+  - External authorization engines (OPA/Casbin remain rejected as incompatible with offline mobile evaluation and disproportionate in complexity).
 
 ## Context
 The frozen business baseline (Phase 0–10) establishes that security and permissioning in NOVYX are governed by the **Action Eligibility Principle**:
@@ -144,6 +156,6 @@ Option B eliminates reliance on client UI hiding, guarantees that no unauthorize
 - None. Policy aligns 100% with Report 07 and Report 12.
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option B (Multi-Tier Defense-in-Depth Authorization Policy).
+- [x] **APPROVE** Option B (Multi-Tier Defense-in-Depth Authorization Policy).
 - [ ] **REJECT** and mandate alternative option.
 - [ ] **REQUEST_REVISION** with specific modifications.

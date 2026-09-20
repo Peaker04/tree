@@ -24,19 +24,19 @@ In the current AS-IS implementation:
 - Additional technical attributes proposed for diagnostics and forensic analysis: `clientIp`, `userAgent`, `correlationId`, `beforeState` (summary), `afterState` (summary). These are classified as **PROPOSED TECHNICAL METADATA** and do not alter frozen business requirements.
 
 ## NFR / Quality Drivers
-- **Tamper Evidence & Non-Repudiation:** Technical assurance that past audit logs cannot be modified undetected within the application and database user trust boundary.
+- **Defense-in-Depth & Non-Repudiation:** Technical assurance that past audit logs cannot be modified undetected within the application and standard database user trust boundary.
 - **Query Performance & Scalability:** Efficient pagination and indexing over hundreds of thousands of audit records without degrading operational database performance.
-- **Cost-Proportional Simplicity:** Avoid premature, overly complex distributed ledger or blockchain technologies that add massive latency and operational friction without clear business justification.
+- **Cost-Proportional Simplicity:** Avoid premature, overly complex cryptographic chaining or distributed ledger schemes that add write latency and operational overhead without clear business justification.
 
 ## Threat Model & Integrity Trust Boundary
 To evaluate integrity mechanisms honestly, the threat model defines the following boundaries:
 1. **Threat Actor 1 — External Attacker / Compromised Application Account / Malicious Product Actor (Staff, Manager, Platform Admin):**
    - *Trust Boundary:* Bounded at the application and standard API layer.
-   - *Defense:* Database user privilege separation (`REVOKE UPDATE, DELETE`) guarantees that no application bug, compromised API token, or SQL injection through the app user can modify or delete audit rows.
+   - *Defense:* Database user privilege separation (`REVOKE UPDATE, DELETE ON audit_events FROM app_user`) guarantees that no application bug, compromised API token, or SQL injection through the app user can modify or delete audit rows.
 2. **Threat Actor 2 — Compromised Database Administrator (DBA) / Root Infrastructure Attacker:**
    - *Trust Boundary:* Bounded at the physical/cloud database root.
    - *Honest Protection Assessment:* A simple row hash chain stored within the database **does NOT prove non-repudiation against a root DBA**, because an attacker with full database mutation privileges can alter historical records and recompute the entire hash chain. Full protection against a rogue DBA requires an **external trust anchor** (e.g., periodic cryptographic hash checkpoints pushed to an immutable external log or WORM storage).
-   - *Architecture Decision:* Unless the organization mandates external trust anchoring, row hash chaining is positioned as tamper-detection against internal partial tampering and data corruption, not cryptographic proof against root DBAs.
+   - *Architecture Decision:* Unless the organization mandates external trust anchoring or formal compliance audits, cryptographic hash chaining is NOT required for MVP. Database privilege separation provides robust, cost-effective defense against Threat Actor 1.
 
 ## Decision Question
 What technical architecture, persistence strategy, and integrity mechanisms should be selected for the NOVYX Audit Trail to enforce append-only immutability, support concurrent writes, and provide fast administrative querying?
@@ -47,95 +47,85 @@ What technical architecture, persistence strategy, and integrity mechanisms shou
 - **Description:** Store audit events in a standard relational table. Only `INSERT` and `SELECT` queries are exposed in application code; no `UPDATE` or `DELETE` endpoints exist.
 - **Advantages:** Simplest implementation; standard SQL queries, indexes, and migrations.
 - **Disadvantages:**
-  - Weak security boundary: Any database administrator, compromised DB user, or SQL injection vulnerability can execute `DELETE FROM audit_events` or `UPDATE audit_events`.
-  - No cryptographic proof of non-tampering.
-- **Risks:** Fails rigorous compliance or forensics standards if database credentials are leak-prone.
+  - Weak security boundary: Any compromised database user, application bug, or SQL injection vulnerability can execute `DELETE FROM audit_events` or `UPDATE audit_events`.
+  - Violates defense-in-depth principles.
+- **Risks:** Fails basic forensic integrity standards if application database credentials are leaked.
 - **Migration Impact:** Low.
 - **Operational Impact:** Low.
 
-### Option B: Database Privilege Separation + Append-Only Table + Stream-Partitioned Hash Chaining [RECOMMENDED]
+### Option B: Database Privilege Separation + Append-Only Table + Indexes (Without Hash Chaining) [RECOMMENDED FOR MVP]
 - **Description:**
   1. **Database-Level Privilege Separation (Primary Defense):**
-     - Dependent on the backend relational persistence topology (`ADR 0013`).
+     - Leverages the accepted backend relational persistence topology (`ADR 0013`).
      - The application connection uses a database user with permissions strictly restricted to `INSERT, SELECT` on `audit_events`. `UPDATE`, `DELETE`, `TRUNCATE`, and `DROP` are explicitly `REVOKED` at the database engine level (`REVOKE UPDATE, DELETE, TRUNCATE ON audit_events FROM app_user;`).
-  2. **Stream-Partitioned Hash Chaining (Mitigating Write Serialization Bottlenecks):**
-     - *Concurrency Analysis:* A single global hash chain (`prev_hash` across all system events) forces serial ordering across every concurrent task update, review, and login across the platform, creating an severe database lock bottleneck.
-     - *Solution:* Hash chaining is partitioned by resource stream (e.g., by `resource_type` and `resource_id`, or by Bounded Context stream), allowing independent concurrent audit writes without global lock contention.
-     - `hash = SHA256(prev_stream_hash + event_id + timestamp + actor_id + action + resource_id + payload_summary)`.
-  3. **Direct Table Indexing:**
-     - Composite indexes on `(actor_id, timestamp)`, `(resource_type, resource_id)`, and `(action_type, timestamp)` guarantee fast query performance for Admin Web (`CAP-ADM-05`).
+  2. **Direct Table Indexing:**
+     - Composite indexes on `(actor_id, timestamp)`, `(resource_type, resource_id)`, and `(action_type, timestamp)` guarantee fast query performance for Admin Web (`CAP-ADM-05`, `GV-08`, `GV-09`).
+  3. **Absence of Hash Chaining at MVP:**
+     - Zero write serialization bottleneck; zero extra hash calculation overhead on high-frequency operational mutations.
 - **Advantages:**
-  - **Robust Defense in Depth:** Application layer compromises cannot modify or delete audit rows.
-  - **No Global Write Bottleneck:** Stream-partitioned chaining allows high-throughput concurrent writes across different tasks and users.
-  - **Zero Exotic Infrastructure:** Operates entirely within standard relational database engines without third-party blockchain services.
-  - **Fast Administrative Filtering:** Native SQL queries with composite indexes support responsive pagination on Admin Web.
-- **Disadvantages:**
-  - Does not prevent tampering by a root DBA without an external cryptographic anchor.
-  - Stream hash lookup requires tracking previous hash per resource stream.
-- **Risks:** Low; pragmatic, scalable integrity assurance.
-- **Migration Impact:** Clean addition of schema and database role configuration.
-- **Operational Impact:** Standard relational database maintenance.
+  - **Robust Defense-in-Depth:** Application-level compromises and SQL injection cannot alter or delete past audit records.
+  - **Zero Concurrency Overhead:** Unconstrained concurrent inserts across independent workers.
+  - **Zero Exotic Dependencies:** Implemented natively in any standard relational database engine.
+  - **Fast Multi-Criteria Queries:** Standard B-tree indexes power administrative filtering on Admin Web.
+- **Disadvantages:** Does not protect against a root DBA (which hash chaining alone cannot protect against either without external anchoring).
+- **Risks:** Low; pragmatic, scalable, and completely satisfies frozen business drivers.
+- **Migration Impact:** Standard relational table schema and database user grant scripts.
+- **Operational Impact:** Low; standard relational maintenance.
 
-### Option C: Distributed Ledger / Blockchain (Hyperledger / Ethereum / AWS QLDB)
-- **Description:** Write every audit event to a private blockchain or cloud ledger.
-- **Advantages:** Cryptographic immutability enforced by distributed consensus.
-- **Disadvantages:**
-  - Extreme over-engineering for an urban green management platform.
-  - High operational complexity, slow write latency (hundreds of milliseconds to seconds), and high cloud costs.
-  - Complex query limitations (poor support for multi-criteria relational filtering needed by `CAP-ADM-05`).
-- **Risks:** Vendor lock-in, latency bottlenecks, high operational burden.
-- **Migration Impact:** Severe; requires external SDKs and consensus management.
-- **Operational Impact:** High maintenance and hosting costs.
+### Option C: Option B + Stream-Partitioned Hash Chaining [OPTIONAL FUTURE HARDENING]
+- **Description:** Add cryptographic row hashing (`hash = SHA256(prev_stream_hash + event_data)`) partitioned by resource stream.
+- **Evaluation:** Provides tamper-detection against internal out-of-band partial tampering by non-superusers. However, it adds algorithmic complexity and stream tracking. Reclassified as an **OPTIONAL FUTURE HARDENING** capability, to be implemented only if formal regulatory compliance requires it.
 
-## Proposed Decision
-**Adopt Option B: Database-Level Privilege Separation + Append-Only Table + Stream-Partitioned Hash Chaining.**
-*Recommendation Confidence: MEDIUM (depends on backend persistence engine selection in ADR 0013 and organizational threat model confirmation).*
+### Option D: Distributed Ledger / External Trust Anchoring (Blockchain / WORM Storage)
+- **Description:** Write audit events or periodic Merkle roots to an external immutable ledger or cloud WORM storage.
+- **Evaluation:** The only mathematical defense against a compromised root DBA, but disproportionately expensive and complex for urban forestry management. Deferred to future enterprise compliance phases if needed.
 
-1. **Database Privilege Controls:**
-   - For relational databases (e.g., PostgreSQL-compatible per `ADR 0013`), configure application user privileges:
+## Proposed Decision (Revised Candidate Pending Final Owner Review)
+**Adopt Option B: Database-Level Privilege Separation + Append-Only Table + Indexes (Without Hash Chaining for MVP).**
+*Recommendation Confidence: HIGH (revised per Owner Decision Batch 1 to establish pragmatic MVP baseline; hash chaining deferred to optional future hardening).*
+
+1. **Database Privilege Controls (Architecture Invariant):**
+   - For relational databases (per accepted `ADR 0013`), configure application user privileges:
      ```sql
-     -- Conditional implementation candidate for relational engine
+     -- Required technical property: application user cannot UPDATE or DELETE audit records
      GRANT SELECT, INSERT ON audit_events TO novyx_app_user;
      REVOKE UPDATE, DELETE, TRUNCATE ON audit_events FROM novyx_app_user;
      ```
+   - Exact SQL grant/revoke syntax remains engine-specific.
 2. **Schema Definition (Candidate Relational Schema):**
-   - Fields: `id UUID PRIMARY KEY`, `sequence_number BIGSERIAL`, `timestamp TIMESTAMPTZ`, `actor_id VARCHAR(64)`, `actor_role VARCHAR(32)`, `action_type VARCHAR(64)`, `resource_type VARCHAR(64)`, `resource_id VARCHAR(64)`, `outcome VARCHAR(16)`, `payload_summary JSONB`, `prev_hash VARCHAR(64)`, `current_hash VARCHAR(64)`.
+   - Fields: `id UUID PRIMARY KEY`, `sequence_number BIGSERIAL`, `timestamp TIMESTAMPTZ`, `actor_id VARCHAR(64)`, `actor_role VARCHAR(32)`, `action_type VARCHAR(64)`, `resource_type VARCHAR(64)`, `resource_id VARCHAR(64)`, `outcome VARCHAR(16)`, `payload_summary JSONB`.
    - Technical metadata fields: `client_ip VARCHAR(45)`, `user_agent TEXT`, `correlation_id VARCHAR(64)`.
-3. **Integrity Scope:**
-   - Detects application-level tampering, payload corruption, and non-superuser manual database tampering.
-   - External trust anchoring (e.g., publishing daily Merkle roots to external immutable storage) is deferred as an optional hardening measure.
+3. **Stream Hash-Chaining Reclassified as Optional Future Hardening:**
+   - Cryptographic hash chaining is NOT implemented by default in MVP.
+   - Trigger conditions for future activation:
+     - Specific regulatory or banking compliance mandate.
+     - Formal carbon-credit verification standard requiring cryptographic proof.
+     - Defined privileged-DBA threat model requiring external trust anchoring.
 
 ## Rationale
-Option B satisfies the absolute append-only invariant of the frozen business baseline while preserving standard relational query efficiency for Admin Web. Partitioning hash chains by stream eliminates global concurrency write bottlenecks.
+Option B satisfies 100% of the frozen business baseline requirements (`CAP-ADM-05`, `DR-HARD-06`, `DR-POL-04`) and enforces true defense-in-depth against compromised application accounts via database privilege separation. Removing mandatory hash chaining from MVP avoids premature complexity and write serialization risks.
 
 ## Consequences
-- **Positive:** Complete append-only enforcement against application users, fast multi-criteria queries, scalable concurrent writes.
-- **Negative:** Database setup scripts must configure explicit user roles and permissions.
-- **Neutral:** Cold storage archiving policies (e.g., moving audit events older than 1 year to compressed storage) can be scheduled in future operational phases.
+- **Positive:** Complete append-only immutability against application accounts; fast multi-criteria querying on Admin Web; zero write lock overhead; pragmatic maintainability.
+- **Negative:** Database deployment scripts must configure distinct database roles and permissions.
+- **Neutral:** Cold storage archiving policies (e.g., archiving events older than 1 year) can be established during future operations.
 
 ## Security Impact
 - Non-repudiation of operational and governance actions within the application trust boundary.
-- Any attempt to modify audit records via application accounts is rejected by the database engine.
+- Database engine blocks any application-level attempt to modify or delete audit rows.
 
 ## Offline / Reliability Impact
-- Audit events are emitted on the backend server upon receiving verified API commands. Mobile clients do not directly write to central audit tables; mobile operational timestamps are captured in payload metadata.
+- Emitted strictly on the server upon verified API command execution. Mobile clients capture local timestamps in payload metadata without direct access to central audit tables.
 
 ## Contract Impact
 - Add to `@novyx/contracts`:
   - `AuditEventDto`: Standard structure for audit log responses.
   - `ListAuditLogsQuery`: Filter parameters (`actorId`, `role`, `actionType`, `resourceType`, `from`, `to`, `cursor`, `limit`).
 
-## Migration / Compatibility
-- Implemented as a dedicated module (`modules/audit`) within the backend architecture (`ADR 0012`, `ADR 0013`).
-
-## Rejected Alternatives
-- **Option A (Plain Table with no DB constraints):** Rejected due to lack of defense-in-depth and vulnerability to application-level tampering.
-- **Option C (Blockchain / QLDB):** Rejected as disproportionate over-engineering with high latency and cost.
-
 ## Open Questions
-1. Is external cryptographic anchoring (e.g., daily external Merkle root publication) required for compliance against privileged DBA threat actors? (To be evaluated during compliance review).
+1. Is external cryptographic anchoring (e.g., daily external Merkle root publication) mandated by any upcoming compliance standard? (To be evaluated during compliance review).
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option B (Database Privilege Separation + Stream-Partitioned Hash Chaining).
+- [ ] **APPROVE** Option B (Database Privilege Separation + Append-Only Table + Indexes Without Hash Chaining).
 - [ ] **REJECT** and mandate alternative option.
-- [ ] **REQUEST_REVISION** with specific modifications.
+- [x] **REQUEST_REVISION** (Batch 1: Revised candidate setting Database Privilege Separation without hash chaining as MVP target; hash chaining deferred to optional future hardening).

@@ -17,14 +17,15 @@ Following the completion of the Business Baseline Reconciliation (Phase 0–10),
 ## Critical Authority Rule
 `@novyx/contracts` is a **DERIVED TECHNICAL CONTRACT REPRESENTATION**. It is **NOT** the business source of truth. Canonical business documents (`PRODUCT.md`, `DOMAIN.md`, `ACCESS-CONTROL.md`, `WORKFLOWS.md`, `REQUIREMENTS-TRACEABILITY.md`, and reconciliation reports `12-BUSINESS-CONSISTENCY-AUDIT.md`) remain the sole authoritative source of truth. Contract schemas must reflect, but never redefine or alter, frozen business semantics.
 
-## Business Command Identity vs Network Route Identity vs DTO Name
+## Business Command Identity vs Network Route Identity vs DTO Name vs Transport Header
 A foundational architectural principle must be strictly maintained:
-$$\text{Business Command Identity} \neq \text{HTTP Route Identity} \neq \text{DTO Type Name}$$
+$$\text{Business Command Identity} \neq \text{HTTP Route Identity} \neq \text{DTO Type Name} \neq \text{Transport Header}$$
 - **Business Command:** The immutable canonical action defined in the business inventory (e.g., `OP-15 SubmitEvidence`, `OP-05 StartTask`).
 - **HTTP Route Identity:** The REST URL convention exposing the action over the network (e.g., `POST /v1/tasks/:id/evidence`, `POST /v1/tasks/:id/start`).
 - **DTO Type Name:** The TypeScript / Zod type representing the payload schema (e.g., `SubmitEvidenceRequest`, `StartTaskRequest`).
+- **Transport Header:** HTTP-level transport metadata (e.g., `Idempotency-Key: <UUIDv4>`), which is validated at the transport boundary and is strictly separated from the business command payload schema.
 
-Technical naming must NEVER mutate or overwrite the canonical business vocabulary.
+Technical naming must NEVER mutate or overwrite the canonical business vocabulary, and transport metadata must NEVER be conflated with domain payloads.
 
 ## Frozen Business Drivers & Canonical Inventory
 - **Exact 7-State Lifecycle (`DOMAIN.md §3`, `Report 08 §2`):** `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`.
@@ -161,14 +162,15 @@ How should `@novyx/contracts` be restructured and extended to support the full f
    - `ProofProfile`: `'CHANGE_PROOF' | 'SERVICE_PROOF' | 'INSPECTION_PROOF'`
    - `ReviewDecision`: `'APPROVE' | 'APPROVE_WITH_EXCEPTION' | 'REQUEST_REWORK' | 'CANCEL'`
    - `AccountStatus`: `'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED'`
-3. **Command Payload Metadata:**
-   - All state-mutating command schemas enforce `expectedVersion: number` and optional `idempotencyKey?: string`.
+3. **Command Payload vs Transport Metadata Separation:**
+   - **Business Command Payload Schemas:** All state-mutating command payload schemas enforce `expectedVersion: number` alongside command-specific domain fields. They do **NOT** contain `idempotencyKey`.
+   - **HTTP Transport Metadata Schemas:** Transport headers (such as `Idempotency-Key: <UUIDv4>`) are validated via distinct technical request header schemas (e.g., `MutationRequestHeadersSchema`). Technical Zod schemas distinctly model `body`, `query`, `params`, and `headers` at the API boundary without merging transport concerns into domain payload objects.
 
 ## Rationale
 Option B provides robust runtime schema validation without imposing heavy code generation pipelines. It directly fulfills the commitment made in `ADR 0003` while closing all schema gaps documented in `POST-SYNC-IMPLEMENTATION-GAP-MAP.md`.
 
 ## Consequences
-- **Positive:** Complete synchronization between runtime validation and compile-time types. Standardized `VALIDATION_FAILED` errors.
+- **Positive:** Complete synchronization between runtime validation and compile-time types. Standardized `VALIDATION_FAILED` errors. Clean separation between domain command data and HTTP transport headers.
 - **Negative:** `packages/contracts` requires `zod` dependency.
 - **Neutral:** Frontends (`apps/mobile` and `apps/admin-web`) use the same schemas for pre-flight form validation.
 
@@ -197,4 +199,4 @@ Option B provides robust runtime schema validation without imposing heavy code g
 ## Owner Decision Required
 - [ ] **APPROVE** Option B (Zod Schema-First Contracts).
 - [ ] **REJECT** and mandate alternative option.
-- [ ] **REQUEST_REVISION** with specific modifications.
+- [x] **REQUEST_REVISION** (Batch 1: Revised candidate strictly separating HTTP transport headers like Idempotency-Key from business command payload schemas).

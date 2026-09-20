@@ -1,7 +1,23 @@
 # ADR 0013: Backend Runtime & Relational Persistence Topology
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+- **ACCEPTED:**
+  - Production authoritative backend exists to serve as the sole gate for domain invariants, authentication, authorization, and audit logging.
+  - Node.js / TypeScript backend direction within the monorepo (`apps/api`).
+  - Modular Monolith architecture internally structured into modules matching the 5 Bounded Contexts.
+  - Relational Database Family as the persistence foundation.
+  - Single deployable backend boundary.
+  - Logical modules preserve strict Bounded Context ownership: physical database sharing strictly prohibits direct cross-context SQL mutation; cross-module operations must invoke application/module interfaces.
+  - Scoped ACID transactions applied where technical workflows require atomicity.
+- **NOT ACCEPTED / STILL OPEN (Implementation & Deployment Decisions):**
+  - PostgreSQL specifically (remains an architectural recommendation, NOT a locked vendor decision).
+  - Concrete HTTP framework choice (Fastify vs Express).
+  - Concrete ORM / Query Builder choice (Prisma, Drizzle, Kysely, etc.).
+  - Additional caching or messaging infrastructure (Redis, Kafka, etc.).
+  - Container orchestration (Kubernetes) and exact hosting/cloud infrastructure provider.
 
 ## Context
 The frozen business baseline (Phase 0–10) establishes a comprehensive operational and governance platform comprising 5 Bounded Contexts, a 7-state task lifecycle, 3 proof profiles, 4 review outcomes, 48 canonical business commands, and multi-tier action eligibility enforcement.
@@ -129,6 +145,6 @@ Option A provides the simplest, most robust architecture that completely fulfill
 2. Which HTTP framework provides optimal performance and lightweight middleware integration? (Fastify or Express are standard candidates).
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option A (Modular Monolith Backend Application + Relational Database Family).
+- [x] **APPROVE** Option A (Modular Monolith Backend Application + Relational Database Family).
 - [ ] **REJECT** and mandate alternative option.
 - [ ] **REQUEST_REVISION** with specific modifications.

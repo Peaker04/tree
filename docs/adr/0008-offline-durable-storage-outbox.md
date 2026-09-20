@@ -124,7 +124,8 @@ The architecture provides the durability primitives designed to meet `QAS-OFFLIN
 - Designed to meet `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Provides durable local buffering and transactional outbox semantics to prevent evidence loss across connection drops.
 
 ## Contract Impact
-- Adds `idempotencyKey: string` to `SubmitTaskEvidenceRequest` and standardizes `Idempotency-Key` HTTP header.
+- Uses canonical command-derived DTO `SubmitEvidenceRequest` (representing business command `SubmitEvidence`).
+- In alignment with accepted `ADR 0009`, `idempotencyKey` is NOT a property of the `SubmitEvidenceRequest` body payload. The Outbox queue record tracks `idempotency_key` as transport/retry metadata and sends it exclusively via the HTTP `Idempotency-Key: <UUIDv4>` header upon network dispatch.
 
 ## Migration / Compatibility
 - Transition `greenOpsService.ts` from in-memory `snapshot` to `SqliteTaskRepository` and `SqliteOutboxQueue`.
@@ -134,9 +135,9 @@ The architecture provides the durability primitives designed to meet `QAS-OFFLIN
 - **Option C (WatermelonDB / Realm):** Rejected due to build fragility, heavy footprint, and protocol mismatch with REST baseline.
 
 ## Open Questions
-1. What is the local photo retention period after confirmed server sync? (Recommended: Retain for 7 days post-completion, then garbage-collect to conserve device disk space).
+1. What is the local photo retention period after confirmed server sync? (Open operational question; 7 days post-completion is a proposed baseline subject to field disk usage measurement).
 
 ## Owner Decision Required
 - [ ] **APPROVE** Option B (`expo-sqlite` Relational Outbox + Sandbox Filesystem).
 - [ ] **REJECT** and mandate alternative option.
-- [ ] **REQUEST_REVISION** with specific modifications.
+- [x] **REQUEST_REVISION** (Batch 1: Revised candidate aligning canonical SubmitEvidenceRequest DTO and binding Idempotency-Key to HTTP header transport metadata).

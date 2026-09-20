@@ -39,17 +39,17 @@ The 9 candidate ADRs are ordered below by architectural dependency hierarchy, pr
 
 | ADR | Decision Title | Recommended Candidate | Confidence | Primary Risk / Trade-off | Upstream Dependency | Owner Decision |
 | :--- | :--- | :--- | :---: | :--- | :--- | :---: |
-| **0013** | Backend Runtime & Relational Persistence Topology | **Option A:** Modular Monolith (`apps/api`) + Relational DB Family | `MEDIUM` | Monolith discipline required to prevent ad-hoc cross-module SQL coupling | Independent Foundation | &nbsp; |
-| **0005** | Platform Administrator Client Delivery Topology | **Option B:** Dedicated Admin Web App (`apps/admin-web`) | `MEDIUM` | Second frontend workspace in monorepo; CI/CD pipeline expansion | Independent Foundation | &nbsp; |
-| **0010** | Contract Evolution & Runtime Schema Validation | **Option B:** Zod Schema-First Contracts in `@novyx/contracts` | `HIGH` | Zod runtime bundle size overhead (~14KB min/gzip) | Independent Foundation | &nbsp; |
-| **0006** | IAM, Session Lifecycle & Role Administration | **Option B:** Signed Access Token + Refresh Rotation + AuthVersion Gate | `MEDIUM` | Freshness check required on all protected server actions (Reads & Mutations) | `ADR 0013`, `ADR 0005` | &nbsp; |
-| **0007** | Multi-Tier Authorization Enforcement | **Option B:** Multi-Tier Defense-in-Depth (Client Advisory, HTTP Gate, Domain Core) | `HIGH` | Maintenance of eligibility rules across both advisory client and domain core | `ADR 0006`, `ADR 0010` | &nbsp; |
-| **0012** | Clean Architecture Layering & Facade Decomposition | **Option B:** Pragmatic Ports & Adapters within Monorepo | `HIGH` | Refactoring effort to untangle existing 856-line `greenOpsService` facade | `ADR 0007`, `ADR 0008` | &nbsp; |
-| **0008** | Mobile Offline Durable Storage & Outbox | **Option B:** `expo-sqlite` Relational Outbox + Sandbox Filesystem Photos | `HIGH` | SQLite schema migration management; empirical verification required | Independent Mobile | &nbsp; |
-| **0009** | Concurrency Control & Idempotency Strategy | **Option B:** Command Payload OCC (`expectedVersion`) + Header Idempotency | `HIGH` | Server must maintain idempotency cache; clients must handle `409 CONFLICT` | `ADR 0008`, `ADR 0010` | &nbsp; |
-| **0011** | Audit Trail Persistence & Integrity Architecture | **Option B:** Database Privilege Separation + Stream Hash-Chaining | `MEDIUM` | Hash-chaining adds overhead; does not defend against root DBA without external anchor | `ADR 0013` | &nbsp; |
+| **0013** | Backend Runtime & Relational Persistence Topology | **Option A:** Modular Monolith (`apps/api`) + Relational DB Family | `MEDIUM` | Monolith discipline required to prevent ad-hoc cross-module SQL coupling | Independent Foundation | **APPROVED** |
+| **0005** | Platform Administrator Client Delivery Topology | **Option B:** Dedicated Admin Web App (`apps/admin-web`) | `MEDIUM` | Second frontend workspace in monorepo; CI/CD pipeline expansion | Independent Foundation | **APPROVED** |
+| **0010** | Contract Evolution & Runtime Schema Validation | **Option B:** Zod Schema-First Contracts in `@novyx/contracts` | `HIGH` | Zod runtime bundle size overhead (~14KB min/gzip) | Independent Foundation | **REQUEST_REVISION** |
+| **0006** | IAM, Session Lifecycle & Role Administration | **Option B:** Signed Access Token + Refresh Rotation + AuthVersion Gate | `MEDIUM` | Freshness check required on all protected server actions (Reads & Mutations) | `ADR 0013`, `ADR 0005` | **REQUEST_REVISION** |
+| **0007** | Multi-Tier Authorization Enforcement | **Option B:** Multi-Tier Defense-in-Depth (Client Advisory, HTTP Gate, Domain Core) | `HIGH` | Maintenance of eligibility rules across both advisory client and domain core | `ADR 0006`, `ADR 0010` | **APPROVED** |
+| **0012** | Clean Architecture Layering & Facade Decomposition | **Option B:** Pragmatic Ports & Adapters within Monorepo | `HIGH` | Refactoring effort to untangle existing 856-line `greenOpsService` facade | `ADR 0007`, `ADR 0008` | **APPROVED** |
+| **0008** | Mobile Offline Durable Storage & Outbox | **Option B:** `expo-sqlite` Relational Outbox + Sandbox Filesystem Photos | `HIGH` | SQLite schema migration management; empirical verification required | Independent Mobile | **REQUEST_REVISION** |
+| **0009** | Concurrency Control & Idempotency Strategy | **Option B:** Command Payload OCC (`expectedVersion`) + Header Idempotency | `HIGH` | Server must maintain idempotency cache; clients must handle `409 CONFLICT` | `ADR 0008`, `ADR 0010` | **APPROVED** |
+| **0011** | Audit Trail Persistence & Integrity Architecture | **Option B:** Database Privilege Separation + Stream Hash-Chaining | `MEDIUM` | Hash-chaining adds overhead; does not defend against root DBA without external anchor | `ADR 0013` | **REQUEST_REVISION** |
 
-*Note: All Owner Decision cells remain blank pending formal Owner determination.*
+*Note: Owner Decisions recorded per Decision Batch 1 (Baseline Commit: `8e73f71c478a5ca7d58d7b7ffb2f132b2c92cedc`).*
 
 ---
 
@@ -135,9 +135,7 @@ What production server application runtime and persistence topology should be se
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+APPROVED
 ```
 
 ---
@@ -191,9 +189,7 @@ How should the Platform Administrator client interface be architected and delive
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+APPROVED
 ```
 
 ---
@@ -246,9 +242,7 @@ How should `@novyx/contracts` be restructured and extended to support the full f
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
 ```
 
 ---
@@ -309,9 +303,7 @@ How should the IAM boundary, authentication mechanism, session lifecycle, author
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
 ```
 
 ---
@@ -366,9 +358,7 @@ Where and how should Action Eligibility be technically enforced across client pr
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+APPROVED
 ```
 
 ---
@@ -420,9 +410,7 @@ How should the mobile application and platform architecture be structured into l
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+APPROVED
 ```
 
 ---
@@ -486,9 +474,7 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
 ```
 
 ---
@@ -542,9 +528,7 @@ What technical mechanisms should be established across `@novyx/contracts`, clien
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+APPROVED
 ```
 
 ---
@@ -615,9 +599,7 @@ This decision warrants the most critical Owner examination. We explicitly separa
 
 ```markdown
 Owner Decision:
-- [ ] APPROVE
-- [ ] REJECT
-- [ ] REQUEST_REVISION
+REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
 ```
 
 ---

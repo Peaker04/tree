@@ -1,7 +1,20 @@
 # ADR 0005: Platform Administrator Client Delivery Topology
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+- **ACCEPTED:**
+  - Dedicated Platform Administration Web application as an independent client workspace in the monorepo (conceptual future workspace: `apps/admin-web`).
+  - Scope is strictly confined to Platform Governance (`CAP-ADM-01..09`, `GV-01..19`) and authorized read-only tree care history inspection (`OP-22 ViewCareHistory`).
+  - Invariant locked: Platform Administrator has ZERO normal Task operational mutation, assignment, execution, or review authority.
+  - Server authentication and authorization remain the sole security boundary; client separation is an ergonomic and delivery convenience.
+  - Mobile app (`apps/mobile`) explicitly blocks login attempts for `role === 'admin'` with a directive to use the web portal.
+- **NOT ACCEPTED / STILL OPEN (Implementation & Deployment Decisions):**
+  - Concrete frontend framework (Vite SPA vs Next.js).
+  - Exact web UI / component library.
+  - Exact hosting provider or infrastructure deployment mechanism.
+  - Network perimeter hardening requirements (VPN, WAF, IP allowlisting remain optional deployment choices, not frozen architecture mandates).
 
 ## Context
 In the reconciled and frozen business baseline (Phase 0–10), the **Platform Administrator** (`admin`) is established as an active human governance role in MVP (`CAP-ADM-01..09`), responsible for user provisioning, role assignments, account lifecycle, tree master data management, task type catalog governance, proof policy configuration, checklist template versions, and audit log inspection.
@@ -124,6 +137,6 @@ In the mobile app (`apps/mobile`), when a user with `role === 'admin'` attempts 
 2. What are the specific deployment hosting requirements for the admin web portal in the target infrastructure? (To be evaluated during implementation planning).
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option B (Dedicated Admin Web Application `apps/admin-web`).
+- [x] **APPROVE** Option B (Dedicated Admin Web Application `apps/admin-web`).
 - [ ] **REJECT** and mandate mobile app embedding (Option A).
 - [ ] **REQUEST_REVISION** with specific modifications.

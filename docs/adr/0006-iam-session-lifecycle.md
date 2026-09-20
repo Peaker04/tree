@@ -9,7 +9,7 @@ The frozen business baseline (Phase 0–10) establishes a three-role human actor
 In the current AS-IS mobile implementation:
 1. `apps/mobile/src/services/authSessionStore.ts` stores an `AuthSession` in `expo-secure-store`, consisting of `accessToken`, `refreshToken`, `expiresAt`, and a user object.
 2. In `packages/contracts`, `UserRole = 'staff' | 'manager' | 'admin'` is declared, but `Role = 'Staff' | 'Manager'` is used by application code, omitting Admin.
-3. No backend identity provider, token signing/verification specification, or session invalidation protocol is architecturally defined.
+3. No backend identity provider, credential verification specification, or session invalidation protocol is architecturally defined.
 4. Silent refresh and account state revocation handling (`QAS-SEC-01`) are only mocked in development files.
 
 ## Frozen Business Drivers
@@ -23,9 +23,9 @@ In the current AS-IS mobile implementation:
 - **Separation of Duties (`SoD-01..07`, `DR-HARD-02`):** Users who transition from `staff` to `manager` cannot approve tasks they previously executed as staff. Historical action provenance is preserved.
 
 ## NFR / Quality Drivers
-- **Security & Data Loss Prevention (`QAS-SEC-01`):** Access token expiration during field data entry must trigger silent token refresh using a valid refresh token ($\le 1\text{s}$). If refresh fails, local form drafts must be preserved in durable storage before redirecting to login.
-- **Offline Field Continuity:** Field staff must remain operational in remote cellular dead zones without continuous online token verification for local drafts.
-- **Secure Token Storage:** Tokens must be stored in encrypted, OS-protected storage (iOS Keychain / Android Keystore-backed storage via `expo-secure-store`).
+- **Security & Data Loss Prevention (`QAS-SEC-01`):** Access credential expiration during field data entry must trigger silent token refresh using a valid refresh credential ($\le 1\text{s}$). If refresh fails, local form drafts must be preserved in durable storage before redirecting to login.
+- **Offline Field Continuity:** Field staff must remain operational in remote cellular dead zones without continuous online credential verification for local drafts. Offline drafting is local to the device and independent of server credential representation.
+- **Secure Credential Storage:** Sensitive credentials must be stored in encrypted, OS-protected storage (iOS Keychain / Android Keystore-backed storage via `expo-secure-store` on mobile; `HttpOnly; Secure; SameSite=Strict` cookies on web).
 
 ## Current Technical Evidence
 - `apps/mobile/src/services/authSessionStore.ts`: Uses `expo-secure-store` to persist session.
@@ -33,114 +33,91 @@ In the current AS-IS mobile implementation:
 - External Technical Evidence: [Expo SecureStore Documentation](https://docs.expo.dev/versions/v57.0.0/sdk/securestore/) states that data is stored in `SharedPreferences` encrypted with a key stored in Android Keystore on Android, and in the Keychain on iOS.
 
 ## Decision Question
-How should the IAM boundary, authentication mechanism, session lifecycle, authorization freshness across protected reads and mutations, and token storage be architected across mobile and admin clients?
+How should the IAM boundary, authentication mechanism, session lifecycle, authorization freshness across protected reads and mutations, and credential storage be architected across mobile and admin clients?
 
-## Options Considered
+## Architectural Analysis & Comparison of Credential Representations
 
-### Option A: Fully Stateful Server Sessions (Session Cookies / Central Session Store)
-- **Description:** Traditional stateful sessions with HTTP-only cookies managed via a server-side session store (e.g., Redis or database session table).
-- **Advantages:** Instant server-side revocation on account suspension; simple invalidation.
-- **Disadvantages:**
-  - Poor fit for mobile field clients: Cookie handling across native network boundaries can be brittle.
-  - Incompatible with disconnected field continuity: Every client action requires an active online session lookup against central infrastructure.
-  - Cross-origin cookie complexities between mobile native apps, web clients, and backend REST APIs.
-- **Risks:** Field app lockouts during intermittent network disruptions.
-- **Migration Impact:** High complexity for mobile networking.
-- **Operational Impact:** Requires running and maintaining a high-availability session store cluster.
+The Owner's Batch 1 review confirmed that **authoritative freshness verification across all protected server actions is non-negotiable**. Because the server must establish that the user's `accountStatus === 'ACTIVE'` and authorization version is current on every protected request, authorization is fundamentally server-authoritative.
 
-### Option B: Signed Short-Lived Access Token + Refresh Token Rotation + Authoritative Account Version Check [RECOMMENDED]
-- **Description:**
-  - **Access Token:** Short-lived asymmetric JWT (RS256/ES256; proposed parameter: 15 minutes, subject to security decision) containing `userId`, `role`, `accountStatus`, and `authVersion`.
-  - **Refresh Credential:** Long-lived cryptographically random token (proposed parameter: 30 days, subject to security decision) stored in `expo-secure-store` on mobile and `HttpOnly; SameSite=Strict` cookie on Admin Web. Enforces Refresh Token Rotation (RTR) on every refresh request.
-  - **Authoritative Authorization Freshness (Enforcing WF-12 across Reads and Mutations):**
-    - A valid cryptographic signature alone is **NOT** sufficient authorization after suspension or role change.
-    - For **EVERY PROTECTED AUTHENTICATED SERVER REQUEST** (whether READ like `ViewAssignedTask`, `ViewOperationalTask`, `ViewCareHistory`, `ViewAuditLog`, or MUTATE like `SubmitEvidence`, `ReviewTask`, and Governance actions):
-      1. Server request boundary middleware checks that the user's authoritative `accountStatus === 'ACTIVE'` and verifies that `token.authVersion === user.authVersion`.
-      2. If an account is `SUSPENDED` or `DISABLED`, or if the token carries a stale `authVersion`, the server immediately rejects the request with `403 FORBIDDEN: ACCOUNT_SUSPENDED` or `403 FORBIDDEN: PRIVILEGE_REVOKED`.
-      3. This freshness check may be implemented via direct database query on the user record, or via a high-performance in-memory revocation / session-state cache at the API boundary (without forcing a specific cache technology).
-      4. Admin commands `SuspendAccount`, `DisableAccount`, or role changes immediately increment `user.authVersion = user.authVersion + 1` and invalidate active refresh tokens, ensuring immediate cessation of access across all protected endpoints.
-    - Public unauthenticated endpoints (`POST /v1/auth/login`, `POST /v1/auth/forgot-password`, `POST /v1/auth/reset-credential`) are excluded from this check.
-  - **Offline Draft Preservation:** An offline device may still hold previously downloaded data and local SQLite drafts. However, offline persistence does NOT confer server authorization: at the next online protected interaction with the server, current authoritative IAM state takes precedence, and unauthorized submissions are rejected.
+We compare two primary technical options for the access credential:
+
+### Option A: Opaque Short-Lived Access Token + Authoritative Session Lookup
+- **Description:** Server issues a cryptographically random, high-entropy opaque string (e.g., 256-bit token) as the access credential. The server validates this token by looking up the active session record in a fast indexed database table or in-memory cache.
 - **Advantages:**
-  - **Guarantees Immediate Revocation for All Protected Actions:** Completely closes the stale token window for both sensitive reads and mutations per `WF-12`.
-  - **Fulfills `QAS-SEC-01`:** Client HTTP interceptor detects `401 UNAUTHENTICATED`, transparently calls `/v1/auth/refresh`, updates tokens, and retries the original request seamlessly ($\le 1\text{s}$).
-  - **Field Continuity:** Field staff continue drafting work locally in cellular dead zones without continuous server pings.
+  - Complete control and instantaneous revocation: Deleting the session record immediately invalidates the credential everywhere.
+  - Minimal payload size transferred in HTTP `Authorization` headers.
+  - No cryptographic key management or asymmetric key rotation overhead.
 - **Disadvantages:**
-  - Requires checking `accountStatus` / `authVersion` on every protected request (mitigated by indexed query or lightweight session-state cache).
-- **Risks:** Low; strictly enforces frozen security invariants while enabling offline mobile drafts.
-- **Migration Impact:** Formalizes `AuthSession` in `@novyx/contracts` and establishes standard interceptor logic.
-- **Operational Impact:** Standard relational database user state or lightweight cache.
+  - Every API request requires a server-side state lookup (though this lookup is already required for `authVersion` and `accountStatus` freshness).
+- **Offline Assessment:** Completely compatible with offline drafting. Field workers draft in local SQLite; online sessions are only engaged when transmitting outbox payloads to the server.
+
+### Option B: Signed Short-Lived Access Token (JWT) + Authoritative Account/AuthVersion Freshness Lookup
+- **Description:** Server issues a signed JWT containing user claims (`sub`, `role`, `accountStatus`, `authVersion`, `exp`). On protected requests, middleware validates signature and expiration, then queries user state to verify `accountStatus === 'ACTIVE'` and `token.authVersion === user.authVersion`.
+- **Advantages:**
+  - Token carries verified identity claims in memory, reducing redundant joins for basic user attributes (e.g., email, role).
+  - Standardized tooling across web and mobile ecosystems.
+- **Disadvantages:**
+  - **Does NOT make requests stateless:** Because `WF-12` mandates immediate revocation for suspended accounts across all protected actions, a valid cryptographic signature alone is insufficient. The server must still query authoritative state.
+  - Asymmetric signing (RS256/ES256) and JWKS distribution add cryptographic complexity without architectural necessity when verifying requests within a single Modular Monolith backend (`ADR 0013`).
+- **Offline Assessment:** Identical to Option A; offline continuity is managed entirely by client-side local storage (`ADR 0008`).
 
 ### Option C: Third-Party Managed Identity (Auth0 / Supabase Auth / Firebase)
 - **Description:** Outsource authentication entirely to an external Identity-as-a-Service (IDaaS) provider.
-- **Advantages:** Out-of-the-box password hashing, brute-force protection, and hosted login.
-- **Disadvantages:**
-  - Vendor lock-in and ongoing subscription costs.
-  - Awkward synchronization with internal domain rules: Hard to map custom `AccountStatus` enums (`INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`) and specific `CAP-ADM-04` credential lock semantics to proprietary IDaaS models.
-  - External network dependency for authentication in disconnected or private environments.
-- **Risks:** Complex webhook synchronization and potential data divergence.
-- **Migration Impact:** Replaces internal contracts with proprietary vendor SDKs.
-- **Operational Impact:** External SLA dependency and recurring service costs.
+- **Evaluation:** Rejected due to vendor lock-in, recurring subscription costs, and friction mapping custom domain lifecycle states (`INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`) and credential lock semantics (`CAP-ADM-04`).
 
-## Proposed Decision
-**Adopt Option B: Signed Short-Lived Access Token + Refresh Token Rotation + Authoritative Account Version Check across all Protected Actions.**
-*Recommendation Confidence: MEDIUM (depends on final backend runtime topology per ADR 0013 and admin web setup per ADR 0005).*
+## Proposed Decision (Revised Candidate Pending Final Owner Review)
+**Adopt a Server-Authoritative Session Architecture with Short-Lived Access Credentials, Rotating Refresh Credentials, and Mandatory Authorization Freshness Verification.**
+*Recommendation Confidence: HIGH (revised per Owner Decision Batch 1 to avoid premature token-type lock-in).*
 
-1. **Authentication Boundary:**
-   - Public auth endpoints: `POST /v1/auth/login`, `POST /v1/auth/refresh`, `POST /v1/auth/logout`, `POST /v1/auth/forgot-password`.
-   - Governance IAM endpoints: `POST /v1/governance/users/*` (`GV-01..07`).
-2. **Token & Verification Specifications:**
-   - Access Token payload: `{ sub: string, email: string, role: 'staff' | 'manager' | 'admin', accountStatus: 'ACTIVE', authVersion: number, exp: number, iat: number }`.
-   - Signature: RS256 with public key distributed via JWKS (`/v1/.well-known/jwks.json`).
-3. **Comprehensive Revocation & Authorization Freshness Mechanism:**
-   - For every protected request (READ, MUTATE, DECIDE, ADMINISTER), server boundary middleware verifies:
-     `user.accountStatus === 'ACTIVE' && token.authVersion === user.authVersion`.
-   - Any execution of `SuspendAccount`, `DisableAccount`, or role change increments `authVersion` and deletes active refresh token records.
-   - Any suspended or disabled account attempting any protected request is immediately denied with `403 FORBIDDEN`.
-4. **Proposed Lifetimes (Parameters Subject to Security Decision):**
-   - Access Token TTL: Proposed 15 minutes (configurable; subject to formal security review).
-   - Refresh Token TTL: Proposed 30 days with single-use rotation (configurable; subject to formal security review).
-   - Password Setup Link TTL (`ResetCredentialSetup`): Proposed 24 hours (configurable; subject to formal security review).
-5. **Client-Side Secure Storage:**
-   - **Mobile (`apps/mobile`):** Tokens stored via `expo-secure-store` (utilizing Android Keystore-protected SharedPreferences on Android, and Keychain on iOS).
-   - **Admin Web (`apps/admin-web`):** Refresh token in `HttpOnly, Secure, SameSite=Strict` cookie; access token kept in browser memory.
+1. **Non-Negotiable Security Semantics (Architecture Invariants):**
+   - **Four Canonical Account States:** `INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`.
+   - **Credential Lock Independence:** Repeated failed login attempts trigger a temporary credential lock (`CAP-ADM-04`) while `AccountStatus` remains `ACTIVE`. `UnlockAccount` clears the lock counter; `ResetCredentialSetup` generates a secure link.
+   - **Comprehensive Revocation across All Protected Actions (`WF-12`):**
+     - For **EVERY PROTECTED AUTHENTICATED SERVER REQUEST** (whether READ like `ViewAssignedTask`, `ViewOperationalTask`, `ViewCareHistory`, `ViewAuditLog`, or MUTATE like `SubmitEvidence`, `ReviewTask`, and Governance actions):
+       - Server request boundary middleware establishes that the calling user's authoritative `accountStatus === 'ACTIVE'` and verifies that their current `authVersion` / `sessionVersion` matches the active server state.
+       - `SUSPENDED`: Server immediately rejects request with `403 FORBIDDEN: ACCOUNT_SUSPENDED`.
+       - `DISABLED`: Server immediately rejects request with `403 FORBIDDEN: ACCOUNT_DISABLED`.
+       - Role Change or Revocation: Server immediately rejects request with `403 FORBIDDEN: PRIVILEGE_REVOKED`.
+     - Stale credentials/tokens alone never authorize protected requests.
+   - **Offline Draft Preservation:** An offline device preserves local SQLite drafts and captured evidence. Offline persistence does NOT confer server authorization: at the next online server interaction, authoritative IAM state governs, and unauthorized requests are rejected.
+2. **Credential Lifecycle & Rotation:**
+   - **Access Credential:** Short-lived (proposed parameter: 15 minutes, subject to security review).
+   - **Refresh Credential:** Long-lived (proposed parameter: 30 days, subject to security review) with mandatory **Refresh Token Rotation (RTR)**. Every refresh request issues a new refresh credential and invalidates the previous one. Detected reuse of an invalidated refresh credential triggers immediate revocation of all sessions for that user.
+   - Admin actions `SuspendAccount`, `DisableAccount`, or role changes immediately increment `user.authVersion = user.authVersion + 1` and purge all active refresh records.
+3. **Access Credential Representation (Bounded Technical Choice):**
+   - The choice between **Opaque Short-Lived Token** (Option A) and **Signed Short-Lived JWT** (Option B) is retained as a bounded technical choice to be finalized during security implementation planning.
+   - Asymmetric JWT / JWKS is NOT an architecture invariant for the single Modular Monolith deployment (`ADR 0013`). If JWT is selected during implementation, symmetric signing (HS256) or asymmetric signing (RS256) may be evaluated based on verified performance and operational needs.
+4. **Client-Side Secure Storage:**
+   - **Mobile (`apps/mobile`):** Refresh and access credentials persisted exclusively via `expo-secure-store` (Android Keystore / iOS Keychain).
+   - **Admin Web (`apps/admin-web`):** Refresh credentials stored in `HttpOnly; Secure; SameSite=Strict` cookies; access credentials held in application memory.
 
 ## Rationale
-Option B eliminates the security vulnerability of stale JWT tokens across all protected product actions (fulfilling `WF-12`) while preserving seamless offline mobile drafting for field personnel. It provides authoritative revocation without the distributed complexity of external session stores.
+This revised decision focuses on what is architecturally vital: absolute compliance with `WF-12` revocation across reads and mutations, Separation of Duties, and offline draft preservation, while deliberately avoiding over-specifying token representations (such as mandating RS256 and JWKS) before implementation requirements demand them.
 
 ## Consequences
-- **Positive:** Full alignment with `QAS-SEC-01` (silent refresh), frozen business rules (`WF-12`, `CAP-ADM-01..04`), and strict Separation of Duties. Zero vendor lock-in.
-- **Negative:** Backend must maintain token issuance, refresh token rotation, and `authVersion` validation on protected requests.
-- **Neutral:** Mobile client requires an Axios/Fetch network interceptor for automated 401 refresh handling.
+- **Positive:** Complete defense against stale credential replay across all protected endpoints; fully satisfies `WF-12`; preserves local mobile drafts; eliminates unnecessary cryptographic complexity.
+- **Negative:** Server must perform an indexed account status check on every protected request.
+- **Neutral:** Token format can be finalized during Phase 12 security implementation without altering client/server API contracts.
 
 ## Security Impact
-- Tokens protected in OS-encrypted storage on devices.
-- Single-use Refresh Token Rotation mitigates token replay.
-- Suspension and role changes immediately block subsequent state mutations and protected reads at the server boundary.
+- Eliminates the stale token vulnerability window for both sensitive reads and state mutations.
+- Refresh token rotation prevents long-lived credential hijacking.
 
 ## Offline / Reliability Impact
-- Valid access tokens allow offline field operations to continue locally.
-- Local form drafts are preserved in durable SQLite storage if session renewal fails permanently.
+- Seamless offline field continuity: field workers continue drafting locally without continuous server polling.
+- Transparent silent token refresh ($\le 1$s) satisfies `QAS-SEC-01`.
 
 ## Contract Impact
-- Update `@novyx/contracts`:
-  - Standardize `AuthSession` with explicit token expiration metadata.
-  - Add `RefreshTokenRequest { refreshToken: string }` and `RefreshTokenResponse { accessToken: string, refreshToken: string, expiresAt: string }`.
-  - Standardize `AccountStatus` enum: `'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED'`.
-
-## Migration / Compatibility
-- Existing `authSessionStore.ts` already uses `expo-secure-store`.
-- Update `greenOpsService.ts` / `RestApiAdapter` to implement 401 retry interceptor.
-
-## Rejected Alternatives
-- **Option A (Stateful Sessions):** Incompatible with offline mobile architecture.
-- **Option C (Third-Party IDaaS):** Incompatible with custom domain governance requirements and cost constraints.
+- Standardize in `@novyx/contracts`:
+  - `AccountStatus = 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED'`.
+  - `AuthSession`, `RefreshTokenRequest`, `RefreshTokenResponse`.
 
 ## Open Questions
-1. Should password hashing strictly require Argon2id or bcrypt? (Argon2id recommended per OWASP Password Storage Cheat Sheet).
-2. What are the final approved TTL values for access tokens and refresh tokens in production? (To be decided during security review).
+1. Should password hashing strictly require Argon2id or bcrypt? (Argon2id recommended per OWASP standards).
+2. What are the final approved TTL values for access credentials and refresh credentials? (To be decided during security review).
+3. Which access credential representation (opaque token vs signed JWT) is preferred during implementation? (Bounded technical choice).
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option B (Signed Short-Lived Access Token + Refresh Token Rotation + Authoritative Account Version Check).
+- [ ] **APPROVE** Option B (Signed Short-Lived JWT + Refresh Token Rotation + Authoritative Account Version Check).
 - [ ] **REJECT** and mandate alternative option.
-- [ ] **REQUEST_REVISION** with specific modifications.
+- [x] **REQUEST_REVISION** (Batch 1: Revised candidate removing asymmetric JWT mandate; token representation retained as bounded implementation choice).

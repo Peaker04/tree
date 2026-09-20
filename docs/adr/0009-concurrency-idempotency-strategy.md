@@ -1,7 +1,18 @@
 # ADR 0009: Optimistic Concurrency Control & Command Idempotency Strategy
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+- **ACCEPTED:**
+  - Optimistic Concurrency Control (OCC) using command payload `expectedVersion: number`.
+  - Concurrency conflict maps strictly to HTTP `409 CONFLICT` with error code `CONFLICT: STALE_VERSION`.
+  - Command Idempotency enforced via HTTP `Idempotency-Key: <UUIDv4>` header.
+  - Same logical retry (e.g., from mobile Outbox) preserves and resends the identical `Idempotency-Key`.
+  - Local evidence survives conflicts: On `409 CONFLICT`, the mobile client sets transport status to failed but preserves 100% of local evidence drafts in SQLite without discarding data.
+- **NOT ACCEPTED / STILL OPEN (Implementation Planning):**
+  - 72-hour retention TTL as a final locked production invariant.
+  - Architectural rule locked: `idempotency retention duration >= maximum legitimate offline retry horizon`. The final numeric TTL remains open pending empirical measurement in field operational conditions.
 
 ## Context
 In the reconciled and frozen business baseline (Phase 0–10), field workflows are distributed and inherently asynchronous. Operations Managers manage tasks from an office or mobile workspace, while Field Staff execute work outdoors under intermittent connectivity.
@@ -142,6 +153,6 @@ Option B eliminates both duplicate submissions and silent overwrite hazards. Sel
 1. What is the maximum expected offline horizon in remote forestry regions to finalize the idempotency TTL? (Proposed baseline: 72 hours; to be verified during operational testing).
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option B (Command Payload OCC + Header-Based Idempotency Keys).
+- [x] **APPROVE** Option B (Command Payload OCC + Header-Based Idempotency Keys).
 - [ ] **REJECT** and mandate alternative option.
 - [ ] **REQUEST_REVISION** with specific modifications.
