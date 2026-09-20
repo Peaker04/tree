@@ -1,7 +1,7 @@
 # NOVYX GreenOps — Workflow Optimization & Operational Sequences (Phase 5)
 
 > **Tài liệu chuẩn mực tối ưu hóa quy trình nghiệp vụ đầu-cuối và ma trận bàn giao**
-> Thuộc chu trình: **Business Baseline Reconciliation — Phase 5**.
+> Thuộc chu trình: **Business Baseline Reconciliation — Phase 5 (Semantic Closure)**.
 > Căn cứ chuẩn tắc:
 > - [`docs/business-reconciliation/02-ACTOR-MODEL-DECISION.md`](02-ACTOR-MODEL-DECISION.md) (Khóa ranh giới 4 tác nhân)
 > - [`docs/business-reconciliation/03-ROLE-NAMING-TAXONOMY.md`](03-ROLE-NAMING-TAXONOMY.md) (Khóa danh xưng 3 tầng)
@@ -16,7 +16,7 @@
 > **Ranh giới thực thi (Hard Scope Rule)**:
 > - Khảo sát, rà soát và tối ưu hóa toàn bộ các luồng nghiệp vụ đầu-cuối sau khi đã khóa Actor, Domain Ownership và Authorization.
 > - **KHÔNG** sửa mã nguồn ứng dụng (`apps/**`) hay thư viện chia sẻ (`packages/**`).
-> - **KHÔNG** sửa đổi tài liệu canonical (`PRODUCT.md`, `DOMAIN.md`, `ACCESS-CONTROL.md`, `WORKFLOWS.md`, `REQUIREMENTS-TRACEABILITY.md`, `NFR.md`).
+> - **KHÔNG** sửa đổi tài liệu canonical (`PRODUCT.md`, `DOMAIN.md`, `ACCESS-CONTROL.md`, `WORKFLOWS.md`, `REQUIREMENTS-TRACEABILITY.md`, `NFR.md`, `ARCHITECTURE.md`).
 > - **KHÔNG** sửa đổi sơ đồ trực quan (`docs/diagrams/**`) tại phase này.
 > - **KHÔNG** thiết kế API, không vẽ wireframe UI, không tạo database schema.
 
@@ -74,7 +74,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 │  - WF-17: Audit Log Inspection (Thanh tra & tra cứu sổ nhật ký kiểm toán)   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  NHÓM C: QUY TRÌNH HỖ TRỢ KỸ THUẬT NGOẠI TUYẾN (TECHNICAL FLOW - MVP)       │
-│  - WF-18: Offline Submission & Background Sync (Nộp offline & Đồng bộ ngầm) │
+│  - WF-18: Offline Submission & Background Outbox Sync (Nộp offline & Đồng bộ ngầm) │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  NHÓM D: QUY TRÌNH KIỂM SOÁT TƯƠNG LAI (FUTURE CONTROLLED FLOWS - NEXT)     │
 │  - WF-NEXT-01: Dynamic Findings Template Governance (Form khám bệnh động)   │
@@ -97,8 +97,8 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Điều kiện vào (Entry Conditions)**:
   - Tác nhân đăng nhập có vai trò `manager` và trạng thái `ACTIVE`.
   - Cây mục tiêu tồn tại trong `Tree Asset Registry` và chưa bị `RETIRED`.
-  - Loại việc `TaskType` đang ở trạng thái `ACTIVE`.
-  - Tồn tại ánh xạ chính sách bằng chứng hợp lệ `TaskType -> ProofProfile`.
+  - Loại việc `TaskType` đang ở trạng thái `ACTIVE` trong `TaskTypeCatalog`.
+  - Tồn tại ánh xạ chính sách bằng chứng hợp lệ `TaskType -> ProofProfile` trong `ProofPolicyMapping`.
   - Nhân viên được phân công có vai trò `staff` và trạng thái `ACTIVE`.
 - **Luồng thành công chuẩn tắc (Happy Path)**:
   1. *[START]* Quản lý vận hành truy cập chức năng tạo nhiệm vụ.
@@ -108,7 +108,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   5. Quản lý chọn nhân viên hiện trường (`staff`) tiếp nhận việc và thiết lập thời hạn hoàn thành (Deadline tương lai).
   6. Quản lý bấm xác nhận `CreateTask`.
   7. *[Hệ thống]* Kiểm tra tính hợp lệ toàn vẹn, tạo thực thể `Task` ở trạng thái `PENDING`, chốt bản chụp bất biến `treeIdSnapshot`, `policyVersionId`, và `assignedStaffId`.
-  8. *[Hệ thống]* Ghi sự kiện kiểm toán khởi tạo (`AUDIT_REQUIRED`), gửi thông báo việc mới tới ứng dụng di động của nhân viên được phân công.
+  8. *[Hệ thống]* Ghi sự kiện kiểm toán khởi tạo (`AUDIT_REQUIRED`), phát thông báo vận hành có việc mới tới nhân viên được phân công.
   9. *[END]* Nhiệm vụ xuất hiện trong danh sách việc cần làm của nhân viên với trạng thái `PENDING`.
 - **Điểm ra quyết định (Decision Points)**:
   - Chọn nhân sự phân công: Dựa trên năng lực chuyên môn và tải công việc hiện trường của nhân viên.
@@ -116,8 +116,9 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Cây đã bị đốn hạ (`RETIRED`): Báo lỗi `TREE_RETIRED`, từ chối tạo task.
   - Loại việc `INACTIVE`: Báo lỗi `TASK_TYPE_DISABLED`, yêu cầu chọn loại việc khác.
+  - Loại việc chưa có ánh xạ ProofPolicy hợp lệ: Báo lỗi `PROOF_POLICY_MAPPING_MISSING`, chặn tạo task.
   - Nhân viên đang bị khóa (`SUSPENDED` / `DISABLED`): Báo lỗi `ASSIGNEE_NOT_ACTIVE`, chặn phân công.
-- **Bàn giao (Handoff)**: Từ Operations Manager $\to$ Field Staff thông qua việc xuất hiện task ở trạng thái `PENDING`.
+- **Bàn giao (Handoff)**: Từ Operations Manager $\to$ Field Staff thông qua việc xuất hiện task ở trạng thái `PENDING` (`HO-01`).
 - **Điều kiện kết thúc**: Thực thể `Task` được ghi bền vững vào cơ sở dữ liệu ở trạng thái `PENDING`.
 - **Trạng thái miền kết quả**: `TaskStatus = PENDING`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
@@ -149,7 +150,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Nhân viên khác cố bấm bắt đầu: Báo lỗi `RESOURCE_SCOPE_MISMATCH`, từ chối kích hoạt.
   - Task đã bị Quản lý hủy trước đó (`CANCELLED`): Báo lỗi `INVALID_TASK_STATE`, thông báo công việc đã chấm dứt.
-- **Bàn giao (Handoff)**: Từ trạng thái chờ (`PENDING`) $\to$ Trạng thái thi công chủ động của chính nhân viên đó (`IN_PROGRESS`).
+- **Bàn giao (Handoff)**: Từ trạng thái chờ (`PENDING`) $\to$ Trạng thái thi công chủ động của chính nhân viên đó (`IN_PROGRESS`) (`HO-02`).
 - **Điều kiện kết thúc**: Trạng thái nhiệm vụ chuyển sang `IN_PROGRESS`.
 - **Trạng thái miền kết quả**: `TaskStatus = IN_PROGRESS`.
 - **Yêu cầu kiểm toán**: `NO_BUSINESS_AUDIT_REQUIRED`.
@@ -184,7 +185,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Hành vi tự động hóa của Hệ thống**: Tính toán khoảng cách trắc địa và so khớp chuỗi mã QR hoàn toàn tự động, tức thời.
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - **Ngoại lệ GPS (`LOCATION_EXCEPTION`)**: Tán lá rậm hoặc hẻm sâu khiến sai số $> 10$m sau nhiều lần thử lại. Nhân viên kích hoạt cờ ngoại lệ, nhập văn bản giải trình lý do thực địa. Hệ thống lưu nguyên vẹn tọa độ đo được, khoảng cách thực tế và gắn cờ cảnh báo cho Quản lý thẩm định sau này.
-  - **Ngoại lệ QR (`IDENTITY_EXCEPTION`)**: Tem QR bị mất, cạo rách hoặc mờ mã. Nhân viên kích hoạt cờ ngoại lệ, bắt buộc chụp ảnh hiện trạng gốc cây thiếu tem, nhập lý do và có thể nhập mã số sơn dập nổi trên thân cây (nếu có). Hệ thống đối chiếu mã nhập tay với duy nhất cây được giao, cấm đổi sang cây khác.
+  - **Ngoại lệ QR (`IDENTITY_EXCEPTION`)**: Tem QR bị mất, cạo rách hoặc mờ mã. Nhân viên kích hoạt cờ ngoại lệ, bắt buộc chụp ảnh hiện trạng tem tại gốc cây, nhập lý do và có thể nhập mã số dập nổi thủ công trên thân cây (nếu có). Hệ thống đối chiếu mã nhập tay với duy nhất cây được giao, cấm đổi sang cây khác.
 - **Bàn giao (Handoff)**: Lưu kết quả vào thực thể thành phần `SiteVerification` của Task. Không bàn giao sang Quản lý tại bước này (Quản lý chỉ xem xét lúc thẩm định tổng thể).
 - **Điều kiện kết thúc**: Cả hai hạng mục GPS và QR đều có kết quả (hoặc `VERIFIED`, hoặc `EXCEPTION` có giải trình).
 - **Trạng thái miền kết quả**: `TaskStatus` giữ nguyên không đổi (`IN_PROGRESS` hoặc `REWORK_REQUIRED`).
@@ -248,17 +249,17 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
      - Đã đủ 100% số lượng ảnh chụp thực địa theo `ProofProfile`.
      - Checklist đã trả lời đủ 100% (nếu profile yêu cầu).
      - Bảng `StructuredFindings` đã điền đủ các trường bắt buộc (nếu là `INSPECTION_PROOF`).
-  3. Khi toàn bộ điều kiện tiên quyết thỏa mãn và thiết bị có kết nối Internet trực tuyến:
-     - Gói tin được gửi thành công lên Authoritative Server.
+  3. Khi toàn bộ điều kiện tiên quyết thỏa mãn và thiết bị có kết nối mạng trực tuyến:
+     - Gói tin được gửi thành công và được máy chủ chuẩn tắc tiếp nhận và chấp thuận nghiệp vụ (Server / Business Acceptance).
      - *[Hệ thống]* Chuyển trạng thái `TaskStatus = WAITING_REVIEW`.
-     - *[Hệ thống]* Gửi thông báo có hồ sơ mới cần duyệt tới Quản lý vận hành phụ trách.
+     - *[Hệ thống]* Phát thông báo vận hành có hồ sơ mới cần duyệt tới Quản lý phụ trách.
   4. *[END]* Nhiệm vụ rời khỏi danh sách thực hiện của nhân viên, chuyển sang danh mục "Đang chờ duyệt".
 - **Điểm ra quyết định (Decision Points)**: Không có quyết định của con người tại bước nộp; hệ thống kiểm tra logic tự động.
 - **Hành vi tự động hóa của Hệ thống**: Tự động xác thực tính đầy đủ và toàn vẹn của gói hồ sơ trước khi cho phép chuyển trạng thái.
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - **Hồ sơ chưa đủ chỉ tiêu**: Hệ thống từ chối chuyển trạng thái, hiển thị danh sách các mục còn thiếu (ví dụ: "Chưa chụp ảnh sau", "Còn 2 câu checklist chưa điền"). Nhiệm vụ giữ nguyên `IN_PROGRESS`.
   - **Mất kết nối mạng (Offline)**: Nếu bấm nộp khi không có mạng, hệ thống chuyển sang quy trình kỹ thuật `WF-18` (Lưu cục bộ `PENDING_SYNC`, máy chủ vẫn giữ nguyên `IN_PROGRESS`).
-- **Bàn giao (Handoff)**: Từ Field Staff $\to$ Operations Manager thông qua việc task xuất hiện trong Hàng đợi thẩm định (`ReviewQueue`).
+- **Bàn giao (Handoff)**: Từ Field Staff $\to$ Operations Manager thông qua việc task xuất hiện trong Hàng đợi thẩm định (`ReviewQueue`) (`HO-05`).
 - **Điều kiện kết thúc**: Máy chủ chuẩn tắc ghi nhận thành công gói hồ sơ và chuyển task sang `WAITING_REVIEW`.
 - **Trạng thái miền kết quả**: `TaskStatus = WAITING_REVIEW`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
@@ -278,6 +279,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   - `TaskStatus = WAITING_REVIEW`.
   - Task thuộc phạm vi quản lý vận hành được ủy quyền (`AUTHORIZED_OPERATIONAL_SCOPE`).
   - Quản lý đăng nhập đang ở trạng thái `ACTIVE`.
+  - Người thực hiện thẩm định **KHÔNG PHẢI là người đã thi công nhiệm vụ đó** (bảo đảm nguyên tắc phân tách nhiệm vụ và chống tự duyệt `DR-HARD-02`).
 - **Luồng thành công chuẩn tắc (Happy Path)**:
   1. *[START]* Quản lý mở Hàng đợi thẩm định (`ViewReviewQueue`), chọn nhiệm vụ cần duyệt.
   2. Quản lý mở xem chi tiết hồ sơ (`ReviewTask`): Kiểm tra ảnh Trước/Sau, câu trả lời checklist, kết quả khám bệnh, tọa độ GPS và ảnh tem QR.
@@ -303,7 +305,8 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Duyệt ngoại lệ mà để trống lý do giải trình: Hệ thống báo lỗi `PRECONDITION_NOT_MET`, chặn duyệt cho đến khi có văn bản giải trình trách nhiệm.
   - Staff hoặc Admin cố tình gọi lệnh Approve: Báo lỗi `ROLE_NOT_ALLOWED`, chặn đứng 100%.
-- **Bàn giao (Handoff)**: Từ Operations Manager $\to$ Hồ sơ Cây xanh (`Tree Asset Registry` / `CareHistory`) đối với kết quả nghiệm thu thành công.
+  - Quản lý cố tình tự duyệt bài do chính mình thi công trước đây (sau khi đổi vai trò từ Staff lên Manager): Báo lỗi `SELF_REVIEW_FORBIDDEN`, chặn đứng 100%.
+- **Bàn giao (Handoff)**: Từ Operations Manager $\to$ Hồ sơ Cây xanh (`Tree Asset Registry` / `CareHistory`) đối với kết quả nghiệm thu thành công (`HO-08`).
 - **Điều kiện kết thúc**: Nhiệm vụ chuyển trạng thái sang `COMPLETED` (đóng vĩnh viễn).
 - **Trạng thái miền kết quả**: `TaskStatus = COMPLETED`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
@@ -326,7 +329,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   1. *[START]* Quản lý chọn các khâu sai sót cần sửa (ví dụ: chỉ chụp lại ảnh sau `AFTER_PHOTO`, hoặc làm lại mục bón phân trong `CHECKLIST`), nhập hướng dẫn khắc phục và bấm xác nhận `RequestRework`.
   2. *[Hệ thống]* Khóa bảo lưu toàn bộ các bằng chứng hợp lệ cũ của phiên trước (`Attempt 1`).
   3. *[Hệ thống]* Chuyển trạng thái `TaskStatus = REWORK_REQUIRED`, tạo phiên nộp mới (`Attempt 2`), gắn cờ các mục cụ thể cần sửa đổi.
-  4. *[Hệ thống]* Ghi sự kiện kiểm toán (`AUDIT_REQUIRED`), gửi thông báo khẩn yêu cầu sửa chữa đến nhân viên hiện trường.
+  4. *[Hệ thống]* Ghi sự kiện kiểm toán (`AUDIT_REQUIRED`), phát thông báo vận hành yêu cầu sửa chữa đến nhân viên hiện trường.
   5. Nhân viên mở nhiệm vụ: Giao diện hiển thị rõ ràng lý do từ chối và **chỉ mở quyền sửa/chụp bổ sung đối với đúng các mục bị Quản lý chỉ định**.
   6. Nhân viên thực hiện khắc phục ngoài hiện trường và chụp lại/điền lại các mục yêu cầu.
   7. Nhân viên bấm **"Nộp lại hồ sơ khắc phục"** (`ResubmitRework`).
@@ -338,7 +341,8 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Nhân viên bấm nộp lại nhưng chưa chụp bổ sung khâu bị từ chối: Báo lỗi `PRECONDITION_NOT_MET`, chặn nộp.
   - Báo sự cố hiện trường tại đây: Lệnh `ReportFieldIssue` bị `DENY 100%` (không tồn tại đường `REWORK_REQUIRED -> BLOCKED`).
-- **Bàn giao (Handoff)**: Từ Manager $\to$ Staff (yêu cầu làm lại) và ngược lại từ Staff $\to$ Manager (nộp lại hồ sơ sửa).
+  - Điều chuyển nhân sự tại đây: Lệnh `ReassignTask` bị `DENY 100%`. Nếu nhân viên bị khóa tài khoản hoặc không thể tiếp tục, Quản lý xử lý qua hủy việc (`CancelTask`) và tạo task thay thế (WF-01), không điều chuyển trực tiếp từ `REWORK_REQUIRED`.
+- **Bàn giao (Handoff)**: Từ Manager $\to$ Staff (`HO-06`) và ngược lại từ Staff $\to$ Manager (`HO-07`).
 - **Điều kiện kết thúc**: Nhiệm vụ quay trở lại trạng thái `WAITING_REVIEW`.
 - **Trạng thái miền kết quả**: `TaskStatus = WAITING_REVIEW`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
@@ -359,10 +363,10 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Luồng thành công chuẩn tắc (Happy Path)**:
   1. *[START]* Nhân viên gặp trở ngại hiện trường (tổ ong vò vẽ, rào chắn thi công đường, ngập lụt, cành gãy đe dọa an toàn).
   2. Nhân viên chụp ảnh hiện trường trở ngại, nhập mô tả lý do chi tiết và bấm **"Báo cáo sự cố"** (`ReportFieldIssue`).
-  3. *[Hệ thống]* Cập nhật `TaskStatus = BLOCKED`, ghi nhận thực thể `FieldIssue`, gửi cảnh báo sự cố màu vàng/đỏ tới bảng điều hành của Quản lý.
+  3. *[Hệ thống]* Cập nhật `TaskStatus = BLOCKED`, ghi nhận thực thể `FieldIssue`, phát cảnh báo sự cố tới bảng điều hành của Quản lý.
   4. Quản lý vận hành tiếp nhận sự cố, đánh giá tình hình thực địa và chọn **chính xác 1 trong 3 lối thoát chuẩn tắc**:
      - **Lối thoát 1: `RESUME` (Tiếp tục thi công)**:
-       - Áp dụng khi trở ngại đã được giải tỏa (rào chắn đã dỡ bỏ, tổ ong đã được xử lý).
+       - Áp dụng khi trở ngại đã được giải tỏa (rào chắn đã dỡ bỏ, tổ ong đã được xử lý) và cùng nhân viên cũ tiếp tục làm.
        - Quản lý bấm xác nhận mở lại (`ResumeBlockedTask`).
        - *[Hệ thống]* Chuyển trạng thái `TaskStatus = IN_PROGRESS` cho nhân viên cũ tiếp tục thi công.
      - **Lối thoát 2: `REASSIGN` (Điều chuyển nhân sự khác tiếp quản)**:
@@ -379,7 +383,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Nhân viên tự ý bấm Resume: Bị từ chối `ROLE_NOT_ALLOWED` (duy nhất Manager mới có quyền gỡ BLOCKED).
   - Báo sự cố không có ảnh chụp hoặc lý do rỗng: Báo lỗi `PRECONDITION_NOT_MET`, yêu cầu cung cấp minh chứng sự cố.
-- **Bàn giao (Handoff)**: Từ Staff $\to$ Manager (khi báo sự cố) và từ Manager $\to$ Staff cũ/mới (khi gỡ sự cố).
+- **Bàn giao (Handoff)**: Từ Staff $\to$ Manager (`HO-03`) và từ Manager $\to$ Staff (`HO-04`).
 - **Điều kiện kết thúc**: Nhiệm vụ rời khỏi trạng thái `BLOCKED` chuyển sang `IN_PROGRESS`, `PENDING` hoặc `CANCELLED`.
 - **Trạng thái miền kết quả**: `IN_PROGRESS` (nếu Resume), `PENDING` (nếu Reassign), `CANCELLED` (nếu Cancel).
 - **Yêu cầu kiểm toán**: `AUDIT_RECOMMENDED` cho báo cáo sự cố; `AUDIT_REQUIRED` cho quyết định gỡ ách tắc của Quản lý.
@@ -405,7 +409,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   4. *[Hệ thống]* Kiểm tra trạng thái hiện tại: Đảm bảo không phải là `COMPLETED` hoặc `CANCELLED`.
   5. *[Hệ thống]* Cập nhật `TaskStatus = CANCELLED`, ghi nhận định danh người hủy (`cancelledByUserId`), thời điểm hủy (`cancelledAt`) và lý do văn bản vào thực thể `Cancellation`.
   6. *[Hệ thống]* Đóng nhiệm vụ vĩnh viễn (Terminal Void); bảo toàn toàn bộ dữ liệu lịch sử và các ảnh chụp nháp đã có phục vụ kiểm toán; **TUYỆT ĐỐI KHÔNG sinh bản ghi Lịch sử chăm sóc (`CareHistory`)**.
-  7. *[Hệ thống]* Ghi sự kiện kiểm toán (`AUDIT_REQUIRED`), gửi thông báo hủy việc tới nhân viên liên quan.
+  7. *[Hệ thống]* Ghi sự kiện kiểm toán (`AUDIT_REQUIRED`), phát thông báo vận hành hủy việc tới nhân viên liên quan.
   8. *[END]* Nhiệm vụ đóng vĩnh viễn, không thể thao tác thêm bất kỳ lệnh nào.
 - **Điểm ra quyết định (Decision Points)**: Quản lý quyết định hủy việc dựa trên yêu cầu đột xuất hoặc sự cố thực địa bất khả kháng.
 - **Hành vi tự động hóa của Hệ thống**: Tự động ngắt toàn bộ quyền chỉnh sửa của nhân viên trên nhiệm vụ bị hủy.
@@ -413,7 +417,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   - Cố tình hủy nhiệm vụ đã hoàn thành (`COMPLETED`): Bị chặn đứng `TERMINAL_RESOURCE` (`DR-HARD-05`).
   - Hủy việc mà để trống lý do: Báo lỗi `PRECONDITION_NOT_MET`, bắt buộc nhập lý do có nghĩa.
   - Staff hoặc Admin gọi lệnh hủy: Báo lỗi `ROLE_NOT_ALLOWED` (chỉ duy nhất Manager mới có thẩm quyền).
-- **Bàn giao (Handoff)**: Từ Operations Manager $\to$ Sổ nhật ký kiểm toán (`Audit & Compliance`).
+- **Bàn giao (Handoff)**: Từ Operations Manager $\to$ Sổ nhật ký kiểm toán (`Audit & Compliance`) (`HO-09`).
 - **Điều kiện kết thúc**: Nhiệm vụ chuyển trạng thái sang `CANCELLED`.
 - **Trạng thái miền kết quả**: `TaskStatus = CANCELLED`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
@@ -429,7 +433,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Mục đích**: Cấp phát danh tính và tài khoản truy cập an toàn cho nhân sự mới tham gia hệ thống.
 - **Kích hoạt (Trigger)**: Yêu cầu tiếp nhận nhân sự mới từ bộ phận nhân sự/vận hành đô thị.
 - **Tác nhân chính**: Platform Administrator (`admin`).
-- **Tác nhân phối hợp**: System (tạo liên kết bảo mật/mã mời một lần).
+- **Tác nhân phối hợp**: System.
 - **Ngữ cảnh sở hữu**: `Identity & Access Management`.
 - **Điều kiện vào (Entry Conditions)**:
   - Tác nhân có vai trò Platform Administrator đang `ACTIVE`.
@@ -438,92 +442,119 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   1. *[START]* Admin truy cập giao diện Quản trị Người dùng, chọn chức năng tạo mới tài khoản (`ProvisionUser`).
   2. Admin nhập họ tên, thông tin liên lạc chính thức (Email/Phone) và chọn vai trò ban đầu (`staff`, `manager`, hoặc `admin`).
   3. Admin xác nhận tạo người dùng.
-  4. *[Hệ thống]* Kiểm tra tính duy nhất của định danh; khởi tạo bản ghi `User` và `Account` ở trạng thái `INVITED` (hoặc `ACTIVE` kèm mật khẩu tạm thời bảo mật).
+  4. *[Hệ thống]* Kiểm tra tính duy nhất của định danh; khởi tạo bản ghi `User` và `Account` ở trạng thái `INVITED` (hoặc `ACTIVE`).
   5. *[Hệ thống]* Gắn bản ghi phân quyền vai trò ban đầu vào sổ theo dõi `RoleAssignment`.
   6. *[Hệ thống]* Ghi nhận sự kiện kiểm toán cấp phát người dùng mới (`AUDIT_REQUIRED`).
-  7. *[Hệ thống]* Tự động phát liên kết thiết lập mật khẩu một lần an toàn qua kênh liên lạc chính thức của người dùng. Admin không được nhìn thấy mật khẩu dạng rõ.
-  8. *[END]* Người dùng nhận liên kết, thiết lập mật khẩu cá nhân và kích hoạt tài khoản thành công.
+  7. *[Hệ thống]* Cung cấp cơ chế kích hoạt tài khoản / thiết lập thông tin xác thực an toàn (Secure Account Activation / Credential Setup Mechanism) tới kênh liên lạc chính thức của người dùng. Admin tuyệt đối không nhìn thấy thông tin xác thực dạng rõ.
+  8. *[END]* Người dùng nhận phương thức kích hoạt an toàn, thiết lập mật khẩu cá nhân và đăng nhập thành công.
 - **Điểm ra quyết định (Decision Points)**: Admin lựa chọn vai trò ban đầu phù hợp với quyết định tuyển dụng.
-- **Hành vi tự động hóa của Hệ thống**: Tạo mã thông báo thiết lập mật khẩu một lần (One-Time Token) có thời hạn ngắn, tự động mã hóa mật khẩu an toàn.
+- **Hành vi tự động hóa của Hệ thống**: Tự động mã hóa và khởi tạo thông tin xác thực, lưu vết kiểm toán bất biến.
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Trùng lặp Email/Phone: Báo lỗi `IDENTITY_ALREADY_EXISTS`, chặn tạo mới.
   - Tự đăng ký tự do ngoài màn hình đăng nhập: Bị từ chối `ACTION_REJECTED_BY_PRODUCT_MODEL` (NOVYX cấm hoàn toàn cơ chế tự do đăng ký tài khoản).
-- **Bàn giao (Handoff)**: Từ Platform Administrator $\to$ Người dùng đầu cuối qua kênh thư/tin nhắn bảo mật.
+- **Bàn giao (Handoff)**: Từ Platform Administrator $\to$ Người dùng đầu cuối qua cơ chế kích hoạt an toàn.
 - **Điều kiện kết thúc**: Bản ghi người dùng được tạo bền vững; sự kiện kiểm toán được ghi nối tiếp.
 - **Trạng thái miền kết quả**: `AccountStatus = INVITED` hoặc `ACTIVE`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
-- **Phát hiện tối ưu hóa (Optimization Finding)**: Loại bỏ hoàn toàn sự tham gia của Quản lý vận hành trong luồng cấp phát danh tính kỹ thuật (chuyển 100% về IAM của Admin); Admin không cần duyệt thủ công mật khẩu của nhân viên.
-- **Bất biến được bảo vệ (Locked Invariants)**: Cấm tự đăng ký tự do; Admin không được xem mật khẩu dạng rõ; Manager không có quyền tạo tài khoản người dùng.
+- **Phát hiện tối ưu hóa (Optimization Finding)**: Loại bỏ hoàn toàn sự tham gia của Quản lý vận hành trong luồng cấp phát danh tính kỹ thuật (chuyển 100% về IAM của Admin); Admin không cần và không được duyệt thủ công mật khẩu của nhân viên. Các chi tiết triển khai kỹ thuật (Token, thời hạn, thuật toán mã hóa) được hoãn lại tại Phase 11 Technical Architecture / ADR (`OPT-09`).
+- **Bất biến được bảo vệ (Locked Invariants)**: Cấm tự đăng ký tự do; Admin không được xem mật khẩu dạng rõ; Manager không có quyền tạo tài khoản người dùng; quy trình bootstrap Admin đầu tiên tách biệt với ProvisionUser thường nhật.
 
 ---
 
-### WF-11: Role Change & Assignment (Điều chỉnh phân quyền vai trò)
+### WF-11: Role Change & Operational Responsibility Reconciliation (Điều chỉnh phân quyền vai trò & Đối soát trách nhiệm)
 - **Mã quy trình**: `WF-11`
-- **Mục đích**: Điều chỉnh vai trò người dùng phù hợp với quyết định điều chuyển nhân sự trong tổ chức.
+- **Mục đích**: Điều chỉnh vai trò người dùng trong tổ chức đồng thời đối soát và xử lý dứt điểm các trách nhiệm tác nghiệp hiện hữu, ngăn chặn xung đột phân tách nhiệm vụ và bế tắc công việc.
 - **Kích hoạt (Trigger)**: Quyết định bổ nhiệm, điều chuyển công tác hoặc thu hồi quyền hạn.
 - **Tác nhân chính**: Platform Administrator (`admin`).
-- **Tác nhân phối hợp**: System.
-- **Ngữ cảnh sở hữu**: `Identity & Access Management`.
+- **Tác nhân phối hợp**: System (đối soát xung đột tất định) $\to$ Operations Manager (xử lý bàn giao tác nghiệp).
+- **Ngữ cảnh sở hữu**: `Identity & Access Management` (bàn giao sang `Work Management`).
 - **Điều kiện vào (Entry Conditions)**:
   - Tác nhân là Platform Administrator đang `ACTIVE`.
   - Tài khoản mục tiêu đang ở trạng thái `ACTIVE`.
   - Vai trò mới thuộc tập hợp hợp lệ `{'staff', 'manager', 'admin'}` và khác vai trò hiện tại.
+  - Admin không tự sửa vai trò của chính mình (`ADM-SOD-01`).
 - **Luồng thành công chuẩn tắc (Happy Path)**:
-  1. *[START]* Admin tra cứu người dùng cần điều chỉnh quyền, chọn chức năng phân quyền (`AssignRole`).
-  2. Admin chọn vai trò mới và bắt buộc nhập lý do điều chỉnh quyền hạn bằng văn bản.
-  3. *[Hệ thống]* Kiểm tra ràng buộc phân tách nhiệm vụ: Đảm bảo Admin không tự sửa đổi vai trò của chính mình (`ADM-SOD-01`).
-  4. Admin bấm xác nhận điều chỉnh vai trò.
-  5. *[Hệ thống]* Cập nhật vai trò mới cho tài khoản, thu hồi các phiên đăng nhập (Access Token) cũ để ép buộc xác thực lại quyền mới.
-  6. *[Hệ thống]* Ghi lưu vết lịch sử vai trò cũ/mới, định danh người thực hiện, thời điểm và lý do vào `RoleAssignment` và phát sự kiện kiểm toán (`AUDIT_REQUIRED`).
-  7. *[END]* Người dùng đăng nhập lại với quyền hạn mới; toàn bộ chữ ký tác giả trong các công việc quá khứ giữ nguyên vẹn.
-- **Điểm ra quyết định (Decision Points)**: Admin xác minh tính hợp thức của văn bản yêu cầu điều chỉnh quyền trước khi thực hiện.
-- **Hành vi tự động hóa của Hệ thống**: Tự động thu hồi phiên làm việc tức thời của người dùng bị đổi quyền.
+  1. *[START]* Admin tra cứu người dùng cần điều chỉnh quyền, chọn vai trò mới và nhập lý do văn bản (`AssignRole`).
+  2. **Bước Kiểm tra Tác động Trách nhiệm (Role Change Impact Check)**:
+     - *[Hệ thống]* Tự động rà soát toàn bộ các trách nhiệm tác nghiệp hiện hữu của người dùng:
+       - **Trường hợp A: STAFF $\to$ MANAGER**:
+         - Rà soát các task do người này phụ trách:
+           - Task `PENDING`: Bắt buộc bàn giao phân công lại cho nhân viên khác (`ReassignTask Case A`).
+           - Task `IN_PROGRESS`: Không thể Reassign trực tiếp; Quản lý hiện tại phải xử lý qua lệnh hợp lệ hiện hành (ví dụ: `CancelTask` kèm lý do chuyển vai trò, và tạo task thay thế cho nhân viên khác theo `WF-01`) trước khi vai trò mới có hiệu lực.
+           - Task `BLOCKED`: Quản lý xử lý qua Reassign Case B hoặc Cancel.
+           - Task `REWORK_REQUIRED`: Phải được giải quyết dứt điểm (ví dụ: hủy và tạo task thay thế), không để việc sửa chữa tồn đọng cho người không còn quyền Staff.
+           - Task `WAITING_REVIEW`: Quyền tác giả lịch sử được bảo lưu (`executedBy = User A`). **Sau khi thăng chức lên Manager, User A TUYỆT ĐỐI BỊ CẤM phê duyệt (`Approve`/`ApproveWithException`) hoặc yêu cầu sửa (`RequestRework`) trên các task do chính mình thi công trước đây**; một Operations Manager hợp lệ khác bắt buộc phải thực hiện thẩm định.
+       - **Trường hợp B: MANAGER $\to$ STAFF / ADMIN**:
+         - Rà soát các trách nhiệm quản lý đang giữ (`AUTHORIZED_OPERATIONAL_RESPONSIBILITIES`): Các task trong hàng đợi duyệt (`ReviewQueue`), các sự cố `BLOCKED` chưa xử lý.
+         - Bắt buộc thực hiện bàn giao trách nhiệm quản lý sang một Operations Manager hợp lệ khác trước khi việc đổi vai trò có hiệu lực chính thức.
+  3. **Trạng thái Điều kiện Quy trình (Workflow Condition)**:
+     - Nếu còn tồn đọng trách nhiệm tác nghiệp xung đột: Hệ thống ghi nhận điều kiện quy trình `ROLE_CHANGE_PENDING_OPERATIONAL_HANDOFF` *(đây là trạng thái điều kiện quy trình, TUYỆT ĐỐI KHÔNG PHẢI là một enum `AccountStatus` mới)*.
+     - Admin nhìn thấy danh sách xung đột nhưng **Admin TUYỆT ĐỐI CẤM tự ý can thiệp vào các Task của Work Management**.
+     - Bàn giao thông tin sang Operations Manager phụ trách để giải tỏa dứt điểm qua các lệnh tác nghiệp chuẩn tắc (`HO-12`).
+  4. Khi toàn bộ trách nhiệm xung đột đã được giải tỏa hoàn tất:
+     - Admin xác nhận kích hoạt chính thức vai trò mới.
+     - *[Hệ thống]* Cập nhật `User.role`.
+     - *[Hệ thống]* Thẩm quyền truy cập/phiên làm việc hiện thời của tài khoản không được tiếp tục duy trì với các đặc quyền cũ một khi vai trò mới có hiệu lực.
+     - *[Hệ thống]* Ghi lưu vết lịch sử vai trò cũ/mới, định danh người thực hiện, thời điểm và lý do vào `RoleAssignment` và phát sự kiện kiểm toán (`AUDIT_REQUIRED`).
+  5. *[END]* Người dùng tiếp quản vai trò mới; toàn bộ chữ ký tác giả và trách nhiệm giải trình lịch sử trong quá khứ được giữ nguyên vẹn.
+- **Điểm ra quyết định (Decision Points)**: Admin xác minh quyết định đổi vai trò; Quản lý quyết định phương án giải tỏa trách nhiệm vận hành tồn đọng.
+- **Hành vi tự động hóa của Hệ thống**: Tự động phát hiện xung đột phân tách nhiệm vụ (Separation of Duties Conflict Detection) và ngăn ngừa việc tự duyệt bài của chính mình.
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Admin tự đổi quyền cho chính mình: Bị chặn đứng `ADM-SOD-01` (`SELF_ROLE_MUTATION_FORBIDDEN`).
   - Gán vai trò không tồn tại (ví dụ: `SuperAdmin`, `Guest`): Báo lỗi `ROLE_NOT_ALLOWED`.
-- **Bàn giao (Handoff)**: Từ Platform Administrator $\to$ Kho lưu trữ kiểm toán `Audit & Compliance`.
-- **Điều kiện kết thúc**: Vai trò mới được cập nhật; phiên làm việc cũ bị thu hồi; bản ghi kiểm toán được tạo.
-- **Trạng thái miền kết quả**: `User.role` được cập nhật.
+  - Cố tình kích hoạt đổi quyền khi chưa giải tỏa xong task `IN_PROGRESS` của Staff: Bị chặn đứng bởi điều kiện `ROLE_CHANGE_PENDING_OPERATIONAL_HANDOFF`.
+- **Bàn giao (Handoff)**: Từ Role Governance (Admin) $\to$ Operations Manager (`HO-12`) để giải tỏa xung đột trách nhiệm trước khi đổi quyền.
+- **Điều kiện kết thúc**: Trách nhiệm tồn đọng được giải tỏa; vai trò mới được cập nhật; sự kiện kiểm toán được ghi nhận.
+- **Trạng thái miền kết quả**: `User.role` cập nhật; không phát sinh trạng thái tài khoản mới.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
-- **Phát hiện tối ưu hóa (Optimization Finding)**: Phân tách rạch ròi: Đổi vai trò chỉ cập nhật thẩm quyền cho các hành động trong tương lai, **tuyệt đối không hồi tố hay viết lại quyền tác giả của các nhiệm vụ trong quá khứ**.
-- **Bất biến được bảo vệ (Locked Invariants)**: Admin cấm tự sửa vai trò của mình; Manager cấm phân quyền; lịch sử vai trò được lưu trữ bất biến.
+- **Phát hiện tối ưu hóa (Optimization Finding)**: Xây dựng cơ chế **Đối soát Tác động Trách nhiệm (Role Change Impact Check)**: Ngăn chặn triệt để tình trạng nhân viên được thăng chức thành Quản lý rồi tự phê duyệt công việc do chính mình làm trước đó, bảo vệ tối thượng tính liêm chính của hồ sơ cây xanh (`OPT-08`). Các cơ chế kỹ thuật thu hồi phiên (JWT, token blacklist, session store) được hoãn lại ở Phase 11 (`OPT-09`).
+- **Bất biến được bảo vệ (Locked Invariants)**: Người thi công không được tự duyệt bài của mình; chữ ký tác giả lịch sử không bị viết lại; Admin không tự ý can thiệp task để dọn đường đổi quyền.
 
 ---
 
-### WF-12: Account Suspension & Lifecycle (Khóa, Mở khóa, Vô hiệu hóa)
+### WF-12: Account Suspension & Workload Disposition (Khóa tài khoản & Xử lý khối lượng công việc)
 - **Mã quy trình**: `WF-12`
-- **Mục đích**: Tạm dừng, mở lại hoặc chấm dứt vĩnh viễn quyền truy cập của tài khoản người dùng theo vòng đời nhân sự hoặc rủi ro an ninh.
+- **Mục đích**: Tạm dừng, mở lại hoặc chấm dứt quyền truy cập của tài khoản người dùng, đồng thời cung cấp ma trận xử lý dứt điểm các nhiệm vụ dở dang **mà không tạo ngõ cụt vận hành hay vi phạm máy trạng thái**.
 - **Kích hoạt (Trigger)**: Nhân viên vi phạm kỷ luật, nghỉ phép dài ngày, nhập sai mật khẩu quá số lần quy định, hoặc chấm dứt hợp đồng lao động.
 - **Tác nhân chính**: Platform Administrator (`admin`).
-- **Tác nhân phối hợp**: System (thu hồi token) $\to$ Operations Manager (điều phối lại công việc tồn đọng).
-- **Ngữ cảnh sở hữu**: `Identity & Access Management` (bàn giao sang `Work Management`).
+- **Tác nhân phối hợp**: System $\to$ Operations Manager (tiếp nhận thông tin và xử lý công việc).
+- **Ngữ cảnh sở hữu**: `Identity & Access Management` (bàn giao thông tin sang `Work Management`).
 - **Điều kiện vào (Entry Conditions)**:
   - Tác nhân là Platform Administrator đang `ACTIVE`.
   - Tài khoản mục tiêu tồn tại trong hệ thống.
 - **Luồng thành công chuẩn tắc (Happy Path)**:
-  1. *[START]* Admin chọn tài khoản cần xử lý và chọn lệnh thao tác phù hợp:
-     - **Lệnh A: `SuspendAccount` (Khóa tạm thời)**: Nhập lý do bằng văn bản $\to$ Chuyển trạng thái sang `SUSPENDED` $\to$ Lập tức thu hồi Access Token.
-     - **Lệnh B: `ActivateAccount` / `UnlockAccount` (Mở khóa / Kích hoạt lại)**: Xác minh danh tính thành công $\to$ Chuyển trạng thái sang `ACTIVE` $\to$ Cấp phép đăng nhập lại.
-     - **Lệnh C: `DisableAccount` (Vô hiệu hóa vĩnh viễn)**: Nhân sự nghỉ việc $\to$ Chuyển sang `DISABLED` $\to$ Thu hồi toàn bộ quyền vĩnh viễn, không xóa vật lý bản ghi.
+  1. *[START]* Admin chọn tài khoản cần xử lý và thực hiện lệnh quản trị:
+     - **`SuspendAccount` (Khóa tạm thời)**: Nhập lý do bằng văn bản $\to$ Chuyển trạng thái sang `SUSPENDED` $\to$ Tài khoản không còn khả năng thực hiện bất kỳ hành vi xác thực nào.
+     - **`ActivateAccount` / `UnlockAccount` (Mở khóa / Kích hoạt lại)**: Xác minh danh tính thành công $\to$ Chuyển trạng thái sang `ACTIVE` $\to$ Cấp phép đăng nhập lại.
+     - **`DisableAccount` (Vô hiệu hóa vĩnh viễn)**: Nhân sự nghỉ việc $\to$ Chuyển sang `DISABLED` $\to$ Thu hồi toàn bộ quyền vĩnh viễn, không xóa vật lý bản ghi.
   2. *[Hệ thống]* Ghi nhận dòng kiểm toán biến động tài khoản tương ứng (`AUDIT_REQUIRED`).
-  3. **Handoff Xuyên Ngữ cảnh sang Work Management**:
-     - *[Hệ thống]* Quét danh sách các nhiệm vụ đang gán cho nhân sự bị khóa:
-       - **TUYỆT ĐỐI KHÔNG tự động hủy task (`TaskStatus` không bị đổi sang `CANCELLED`)**.
-       - Đưa danh sách nhiệm vụ bị ảnh hưởng vào khu vực cảnh báo vận hành của Quản lý.
-  4. Quản lý vận hành truy cập `Work Management` và xử lý:
-     - Nếu task đang `PENDING`: Quản lý thực hiện đổi nhân viên khác (`ReassignTask Case A`).
-     - Nếu task đang `IN_PROGRESS`: Yêu cầu phối hợp thực địa chuyển task sang `BLOCKED` rồi mới Reassign sang người mới.
-  5. *[END]* Vòng đời tài khoản được kiểm soát chặt chẽ; công việc hiện trường không bị gián đoạn hay mất mát.
-- **Điểm ra quyết định (Decision Points)**: Admin quyết định thời điểm khóa tài khoản; Quản lý quyết định phương án điều phối công việc dở dang.
-- **Hành vi tự động hóa của Hệ thống**: Tự động thu hồi phiên làm việc nhưng cách ly không cho đột biến trực tiếp sang trạng thái công việc.
+  3. **Handoff Thông tin Xuyên Ngữ cảnh sang Work Management (`HO-10`)**:
+     - *[Hệ thống]* Quét danh sách các nhiệm vụ đang gán cho nhân sự bị khóa và phát thông tin sự kiện: `USER_NOT_OPERATIONALLY_AVAILABLE` sang bảng điều hành của Quản lý.
+     - **BẤT BIẾN CỐT TỬ**: Ngữ cảnh IAM và System **TUYỆT ĐỐI KHÔNG ĐƯỢC PHÉP tự ý đột biến `TaskStatus`** (không tự hủy sang `CANCELLED`, không tự chuyển sang `BLOCKED`, không tự tạo trạng thái mới `ACCOUNT_SUSPENDED` hay `STAFF_UNAVAILABLE`).
+  4. **Ma trận Xử lý Khối lượng Công việc của Nhân viên Bị Khóa (Suspended Staff Task Disposition Matrix)**:
+     - Quản lý vận hành tiếp nhận thông tin và xử lý từng nhiệm vụ theo đúng thẩm quyền hợp lệ hiện hành:
+
+| Trạng thái Nhiệm vụ (`TaskStatus`) | Tác động Khi Nhân viên Bị Khóa IAM | Phản ứng Nghiệp vụ Hợp lệ Duy nhất của Quản lý Vận hành |
+|---|---|---|
+| **`PENDING`** | Task giữ nguyên `PENDING` | Quản lý thực hiện `ReassignTask (Case A)` $\to$ `PENDING` cho nhân viên mới `ACTIVE`. |
+| **`IN_PROGRESS`** | Task giữ nguyên `IN_PROGRESS` | Cấm Reassign trực tiếp. IAM/System cấm tự chuyển sang `BLOCKED`. Quản lý thực hiện `CancelTask` với lý do "Nhân sự bị đình chỉ/không khả dụng". Nếu công việc bắt buộc phải làm tiếp, Quản lý tạo một Task mới thay thế thông qua quy trình chuẩn `WF-01`. |
+| **`BLOCKED`** | Task giữ nguyên `BLOCKED` | Quản lý có thể: (1) `Resume` chỉ khi chính nhân viên đó được mở khóa khả dụng trở lại; (2) `ReassignTask (Case B)` $\to$ `PENDING` cho nhân viên mới; (3) `CancelTask` $\to$ `CANCELLED`. |
+| **`WAITING_REVIEW`** | Task giữ nguyên `WAITING_REVIEW` | Khóa tài khoản không làm mất giá trị bằng chứng đã nộp. Quản lý có thể: `Approve` $\to$ `COMPLETED`, `ApproveWithException` $\to$ `COMPLETED`, `RequestRework` $\to$ `REWORK_REQUIRED`, hoặc `CancelTask` $\to$ `CANCELLED`. Nếu chọn `RequestRework` mà nhân viên bị khóa không thể sửa, Quản lý không được tạo bế tắc thi công; Quản lý xử lý qua hủy việc/tạo task thay thế thay vì điều chuyển trái phép từ `REWORK_REQUIRED`. |
+| **`REWORK_REQUIRED`** | Task giữ nguyên `REWORK_REQUIRED` | Cấm Reassign trực tiếp. Nhân viên bị khóa không thể `ResubmitRework`. Quản lý thực hiện `CancelTask`. Nếu công việc cần tiếp tục, Quản lý tạo Task thay thế mới qua `WF-01`; bảo lưu toàn bộ bằng chứng và lịch sử của task bị hủy. |
+| **`COMPLETED`** | Không đột biến dữ liệu | Toàn bộ dữ liệu bất biến. |
+| **`CANCELLED`** | Không đột biến dữ liệu | Toàn bộ dữ liệu bất biến. |
+
+  5. *[END]* Vòng đời tài khoản được kiểm soát an toàn; khối lượng công việc hiện trường được giải tỏa dứt điểm qua các lệnh chuẩn mực, không có ngõ cụt vận hành.
+- **Điểm ra quyết định (Decision Points)**: Admin quyết định thời điểm khóa tài khoản; Quản lý quyết định phương án xử lý công việc dở dang (Reassign, Cancel, hoặc tạo task thay thế).
+- **Hành vi tự động hóa của Hệ thống**: Tự động chặn truy cập của tài khoản bị khóa nhưng cách ly hoàn toàn không cho đột biến trực tiếp sang trạng thái công việc.
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Kích hoạt lại tài khoản đã bị `DISABLED`: Báo lỗi `CANNOT_ACTIVATE_DISABLED_ACCOUNT` (tài khoản đã vô hiệu hóa nghỉ việc cấm mở lại).
-- **Bàn giao (Handoff)**: Từ IAM (Admin) $\to$ Work Management (Manager) qua tín hiệu cảnh báo khả dụng nhân sự.
-- **Điều kiện kết thúc**: Trạng thái tài khoản cập nhật bền vững; Quản lý tiếp nhận thông tin điều phối.
+- **Bàn giao (Handoff)**: Từ IAM (Admin) $\to$ Work Management (Manager) qua thông tin sự kiện `USER_NOT_OPERATIONALLY_AVAILABLE` (`HO-10`).
+- **Điều kiện kết thúc**: Trạng thái tài khoản cập nhật bền vững; Quản lý tiếp nhận thông tin và xử lý xong các nhiệm vụ dở dang.
 - **Trạng thái miền kết quả**: `AccountStatus = SUSPENDED`, `ACTIVE`, hoặc `DISABLED`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
-- **Phát hiện tối ưu hóa (Optimization Finding)**: Khóa cứng bất biến **Phân tách thẩm quyền xuyên ngữ cảnh (Cross-Context Isolation)**: Khóa tài khoản trong IAM tuyệt đối không tự động hủy task của Work Management, bảo vệ trọn vẹn quyền điều hành của Quản lý vận hành.
-- **Bất biến được bảo vệ (Locked Invariants)**: IAM không tự hủy task; Admin không tự ý điều chuyển task thay Quản lý; dữ liệu người dùng cấm xóa vật lý.
+- **Phát hiện tối ưu hóa (Optimization Finding)**: Giải quyết dứt điểm khiếm khuyết **Ngõ cụt vận hành khi khóa tài khoản (Operational Dead-End Resolution)**: Thay vì bịa đặt một lệnh Quản lý tự chuyển `IN_PROGRESS -> BLOCKED` không có thực, hệ thống chuẩn hóa luồng Hủy có lý do kiểm toán và tạo Task thay thế (`OPT-07`). Cơ chế thu hồi phiên làm việc kỹ thuật được hoãn lại tại Phase 11 (`OPT-09`).
+- **Bất biến được bảo vệ (Locked Invariants)**: Máy trạng thái 7 bước không bị phá vỡ; IAM không tự hủy task; Admin không tự ý điều chuyển task thay Quản lý; dữ liệu người dùng cấm xóa vật lý.
 
 ---
 
@@ -538,25 +569,35 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   - Tác nhân là Platform Administrator đang `ACTIVE`.
 - **Luồng thành công chuẩn tắc (Happy Path)**:
   1. *[START]* Admin truy cập giao diện Sổ bộ Cây xanh (`Tree Asset Registry`), thực hiện một trong các lệnh quản trị:
-     - **Tạo cây mới (`CreateTree`)**: Nhập mã định danh `treeId` duy nhất, mã tem `qrCode` ban đầu, chủng loại cây, và tọa độ GPS chuẩn $\to$ Cây được tạo ở trạng thái đang sinh trưởng.
+     - **Tạo cây mới (`CreateTree`)**:
+       - Nhập mã định danh `treeId` (duy nhất toàn hệ thống).
+       - Nhập mã tem `qrCode` ban đầu (duy nhất toàn hệ thống).
+       - Nhập chủng loại cây, thông số thực vật học.
+       - Nhập tọa độ GPS chuẩn (Latitude, Longitude hợp lệ về định dạng và phạm vi trắc địa; **tọa độ không phải là khóa duy nhất danh tính**).
+       - Bấm xác nhận tạo cây $\to$ Cây được tạo ở trạng thái đang sinh trưởng.
      - **Sửa thông tin gốc (`UpdateTreeMasterData`)**: Cập nhật chiều cao, đường kính thân, tình trạng tán lá $\to$ Bắt buộc nhập lý do điều chỉnh $\to$ Lưu vết cập nhật.
-     - **Cấp đổi mã QR (`ReplaceTreeQrCode`)**: Nhận báo cáo tem hỏng từ hiện trường $\to$ Cấp chuỗi `qrCode` mới $\to$ Giữ nguyên bất biến `treeId` $\to$ Cập nhật vào Master Data.
-     - **Đo đạc lại GPS chuẩn (`UpdateCanonicalCoordinates`)**: Có biên bản trắc địa mới $\to$ Cập nhật kinh độ, vĩ độ chuẩn của gốc cây $\to$ Giữ nguyên `treeId`.
+     - **Cấp đổi mã QR (`ReplaceTreeQrCode`)**: Nhận báo cáo tem hỏng từ hiện trường $\to$ Cấp chuỗi `qrCode` mới (kiểm tra tính duy nhất của mã mới) $\to$ Giữ nguyên bất biến `treeId` $\to$ Cập nhật vào Master Data.
+     - **Đo đạc lại GPS chuẩn (`UpdateCanonicalCoordinates`)**: Có biên bản trắc địa mới $\to$ Cập nhật kinh độ, vĩ độ chuẩn của gốc cây (kiểm tra tính hợp lệ về dải tọa độ, không kiểm tra tính duy nhất) $\to$ Bắt buộc nhập lý do trắc địa $\to$ Giữ nguyên `treeId`.
      - **Thanh lý cây (`RetireTree`)**: Cây đã chết hoặc đốn hạ $\to$ Chuyển trạng thái cây sang `RETIRED` $\to$ Ngăn chặn tạo task mới cho cây này về sau.
-  2. *[Hệ thống]* Kiểm tra tính hợp lệ, tính duy nhất của mã QR/tọa độ, ghi cập nhật bền vững vào Master Data.
-  3. *[Hệ thống]* Ghi dòng sự kiện kiểm toán tài sản (`AUDIT_REQUIRED`).
+  2. *[Hệ thống]* Kiểm tra tính hợp lệ:
+     - Đối với `CreateTree`: Đối soát tính duy nhất của `treeId`, tính duy nhất của `qrCode`, và tính hợp lệ về định dạng/dải đo của tọa độ GPS.
+     - Đối với `ReplaceTreeQrCode`: Đối soát tính duy nhất của chuỗi `qrCode` mới.
+     - Đối với `UpdateCanonicalCoordinates`: Đối soát tính hợp lệ về định dạng và dải đo của tọa độ mới.
+  3. *[Hệ thống]* Ghi cập nhật bền vững vào Master Data và phát sự kiện kiểm toán tài sản (`AUDIT_REQUIRED`).
   4. *[END]* Dữ liệu cây xanh được cập nhật; toàn bộ các nhiệm vụ lịch sử trong quá khứ giữ nguyên vẹn bản chụp tọa độ và QR đã đo.
 - **Điểm ra quyết định (Decision Points)**: Admin đối soát căn cứ thực địa trước khi cấp đổi mã tem QR hoặc thanh lý cây.
 - **Hành vi tự động hóa của Hệ thống**: Tự động chặn khởi tạo nhiệm vụ mới đối với các cây mang trạng thái `RETIRED`.
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
+  - Trùng lặp `treeId`: Báo lỗi `TREE_ID_ALREADY_EXISTS`, chặn tạo mới.
   - Cấp đổi mã QR trùng với cây khác: Báo lỗi `QR_CODE_ALREADY_EXISTS`, chặn trùng lặp.
+  - Tọa độ GPS nằm ngoài dải hợp lệ (ví dụ: vĩ độ $> 90^\circ$ hoặc định dạng sai): Báo lỗi `INVALID_COORDINATE_FORMAT`.
   - Sửa đổi `treeId`: Bị từ chối `IMMUTABLE_IDENTIFIER` (`treeId` là bất biến vĩnh viễn).
 - **Bàn giao (Handoff)**: Dữ liệu Master Data sẵn sàng cho các lệnh đọc tra cứu của Manager và Staff.
 - **Điều kiện kết thúc**: Bản ghi cây trong sổ bộ Master Data được cập nhật thành công.
 - **Trạng thái miền kết quả**: Cập nhật thuộc tính của thực thể `Tree`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
-- **Phát hiện tối ưu hóa (Optimization Finding)**: Tách bạch rõ rệt: Cấp đổi tem `qrCode` trong Master Data **tuyệt đối không sửa đổi hay làm sai lệch kết quả quét QR trong các bản ghi `SiteVerification` của các task đã hoàn thành trong quá khứ**.
-- **Bất biến được bảo vệ (Locked Invariants)**: `treeId` bất biến vĩnh viễn; cấm xóa vật lý hồ sơ cây; Staff và Manager không có quyền sửa Master Data.
+- **Phát hiện tối ưu hóa (Optimization Finding)**: Đính chính chuẩn xác ngữ nghĩa dữ liệu: **Tọa độ chuẩn không phải là khóa duy nhất định danh (Coordinates are NOT Unique Identifiers)**. Hai cây xanh trồng sát nhau hoặc có tọa độ làm tròn trùng nhau vẫn hoàn toàn hợp lệ (`OPT-10`). Cấp đổi tem QR không viết lại dữ liệu quét QR của các task cũ.
+- **Bất biến được bảo vệ (Locked Invariants)**: `treeId` bất biến vĩnh viễn; `qrCode` là duy nhất; cấm xóa vật lý hồ sơ cây; Staff và Manager không có quyền sửa Master Data.
 
 ---
 
@@ -567,36 +608,38 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
 - **Tác nhân chính**: Platform Administrator (`admin`).
 - **Tác nhân phối hợp**: System.
 - **Ngữ cảnh sở hữu**: `Policy & Template Governance`.
+- **Phân định tài nguyên sở hữu**: `TaskTypeCatalog` là tài nguyên **chỉ ghi lưu vết kiểm toán (AUDIT-ONLY resource)**, hoàn toàn độc lập với tài nguyên chính sách phiên bản `ProofPolicyMapping`.
 - **Điều kiện vào (Entry Conditions)**:
   - Tác nhân là Platform Administrator đang `ACTIVE`.
 - **Luồng thành công chuẩn tắc (Happy Path)**:
   1. *[START]* Admin truy cập Danh mục công việc (`TaskTypeCatalog`).
   2. Thực hiện hành động quản trị:
-     - **Tạo mới (`CreateTaskType`)**: Nhập mã định danh bền vững `taskTypeId`, tên hiển thị, mô tả kỹ thuật, và gắn kèm chính sách bằng chứng bắt buộc (`ProofProfile`). Tạo ở trạng thái `ACTIVE`.
+     - **Tạo mới (`CreateTaskType`)**: Nhập mã định danh bền vững `taskTypeId`, tên hiển thị, mô tả kỹ thuật. Tạo ở trạng thái `ACTIVE` *(Lưu ý: Loại việc này chỉ có thể được Quản lý chọn khi đã được gắn kèm ánh xạ chính sách bằng chứng hợp lệ tại WF-15)*.
      - **Tạm ngưng (`DeactivateTaskType`)**: Chọn loại việc không còn nhu cầu $\to$ Chuyển trạng thái sang `INACTIVE` $\to$ Loại việc bị ẩn khỏi màn hình tạo task của Quản lý.
      - **Kích hoạt lại (`ActivateTaskType`)**: Chuyển trạng thái loại việc từ `INACTIVE` sang `ACTIVE`.
   3. *[Hệ thống]* Ghi nhận thay đổi vào Catalog, ghi sự kiện kiểm toán (`AUDIT_REQUIRED`).
-  4. *[END]* Danh mục loại việc sẵn sàng cho Quản lý chọn lựa khi giao việc mới.
-- **Điểm ra quyết định (Decision Points)**: Admin xác định chính sách áp dụng loại công việc.
-- **Hành vi tự động hóa của Hệ thống**: Tự động lọc chỉ hiển thị loại việc `ACTIVE` khi Manager tạo task.
+  4. *[END]* Danh mục loại việc sẵn sàng phục vụ quy trình ánh xạ chính sách và giao việc.
+- **Điểm ra quyết định (Decision Points)**: Admin xác định danh mục loại công việc cần thiết cho vận hành đô thị.
+- **Hành vi tự động hóa của Hệ thống**: Tự động lọc chỉ hiển thị loại việc `ACTIVE` và đã có ánh xạ ProofProfile khi Manager tạo task.
 - **Nhánh thất bại / Ngoại lệ (Failure Path)**:
   - Yêu cầu xóa cứng một `TaskType` đã từng có task thực hiện: Bị chặn đứng `HARD_DELETE_FORBIDDEN` (chỉ được phép chuyển sang `INACTIVE` để bảo toàn toàn vẹn tham chiếu lịch sử).
-- **Bàn giao (Handoff)**: Từ Policy Governance $\to$ Work Management (dưới dạng danh mục đọc khả dụng).
+- **Bàn giao (Handoff)**: Từ TaskType Catalog $\to$ Proof Policy Mapping (`WF-15`) và Work Management.
 - **Điều kiện kết thúc**: Trạng thái `TaskType` trong Catalog được cập nhật.
 - **Trạng thái miền kết quả**: `TaskType.status = ACTIVE` hoặc `INACTIVE`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED`.
-- **Phát hiện tối ưu hóa (Optimization Finding)**: Quản lý vận hành bị tước bỏ quyền tự gõ loại việc tùy tiện ngoài hiện trường; 100% nhiệm vụ phải tuân thủ danh mục chuẩn hóa của đô thị.
-- **Bất biến được bảo vệ (Locked Invariants)**: Cấm xóa cứng TaskType đã có dữ liệu tham chiếu; thay đổi nghiệp vụ lớn phải tạo TaskType mới thay vì sửa đè ngữ nghĩa.
+- **Phát hiện tối ưu hóa (Optimization Finding)**: Tách bạch rõ rệt giữa `TaskTypeCatalog` (danh mục công việc) và `ProofPolicyMapping` (chính sách bằng chứng). Quản lý vận hành bị tước bỏ quyền tự gõ loại việc tùy tiện ngoài hiện trường.
+- **Bất biến được bảo vệ (Locked Invariants)**: Cấm xóa cứng TaskType đã có dữ liệu tham chiếu; thay đổi ngữ nghĩa lớn phải tạo TaskType mới thay vì sửa đè ngữ nghĩa.
 
 ---
 
 ### WF-15: Proof Policy Mapping Governance (Quản trị chính sách bằng chứng)
 - **Mã quy trình**: `WF-15`
 - **Mục đích**: Thiết lập và ban hành phiên bản quy tắc ánh xạ bắt buộc từ loại việc sang hồ sơ bằng chứng (`TaskType -> ProofProfile`).
-- **Kích hoạt (Trigger)**: Cập nhật tiêu chuẩn nghiệm thu kỹ thuật cây xanh đô thị.
+- **Kích hoạt (Trigger)**: Cập nhật tiêu chuẩn nghiệm thu kỹ thuật cây xanh đô thị hoặc thiết lập chính sách cho TaskType mới.
 - **Tác nhân chính**: Platform Administrator (`admin`).
 - **Tác nhân phối hợp**: System.
 - **Ngữ cảnh sở hữu**: `Policy & Template Governance`.
+- **Phân định tài nguyên sở hữu**: `ProofPolicyMapping` là tài nguyên **chính sách có quản lý phiên bản độc lập (VERSIONED policy resource)**.
 - **Điều kiện vào (Entry Conditions)**:
   - Tác nhân là Platform Administrator đang `ACTIVE`.
   - Mỗi `TaskType` bắt buộc ánh xạ tới chính xác một trong 3 hồ sơ chuẩn: `CHANGE_PROOF`, `SERVICE_PROOF`, hoặc `INSPECTION_PROOF`.
@@ -691,7 +734,7 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
   - `TaskStatus = IN_PROGRESS` trên thiết bị và trên Authoritative Server.
   - Hồ sơ bằng chứng đã đạt 100% chỉ tiêu theo `ProofProfile`.
 - **Luồng hoạt động chuẩn tắc (Technical Sequence)**:
-  1. *[START]* Nhân viên bấm "Nộp hồ sơ nghiệm thu" ngoài hiện trường khi không có sóng 4G/Wifi.
+  1. *[START]* Nhân viên bấm "Nộp hồ sơ nghiệm thu" ngoài hiện trường khi không có kết nối mạng.
   2. *[Thiết bị di động]*:
      - Ghi nhận trạng thái đồng bộ máy khách: `LocalSubmissionStatus = PENDING_SYNC`.
      - Lưu trữ bền vững toàn bộ dữ liệu gói tin và file ảnh vào Bộ nhớ an toàn cục bộ (Durable Outbox Store).
@@ -700,10 +743,10 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
      - Trạng thái nhiệm vụ **VẪN LÀ `TaskStatus = IN_PROGRESS`**.
      - Tuyệt đối **KHÔNG TỒN TẠI** trạng thái nghiệp vụ `"OFFLINE_SUBMITTED"`.
   4. *[Khi thiết bị khôi phục kết nối Internet]*:
-     - Dịch vụ đồng bộ nền (Background Outbox Worker) tự động đánh thức và gửi gói tin lên máy chủ.
-     - **Trường hợp A: Đồng bộ Thành công (Sync Success)**:
+     - Dịch vụ đồng bộ nền tự động chuyển gói tin lên máy chủ.
+     - **Trường hợp A: Tiếp nhận & Chấp thuận Nghiệp vụ (Server / Business Acceptance)**:
        - Máy chủ tiếp nhận trọn vẹn dữ liệu, kiểm tra hợp lệ và chuyển trạng thái nhiệm vụ: `TaskStatus = WAITING_REVIEW`.
-       - Máy chủ phản hồi mã thành công; thiết bị cập nhật: `LocalSubmissionStatus = SYNCED`.
+       - Thiết bị cập nhật: `LocalSubmissionStatus = SYNCED`.
        - Nhiệm vụ chính thức xuất hiện trên hàng đợi thẩm định của Quản lý.
      - **Trường hợp B: Đồng bộ Thất bại (Sync Failure - Rớt mạng giữa chừng / Lỗi kết nối)**:
        - Máy chủ giữ nguyên trạng thái: `TaskStatus = IN_PROGRESS`.
@@ -711,13 +754,13 @@ Toàn bộ nghiệp vụ hệ thống được cấu trúc thành 18 quy trình 
        - Hiển thị nút bấm "Thử gửi lại" (Manual Retry) cho nhân viên chủ động bấm khi mạng ổn định.
   5. *[END]* Quá trình đồng bộ hoàn tất, dữ liệu trên máy chủ phản ánh đúng trạng thái thực tế.
 - **Điểm ra quyết định**: Không có quyết định con người; hệ thống máy móc xử lý vận chuyển gói tin.
-- **Hành vi tự động hóa**: Cơ chế tự động thử lại có giãn cách lũy thừa (Exponential Backoff Retry) khi có mạng trở lại.
+- **Hành vi tự động hóa**: Cơ chế tự động thử lại ngầm khi phát hiện mạng khôi phục.
 - **Nhánh thất bại / Ngoại lệ**: Mất mạng kéo dài $\to$ Dữ liệu vẫn được bảo vệ nguyên vẹn trong Outbox, không bao giờ bị mất ảnh hay checklist đã làm.
 - **Bàn giao (Handoff)**: Từ Mobile Client Local Outbox $\to$ Authoritative Server API.
 - **Điều kiện kết thúc**: Gói tin được máy chủ tiếp nhận hoặc được lưu bền vững chờ thử lại.
 - **Trạng thái miền kết quả**: Chỉ khi máy chủ tiếp nhận thành công thì `TaskStatus` mới lên `WAITING_REVIEW`; nếu chưa đồng bộ thành công, task mãi mãi giữ nguyên `IN_PROGRESS`.
 - **Yêu cầu kiểm toán**: `AUDIT_REQUIRED` (được ghi nhận khi máy chủ chính thức tiếp nhận và đổi state).
-- **Phát hiện tối ưu hóa (Optimization Finding)**: **Tách biệt tuyệt đối giữa Trạng thái Đồng bộ kỹ thuật (`SyncStatus`) và Vòng đời Nghiệp vụ (`TaskStatus`)**. Ngăn chặn 100% lỗi sai kiến trúc phổ biến là đưa trạng thái nộp offline vào máy trạng thái máy chủ.
+- **Phát hiện tối ưu hóa (Optimization Finding)**: **Tách biệt tuyệt đối giữa Trạng thái Đồng bộ kỹ thuật (`SyncStatus`) và Vòng đời Nghiệp vụ (`TaskStatus`)**. Ngăn chặn 100% lỗi sai kiến trúc phổ biến là đưa trạng thái nộp offline vào máy trạng thái máy chủ. Giao thức mạng và mã phản hồi cụ thể được hoãn lại tại Phase 11 (`OPT-09`).
 - **Bất biến được bảo vệ (Locked Invariants)**: Bấm nộp offline không tự chuyển state server (`DR-TECH-01`); không có trạng thái OFFLINE_SUBMITTED; kết nối mạng trở lại không đồng nghĩa với việc task tự động được duyệt.
 
 ---
@@ -742,7 +785,7 @@ Tuân thủ nghiêm ngặt nguyên tắc **Khóa Phạm Vi MVP**, ba quy trình 
 
 ### WF-NEXT-03: Security Governance Notifications (Cảnh báo An ninh Quản trị)
 - **Trạng thái**: **`NEXT` (Không kích hoạt trong MVP)**.
-- **Bản chất**: Hệ thống cảnh báo tự động qua SMS/Email bảo mật cho Ban Giám đốc khi phát hiện: Admin gán quyền cho Admin khác, khóa tài khoản hàng loạt hoặc kích hoạt phiên Break-Glass. Được bảo lưu phát triển đồng bộ khi phân hệ Break-Glass sẵn sàng.
+- **Bản chất**: Hệ thống cảnh báo tự động qua kênh an toàn cho Ban Giám sát khi phát hiện: Admin gán quyền cho Admin khác, khóa tài khoản hàng loạt hoặc kích hoạt phiên Break-Glass. Được bảo lưu phát triển đồng bộ khi phân hệ Break-Glass sẵn sàng.
 
 ---
 
@@ -761,8 +804,9 @@ Bảng đối soát đảm bảo mọi điểm tiếp giáp bàn giao công vi�
 | **HO-07** | `Work Management` | Field Staff | `Work Management` | Operations Manager | Nhân viên sửa xong bấm `ResubmitRework` | Gói hồ sơ bổ sung phiên mới (`Attempt 2`) | `REWORK_REQUIRED` | `WAITING_REVIEW` |
 | **HO-08** | `Work Management` | Operations Manager | `Tree Asset Registry` | Cây xanh mục tiêu | Quản lý bấm `Approve` hoặc `ApproveWithException` | Bản ghi kỹ thuật chính thức chiếu sang `CareHistory` | `WAITING_REVIEW` | `COMPLETED` |
 | **HO-09** | `Work Management` | Operations Manager | `Audit & Compliance` | Sổ nhật ký kiểm toán | Quản lý bấm `CancelTask` | Thực thể `Cancellation` kèm lý do hủy văn bản | Phi kết thúc | `CANCELLED` |
-| **HO-10** | `Identity & Access` | Platform Administrator | `Work Management` | Operations Manager | Admin khóa tài khoản nhân sự (`SuspendAccount`) | Tín hiệu cảnh báo khả dụng nhân sự có việc dở dang | `ACTIVE` | `SUSPENDED` |
+| **HO-10** | `Identity & Access` | Platform Administrator | `Work Management` | Operations Manager | Admin khóa tài khoản nhân sự (`SuspendAccount`) | Thông tin sự kiện `USER_NOT_OPERATIONALLY_AVAILABLE` | `ACTIVE` | `SUSPENDED` |
 | **HO-11** | Mọi Ngữ cảnh | Mọi Tác nhân | `Audit & Compliance` | Sổ nhật ký kiểm toán | Thực thi bất kỳ lệnh quản trị hoặc quyết định duyệt | Dữ liệu `AuditEvent` bất biến (`Append-Only`) | *N/A* | *N/A* |
+| **HO-12** | `Identity & Access` | Platform Administrator | `Work Management` | Operations Manager | Yêu cầu đổi vai trò xung đột trách nhiệm vận hành | Tín hiệu `ROLE_CHANGE_PENDING_OPERATIONAL_HANDOFF` | Khởi tạo đổi quyền | Chờ giải tỏa xong mới đổi |
 
 ---
 
@@ -798,6 +842,10 @@ Rà soát toàn bộ các điểm ma sát nghiệp vụ để thực thi tối �
 | **OPT-04** | Sai sót 1 khâu nhỏ nhưng hệ thống cũ bắt nhân viên làm lại toàn bộ từ đầu | Áp dụng vòng lặp làm lại có mục tiêu (`Targeted Rework`): Bảo lưu bằng chứng hợp lệ cũ, chỉ bắt chụp/sửa đúng khâu hỏng. | **KHÔNG** | **ACCEPTED (Đã tối ưu)** |
 | **OPT-05** | Khóa tài khoản nhân sự trong IAM tự động làm đứt gãy và hủy hàng loạt nhiệm vụ | Phân tách ngữ cảnh: Khóa tài khoản chỉ cảnh báo nhân sự vắng mặt; Quản lý vận hành toàn quyền chủ động điều phối lại task. | **KHÔNG** | **ACCEPTED (Đã tối ưu)** |
 | **OPT-06** | Đưa thêm một làn Admin vào sơ đồ vận hành thực địa khiến luồng bị rối | Loại bỏ 100% sự hiện diện của Admin trong quy trình hiện trường; Admin chỉ xuất hiện trong quản trị nền tảng và thanh tra. | **KHÔNG** | **ACCEPTED (Đã tối ưu)** |
+| **OPT-07** | Bế tắc khi nhân viên bị khóa đang có task `IN_PROGRESS` (thiếu lệnh chuyển sang BLOCKED) | Chuẩn hóa Ma trận xử lý khối lượng công việc: Quản lý dùng `CancelTask` có lý do kiểm toán và tạo task thay thế (WF-01), không bịa lệnh sang BLOCKED. | **KHÔNG (Đóng bế tắc)** | **ACCEPTED (Đã tối ưu)** |
+| **OPT-08** | Đổi vai trò người dùng làm treo việc dở dang hoặc gây xung đột tự duyệt bài | Bổ sung chốt kiểm tra tác động trách nhiệm (`Role Change Impact Check`) và điều kiện `ROLE_CHANGE_PENDING_OPERATIONAL_HANDOFF`. | **KHÔNG (Bảo vệ SoD)** | **ACCEPTED (Đã tối ưu)** |
+| **OPT-09** | Đưa các chi tiết cơ chế kỹ thuật xác thực/phiên (Token, HTTP, FCM) vào luồng nghiệp vụ | Khái quát hóa sang ngữ nghĩa nghiệp vụ thuần túy; hoãn toàn bộ cơ chế xác thực/vận chuyển kỹ thuật cụ thể sang Phase 11 Architecture/ADR. | **KHÔNG (Đúng ranh giới)** | **ACCEPTED (Đã tối ưu)** |
+| **OPT-10** | Tọa độ chuẩn của cây bị hiểu sai là khóa duy nhất toàn cục | Đính chính: `treeId` và `qrCode` là duy nhất; tọa độ GPS chuẩn chỉ kiểm tra tính hợp lệ về định dạng và phạm vi, không kiểm tra tính duy nhất. | **KHÔNG (Đính chính dữ liệu)** | **ACCEPTED (Đã tối ưu)** |
 | **OPT-REJ-01** | Đề xuất cho phép Hệ thống tự động duyệt nghiệm thu các task đủ ảnh (`Auto-approval`) | **BÁC BỎ HOÀN TOÀN**: Vi phạm bất biến an toàn `DR-POL-01`. 100% công việc cây xanh đô thị bắt buộc phải do Quản lý chịu trách nhiệm thẩm định. | **CÓ (Vi phạm an toàn)** | **REJECTED (Bác bỏ)** |
 | **OPT-REJ-02** | Đề xuất cho phép Admin được duyệt task thay Quản lý khi Quản lý vắng mặt | **BÁC BỎ HOÀN TOÀN**: Vi phạm nguyên tắc phân tách nhiệm vụ `ADM-SOD-04`. Admin không có thẩm quyền vận hành thực địa. | **CÓ (Phá vỡ vai trò)** | **REJECTED (Bác bỏ)** |
 | **OPT-REJ-03** | Đề xuất gộp chung trạng thái `BLOCKED` và `REWORK_REQUIRED` thành một trạng thái lỗi | **BÁC BỎ HOÀN TOÀN**: Trộn lẫn giữa trở ngại khách quan khi thi công (`BLOCKED`) và lỗi chất lượng chuyên môn do nhân viên làm ẩu (`REWORK`). | **CÓ (Phá máy trạng thái)** | **REJECTED (Bác bỏ)** |
@@ -828,6 +876,7 @@ Phân loại mức độ thiết yếu của từng bước nghiệp vụ nhằm
 | **WF-07** | Bảo lưu chứng cứ cũ và chỉ định khâu sửa | `REQUIRED_CONTROL` | Tránh lãng phí công sức nhân viên, bảo toàn trách nhiệm giải trình. |
 | **WF-08** | Quản lý gỡ ách tắc qua 3 lối thoát dứt điểm | `REQUIRED_BUSINESS_ACTION` | Phán quyết giải quyết trở ngại vận hành hiện trường. |
 | **WF-09** | Bắt buộc nhập lý do bằng văn bản khi hủy việc | `REQUIRED_CONTROL` | Ngăn chặn việc hủy nhiệm vụ tùy tiện, phục vụ hậu kiểm tra soát. |
+| **WF-11** | Đối soát xung đột trách nhiệm trước khi đổi quyền | `REQUIRED_CONTROL` | Ngăn chặn việc tự duyệt bài của chính mình và tránh treo task vô chủ. |
 | **WF-12** | IAM khóa tài khoản tự hủy task công việc | `REDUNDANT — REMOVE` | **Đã loại bỏ**: Tránh xung đột thẩm quyền, nhường quyền điều phối cho Quản lý. |
 
 ---
@@ -870,7 +919,8 @@ Thực hiện kiểm tra nghiêm ngặt nguyên tắc **Admin không tự độn
 | **Hồ sơ bị Quản lý phát hiện sai sót kỹ thuật** | WF-06, WF-07 | Chuyển sang `REWORK_REQUIRED`, chỉ định khâu sai sót; nhân viên bổ sung đúng khâu hỏng. | `REWORK_REQUIRED` |
 | **Hiện trường gặp chướng ngại vật cản trở thi công** | WF-08 | Nhân viên bấm `ReportFieldIssue` $\to$ Chuyển sang `BLOCKED` $\to$ Quản lý quyết định tháo gỡ. | `BLOCKED` |
 | **Nhân viên đang thi công thì gặp tai nạn/ốm đau** | WF-08 | Chuyển task sang `BLOCKED` $\to$ Quản lý thực hiện Reassign Case B về `PENDING` cho người mới. | `PENDING` (gán người mới) |
-| **Nhân sự thi công bị Admin khóa tài khoản IAM** | WF-12 | Cảnh báo sang bảng điều hành của Quản lý $\to$ Quản lý chủ động Reassign hoặc hủy task. | `PENDING` hoặc `BLOCKED` |
+| **Nhân sự thi công bị Admin khóa tài khoản IAM** | WF-12 | Cảnh báo sang Quản lý $\to$ Quản lý thực hiện Cancel task và tạo task mới thay thế theo ma trận. | `CANCELLED` & Tạo Task mới |
+| **Yêu cầu đổi vai trò khi đang có task dở dang** | WF-11 | Ghi nhận điều kiện `ROLE_CHANGE_PENDING_OPERATIONAL_HANDOFF`, Quản lý giải tỏa việc trước khi đổi quyền. | Bàn giao xong mới đổi |
 
 ---
 
@@ -887,9 +937,9 @@ Thực hiện kiểm tra nghiêm ngặt nguyên tắc **Admin không tự độn
 
 ---
 
-## 14. Thử Nghiệm Phủ Định Quy Trình Nghiệp Vụ (Negative Workflow Tests WF-NT-01..18)
+## 14. Thử Nghiệm Phủ Định Quy Trình Nghiệp Vụ (Negative Workflow Tests)
 
-Đánh giá 18 kịch bản sai lệch quy trình nhằm chứng minh tính chặt chẽ tuyệt đối của mô hình Phase 5:
+### 14.1. Bộ thử nghiệm phủ định ban đầu (WF-NT-01..18):
 
 | Mã Ca Kiểm Thử | Kịch bản Sai lệch Quy trình Giả định | Kết quả Mong đợi | Đánh giá Thực tế trong Mô hình Phase 5 | Kết luận |
 |---|---|:---:|---|:---:|
@@ -912,6 +962,23 @@ Thực hiện kiểm tra nghiêm ngặt nguyên tắc **Admin không tự độn
 | **WF-NT-17** | Quản lý gọi lệnh điều chuyển nhân sự (`ReassignTask`) trực tiếp khi task đang `REWORK_REQUIRED`. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-07` và Ma trận trạng thái. `REWORK_REQUIRED` cấm Reassign trực tiếp. | **PASS** |
 | **WF-NT-18** | Nhiệm vụ tại `REWORK_REQUIRED` gọi lệnh `ReportFieldIssue` để nhảy sang `BLOCKED`. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-07`, `P4-SC-01`. Không tồn tại bước chuyển `REWORK_REQUIRED -> BLOCKED`. | **PASS** |
 
+### 14.2. Bộ thử nghiệm phủ định Semantic Closure (P5-SC-NT-01..12):
+
+| Mã Ca Kiểm Thử | Kịch bản Sai lệch Ngữ nghĩa Giả định | Kết quả Mong đợi | Đánh giá Thực tế trong Mô hình Phase 5 Closure | Kết luận |
+|---|---|:---:|---|:---:|
+| **P5-SC-NT-01** | Lệnh `SuspendAccount` tự động làm biến đổi nhiệm vụ từ `IN_PROGRESS` sang `BLOCKED`. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi Mục 4 (`WF-12`). Khóa tài khoản không tự ý đổi TaskStatus; không tự tạo BLOCKED. | **PASS** |
+| **P5-SC-NT-02** | Quản lý gọi lệnh điều chuyển trực tiếp (`ReassignTask`) trên task `IN_PROGRESS` khi Staff bị khóa. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi Ma trận Mục 4 (`WF-12`). `IN_PROGRESS` cấm Reassign trực tiếp; phải hủy và tạo task thay thế. | **PASS** |
+| **P5-SC-NT-03** | Ngữ cảnh IAM tự động hủy (`CANCELLED`) các nhiệm vụ bị ảnh hưởng khi khóa người dùng. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-12` và nguyên tắc phân tách ngữ cảnh. IAM chỉ phát thông tin, Manager quyết định xử lý. | **PASS** |
+| **P5-SC-NT-04** | Một nhiệm vụ `IN_PROGRESS` có nhân viên bị khóa tài khoản rơi vào ngõ cụt không có lối thoát. | **`FAIL` (Giả định sai)** | Bác bỏ bởi Ma trận Mục 4 (`WF-12`). Quản lý có lối thoát chuẩn tắc: `CancelTask` có lý do và tạo task thay thế. | **PASS** |
+| **P5-SC-NT-05** | Quản lý được phép Reassign trực tiếp từ `REWORK_REQUIRED` với lý do nhân viên đã bị khóa tài khoản. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi Ma trận Mục 4 (`WF-12`). Cấm Reassign từ `REWORK_REQUIRED`; xử lý qua hủy việc và tạo task thay thế. | **PASS** |
+| **P5-SC-NT-06** | Nhân viên đang có task `IN_PROGRESS` được thăng chức lên Manager và task vẫn để người đó thi công. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-11`. Rà soát tác động trách nhiệm bắt buộc giải tỏa dứt điểm task trước khi đổi quyền. | **PASS** |
+| **P5-SC-NT-07** | Một Quản lý mới được thăng chức tiến hành thẩm định và duyệt task do chính mình thi công trước đó. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-11` và `DR-HARD-02`. Executor cấm tự duyệt bài của mình; bắt buộc Manager khác duyệt. | **PASS** |
+| **P5-SC-NT-08** | Admin thực hiện giải quyết phân công hoặc hủy các task dở dang như một phần của lệnh `AssignRole`. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-11` và `P4-09`. Admin không có quyền can thiệp task; Quản lý vận hành phải xử lý task. | **PASS** |
+| **P5-SC-NT-09** | Việc thay đổi vai trò làm viết lại vai trò lịch sử hoặc quyền tác giả của các nhiệm vụ trong quá khứ. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-11`. Quyền tác giả lịch sử là bất biến vĩnh viễn (`executedBy = User A as Staff`). | **PASS** |
+| **P5-SC-NT-10** | Lệnh `CreateTree` bị từ chối chỉ vì một cây khác trong hệ thống có tọa độ GPS làm tròn trùng nhau. | **`FAIL` (Giả định sai)** | Bác bỏ bởi `WF-13` và `OPT-10`. Tọa độ chuẩn chỉ kiểm tra tính hợp lệ về định dạng/dải đo, không kiểm tra duy nhất. | **PASS** |
+| **P5-SC-NT-11** | Hai cây xanh khác nhau trong hệ thống được phép dùng chung một mã tem vật lý `qrCode`. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-13`. Mã `qrCode` bắt buộc phải duy nhất toàn hệ thống. | **PASS** |
+| **P5-SC-NT-12** | Admin có thể chỉnh sửa mã định danh `treeId` trong khi cập nhật tọa độ chuẩn của cây. | **`FAIL` (Bị chặn đứng)** | Bác bỏ bởi `WF-13`. `treeId` là bất biến vĩnh viễn, không thể chỉnh sửa trong bất kỳ lệnh nào. | **PASS** |
+
 ---
 
 ## 15. Ma Trận Nhất Quán Toàn Cục Các Quy Trình (Workflow Consistency Matrix)
@@ -930,7 +997,7 @@ Bảng đối soát tổng hợp đảm bảo 100% các quy trình nghiệp vụ
 | **WF-08** | Blocked Resolution | Staff, Manager, System | `IN_PROGRESS` | `IN_PROGRESS` / `PENDING` | Staff $\to$ Manager $\to$ Staff | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
 | **WF-09** | Task Cancellation | Manager, System | Phi kết thúc | `CANCELLED` | Manager $\to$ Audit Store | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
 | **WF-10** | User Provisioning | Admin, System | Tác nhân Admin ACTIVE | `INVITED` / `ACTIVE` | Admin $\to$ Người dùng | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
-| **WF-11** | Role Change | Admin, System | User mục tiêu ACTIVE | User cập nhật role | Admin $\to$ Audit Store | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
+| **WF-11** | Role Change | Admin, Manager, System | User mục tiêu ACTIVE | User cập nhật role | Admin $\to$ Manager $\to$ Audit | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
 | **WF-12** | Account Suspension | Admin, Manager, System | User mục tiêu ACTIVE | User `SUSPENDED` | IAM $\to$ Work Management | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
 | **WF-13** | Tree Master Data Governance | Admin, System | Tác nhân Admin ACTIVE | Cây cập nhật Master Data | Admin $\to$ Master Data Store | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
 | **WF-14** | TaskType Catalog Governance | Admin, System | Tác nhân Admin ACTIVE | Catalog cập nhật TaskType | Policy $\to$ Work Management | `AUDIT_REQUIRED` | **MVP** | **CONSISTENT (100%)** |
@@ -944,16 +1011,16 @@ Bảng đối soát tổng hợp đảm bảo 100% các quy trình nghiệp vụ
 
 ---
 
-## 16. Bảng Bằng Chứng Nghiệm Thu Cổng Phase 5 (Phase 5 Evidence Table)
+## 16. Bảng Bằng Chứng Nghiệm Thu Cổng Phase 5 (Phase 5 Evidence & Semantic Closure Tables)
 
-Nghiệm thu toàn bộ 11 tiêu chí cổng kiểm soát chất lượng khắt khe của Phase 5 theo Master Plan:
+### 16.1. Bảng nghiệm thu 11 tiêu chí chất lượng cốt lõi (P5-01..P5-11):
 
 | Gate ID | Tiêu chí Nghiệm thu (Requirement) | Phương pháp Xác minh (Verification Method) | Căn cứ Bằng chứng Cụ thể (Concrete Evidence) | Tính Chặn (Blocking) | Kết quả Nghiệm thu (Result) |
 |---|---|---|---|:---:|:---:|
 | **P5-01** | Không thêm Admin lane vào field flow nếu không có action | Swimlane & Role Integrity Audit | Mục 11 & WF-NT-01: Admin bị cấm 100% trong toàn bộ 9 luồng vận hành thực địa `WF-01..09`. | **YES** | **PASS** |
-| **P5-02** | Quy trình cấp phát người dùng (User Provisioning) xác định rõ | IAM Flow Verification | Mục 4 (`WF-10`): Định nghĩa đầy đủ START $\to$ STEPS $\to$ END, mật khẩu mã hóa một lần, phân quyền ban đầu. | **YES** | **PASS** |
-| **P5-03** | Quy trình thay đổi vai trò (Role-change) xác định rõ | Role Governance Audit | Mục 4 (`WF-11`): Admin đổi quyền có lý do, cấm tự đổi quyền (`ADM-SOD-01`), thu hồi phiên làm việc tức thời. | **YES** | **PASS** |
-| **P5-04** | Quy trình khóa tài khoản (Suspension) xác định rõ | Suspension Isolation Audit | Mục 4 (`WF-12`): Khóa IAM thu hồi token nhưng cấm tự động hủy task; nhường quyền điều phối cho Quản lý. | **YES** | **PASS** |
+| **P5-02** | Quy trình cấp phát người dùng (User Provisioning) xác định rõ | IAM Flow Verification | Mục 4 (`WF-10`): Định nghĩa đầy đủ START $\to$ STEPS $\to$ END, thiết lập xác thực an toàn, phân quyền ban đầu. | **YES** | **PASS** |
+| **P5-03** | Quy trình thay đổi vai trò (Role-change) xác định rõ | Role Governance Audit | Mục 4 (`WF-11`): Admin đổi quyền có lý do, cấm tự đổi quyền (`ADM-SOD-01`), kiểm tra xung đột trách nhiệm tác nghiệp. | **YES** | **PASS** |
+| **P5-04** | Quy trình khóa tài khoản (Suspension) xác định rõ | Suspension Isolation Audit | Mục 4 (`WF-12`): Khóa IAM ngắt quyền truy cập nhưng cấm tự hủy task; nhường quyền điều phối cho Quản lý theo ma trận. | **YES** | **PASS** |
 | **P5-05** | Sự kiện kiểm toán (`AuditEvent`) được tạo đúng lúc | Audit Generation Verification | Bảng Mục 7 & Mục 15: 100% các quyết định quản trị, duyệt việc, hủy việc đều gắn mác `AUDIT_REQUIRED`. | **YES** | **PASS** |
 | **P5-06** | Quy trình can thiệp khẩn cấp (Break-glass) xử lý đúng chuẩn | Emergency Boundary Audit | Mục 6 (`WF-NEXT-02`) & WF-NT-15: Định vị rõ ranh giới kiểm soát tương lai, khóa 100% không kích hoạt trong MVP. | **YES** | **PASS** |
 | **P5-07** | Vòng đời 7 trạng thái của Task không bị phá vỡ | Lifecycle State Machine Audit | Mục 3 (`WF-01..09`): Bảo toàn nguyên vẹn 7 trạng thái chuẩn tắc, không thêm bất kỳ trạng thái trung gian nào. | **YES** | **PASS** |
@@ -962,17 +1029,27 @@ Nghiệm thu toàn bộ 11 tiêu chí cổng kiểm soát chất lượng khắt
 | **P5-10** | Ngữ nghĩa ngoại tuyến không bị trộn lẫn với `TaskStatus` | Offline Decoupling Audit | Mục 5 (`WF-18`) & WF-NT-07: Tách biệt `LocalSubmissionStatus` (PENDING_SYNC) với `TaskStatus` server (IN_PROGRESS). | **YES** | **PASS** |
 | **P5-11** | Quy tắc phân công lại (Reassignment) giữ nguyên vẹn | Reassignment Governance Audit | Mục 3 (`WF-01`, `WF-08`) & WF-NT-17: Chỉ Reassign tại PENDING hoặc BLOCKED $\to$ PENDING; cấm Reassign tại IN_PROGRESS/REWORK. | **YES** | **PASS** |
 
+### 16.2. Bảng nghiệm thu 4 hạng mục khiếm khuyết ngữ nghĩa Phase 5 (P5-SC-01..P5-SC-04):
+
+| Mã Khiếm khuyết | Tên Khiếm khuyết Ngữ nghĩa (Defect) | Căn cứ Khắc phục Cụ thể (Concrete Resolution Evidence) | Kết quả Đối soát (Result) |
+|:---:|---|---|:---:|
+| **P5-SC-01** | Khóa tài khoản nhân sự tạo ngõ cụt vận hành trên task `IN_PROGRESS` | Mục 4 (`WF-12`): Xây dựng Ma trận xử lý khối lượng công việc; Quản lý thực hiện `CancelTask` có lý do và tạo task mới thay thế (`WF-01`), loại bỏ hoàn toàn bước tự ý chuyển sang `BLOCKED`. | **PASS** |
+| **P5-SC-02** | Đổi vai trò không đối soát trách nhiệm và nguy cơ tự duyệt bài | Mục 4 (`WF-11`): Bổ sung `Role Change Impact Check`, ghi nhận điều kiện `ROLE_CHANGE_PENDING_OPERATIONAL_HANDOFF`, cấm người thăng chức tự duyệt bài của mình, bảo lưu quyền tác giả lịch sử. | **PASS** |
+| **P5-SC-03** | Đưa các cơ chế kỹ thuật xác thực/phiên (Token, HTTP, FCM) vào luồng nghiệp vụ | Mục 4 & 5 (`WF-10`, `WF-11`, `WF-12`, `WF-18`): Khái quát hóa sang ngữ nghĩa nghiệp vụ thuần túy; hoãn toàn bộ cơ chế xác thực và vận chuyển kỹ thuật sang Phase 11 Architecture/ADR. | **PASS** |
+| **P5-SC-04** | Nhầm lẫn tọa độ chuẩn của cây là khóa duy nhất toàn cục | Mục 4 (`WF-13`): Đính chính chuẩn xác: `treeId` và `qrCode` là duy nhất; tọa độ GPS chuẩn chỉ kiểm tra tính hợp lệ về định dạng và dải trắc địa, không kiểm tra tính duy nhất. | **PASS** |
+
 ---
 
-## 17. Kết Luận Cổng Nghiệm Thu Phase 5 (Phase 5 Exit Gate)
+## 17. Kết Luận Khóa Đóng Cổng Phase 5 (Phase 5 Semantic Closure Exit Gate)
 
 ```text
 ================================================================================
-PHASE 5 PASS
-— END-TO-END WORKFLOWS RECONCILED
-— OPERATIONAL AND GOVERNANCE FLOWS SEPARATED
-— HANDOFFS AND FAILURE PATHS DEFINED
-— TASK LIFECYCLE AND PROOF SEMANTICS PRESERVED
+PHASE 5 PASS — SEMANTICALLY CLOSED
+— SUSPENSION WORKLOAD DEAD-END REMOVED
+— ROLE CHANGE RESPONSIBILITY HANDOFF DEFINED
+— TECHNICAL AUTH MECHANISMS DEFERRED
+— TREE COORDINATE SEMANTICS CORRECTED
+— WORKFLOW BASELINE FROZEN
 — READY FOR PHASE 6 CANONICAL DOCUMENT RECONCILIATION
 ================================================================================
 ```

@@ -391,7 +391,7 @@ docs/business-reconciliation/
 ## Exit Gate
 
 ```text
-P5 PASS
+P5 PASS — SEMANTICALLY CLOSED
 ```
 
 Chỉ khi:
@@ -401,7 +401,8 @@ Chỉ khi:
 - Phân tách rạch ròi giữa phán quyết nghiệp vụ con người và tự động hóa tất định
 - Vòng đời 7 trạng thái của Task, 3 ProofProfiles, CareHistory chỉ sinh từ COMPLETED và tính bất biến của trạng thái đóng được bảo vệ 100%
 - Quy trình ngoại tuyến (Offline) hoàn toàn tách biệt với TaskStatus
-- Quality gates P5-01..P5-11 đều PASS có căn cứ đối soát.
+- Quality gates P5-01..P5-11 đều PASS có căn cứ đối soát
+- Quality gates đóng ngữ nghĩa P5-SC-01..P5-SC-04 đều PASS (xóa bỏ dead-end đình chỉ tài khoản, đối soát bàn giao trách nhiệm khi đổi vai trò, trì hoãn cơ chế xác thực kỹ thuật sang kiến trúc, chuẩn hóa ngữ nghĩa tọa độ cây không phải định danh duy nhất).
 
 ## Stop rule
 
