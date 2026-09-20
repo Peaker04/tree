@@ -381,6 +381,28 @@ Admin **không tự động có lane** trong Operational Task Swimlane.
 | P5-10 | Offline semantics không bị trộn với TaskStatus |
 | P5-11 | Reassignment rules giữ nguyên trừ khi có decision explicit |
 
+## Artifact
+
+```text
+docs/business-reconciliation/
+  08-WORKFLOW-OPTIMIZATION.md
+```
+
+## Exit Gate
+
+```text
+P5 PASS
+```
+
+Chỉ khi:
+- Toàn bộ 18 quy trình vận hành và quản trị MVP được chuẩn hóa chi tiết luồng bắt đầu/kết thúc
+- Không thêm làn (lane) Admin vào quy trình vận hành thực địa
+- Handoff ma trận xuyên ngữ cảnh và điểm bàn giao được xác định rõ ràng
+- Phân tách rạch ròi giữa phán quyết nghiệp vụ con người và tự động hóa tất định
+- Vòng đời 7 trạng thái của Task, 3 ProofProfiles, CareHistory chỉ sinh từ COMPLETED và tính bất biến của trạng thái đóng được bảo vệ 100%
+- Quy trình ngoại tuyến (Offline) hoàn toàn tách biệt với TaskStatus
+- Quality gates P5-01..P5-11 đều PASS có căn cứ đối soát.
+
 ## Stop rule
 
 ```text
