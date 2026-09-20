@@ -18,17 +18,17 @@ The business baseline enforces two critical offline invariants:
 
 In the current AS-IS mobile implementation (`apps/mobile/src/services/greenOpsService.ts`):
 - All task data, trees, notifications, and drafts are kept in an **in-memory JavaScript object** (`let snapshot: AppData`).
-- If the app is killed by the OS while the camera is active (a frequent occurrence on Android low-RAM devices, `QAS-OFFLINE-02`) or if the user exits the app while offline, **100% of newly collected evidence, checklist entries, and drafts are lost permanently**.
+- If the app is killed by the OS while the camera is active (a frequent occurrence on Android low-RAM devices, `QAS-OFFLINE-02`) or if the user exits the app while offline, newly collected evidence, checklist entries, and drafts are lost permanently.
 - There is no persistent Outbox queue, no retry backoff mechanism, and no durable storage engine configured.
 
 ## Frozen Business Drivers
-- **Offline Data Loss Prevention (`DR-HARD-04`, `DR-MVP-04`):** Zero accepted field evidence or checklist input may be lost due to network dropouts or process termination.
-- **Proof Profile Support:** Structured evidence for `CHANGE_PROOF`, `SERVICE_PROOF`, and `INSPECTION_PROOF` (Site Verification GPS/QR, condition photos, findings JSON, checklist items) must be transactionally preserved.
+- **Offline Data Loss Prevention (`DR-HARD-04`, `DR-MVP-04`):** Protection of field evidence and checklist input against network dropouts and unexpected app termination.
+- **Proof Profile Support:** Structured evidence for `CHANGE_PROOF`, `SERVICE_PROOF`, and `INSPECTION_PROOF` (Site Verification GPS/QR, condition photos, findings JSON, checklist items) must be preserved durably.
 - **Strict Domain State Separation:** `PENDING_SYNC` is a client-local submission status; it must never be sent to or stored as an authoritative server `TaskStatus`.
 
 ## NFR / Quality Drivers
-- **`QAS-OFFLINE-01` (Zero Data Loss Mid-Evidence):** Offline actions must be persisted locally in $< 100\text{ms}$; tapping "Submit" enqueues the payload into a durable Outbox with `LocalSubmissionStatus = PENDING_SYNC`.
-- **`QAS-OFFLINE-02` (State Recoverability After OS Kill):** If Android terminates the app process during photo capture, on relaunch the session and task draft must be restored from durable storage in $\le 2\text{s}$.
+- **`QAS-OFFLINE-01` (Offline Evidence Buffering):** Offline actions must be persisted locally in $< 100\text{ms}$; tapping "Submit" enqueues the payload into a durable Outbox with `LocalSubmissionStatus = PENDING_SYNC`.
+- **`QAS-OFFLINE-02` (State Recoverability After OS Kill):** If Android terminates the app process during photo capture, on relaunch the session and task draft should be restored from durable storage in $\le 2\text{s}$.
 - **Storage Durability & File Integrity:** Binary photo files must reside in persistent application sandbox storage (`expo-file-system`) with local URIs referenced by structured database records, avoiding Base64 storage in database rows.
 
 ## Current Technical Evidence
@@ -36,7 +36,7 @@ In the current AS-IS mobile implementation (`apps/mobile/src/services/greenOpsSe
 - External Technical Evidence: [Expo SQLite Documentation](https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/) verifies that SQLite stores data in an operating system sandboxed `.db` file that persists across app restarts, supporting synchronous and asynchronous prepared statements and transactions via `withTransactionSync`.
 
 ## Decision Question
-What local storage engine, binary management strategy, and Outbox synchronization architecture should be adopted in `apps/mobile` to fulfill the zero-data-loss and offline-resilience NFRs?
+What local storage engine, binary management strategy, and Outbox synchronization architecture should be adopted in `apps/mobile` to provide the durability primitives required for offline resilience?
 
 ## Options Considered
 
@@ -61,8 +61,8 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
   2. **Binary Evidence Files:** Photos captured via `expo-camera` / `expo-image-picker` are immediately copied from temporary cache to persistent sandbox directory: `file://${FileSystem.documentDirectory}/evidence/${taskId}/${filename}.jpg`.
   3. **Outbox Worker:** A persistent, sequential FIFO synchronization worker that watches network connectivity via `@react-native-community/netinfo`, processes `outbox_queue` entries, uploads binary multipart payloads, and updates local state upon server acceptance.
 - **Advantages:**
-  - **Transactional Integrity:** Updating task draft state and enqueuing an outbox item occurs inside a single SQLite transaction (`db.withTransactionSync`).
-  - **Fulfills `QAS-OFFLINE-01` & `QAS-OFFLINE-02`:** Every photo capture and checklist check is committed immediately to SQLite and permanent disk storage.
+  - **Transactional Integrity Primitives:** Updating task draft state and enqueuing an outbox item occurs inside a single SQLite transaction (`db.withTransactionSync`).
+  - **Designed to Satisfy `QAS-OFFLINE-01` & `QAS-OFFLINE-02`:** Every photo capture and checklist check is committed immediately to SQLite and permanent disk storage.
   - **Optimized Memory & Fast Queries:** Relational SQL queries (`SELECT * FROM tasks WHERE status = 'IN_PROGRESS'`) load only the needed rows, avoiding massive JSON deserialization overhead on 3GB RAM Android devices.
   - **Clean Outbox State Machine:** Outbox items have distinct retry counts, exponential backoff, error logs, and idempotency keys.
   - **First-Class Expo SDK 57 Support:** `expo-sqlite` is fully maintained with native support.
@@ -83,7 +83,7 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
 
 ## Proposed Decision
 **Adopt Option B: Relational SQLite Engine (`expo-sqlite`) for Structured Data & Outbox + Sandbox Filesystem for Binary Photos.**
-*Recommendation Confidence: HIGH (standard Expo SDK 57 native architecture, directly resolves AR-11-02).*
+*Recommendation Confidence: HIGH (standard Expo SDK 57 native architecture, directly addresses AR-11-02).*
 
 1. **Storage Topology:**
    - **`expo-sqlite`:** Manages relational entities (`tasks`, `trees`, `task_evidence`, `checklist_items`, `outbox_queue`, `app_cache_metadata`).
@@ -105,14 +105,14 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
      5. **On Network / Server Error (HTTP 5xx / Timeout):** Worker sets `SyncStatus = SYNC_FAILED`, increments `attemptCount`, applies exponential backoff ($2^n \times 1000\text{ms}$ up to 60s), and automatically retries upon next connectivity event.
 
 ## Verification & Resilience Evidence Strategy
-The architecture is designed to satisfy `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Zero field evidence loss must be empirically verified through targeted test suites:
+The architecture provides the durability primitives designed to meet `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Formal architecture acceptance requires passing the following empirical verification test suites:
 1. **Process Kill Interruption Tests:** Killing app process during photo capture and verifying draft restoration upon relaunch ($\le 2\text{s}$).
 2. **Transaction Interruption Tests:** Simulating power loss or crash mid-transaction to verify zero SQLite corruption.
 3. **Network Dropout Retries:** Verifying that outbox items survive airplane mode cycles and cleanly retry with identical `Idempotency-Key`.
 4. **Disk-Full & Migration Tests:** Handling out-of-storage conditions gracefully without crashing.
 
 ## Consequences
-- **Positive:** Resolves `AR-11-02` (in-memory data loss). Guarantees zero unrecoverable evidence loss. Low memory consumption on budget Android devices.
+- **Positive:** Addresses `AR-11-02` (in-memory volatile storage). Provides durable persistence primitives designed to protect evidence; acceptance requires passing specified fault tests. Low memory consumption on budget Android devices.
 - **Negative:** Schema migrations must be authored and tested as contracts evolve.
 - **Neutral:** Local photo garbage collection policy should purge images only after task reaches terminal `COMPLETED` state and remote storage is confirmed.
 
@@ -121,7 +121,7 @@ The architecture is designed to satisfy `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Z
 - Sensitive auth credentials remain isolated in `expo-secure-store`, never stored in plaintext SQLite.
 
 ## Offline / Reliability Impact
-- Directly fulfills `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Field staff never lose completed work due to connection loss.
+- Designed to meet `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Provides durable local buffering and transactional outbox semantics to prevent evidence loss across connection drops.
 
 ## Contract Impact
 - Adds `idempotencyKey: string` to `SubmitTaskEvidenceRequest` and standardizes `Idempotency-Key` HTTP header.

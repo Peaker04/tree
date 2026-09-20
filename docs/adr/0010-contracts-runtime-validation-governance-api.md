@@ -15,25 +15,78 @@ Following the completion of the Business Baseline Reconciliation (Phase 0–10),
 6. **No Runtime Validation:** All types in `packages/contracts` are compile-time TypeScript interfaces. Incoming network payloads cannot be validated at runtime without writing redundant manual validation checks.
 
 ## Critical Authority Rule
-`@novyx/contracts` is a **DERIVED TECHNICAL CONTRACT REPRESENTATION**. It is **NOT** the business source of truth. Canonical business documents (`PRODUCT.md`, `DOMAIN.md`, `ACCESS-CONTROL.md`, `WORKFLOWS.md`, `REQUIREMENTS-TRACEABILITY.md`) remain the sole authoritative source of truth. Contract schemas must reflect, but never redefine, frozen business semantics.
+`@novyx/contracts` is a **DERIVED TECHNICAL CONTRACT REPRESENTATION**. It is **NOT** the business source of truth. Canonical business documents (`PRODUCT.md`, `DOMAIN.md`, `ACCESS-CONTROL.md`, `WORKFLOWS.md`, `REQUIREMENTS-TRACEABILITY.md`, and reconciliation reports `12-BUSINESS-CONSISTENCY-AUDIT.md`) remain the sole authoritative source of truth. Contract schemas must reflect, but never redefine or alter, frozen business semantics.
 
-## Frozen Business Drivers
+## Business Command Identity vs Network Route Identity vs DTO Name
+A foundational architectural principle must be strictly maintained:
+$$\text{Business Command Identity} \neq \text{HTTP Route Identity} \neq \text{DTO Type Name}$$
+- **Business Command:** The immutable canonical action defined in the business inventory (e.g., `OP-15 SubmitEvidence`, `OP-05 StartTask`).
+- **HTTP Route Identity:** The REST URL convention exposing the action over the network (e.g., `POST /v1/tasks/:id/evidence`, `POST /v1/tasks/:id/start`).
+- **DTO Type Name:** The TypeScript / Zod type representing the payload schema (e.g., `SubmitEvidenceRequest`, `StartTaskRequest`).
+
+Technical naming must NEVER mutate or overwrite the canonical business vocabulary.
+
+## Frozen Business Drivers & Canonical Inventory
 - **Exact 7-State Lifecycle (`DOMAIN.md §3`, `Report 08 §2`):** `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`.
 - **Exact 3 Proof Profiles (`DOMAIN.md §4`, `WORKFLOWS.md §3`):** `CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`.
 - **Exact 4 Review Outcomes (`DOMAIN.md §5`, `WORKFLOWS.md §4`):** `APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`.
 - **Exact 4 Account Lifecycle States (`DR-HARD-05`, `CAP-ADM-03`):** `INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`.
-- **48 Canonical Business Commands:** Unified inventory of 22 operational commands (`OP-01..22`) and 22 governance commands (`GV-01..22`, with `GV-07` normalized as `ResetCredentialSetup`), and 4 RTM supplementary commands.
+- **Exact 48 Business Inventory Commands:** Comprising 22 Operational Commands (`OP-01..22`), 22 Governance Commands (`GV-01..22`), and 4 RTM Supplementary Commands.
 
-## Command vs Network API Exposure Classification
-The 48 canonical commands represent the **business action inventory**, which does NOT automatically translate into 48 distinct network endpoints. Technical contracts are exposed based on clear network boundary classification:
+## Comprehensive Command / API Exposure Classification Table
 
-| Phân loại ranh giới (Classification) | Định nghĩa kỹ thuật | Các lệnh / hành vi thuộc nhóm | Ràng buộc Hợp đồng (`@novyx/contracts`) |
-| :--- | :--- | :--- | :--- |
-| **`EXTERNAL_OPERATIONAL_API`** | Các mutation lệnh từ Mobile App gửi lên Backend qua REST `/v1/tasks/*`. | `OP-01` CheckInGps, `OP-02` ScanTreeQr, `OP-03` StartTask, `OP-04` CaptureConditionPhotos, `OP-05` CompleteChecklist, `OP-06` ReportLocationException, `OP-07` ReportIdentityException, `OP-08` SubmitTaskEvidence, `OP-09` ReportFieldIssue, `OP-10` ResolveBlocked, `OP-11` ReassignTask, `OP-12` CancelTask, `OP-13` ReviewDecision, `OP-14` RequestRework, `OP-15` CreateTask. | Bắt buộc Zod Request/Response Schemas, `expectedVersion`, và `idempotencyKey`. |
-| **`EXTERNAL_GOVERNANCE_API`** | Các mutation lệnh từ Admin Web gửi lên Backend qua REST `/v1/governance/*`. | `GV-01..06` User & Role Actions, `GV-07` ResetCredentialSetup, `GV-08..12` Tree Master Data Actions, `GV-13..14` TaskType Actions, `GV-15..17` ProofPolicy Actions, `GV-18..20` ChecklistTemplate Actions. | Bắt buộc Zod Request/Response Schemas. |
-| **`EXTERNAL_READ_API`** | Các truy vấn dữ liệu (Queries) từ Mobile và Web qua HTTP GET. | `OP-16` ListAssignedTasks, `OP-17` ListOperationalTasks, `OP-18` LookupTreeByQr, `OP-19` GetTreeDetail, `OP-20` GetTaskDetail, `OP-21` GetCareHistory, `OP-22` ListNotifications, `GV-21..22` View & Filter AuditLog. | Bắt buộc Query Parameter Schemas và Response DTO Schemas. |
-| **`SYSTEM_INTERNAL`** | Tác vụ xử lý nội bộ tất định do System thực thi trên máy chủ; **KHÔNG PHẢI ENDPOINT MẠNG**. | `ProjectCareHistory` (chiếu lịch sử khi task `COMPLETED`), tự động sinh `AuditEvent`. | Không tạo public network endpoint schema; quản lý qua internal Domain Event / Projector types. |
-| **`CLIENT_LOCAL / ADVISORY`** | Logic tính toán và lưu nháp cục bộ trên thiết bị di động; không gửi trực tiếp qua mạng. | Đánh giá Action Eligibility tức thời, tính toán khoảng cách GPS, lưu cache ảnh tạm. | Export pure domain helper types; không phải REST endpoints. |
+The 48 business commands represent the business action inventory. Only actions crossing an external network boundary receive request/response DTO schemas in `@novyx/contracts`. Internal system actions and client-local advisory validations are separated:
+
+| Business Command | Canonical ID if any | Product Status | Network Exposure | Reason & Technical Mapping |
+| :--- | :---: | :---: | :--- | :--- |
+| **ViewAssignedTask** | `OP-01` | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn danh sách nhiệm vụ được giao cho Staff qua `GET /v1/tasks/assigned`. |
+| **ViewOperationalTask** | `OP-02` | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn danh sách & chi tiết nhiệm vụ trong phạm vi của Manager qua `GET /v1/tasks/operational`. |
+| **CreateTask** | `OP-03` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh tạo nhiệm vụ mới của Manager qua `POST /v1/tasks`. DTO: `CreateTaskRequest`. |
+| **AssignTask** | `OP-04` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh phân công nhân sự qua `POST /v1/tasks/:id/assign`. DTO: `AssignTaskRequest`. |
+| **StartTask** | `OP-05` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh chuyển trạng thái sang IN_PROGRESS qua `POST /v1/tasks/:id/start`. DTO: `StartTaskRequest`. |
+| **VerifyGps** | `OP-06` | ACTIVE (MVP) | `CLIENT_LOCAL_ADVISORY` | Tiền kiểm tra GPS 10m cục bộ trên mobile trước khi nộp; không phải endpoint mạng độc lập. |
+| **VerifyQr** | `OP-07` | ACTIVE (MVP) | `CLIENT_LOCAL_ADVISORY` | Quét và đối soát tem QR cục bộ trên mobile trước khi nộp; không phải endpoint mạng độc lập. |
+| **ReportFieldIssue** | `OP-08` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh báo sự cố hiện trường chuyển task sang BLOCKED qua `POST /v1/tasks/:id/issue`. DTO: `ReportFieldIssueRequest`. |
+| **ResumeBlockedTask** | `OP-09` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh giải tỏa sự cố đưa task trở lại IN_PROGRESS qua `POST /v1/tasks/:id/resume`. DTO: `ResumeBlockedTaskRequest`. |
+| **ReassignTask** | `OP-10` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh đổi nhân sự thực hiện qua `POST /v1/tasks/:id/reassign`. DTO: `ReassignTaskRequest`. |
+| **CancelTask** | `OP-11` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh hủy nhiệm vụ kèm lý do qua `POST /v1/tasks/:id/cancel`. DTO: `CancelTaskRequest`. |
+| **CaptureProofEvidence** | `OP-12` | ACTIVE (MVP) | `CLIENT_LOCAL_ADVISORY` | Thao tác chụp ảnh hiện trường và lưu file nhị phân trong sandbox; đính kèm khi SubmitEvidence. |
+| **CompleteChecklist** | `OP-13` | ACTIVE (MVP) | `CLIENT_LOCAL_ADVISORY` | Thao tác tích checklist và lưu nháp SQLite; gửi kèm trong payload SubmitEvidence. |
+| **RecordStructuredFindings** | `OP-14` | ACTIVE (MVP) | `CLIENT_LOCAL_ADVISORY` | Ghi nhận chỉ số lâm sinh vào bản nháp SQLite; gửi kèm trong payload SubmitEvidence. |
+| **SubmitEvidence** | `OP-15` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh nộp hồ sơ bằng chứng chuyển task sang WAITING_REVIEW qua `POST /v1/tasks/:id/evidence`. DTO: `SubmitEvidenceRequest`. |
+| **ViewReviewQueue** | `OP-16` | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn danh sách nhiệm vụ chờ duyệt của Manager qua `GET /v1/tasks/review-queue`. |
+| **ReviewTask** | `OP-17` | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn hồ sơ bằng chứng chi tiết để thẩm định qua `GET /v1/tasks/:id/review`. |
+| **ApproveTask** | `OP-18` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh duyệt hoàn thành COMPLETED qua `POST /v1/tasks/:id/approve`. DTO: `ApproveTaskRequest`. |
+| **ApproveWithException** | `OP-19` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh duyệt có ngoại lệ qua `POST /v1/tasks/:id/approve-with-exception`. DTO: `ApproveWithExceptionRequest`. |
+| **RequestRework** | `OP-20` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh yêu cầu làm lại REWORK_REQUIRED qua `POST /v1/tasks/:id/request-rework`. DTO: `RequestReworkRequest`. |
+| **ResubmitRework** | `OP-21` | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Lệnh nộp lại bằng chứng khắc phục qua `POST /v1/tasks/:id/resubmit`. DTO: `ResubmitReworkRequest`. |
+| **ViewCareHistory** | `OP-22` | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn lịch sử chăm sóc cây xanh qua `GET /v1/trees/:id/care-history`. |
+| **ProvisionUser** | `GV-01` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Khởi tạo tài khoản người dùng mới qua `POST /v1/governance/users`. DTO: `ProvisionUserRequest`. |
+| **AssignRole** | `GV-02` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Gán vai trò người dùng qua `POST /v1/governance/users/:id/role`. DTO: `AssignRoleRequest`. |
+| **ActivateAccount** | `GV-03` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Kích hoạt tài khoản qua `POST /v1/governance/users/:id/activate`. DTO: `ActivateAccountRequest`. |
+| **SuspendAccount** | `GV-04` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Đình chỉ tài khoản qua `POST /v1/governance/users/:id/suspend`. DTO: `SuspendAccountRequest`. |
+| **DisableAccount** | `GV-05` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Vô hiệu hóa tài khoản qua `POST /v1/governance/users/:id/disable`. DTO: `DisableAccountRequest`. |
+| **UnlockAccount** | `GV-06` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Xóa khóa xác thực tạm thời qua `POST /v1/governance/users/:id/unlock`. DTO: `UnlockAccountRequest`. |
+| **ResetCredentialSetup** | `GV-07` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Cấp lại liên kết thiết lập mật khẩu qua `POST /v1/governance/users/:id/reset-credential`. DTO: `ResetCredentialSetupRequest`. |
+| **ViewAuditLog** | `GV-08` | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn danh sách nhật ký kiểm toán qua `GET /v1/audit/logs`. |
+| **FilterAuditLog** | `GV-09` | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn lọc nhật ký kiểm toán đa tiêu chí qua `GET /v1/audit/logs/filter`. |
+| **CreateTree** | `GV-10` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Tạo hồ sơ cây xanh mới qua `POST /v1/governance/trees`. DTO: `CreateTreeRequest`. |
+| **UpdateTreeMasterData** | `GV-11` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Cập nhật thông tin lâm sinh cây xanh qua `PATCH /v1/governance/trees/:id`. DTO: `UpdateTreeMasterDataRequest`. |
+| **ReplaceTreeQrCode** | `GV-12` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Cấp đổi tem QR cây qua `POST /v1/governance/trees/:id/replace-qr`. DTO: `ReplaceTreeQrCodeRequest`. |
+| **UpdateCanonicalCoordinates** | `GV-13` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Hiệu chỉnh tọa độ trắc địa qua `POST /v1/governance/trees/:id/coordinates`. DTO: `UpdateCanonicalCoordinatesRequest`. |
+| **RetireTree** | `GV-14` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Thanh lý / giải tỏa cây xanh qua `POST /v1/governance/trees/:id/retire`. DTO: `RetireTreeRequest`. |
+| **CreateTaskType** | `GV-15` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Định nghĩa loại nhiệm vụ mới qua `POST /v1/governance/task-types`. DTO: `CreateTaskTypeRequest`. |
+| **ActivateTaskType** | `GV-16` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Kích hoạt loại nhiệm vụ qua `POST /v1/governance/task-types/:id/activate`. DTO: `ActivateTaskTypeRequest`. |
+| **DeactivateTaskType** | `GV-17` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Ngừng áp dụng loại nhiệm vụ qua `POST /v1/governance/task-types/:id/deactivate`. DTO: `DeactivateTaskTypeRequest`. |
+| **PublishProofPolicyVersion** | `GV-18` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Ban hành phiên bản chính sách bằng chứng qua `POST /v1/governance/proof-policies`. DTO: `PublishProofPolicyVersionRequest`. |
+| **PublishChecklistTemplateVersion** | `GV-19` | ACTIVE (MVP) | `EXTERNAL_GOVERNANCE_API` | Ban hành phiên bản mẫu kiểm tra qua `POST /v1/governance/checklist-templates`. DTO: `PublishChecklistTemplateVersionRequest`. |
+| **ManageDynamicFindingsTemplate** | `GV-20` | FUTURE (NEXT) | `FUTURE_NOT_ACTIVE` | Quản lý mẫu biểu động thuộc giai đoạn sau; **KHÔNG CÓ ENDPOINT MVP**. |
+| **UseBreakGlass** | `GV-21` | FUTURE (NEXT) | `FUTURE_NOT_ACTIVE` | Cơ chế xử lý khẩn cấp bypass thuộc giai đoạn sau; **KHÔNG CÓ ENDPOINT MVP**. |
+| **ManagePlatformSystemConfig** | `GV-22` | REJECTED | `NOT_NETWORK_EXPOSED` | Đã bị loại trừ trong chuẩn tắc nghiệp vụ; **CẤM TRIỂN KHAI ENDPOINT**. |
+| **ReportLocationException** | - | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Báo cáo giải trình GPS > 10m (DTO: `LocationExceptionDto`, gửi kèm SubmitEvidence hoặc issue). |
+| **ReportIdentityException** | - | ACTIVE (MVP) | `EXTERNAL_OPERATIONAL_API` | Báo cáo đối soát tem QR hỏng (DTO: `IdentityExceptionDto`, gửi kèm SubmitEvidence). |
+| **LookupTreeByQr** | - | ACTIVE (MVP) | `EXTERNAL_READ_API` | Truy vấn thông tin cây xanh qua mã QR quét được qua `GET /v1/trees/qr/:code`. |
+| **ProjectCareHistory** | - | ACTIVE (MVP) | `SYSTEM_INTERNAL` | Tác vụ máy chủ tự động chiếu CareHistory khi task đạt trạng thái `COMPLETED`; **KHÔNG CÓ ENDPOINT MẠNG**. |
 
 ## NFR / Quality Drivers
 - **Contract Safety & Robustness (`QAS-FAULT-01`):** Untrusted incoming payloads must be validated at the boundary, returning `400 VALIDATION_FAILED` before reaching application or domain logic.
@@ -46,7 +99,7 @@ How should `@novyx/contracts` be restructured and extended to support the full f
 ## Options Considered
 
 ### Option A: Manual Validation in Route Controllers + Plain TypeScript Interfaces
-- **Description:** Keep plain TypeScript interfaces in `packages/contracts`; write manual `if (!body.taskId...)` checks in backend handlers and client services.
+- **Description:** Keep plain TypeScript interfaces in `packages/contracts`; write manual checks in backend handlers and client services.
 - **Advantages:** Zero additional library dependencies.
 - **Disadvantages:**
   - Extremely error-prone and tedious: Developers must write hundreds of lines of boilerplate validation.
@@ -98,9 +151,9 @@ How should `@novyx/contracts` be restructured and extended to support the full f
    packages/contracts/src/
    ├── common/             # ApiResult, ApiSuccess, ApiFailure, ErrorCode, Pagination
    ├── auth/               # LoginRequest, AuthSession, RefreshToken, UserRole, AccountStatus
-   ├── operational/        # External Operational Command & Query Schemas (OP-01..15, OP-16..22)
-   ├── governance/         # External Governance Command & Query Schemas (GV-01..20, GV-21..22)
-   ├── audit/              # AuditEventDto, ListAuditLogsQuerySchema
+   ├── operational/        # External Operational Command & Query Schemas (OP-03..05, OP-08..11, OP-15, OP-18..21, Exceptions)
+   ├── governance/         # External Governance Command & Query Schemas (GV-01..07, GV-10..19)
+   ├── audit/              # AuditEventDto, ListAuditLogsQuerySchema (GV-08, GV-09)
    └── index.ts            # Public barrel export
    ```
 2. **Canonical Enum Updates:**
