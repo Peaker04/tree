@@ -322,7 +322,7 @@ docs/business-reconciliation/
 ## Exit Gate
 
 ```text
-P4 PASS
+P4 PASS — SEMANTICALLY CLOSED
 ```
 
 Chỉ khi:
@@ -331,7 +331,7 @@ Chỉ khi:
 - System authority matrix xác định rõ technical automation vs human authority
 - Task action × Task status matrix xác định chính xác 7 domain states và terminal state immutability
 - Separation of Duties và 4-factor eligibility formula được thực thi đầy đủ
-- Quality gates P4-01..P4-12 đều PASS có bằng chứng đối soát.
+- Quality gates P4-01..P4-12 và P4-SC-01..P4-SC-05 đều PASS có bằng chứng đối soát.
 
 ## Quality test
 
