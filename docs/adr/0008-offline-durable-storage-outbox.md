@@ -9,9 +9,12 @@ In the reconciled and frozen business baseline (Phase 0–10), Field Staff opera
 The business baseline enforces two critical offline invariants:
 1. **Three Orthogonal State Dimensions:**
    - `TaskStatus`: Authoritative server-side domain lifecycle (`PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`).
-   - `LocalSubmissionStatus`: Local client lifecycle (`IDLE`, `SAVED_DRAFT`, `PENDING_SYNC`, `SYNCED`, `SYNC_FAILED`).
-   - `SyncStatus`: Transport-level synchronization state (`IDLE`, `SYNCING`, `SYNCED`, `FAILED`).
-2. **Offline Submission Rule:** When a field worker submits evidence while disconnected, `LocalSubmissionStatus` transitions to `PENDING_SYNC`. **Crucially, on the server, `TaskStatus` remains strictly `IN_PROGRESS`** until the server receives, validates, and accepts the evidence payload, at which point `TaskStatus` becomes `WAITING_REVIEW`.
+   - `LocalSubmissionStatus`: Local submission intent/progress dimension (`IDLE`, `SAVED_DRAFT`, `PENDING_SYNC`).
+   - `SyncStatus`: Transport-level synchronization outcome dimension (`IDLE`, `SYNCING`, `SYNCED`, `SYNC_FAILED`).
+2. **Offline Submission Invariant:** When a field worker submits evidence while disconnected:
+   - Local state sets `LocalSubmissionStatus = PENDING_SYNC` and `SyncStatus = IDLE`.
+   - **Crucially, the authoritative `TaskStatus` remains strictly `IN_PROGRESS`** until the server receives, validates, and accepts the evidence payload, at which point the server updates `TaskStatus` to `WAITING_REVIEW` and the client receives confirmation (`SyncStatus = SYNCED`).
+   - On sync failure, `TaskStatus` remains `IN_PROGRESS`, while `SyncStatus` becomes `SYNC_FAILED` with detailed failure reason metadata.
 
 In the current AS-IS mobile implementation (`apps/mobile/src/services/greenOpsService.ts`):
 - All task data, trees, notifications, and drafts are kept in an **in-memory JavaScript object** (`let snapshot: AppData`).
@@ -21,12 +24,16 @@ In the current AS-IS mobile implementation (`apps/mobile/src/services/greenOpsSe
 ## Frozen Business Drivers
 - **Offline Data Loss Prevention (`DR-HARD-04`, `DR-MVP-04`):** Zero accepted field evidence or checklist input may be lost due to network dropouts or process termination.
 - **Proof Profile Support:** Structured evidence for `CHANGE_PROOF`, `SERVICE_PROOF`, and `INSPECTION_PROOF` (Site Verification GPS/QR, condition photos, findings JSON, checklist items) must be transactionally preserved.
-- **Strict Domain State Separation:** `PENDING_SYNC` must never be sent to or stored as a server `TaskStatus`.
+- **Strict Domain State Separation:** `PENDING_SYNC` is a client-local submission status; it must never be sent to or stored as an authoritative server `TaskStatus`.
 
 ## NFR / Quality Drivers
-- **`QAS-OFFLINE-01` (Zero Data Loss Mid-Evidence):** Offline actions must be persisted locally in $< 100\text{ms}$; when the worker taps "Submit", the payload is enqueued into a durable Outbox with `LocalSubmissionStatus = PENDING_SYNC`.
+- **`QAS-OFFLINE-01` (Zero Data Loss Mid-Evidence):** Offline actions must be persisted locally in $< 100\text{ms}$; tapping "Submit" enqueues the payload into a durable Outbox with `LocalSubmissionStatus = PENDING_SYNC`.
 - **`QAS-OFFLINE-02` (State Recoverability After OS Kill):** If Android terminates the app process during photo capture, on relaunch the session and task draft must be restored from durable storage in $\le 2\text{s}$.
-- **Storage Durability & File Integrity:** Binary photo files must not be stored as Base64 strings in database rows; they must reside in persistent application sandbox storage (`expo-file-system`) with local URIs referenced by structured database records.
+- **Storage Durability & File Integrity:** Binary photo files must reside in persistent application sandbox storage (`expo-file-system`) with local URIs referenced by structured database records, avoiding Base64 storage in database rows.
+
+## Current Technical Evidence
+- `apps/mobile/src/services/greenOpsService.ts`: Uses `let snapshot: AppData` in volatile memory.
+- External Technical Evidence: [Expo SQLite Documentation](https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/) verifies that SQLite stores data in an operating system sandboxed `.db` file that persists across app restarts, supporting synchronous and asynchronous prepared statements and transactions via `withTransactionSync`.
 
 ## Decision Question
 What local storage engine, binary management strategy, and Outbox synchronization architecture should be adopted in `apps/mobile` to fulfill the zero-data-loss and offline-resilience NFRs?
@@ -35,9 +42,7 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
 
 ### Option A: Pure Key-Value Storage (AsyncStorage or MMKV)
 - **Description:** Store entire application snapshots or serialized JSON blobs in MMKV or React Native AsyncStorage. Outbox is an array of serialized JSON objects in a single key.
-- **Advantages:**
-  - Simple key-value API; fast read/write for small simple blobs.
-  - MMKV is extremely fast for simple key-value lookups.
+- **Advantages:** Simple key-value API; fast read/write for small simple blobs.
 - **Disadvantages:**
   - No transactional ACID integrity across related entities (tasks, evidence items, checklist records, outbox queue entries). A crash mid-write can corrupt the entire JSON blob.
   - Inefficient querying: Filtering tasks by status or staff requires deserializing the entire multi-megabyte JSON database into JavaScript memory on every screen render.
@@ -52,70 +57,77 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
      - `tasks` (id, task_type, proof_profile, status, assigned_staff_id, tree_id, created_at, updated_at, version, draft_state)
      - `task_evidence` (id, task_id, stage, local_file_uri, remote_url, captured_at, sync_status)
      - `checklist_items` (id, task_id, text, done)
-     - `outbox_queue` (id, task_id, command_type, payload_json, idempotency_key, attempt_count, last_error, status, created_at)
+     - `outbox_queue` (id, task_id, command_type, payload_json, idempotency_key, attempt_count, last_error, sync_status, created_at)
   2. **Binary Evidence Files:** Photos captured via `expo-camera` / `expo-image-picker` are immediately copied from temporary cache to persistent sandbox directory: `file://${FileSystem.documentDirectory}/evidence/${taskId}/${filename}.jpg`.
   3. **Outbox Worker:** A persistent, sequential FIFO synchronization worker that watches network connectivity via `@react-native-community/netinfo`, processes `outbox_queue` entries, uploads binary multipart payloads, and updates local state upon server acceptance.
 - **Advantages:**
-  - **ACID Transactional Guarantees:** Updating task draft state and enqueuing an outbox item occurs inside a single SQLite transaction (`db.withTransactionSync`). Impossible to corrupt state mid-crash.
-  - **Fulfills `QAS-OFFLINE-02`:** Every photo capture and checklist check is committed immediately to SQLite and permanent disk storage. OS kill causes zero data loss.
+  - **Transactional Integrity:** Updating task draft state and enqueuing an outbox item occurs inside a single SQLite transaction (`db.withTransactionSync`).
+  - **Fulfills `QAS-OFFLINE-01` & `QAS-OFFLINE-02`:** Every photo capture and checklist check is committed immediately to SQLite and permanent disk storage.
   - **Optimized Memory & Fast Queries:** Relational SQL queries (`SELECT * FROM tasks WHERE status = 'IN_PROGRESS'`) load only the needed rows, avoiding massive JSON deserialization overhead on 3GB RAM Android devices.
   - **Clean Outbox State Machine:** Outbox items have distinct retry counts, exponential backoff, error logs, and idempotency keys.
-  - **First-Class Expo SDK 57 Support:** `expo-sqlite` is a first-class, fully maintained Expo native library with synchronous and asynchronous prepared statement support.
-- **Disadvantages:**
-  - Requires maintaining SQL migration scripts (`db.execSync('CREATE TABLE IF NOT EXISTS...')`).
-  - Slightly higher initial setup overhead than a simple key-value store.
-- **Risks:** Database migration failures between app updates (mitigated by a strict versioned migration runner).
+  - **First-Class Expo SDK 57 Support:** `expo-sqlite` is fully maintained with native support.
+- **Disadvantages:** Requires maintaining SQL migration scripts.
+- **Risks:** Database migration failures between app updates (mitigated by a versioned migration runner).
 - **Migration Impact:** Replaces in-memory `snapshot` in `greenOpsService.ts` with a `SqliteTaskRepository` and `SqliteOutboxQueue`.
 - **Operational Impact:** None on server; massive reliability boost on client.
 
 ### Option C: WatermelonDB or Realm
-- **Description:** Use a heavyweight reactive mobile ORM (WatermelonDB or Realm) with built-in sync adapters.
+- **Description:** Use a reactive mobile ORM with built-in sync adapters.
 - **Advantages:** Automated observable bindings to React components.
 - **Disadvantages:**
   - Heavy native dependencies, complex native compilation, and frequent Expo version incompatibilities.
-  - Pre-supposes a specific server-side synchronization protocol (e.g., Watermelon sync protocol or Realm Object Server), clashing with the accepted contract-first REST architecture (`ADR 0003`).
+  - Pre-supposes a specific server-side synchronization protocol, clashing with the accepted contract-first REST architecture (`ADR 0003`).
 - **Risks:** High risk of breaking during Expo SDK upgrades; heavy build footprint.
 - **Migration Impact:** Severe; introduces invasive decorator-based model classes.
 - **Operational Impact:** May require proprietary or custom backend synchronization endpoints.
 
 ## Proposed Decision
 **Adopt Option B: Relational SQLite Engine (`expo-sqlite`) for Structured Data & Outbox + Sandbox Filesystem for Binary Photos.**
+*Recommendation Confidence: HIGH (standard Expo SDK 57 native architecture, directly resolves AR-11-02).*
 
 1. **Storage Topology:**
    - **`expo-sqlite`:** Manages relational entities (`tasks`, `trees`, `task_evidence`, `checklist_items`, `outbox_queue`, `app_cache_metadata`).
    - **`expo-file-system` (`documentDirectory`):** Stores permanent binary evidence images.
    - **`expo-secure-store`:** Stores authentication credentials (`AuthSession`) per `ADR 0006`.
-   - **MMKV (Optional/Secondary):** Only for non-critical transient UI preferences (e.g., last selected filter chip).
-2. **Outbox Synchronization Lifecycle:**
-   - *Enqueue:* Tapping "Gửi duyệt" bundles the evidence metadata, writes local URIs, generates a UUIDv4 `idempotencyKey`, and writes an `outbox_queue` record (`status = 'PENDING_SYNC'`) in a single database transaction.
-   - *UI State:* UI immediately reflects `LocalSubmissionStatus = PENDING_SYNC` with amber indicator.
+2. **Orthogonal State Dimensions & Outbox Synchronization Lifecycle:**
+   - *Drafting:* Local evidence is committed to SQLite. `TaskStatus = IN_PROGRESS`, `LocalSubmissionStatus = SAVED_DRAFT`, `SyncStatus = IDLE`.
+   - *Enqueue:* Tapping "Gửi duyệt" bundles evidence metadata, writes local URIs, generates UUIDv4 `idempotencyKey`, and writes an `outbox_queue` record (`sync_status = 'IDLE'`) in a single database transaction.
+   - *UI State:* UI immediately reflects `LocalSubmissionStatus = PENDING_SYNC` with amber indicator. Authoritative server `TaskStatus` remains `IN_PROGRESS`.
    - *Worker Execution:* When network is online, Outbox Worker reads the next pending queue item:
-     1. Uploads multipart binary photos and metadata to `POST /v1/tasks/:id/evidence` with `Idempotency-Key` header.
-     2. On HTTP 200/201: Worker updates local `Task.status = WAITING_REVIEW`, `LocalSubmissionStatus = SYNCED`, marks outbox item `COMPLETED`, and deletes the outbox entry.
-     3. On HTTP 4xx (Validation / SoD / Precondition error): Worker sets `LocalSubmissionStatus = SYNC_FAILED`, logs exact error details, and halts retry to prevent server spamming.
-     4. On HTTP 5xx / Network Timeout: Worker increments `attemptCount`, calculates exponential backoff ($2^n \times 1000\text{ms}$ up to 60s), and leaves item in `PENDING_SYNC` for automatic retry.
+     1. Sets `SyncStatus = SYNCING`.
+     2. Uploads multipart binary photos and metadata to `POST /v1/tasks/:id/evidence` with `Idempotency-Key` header.
+     3. **On Success (HTTP 200/201):** Server updates authoritative state to `WAITING_REVIEW`. Client sets `TaskStatus = WAITING_REVIEW`, `LocalSubmissionStatus = IDLE`, `SyncStatus = SYNCED`. The outbox queue record is safely marked `COMPLETED` and deleted.
+     4. **On Client/Validation/Conflict Failure (HTTP 4xx):**
+        - **Failure Retention Rule:** The worker sets `SyncStatus = SYNC_FAILED` with `syncFailureReason = 'VALIDATION_FAILED' | 'CONFLICT' | 'FORBIDDEN'`.
+        - **Local Evidence Preservation:** Local evidence photos, notes, and outbox payload are **NEVER discarded or silently deleted**.
+        - The authoritative `TaskStatus` remains `IN_PROGRESS` (unless server confirmed a terminal state).
+        - Worker halts automatic retries to prevent server spam and displays a descriptive error banner for user resolution.
+     5. **On Network / Server Error (HTTP 5xx / Timeout):** Worker sets `SyncStatus = SYNC_FAILED`, increments `attemptCount`, applies exponential backoff ($2^n \times 1000\text{ms}$ up to 60s), and automatically retries upon next connectivity event.
 
-## Rationale
-Option B directly satisfies both `QAS-OFFLINE-01` and `QAS-OFFLINE-02` with mathematically proven transactional ACID boundaries. It avoids the catastrophic data loss of the AS-IS in-memory snapshot while avoiding the vendor lock-in and native build instability of heavyweight sync ORMs.
+## Verification & Resilience Evidence Strategy
+The architecture is designed to satisfy `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Zero field evidence loss must be empirically verified through targeted test suites:
+1. **Process Kill Interruption Tests:** Killing app process during photo capture and verifying draft restoration upon relaunch ($\le 2\text{s}$).
+2. **Transaction Interruption Tests:** Simulating power loss or crash mid-transaction to verify zero SQLite corruption.
+3. **Network Dropout Retries:** Verifying that outbox items survive airplane mode cycles and cleanly retry with identical `Idempotency-Key`.
+4. **Disk-Full & Migration Tests:** Handling out-of-storage conditions gracefully without crashing.
 
 ## Consequences
-- **Positive:** Zero data loss during network drops or OS kills. Predictable, auditable Outbox queue. Low memory consumption on budget devices.
-- **Negative:** Schema migrations must be authored and tested as domain contracts evolve.
-- **Neutral:** Binary file cleanup policies must be implemented (purge local photos after task reaches terminal `COMPLETED` state and photos are confirmed on remote object storage).
+- **Positive:** Resolves `AR-11-02` (in-memory data loss). Guarantees zero unrecoverable evidence loss. Low memory consumption on budget Android devices.
+- **Negative:** Schema migrations must be authored and tested as contracts evolve.
+- **Neutral:** Local photo garbage collection policy should purge images only after task reaches terminal `COMPLETED` state and remote storage is confirmed.
 
 ## Security Impact
-- Local database file resides in application-private storage, protected by Android/iOS sandboxing.
-- Sensitive credentials remain isolated in `expo-secure-store`, not stored in plaintext SQLite.
+- Local database file resides in application-private sandbox storage.
+- Sensitive auth credentials remain isolated in `expo-secure-store`, never stored in plaintext SQLite.
 
 ## Offline / Reliability Impact
-- Resolves `AR-11-02` (in-memory snapshot data loss).
-- Guarantees that field workers never lose completed work or photos.
+- Directly fulfills `QAS-OFFLINE-01` and `QAS-OFFLINE-02`. Field staff never lose completed work due to connection loss.
 
 ## Contract Impact
 - Adds `idempotencyKey: string` to `SubmitTaskEvidenceRequest` and standardizes `Idempotency-Key` HTTP header.
 
 ## Migration / Compatibility
-- Transition `greenOpsService.ts` from reading/writing in-memory `snapshot` variable to querying `LocalDatabaseService` backed by `expo-sqlite`.
+- Transition `greenOpsService.ts` from in-memory `snapshot` to `SqliteTaskRepository` and `SqliteOutboxQueue`.
 
 ## Rejected Alternatives
 - **Option A (Pure MMKV/AsyncStorage JSON blobs):** Rejected due to lack of ACID transactions and risk of JSON corruption during process kill.

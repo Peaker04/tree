@@ -12,6 +12,11 @@ The current mobile codebase (`apps/mobile`) operates as a client-side monolith w
 
 `ARCHITECTURE.md` proposes Clean Architecture / Ports & Adapters, but this proposal has not yet been formalized or approved through an ADR. At the same time, we must adhere strictly to the rule: **A business Bounded Context does NOT automatically imply a separate microservice, separate npm package, or separate database**. Over-engineering into dozens of microservices or micro-packages would paralyze development velocity.
 
+## Authoritative Boundary Rule: Server vs Mobile Domain Models
+Architecture must maintain a strict separation of authority between client and server domain models:
+- **Server Domain & Application Core (AUTHORITATIVE):** The server is the sole authoritative source of truth for business invariants, state machine transitions, Separation of Duties enforcement, and audit logging.
+- **Mobile Domain & Application Model (ADVISORY & OFFLINE BUFFER):** The mobile domain model provides immediate ergonomic feedback (disabling buttons, checking pre-conditions), manages offline draft integrity in SQLite, and buffers actions in the Outbox queue. Under no circumstances is the mobile domain aggregate treated as an authoritative security boundary.
+
 ## Frozen Business Drivers
 - **5 Canonical Bounded Contexts (`DOMAIN.md §2`, `Report 06 §3`):**
   - `Work Management` (CORE DOMAIN)
@@ -47,16 +52,14 @@ How should the mobile application and platform architecture be structured into l
 - **Description:**
   Establish 4 distinct concentric layers within `apps/mobile` (and shared backend code) without creating premature npm packages:
   1. **Presentation Layer (`src/presentation/`):**
-     - UI Screens (`StaffHome`, `StaffWork`, `StaffProofFlow`, `ManagerDashboard`, `ManagerReview`).
-     - Screen-level ViewModels / Custom Hooks (`useStaffWorkflow`, `useManagerReview`, `useTaskQueue`).
-     - Pure presentational components (`TaskSurfaces`, `AppPrimitives`).
+     - UI Screens, ViewModels / Custom Hooks, pure presentational components.
      - *Zero business rules, zero direct SQLite/HTTP calls.*
   2. **Application Layer (`src/application/`):**
      - Command Use Cases: `StartTaskUseCase`, `SubmitEvidenceUseCase`, `ResolveBlockedUseCase`, `ReviewTaskUseCase`, `CancelTaskUseCase`, `ReassignTaskUseCase`.
      - Query Use Cases: `ListAssignedTasksUseCase`, `LookupTreeByQrUseCase`, `GetCareHistoryUseCase`.
      - *Orchestrates domain entities and interfaces; agnostic of UI framework.*
   3. **Domain Core (`src/domain/`):**
-     - Aggregates & Entities: `Task` (with encapsulated 7-state transitions), `Tree`, `SiteVerification`.
+     - Aggregates & Entities: `Task`, `Tree`, `SiteVerification`.
      - Value Objects: `ProofProfile`, `Coordinates`, `GpsCheck`, `QrCheck`.
      - Domain Invariants & Policy Evaluators: `canPerformAction()`, `SoD` checks.
      - *Pure TypeScript. Zero dependencies on React, Expo, SQLite, or HTTP.*
@@ -67,30 +70,31 @@ How should the mobile application and platform architecture be structured into l
        - `ExpoHardwareAdapter` (camera & location permissions/sensors).
        - `SecureStoreAuthRepository` (session persistence per `ADR 0006`).
 - **Advantages:**
-  - **100% Testable Core:** 100% of business rules (state machine, proof profiles, SoD) are testable via fast NodeJS unit tests in milliseconds.
+  - **Testable Core:** Core business rules (state machine, proof profiles, SoD) are testable via fast unit tests in milliseconds without React or native mocks.
   - **Pragmatic Decomposition:** Decomposes the 856-line `greenOpsService` into single-responsibility adapters and use cases without fragmenting into dozens of npm packages.
-  - **Clean UI:** Reduces `MobileApp.tsx` from 2,054 lines to a clean root navigator (~150 lines) utilizing React Context / Hooks for state injection.
-  - **Prevents UI Domain Leakage:** `ManagerReview` simply invokes `reviewTaskUseCase.execute({ taskId, decision, reason })`; the use case and domain aggregate manage state transitions.
+  - **Prevents UI Domain Leakage:** UI components simply invoke use cases with pure command arguments; use cases coordinate with domain entities and persistence adapters.
+  - **Clear Dependency Direction:** Outer layers depend on inner layers; inner layers know nothing of outer layers.
 - **Disadvantages:**
   - Requires disciplined folder structure and interface boundaries.
   - Initial refactoring effort across existing mobile screens.
-- **Risks:** Over-abstraction if developers create boilerplate interfaces for trivial one-line operations (mitigated by pragmatic guidelines).
-- **Migration Impact:** Gradual, phased migration (Use Cases introduced behind existing screens).
+- **Risks:** Over-abstraction if developers create boilerplate interfaces for trivial operations (mitigated by pragmatic guidelines).
+- **Migration Impact:** Phased migration (Use Cases introduced behind existing screens).
 - **Operational Impact:** None.
 
 ### Option C: Distributed Microservices & Micro-Frontends
 - **Description:** Split every Bounded Context into an independent deployable microservice with separate databases, and split the mobile app into multiple federated micro-apps.
-- **Advantages:** Total deployment decoupling for enterprise teams with hundreds of developers.
+- **Advantages:** Total deployment decoupling for massive engineering teams.
 - **Disadvantages:**
   - Catastrophic over-engineering for the current product stage.
   - Massive network latency, complex distributed transactions (Sagas), multi-repo overhead, and deployment complexity.
-  - Extreme friction for a paired developer / small engineering team.
+  - Extreme friction for a focused engineering team.
 - **Risks:** System gridlock; project failure due to operational complexity.
 - **Migration Impact:** Unmanageable.
 - **Operational Impact:** Requires Kubernetes, service meshes, distributed tracing, and high cloud bills.
 
 ## Proposed Decision
 **Adopt Option B: Pragmatic Clean Architecture (Ports & Adapters) within the Monorepo.**
+*Recommendation Confidence: HIGH (well-established pattern to untangle monoliths without microservice overhead).*
 
 ### Responsibility Mapping for Decomposing `greenOpsService.ts`
 
@@ -104,24 +108,22 @@ How should the mobile application and platform architecture be structured into l
 | Tính toán `buildCareHistory` | `CareHistoryProjector` | Domain / Application | `BR-11` (Chỉ chiếu từ `COMPLETED`) |
 | Quản lý thông báo | `NotificationRepository` | Infrastructure | Hỗ trợ read-model thông báo |
 
-### Phân rã `MobileApp.tsx` (Monolithic Screen)
-1. Extract Auth / Login UI into a standalone screen: `apps/mobile/src/screens/auth/LoginScreen.tsx` (retiring the dead code `LoginScreen.tsx` and eliminating inline JSX in `MobileApp`).
-2. Replace prop-drilling with focused React Context providers:
-   - `AuthProvider` (session, user identity, login/logout).
-   - `TaskProvider` (task queue, active task, outbox status).
-   - `NetworkProvider` (online/offline connectivity state).
-3. `MobileApp.tsx` becomes a lean root navigation container ($\le 150$ lines).
+### Phân rã `MobileApp.tsx` (Non-Binding Implementation Direction)
+1. Extract Auth / Login UI into standalone screen files (retiring dead code and eliminating inline JSX in `MobileApp`).
+2. Replace prop-drilling with focused state management (e.g., React Context or lightweight store for session, task queue, and connectivity).
+3. `MobileApp.tsx` focuses strictly on root routing and provider assembly.
 
 ## Rationale
 Option B eliminates technical debt, provides rock-solid unit testability for business rules, and protects the codebase against regression without falling into the microservice over-engineering trap.
 
 ## Consequences
-- **Positive:** UI presentation is cleanly separated from business logic. Testability reaches 100% for domain logic. Code files become concise and maintainable.
+- **Positive:** UI presentation is cleanly separated from business logic. Testability reaches high coverage for domain logic. Code files become concise and maintainable.
 - **Negative:** Requires refactoring the existing facade during Phase 12 implementation.
 - **Neutral:** The existing facade can be refactored step-by-step using the Strangler Fig pattern.
 
 ## Security Impact
 - Ensures authorization and validation logic cannot be bypassed by UI manipulation.
+- Clarifies that mobile domain checks are advisory; server domain core remains the sole authoritative gate.
 
 ## Offline / Reliability Impact
 - Directly integrates with `ADR 0008` SQLite repositories to provide complete offline resilience.

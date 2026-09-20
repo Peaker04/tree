@@ -14,7 +14,7 @@ This distributed environment produces concrete concurrency races:
 
 Currently in `packages/contracts` and `apps/mobile`:
 - `TaskDto` has NO concurrency token or `version` property (`ARCHITECTURE.md §4.2`).
-- State-mutating requests (`CreateTaskRequest`, `SubmitTaskEvidenceRequest`, `ReviewDecisionRequest`) have NO idempotency key mechanism.
+- State-mutating requests have NO idempotency key mechanism.
 - The server has no formal contract to return or detect conflicting concurrent mutations.
 
 ## Frozen Business Drivers
@@ -43,28 +43,30 @@ What technical mechanisms should be established across `@novyx/contracts`, clien
 - **Migration Impact:** High complexity.
 - **Operational Impact:** High database lock contention.
 
-### Option B: Combined Optimistic Concurrency Control (OCC) + Header-Based Idempotency Keys [RECOMMENDED]
+### Option B: Command Payload OCC (`expectedVersion`) + Header-Based Idempotency Keys [RECOMMENDED]
 - **Description:**
-  1. **Optimistic Concurrency Control (OCC) via Entity Versioning:**
+  1. **Normalized Concurrency Contract (Command Payload `expectedVersion`):**
      - Add integer `version: number` to all mutating aggregates (`TaskDto`, `TreeDto`, `PolicyDto`).
-     - Any mutating command (e.g., `PATCH /tasks/:id/progress`, `POST /tasks/:id/reassign`, `POST /tasks/:id/cancel`) must include the expected entity version in the request body (`expectedVersion: number`) or via `If-Match: "<version>"` HTTP header.
+     - Every mutating command DTO (e.g., `SubmitTaskEvidenceRequest`, `ReviewDecisionRequest`, `ReassignTaskRequest`, `CancelTaskRequest`) includes an explicit `expectedVersion: number`.
+     - *Why command payload over HTTP If-Match:* The project REST API baseline (`ADR 0003`) is command-oriented (`POST /v1/tasks/:id/evidence`, `POST /v1/tasks/:id/review`) rather than full-resource HTTP PUT replacements. Using `expectedVersion` directly in the command payload provides type-safe Zod schema validation (`ADR 0010`) and maps cleanly to the project-standard `409 CONFLICT` (`STALE_VERSION`), avoiding the RFC 9110 header semantics (which mandate 412 Precondition Failed).
      - Server executes atomic update: `UPDATE tasks SET ..., version = version + 1 WHERE id = :id AND version = :expectedVersion`.
-     - If rows affected is 0: Server rejects with `409 CONFLICT` and error code `CONFLICT: STALE_VERSION`, returning the current authoritative server version of the entity.
+     - If rows affected is 0: Server rejects with `409 CONFLICT` and error code `CONFLICT: STALE_VERSION`, returning the current authoritative server version in the error details.
   2. **Command Idempotency via Client-Generated UUID:**
-     - All state-transitioning and creation requests (`POST /tasks`, `POST /tasks/:id/evidence`, `POST /tasks/:id/review`, `POST /tasks/:id/field-issue`, etc.) must include an `Idempotency-Key: <UUIDv4>` HTTP header (also mirrored in request payload for offline outbox storage).
+     - All state-transitioning and creation requests require an `Idempotency-Key: <UUIDv4>` HTTP header (also mirrored in request payload for offline outbox tracking).
+     - *Industry Standard Reference:* Follows the widely used API design pattern originating from the former IETF draft convention (`draft-ietf-httpapi-idempotency-key-header`, now expired, but universally adopted by major API platforms like Stripe and AWS).
      - Backend maintains an `idempotency_records` table: `(idempotency_key, actor_id, request_path, request_hash, status, response_code, response_body, created_at, expires_at)`.
-     - *On repeated request with identical key & hash within retention window (e.g., 24 hours):* Server bypasses business execution and replays the cached HTTP response directly.
-     - *On repeated request with identical key but different payload:* Server rejects with `422 UNPROCESSABLE_ENTITY` (`VALIDATION_FAILED: IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD`).
+     - *Identical key & payload within retention horizon:* Server replays cached response without re-executing business logic.
+     - *Identical key with different payload:* Server rejects with `422 UNPROCESSABLE_ENTITY` (`VALIDATION_FAILED: IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD`).
 - **Advantages:**
-  - **Zero Lost Updates:** If a Manager reassigns a task while Staff is offline, the Staff's subsequent submission attempt detects the version mismatch (`409 CONFLICT`), preventing accidental data corruption while preserving the Staff's local evidence draft.
+  - **Zero Lost Updates:** If a Manager reassigns a task while Staff is offline, Staff's submission detects the version mismatch (`409 CONFLICT`), preventing accidental data corruption while preserving the Staff's local evidence draft in SQLite.
   - **Safe Automated Retries:** Mobile Outbox can aggressively retry network requests after timeouts without fear of duplicate tasks, double approvals, or duplicate audit events.
-  - **Clean Industry Standard:** Aligns with standard HTTP semantics (`409 Conflict`, `If-Match`, IETF Idempotency-Key draft specifications).
+  - **Single Consistent Concurrency Model:** Avoids mixing header-based and body-based concurrency controls.
 - **Disadvantages:**
-  - Requires clients to handle `409 CONFLICT` gracefully (prompting user to refresh and view latest state).
-  - Backend must manage a lightweight idempotency cache/table with TTL cleanup.
-- **Risks:** Negligible; standard enterprise distributed architecture pattern.
-- **Migration Impact:** Moderate contract additions (`version`, `idempotencyKey`).
-- **Operational Impact:** Small table with 24-hour TTL index; minimal storage overhead.
+  - Requires clients to handle `409 CONFLICT` gracefully.
+  - Backend must manage an idempotency cache/table with TTL cleanup.
+- **Risks:** Negligible; standard distributed architecture pattern.
+- **Migration Impact:** Contract additions (`version`, `expectedVersion`, `idempotencyKey`).
+- **Operational Impact:** Small table with indexed expiration; minimal overhead.
 
 ### Option C: Last-Write-Wins (Timestamp-based resolution)
 - **Description:** Compare `updatedAt` timestamps and let the latest timestamp overwrite previous data.
@@ -78,31 +80,44 @@ What technical mechanisms should be established across `@novyx/contracts`, clien
 - **Operational Impact:** Zero.
 
 ## Proposed Decision
-**Adopt Option B: Combined Optimistic Concurrency Control (OCC) + Header-Based Idempotency Keys.**
+**Adopt Option B: Command Payload OCC (`expectedVersion`) + Header-Based Idempotency Keys.**
+*Recommendation Confidence: HIGH (standard, battle-tested distributed pattern).*
 
-1. **Entity Versioning in Contracts:**
+1. **Entity Versioning & Mutation Contracts:**
    - Add `version: number` to `TaskDto`, `TreeDto`, and governance aggregates.
-   - All mutation endpoints support `expectedVersion?: number` in the request payload and evaluate atomic version incrementing on update.
-2. **Idempotency Standards:**
-   - All mutating REST requests require `Idempotency-Key: <UUIDv4>`.
-   - The mobile Outbox Worker (`ADR 0008`) generates the `idempotencyKey` at the moment of local draft finalization and preserves it through all subsequent retry attempts.
-3. **Conflict Resolution Strategy for Field Tasks:**
-   - When a mobile client receives `409 CONFLICT` on task evidence submission:
-     - The Outbox halts automated retries for that task.
-     - The task is flagged with `LocalSubmissionStatus = CONFLICT_DETECTED`.
-     - The UI presents a clear resolution banner: `"Nhiệm vụ này đã bị thay đổi trên máy chủ (ví dụ: đã được phân công lại hoặc bị hủy bởi Quản lý). Bằng chứng đã chụp của bạn vẫn được lưu an toàn trên máy."`
-     - Allows Staff to review the latest server state while giving the option to export/attach the local proof to an inquiry.
+   - All state-mutating request schemas in `@novyx/contracts` mandate `expectedVersion: number`.
+   - On concurrency mismatch, server returns HTTP `409 CONFLICT` with:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "CONFLICT",
+         "message": "Task has been modified by another operation",
+         "details": { "subtype": "STALE_VERSION", "currentVersion": 5, "expectedVersion": 4 }
+       }
+     }
+     ```
+2. **Idempotency Standards & Retention Horizon:**
+   - All mutating REST requests require header `Idempotency-Key: <UUIDv4>`.
+   - The mobile Outbox Worker generates the key upon draft finalization and preserves it through all retries.
+   - **Retention Horizon Rule (Parameter Subject to Measurement):** The server idempotency record retention window must be configured to be **strictly greater than or equal to the maximum expected offline outbox retry horizon** (proposed baseline: 72 hours, subject to field operational measurement). An idempotency record must NEVER expire while a valid offline outbox item could still legitimately retry!
+3. **Conflict Handling on Mobile Client:**
+   - When the Outbox Worker receives `409 CONFLICT`:
+     - The outbox halts automated retries for that item.
+     - Transport state updates to `SyncStatus = SYNC_FAILED` with `syncFailureReason = 'CONFLICT'`.
+     - **Authoritative `TaskStatus` remains `IN_PROGRESS`** (preserving local field evidence).
+     - UI displays a resolution banner: `"Nhiệm vụ đã được cập nhật trên máy chủ (ví dụ: đã phân công lại hoặc hủy). Bằng chứng thực địa của bạn vẫn được lưu an toàn trên máy."`
 
 ## Rationale
-Option B eliminates both the duplicate submission risk and the silent overwrite hazard. It is the only option that preserves the integrity of the frozen state machine in an intermittently connected distributed mobile environment.
+Option B eliminates both duplicate submissions and silent overwrite hazards. Selecting `expectedVersion` in the command payload aligns perfectly with command-oriented REST and Zod contract validation.
 
 ## Consequences
-- **Positive:** Bulletproof network retries in cellular dead zones. Complete auditability. Clean conflict detection.
+- **Positive:** Network retries in cellular dead zones are safe and idempotent. Lost updates are impossible. Complete audit trail integrity.
 - **Negative:** Mobile client must handle `409 CONFLICT` in UI presentation. Backend requires an idempotency filter/interceptor.
-- **Neutral:** Read operations (`GET`) remain standard without concurrency tokens.
+- **Neutral:** Read operations (`GET`) remain standard without version checks.
 
 ## Security Impact
-- Prevents replay attacks and double-spending/double-submission vulnerabilities.
+- Prevents replay attacks and double-submission vulnerabilities.
 - Idempotency keys are scoped strictly to the authenticated `actor.userId`.
 
 ## Offline / Reliability Impact
@@ -111,9 +126,9 @@ Option B eliminates both the duplicate submission risk and the silent overwrite 
 ## Contract Impact
 - Update `@novyx/contracts`:
   - Add `version: number` to `TaskDto` and `TreeDto`.
-  - Add optional `expectedVersion?: number` to `UpdateTaskProgressRequest`, `ReviewDecisionRequest`, `SubmitTaskEvidenceRequest`.
-  - Add `idempotencyKey?: string` to mutating request types.
-  - Add error code `ERROR_CODES.CONFLICT = 'CONFLICT'` with detail subtype `'STALE_VERSION'`.
+  - Add `expectedVersion: number` to `SubmitTaskEvidenceRequest`, `ReviewDecisionRequest`, `ReassignTaskRequest`, `CancelTaskRequest`.
+  - Add `idempotencyKey?: string` to mutating request schemas.
+  - Standardize error subtype `STALE_VERSION` under `ERROR_CODES.CONFLICT`.
 
 ## Migration / Compatibility
 - Step 1: Update DTO contracts in `@novyx/contracts`.
@@ -124,9 +139,9 @@ Option B eliminates both the duplicate submission risk and the silent overwrite 
 - **Option C (Last-Write-Wins):** Rejected due to risk of silent data loss and violation of state machine invariants.
 
 ## Open Questions
-- What is the retention TTL for idempotency records on the server? (Recommended: 24 to 48 hours).
+1. What is the maximum expected offline horizon in remote forestry regions to finalize the idempotency TTL? (Proposed baseline: 72 hours; to be verified during operational testing).
 
 ## Owner Decision Required
-- [ ] **APPROVE** Option B (Optimistic Concurrency Control + Idempotency Keys).
+- [ ] **APPROVE** Option B (Command Payload OCC + Header-Based Idempotency Keys).
 - [ ] **REJECT** and mandate alternative option.
 - [ ] **REQUEST_REVISION** with specific modifications.

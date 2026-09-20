@@ -12,13 +12,17 @@ Currently, the repository contains a single Expo React Native mobile application
 
 ## Frozen Business Drivers
 - **Three-Role Product Model:** Field Staff (`staff`), Operations Manager (`manager`), Platform Administrator (`admin`) are distinct roles with zero role inheritance.
-- **Admin Invariant (`BR-ACT-01`, `DR-HARD-01`):** Platform Admin is strictly confined to `PLATFORM_GOVERNANCE_SCOPE` (`CAP-ADM-01..09`). Normal operational task actions are DENIED.
-- **Audit Log Inspection (`CAP-ADM-05`, `BR-ADM-05`):** Administrative inspection of security and audit events requires high-density tabular browsing, multi-criteria filtering, and log export.
-- **Master Data & Policy Governance (`CAP-ADM-06..09`, `BR-ADM-06..09`):** Managing botanical tree species, geospatial coordinate updates, checklist versioning, and policy mappings involves complex form editing and desktop-scale data views.
+- **Admin Invariant (`BR-ACT-01`, `DR-HARD-01`):** Platform Admin is strictly confined to `PLATFORM_GOVERNANCE_SCOPE` (`CAP-ADM-01..09`). Normal operational task actions are strictly DENIED.
+- **Audit Log Inspection (`CAP-ADM-05`, `BR-ADM-05`):** Administrative inspection of security and audit events via `ViewAuditLog` and `FilterAuditLog` (multi-criteria filtering by actor, action, resource, date).
+- **Master Data & Policy Governance (`CAP-ADM-06..09`, `BR-ADM-06..09`):** Managing botanical tree species, geospatial coordinate updates, checklist template versions, and proof policy configurations.
+
+## Technical & UX Assumptions (Non-Frozen Context)
+- Governance workflows involve high-density data viewing (wide tables, complex multi-field filters, multi-step policy configuration), which are typically operated on desktop web browsers with physical keyboard and mouse.
+- Mobile field devices are subject to field hazards (loss, shared usage, outdoor sunlight) that are suboptimal for dense administrative governance.
 
 ## NFR / Quality Drivers
-- **Usability & Information Density (`QAS-A11Y-01` contrast with Desktop Governance):** Mobile UI is optimized for outdoor, single-handed, high-contrast field interactions (touch target $\ge 48\text{px}$). Governance tasks are indoor, desktop-based, keyboard/mouse-driven workflows with high information density.
-- **Security & Attack Surface Reduction (`QAS-SEC-01`):** Governance credentials should not be exposed on shared or personal mobile devices used in the field. Administrative sessions require strict timeout controls, IP restrictions, and isolated token storage.
+- **Usability & Information Density (`QAS-A11Y-01` contrast with Desktop Governance):** Mobile UI is optimized for outdoor, single-handed, high-contrast field interactions (touch target $\ge 48\text{px}$). Governance tasks benefit from desktop-scale layout, high tabular data density, and comprehensive filter controls.
+- **Security & Attack Surface Hygiene (`QAS-SEC-01`):** Isolating administrative interfaces to a separate client application reduces accidental exposure of administrative UI elements to field workers and prevents administrative code from being bundled into mobile binaries distributed to field staff.
 - **Maintainability & Deployment Independence:** Decoupling the release lifecycle of administrative governance tooling from field mobile APK updates.
 
 ## Current Technical Evidence
@@ -40,32 +44,33 @@ How should the Platform Administrator client interface be architected and delive
 - **Disadvantages:**
   - Severe ergonomic mismatch: Desktop-scale governance (audit logs, master data tables, policy JSON/schema forms) compressed into a 5-inch handheld screen.
   - Bloats field mobile APK size with administrative code never used by field workers.
-  - Increases security risk: Admin governance logic and bundle distributed to every field device.
-  - Field mobile UI rules (5-tab notched bottom nav, large touch targets, outdoor themes) clash with enterprise desktop administration.
-- **Risks:** High probability of compromised audit review usability; security exposure of admin endpoints in mobile binary.
+  - Conflates field operational workflows with administrative governance.
+  - Field mobile UI rules (5-tab notched bottom nav, large touch targets, outdoor themes) clash with dense administrative governance.
+- **Risks:** High probability of compromised audit review usability; administrative UX confusion on mobile screens.
 - **Migration Impact:** Moderate frontend changes in `MobileApp.tsx` and new mobile screens.
-- **Operational Impact:** Low operational deployment complexity (single app store/APK deployment), but high administrative frustration.
+- **Operational Impact:** Low operational deployment complexity (single app store/APK deployment), but high administrative friction.
 
 ### Option B: Dedicated Admin Web Application (`apps/admin-web`) [RECOMMENDED]
-- **Description:** Introduce a separate web application within the monorepo (`apps/admin-web`), built with React/Vite or Next.js, consuming `@novyx/contracts` and `@novyx/ui` tokens.
+- **Description:** Introduce a separate web application within the monorepo (`apps/admin-web`), built with standard web technologies (React/Vite or Next.js), consuming `@novyx/contracts` and `@novyx/ui` tokens.
 - **Advantages:**
-  - Optimal ergonomics: Native desktop browser experience for tabular audit logs, complex filters, botanical data management, and checklist authoring.
-  - Complete security isolation: Governance code, session handlers, and routes are never bundled into the public field APK.
-  - Independent deployment: Admin web can be deployed to internal VPC/private subnet with IP whitelisting, VPN, and independent release cycles.
-  - Zero mobile bloat: `apps/mobile` remains lightweight, dedicated 100% to field operations.
-  - Respects monorepo architecture (`ADR 0001`): Shares DTO contracts and design tokens seamlessly.
+  - **Ergonomic Alignment:** Native desktop browser experience for tabular audit logs, complex filters, botanical data management, and checklist authoring.
+  - **Reduced Surface Exposure:** Governance UI code, administrative session handlers, and management routes are separated from the public field APK.
+  - **Independent Deployment:** Admin web can be deployed, updated, and versioned independently of mobile app store release cycles. Optional enterprise hardening (e.g., corporate network restriction, VPN, WAF) can be applied to the web host if required by the organization.
+  - **Zero Mobile Bloat:** `apps/mobile` remains lightweight, dedicated 100% to field operations.
+  - **Respects Monorepo Architecture (`ADR 0001`):** Shares DTO contracts and design tokens seamlessly.
 - **Disadvantages:**
   - Introduces a second deployable frontend application in the monorepo.
   - Requires web build/test infrastructure in CI/CD.
 - **Risks:** Scope creep if web UI libraries diverge from design tokens (mitigated by `@novyx/ui` and `@novyx/contracts`).
 - **Migration Impact:** Zero disruption to `apps/mobile`; clean addition of `apps/admin-web`.
-- **Operational Impact:** Independent hosting (e.g., S3/CloudFront, Cloudflare Pages, or containerized web server); access restricted to platform administrators.
+- **Operational Impact:** Independent hosting (e.g., static hosting via Cloudflare Pages / S3 / containerized web server); access restricted to platform administrators.
 
 ### Option C: Universal React Native Web App (Single App targeting Mobile + Web)
 - **Description:** Use Expo Web / React Native for Web to compile `apps/mobile` into both mobile APK and desktop web bundle, dynamically rendering Admin screens when running on Web.
 - **Advantages:**
   - Single framework (React Native) across both form factors.
   - Component logic shared across web and mobile.
+  - Single application codebase.
 - **Disadvantages:**
   - High complexity in responsive adaptive layouts between phone touch screens and multi-window desktop browsers.
   - Sub-optimal desktop web ergonomics (custom scrollbars, non-native table performance, complex web accessibility bridging).
@@ -75,46 +80,47 @@ How should the Platform Administrator client interface be architected and delive
 - **Operational Impact:** Single codebase, but dual-platform QA overhead.
 
 ## Proposed Decision
-**Adopt Option B: Dedicated Admin Web Application (`apps/admin-web`)**.
+**Adopt Option B: Dedicated Admin Web Application (`apps/admin-web`).**
+*Recommendation Confidence: MEDIUM (pending formal confirmation of enterprise administrative hosting environment).*
 
 Platform Governance (`CAP-ADM-01..09`) will be implemented as an independent web application (`apps/admin-web`) inside the monorepo workspace, sharing `@novyx/contracts` and `@novyx/ui`.
 
 In the mobile app (`apps/mobile`), when a user with `role === 'admin'` attempts to authenticate, the mobile app will reject the login with a user-friendly error: `"Tài khoản Quản trị viên Nền tảng phải đăng nhập trên Cổng Quản trị Web (Admin Web Portal)."`, and refuse session initialization.
 
 ## Rationale
-1. **Business Invariant Alignment:** The frozen business model explicitly separates Platform Governance from Field Operations. Admin has zero field operations. A dedicated web tool mirrors this domain reality.
+1. **Business Invariant Alignment:** The frozen business model explicitly separates Platform Governance from Field Operations. Admin has zero field operations. A dedicated web tool cleanly reflects this separation.
 2. **Usability & Ergonomics:** High-density audit logs (viewing hundreds of system events, filtering by actor/resource/date) and tree master data tables are inherently desktop workflows.
-3. **Defense in Depth & Security:** Isolating admin capabilities to a separate web channel allows organizations to enforce network boundaries (e.g., internal corporate network, VPN, Web Application Firewall) without impacting field staff working over cellular networks.
-4. **Clean Code & Monorepo Foundation:** Follows `ADR 0001`. Both applications consume the identical TypeScript API contracts (`@novyx/contracts`), ensuring 100% type safety and contract synchronization without code duplication.
+3. **Deployment Independence & Clean Surface Separation:** Separating the web application isolates administrative UI from field devices and allows independent deployment cadences.
+4. **Monorepo Synergy:** Follows `ADR 0001`. Both applications consume the identical TypeScript API contracts (`@novyx/contracts`), ensuring 100% type safety without code duplication.
+
+## Security Clarification (Critical Boundary)
+- A separate Admin Web application separates the delivery/release surface and reduces accidental exposure of Admin UX to field users.
+- **Client bundle separation is NOT an authorization boundary:** Server-side authentication and authorization (`ADR 0006`, `ADR 0007`) remain the sole authoritative security boundary. All administrative API endpoints (`/v1/governance/*`, `/v1/audit/*`) must independently authenticate and authorize callers, regardless of which client sends the request.
+- Network restrictions (VPN, IP allowlisting, WAF) are optional operational deployment hardening measures, not frozen product requirements.
 
 ## Consequences
-- **Positive:** `apps/mobile` remains lean, secure, and field-focused. Admin UI has full access to rich desktop web data grids and charts. Releases are completely decoupled.
+- **Positive:** `apps/mobile` remains lean, secure, and field-focused. Admin UI has full access to rich desktop web data grids and filters. Releases are completely decoupled.
 - **Negative:** A new application workspace (`apps/admin-web`) must be initialized and maintained in CI/CD.
-- **Neutral:** Backend REST endpoints (`/v1/governance/*`, `/v1/audit/*`) serve both clients based on authenticated bearer token role claims.
-
-## Security Impact
-- Eliminates administrative code and sensitive API routes from mobile client binaries.
-- Allows strict Web-specific security headers (CSP, HSTS, SameSite cookies or short-lived memory tokens).
-- Enables IP restriction and corporate SSO integration specifically for administrative accounts.
+- **Neutral:** Backend REST endpoints serve both clients based on authenticated bearer token role claims.
 
 ## Offline / Reliability Impact
 - None on field mobile: Field mobile offline resilience is unencumbered by administrative caching.
-- Admin Web assumes standard enterprise internet connectivity; offline storage is not required for governance functions.
+- Admin Web assumes standard internet connectivity; offline durable storage is not required for governance functions.
 
 ## Contract Impact
-- Contracts in `@novyx/contracts` will be categorized into operational endpoints and governance endpoints, both consumed by their respective frontends.
+- Contracts in `@novyx/contracts` are partitioned into operational contracts (used by Mobile + Backend) and governance contracts (used by Admin Web + Backend).
 
 ## Migration / Compatibility
 - Step 1: Remove the `mapSessionRole` admin-to-manager coercion in `apps/mobile/src/services/greenOpsService.ts` and replace with an explicit rejection for `role === 'admin'`.
 - Step 2: Establish `apps/admin-web` scaffold in monorepo post-ADR approval.
 
 ## Rejected Alternatives
-- **Option A (Mobile Embedding):** Rejected due to unacceptable usability degradation for audit/master data and increased mobile attack surface.
+- **Option A (Mobile Embedding):** Rejected due to unacceptable usability degradation for audit/master data and clashing ergonomic requirements.
 - **Option C (Universal RN Web):** Rejected due to unnecessary technical complexity and inferior web desktop ergonomics.
 
 ## Open Questions
 1. Should `apps/admin-web` be built with Vite + React SPA or Next.js? (Vite SPA is recommended for a pure internal dashboard behind authentication).
-2. Is multi-factor authentication (MFA) mandatory for Admin Web at MVP? (Recommended for Phase 11 IAM decision).
+2. What are the specific deployment hosting requirements for the admin web portal in the target infrastructure? (To be evaluated during implementation planning).
 
 ## Owner Decision Required
 - [ ] **APPROVE** Option B (Dedicated Admin Web Application `apps/admin-web`).
