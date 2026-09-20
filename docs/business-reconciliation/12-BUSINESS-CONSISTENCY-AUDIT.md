@@ -1,11 +1,11 @@
 # BÁO CÁO KIỂM TOÁN TÍNH NHẤT QUÁN NGHIỆP VỤ (BUSINESS CONSISTENCY AUDIT REPORT)
-## NOVYX GREENOPS — BASELINE RECONCILIATION PHASE 9
+## NOVYX GREENOPS — BASELINE RECONCILIATION PHASE 9 (AUDIT EVIDENCE RE-VERIFIED)
 
-> **Mã tài liệu:** `docs/business-reconciliation/12-BUSINESS-CONSISTENCY-AUDIT.md`  
-> **Trạng thái:** `APPROVED & COMPLETED`  
-> **Giai đoạn:** Phase 9 — Final Business Consistency Audit  
-> **Đường cơ sở đầu vào:** Commit `86b0bed715f0c1b9160fb18e6db58a7396d22f2e` (Phase 8 Semantic Closure)  
-> **Nguyên tắc cốt lõi:** Kiểm toán độc lập toàn diện — Tuyệt đối không tự ý thay đổi đường cơ sở nghiệp vụ — Ngăn chặn trôi dạt ngữ nghĩa trước Phase 10 Freeze.
+> **Mã tài liệu:** `docs/business-reconciliation/12-BUSINESS-CONSISTENCY-AUDIT.md`
+> **Trạng thái:** `APPROVED & COMPLETED (EVIDENCE CORRECTED & RE-AUDITED)`
+> **Giai đoạn:** Phase 9 — Final Business Consistency Audit
+> **Đường cơ sở đầu vào:** Commit `86b0bed715f0c1b9160fb18e6db58a7396d22f2e` (Phase 8 Semantic Closure)
+> **Căn cứ đối soát tối cao:** [PRODUCT.md](file:///d:/ki7/EXE/tree/docs/PRODUCT.md), [DOMAIN.md](file:///d:/ki7/EXE/tree/docs/DOMAIN.md), [ACCESS-CONTROL.md](file:///d:/ki7/EXE/tree/docs/ACCESS-CONTROL.md), [WORKFLOWS.md](file:///d:/ki7/EXE/tree/docs/WORKFLOWS.md), [REQUIREMENTS-TRACEABILITY.md](file:///d:/ki7/EXE/tree/docs/REQUIREMENTS-TRACEABILITY.md), và Quyết định phân quyền chuẩn tắc [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE/tree/docs/business-reconciliation/07-AUTHORIZATION-ACTION-ELIGIBILITY.md).
 
 ---
 
@@ -19,7 +19,7 @@ Phase 9 là bước kiểm toán độc lập cuối cùng của chuỗi điều
    - [WORKFLOWS.md](file:///d:/ki7/EXE/tree/docs/WORKFLOWS.md)
    - [REQUIREMENTS-TRACEABILITY.md](file:///d:/ki7/EXE/tree/docs/REQUIREMENTS-TRACEABILITY.md)
 2. **Bộ quyết định chuẩn tắc đã đóng băng (Frozen Reconciliation Decisions 02–11):**
-   - `02-ACTOR-MODEL-DECISION.md` đến `11-DIAGRAM-SUITE-RECONCILIATION-REPORT.md`
+   - Đặc biệt là ma trận phân quyền đông cứng tại [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE/tree/docs/business-reconciliation/07-AUTHORIZATION-ACTION-ELIGIBILITY.md) và báo cáo nghiệm thu [10-RTM-ACCEPTANCE-ORACLE-REPORT.md](file:///d:/ki7/EXE/tree/docs/business-reconciliation/10-RTM-ACCEPTANCE-ORACLE-REPORT.md).
 3. **Bộ biểu đồ trực quan dẫn xuất (Derived Diagram Suite):**
    - 16 biểu đồ trực quan tại thư mục `docs/diagrams/` và tệp chỉ mục [README.md](file:///d:/ki7/EXE/tree/docs/diagrams/README.md).
 
@@ -83,20 +83,122 @@ Hệ thống tuân thủ trật tự ưu tiên thẩm quyền chuẩn tắc:
 
 ---
 
-## 4. Kết Quả Kiểm Tra Tự Động Bằng Máy (Machine Check Results)
+## 4. Kết Quả Kiểm Tra Tự Động & Thống Kê Danh Mục Lệnh (Machine Check & Inventories)
 
 Kiểm toán tự động thông qua các script phân tích tĩnh tất định trên toàn bộ kho tài liệu chuẩn tắc và biểu đồ dẫn xuất:
 
-| Danh mục kiểm tra | Tiêu chí tìm kiếm | Tổng số phát hiện | Phân loại hợp lệ (Valid) | Phân loại lịch sử (Historical) | Mâu thuẫn chặn (Blocking Defect) | Kết quả |
+### 4.1. Bảng Kết Quả Quét Tĩnh Ngữ Nghĩa (Static Scan Results)
+
+| Danh mục kiểm tra | Tiêu chí tìm kiếm | Tổng phát hiện | Phân loại hợp lệ (Valid) | Phân loại lịch sử (Historical) | Mâu thuẫn chặn (Blocking Defect) | Kết quả |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Vai trò lỗi thời / Tha hóa** | `Super Admin`, `Owner`, `Security Approver`, `Employee`, `Worker`, `Supervisor`, `future-only Admin`, `Admin = Manager`, `non-staff = Manager` | 30 | 30 (Chữ "Owner" trong `Single-Context Ownership`, thuộc tính SVG `data-owner-id`, và "Owner: Manager") | 0 | 0 | **PASS** |
+| **Vai trò lỗi thời / Tha hóa** | `Super Admin`, `Owner`, `Security Approver`, `Employee`, `Worker`, `Supervisor`, `future-only Admin`, `Admin = Manager`, `non-staff = Manager` | 30 | 30 (`Single-Context Ownership`, SVG `data-owner-id`, "Owner: Manager") | 0 | 0 | **PASS** |
 | **Từ khóa Admin Reserved** | `admin reserved`, `Admin RESERVED`, `OUT_OF_MVP`, `OUT OF MVP` | 0 | 0 | 0 | 0 | **PASS** |
 | **Bí danh lệnh không chuẩn tắc** | `ReviewApprove`, `ReviewApproveWithException`, `ReviewRequestRework`, `InspectAuditTrail`, `ExportAuditReport` | 0 | 0 | 0 | 0 | **PASS** |
 | **Trạng thái TaskStatus ngoài luồng** | `OFFLINE_SUBMITTED`, `COMPLETED_WITH_EXCEPTION`, `ADMIN_CANCELLED`, `STAFF_UNAVAILABLE` | 5 | 5 (100% là điều khoản cấm rõ ràng trong [DOMAIN.md](file:///d:/ki7/EXE/tree/docs/DOMAIN.md) và [WORKFLOWS.md](file:///d:/ki7/EXE/tree/docs/WORKFLOWS.md)) | 0 | 0 | **PASS** |
 | **Bí danh token viết tắt REWORK** | `REWORK` độc lập làm giá trị TaskStatus trong ma trận | 0 | 0 | 0 | 0 | **PASS** |
-| **Định danh năng lực Quản trị** | `CAP-ADM-01` đến `CAP-ADM-14` | 71 | 71 (Khớp chính xác 9 MVP, 3 NEXT, 1 REJECTED, 0 RESERVED, 0 CAP-ADM-14) | 0 | 0 | **PASS** |
+| **Định danh năng lực Quản trị** | `CAP-ADM-01` đến `CAP-ADM-14` | 71 | 71 (Khớp 9 MVP, 3 NEXT, 1 REJECTED, 0 RESERVED, 0 CAP-ADM-14) | 0 | 0 | **PASS** |
 | **Tính toàn vẹn liên kết nội bộ** | 347 liên kết markdown và URL `file:///` trong `docs/` | 347 | 347 tồn tại hợp lệ trên đĩa | 0 | 0 | **PASS** |
-| **Kiểm kê Biểu đồ (Inventory)** | So khớp danh mục tệp `*.html` và [README.md](file:///d:/ki7/EXE/tree/docs/diagrams/README.md) | 16 | 16 tệp thực tế khớp 100% 16 mục trong README | 0 | 0 | **PASS** |
+| **Kiểm kê Biểu đồ (Inventory)** | So khớp danh mục tệp `*.html` và [README.md](file:///d:/ki7/EXE/tree/docs/diagrams/README.md) | 16 | 16 tệp đĩa khớp 100% 16 mục catalog | 0 | 0 | **PASS** |
+
+---
+
+### 4.2. Danh Mục Lệnh Phân Quyền Vận Hành Chuẩn Tắc (Frozen Operational Action Inventory OP-01..OP-22)
+
+Nguồn xác thực: [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE/tree/docs/business-reconciliation/07-AUTHORIZATION-ACTION-ELIGIBILITY.md) (Mục 4 & 7).
+Đảm bảo độ bao phủ chính xác **22 / 22 hành vi vận hành chuẩn tắc**:
+
+| Mã OP | Tên Hành vi Vận hành (Canonical Action) | Field Staff | Operations Manager | Platform Admin | System | Có trong P9? | Khớp 100%? |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **OP-01** | `ViewAssignedTask` | **ALLOW** (Giao cho mình) | **ALLOW** (`AUTHORIZED_OPERATIONAL_SCOPE`) | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-02** | `ViewOperationalTask` | **DENY** | **ALLOW** (`AUTHORIZED_OPERATIONAL_SCOPE`) | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-03** | `CreateTask` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-04** | `AssignTask` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-05** | `StartTask` | **ALLOW** (Đúng người nhận) | **DENY** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-06** | `VerifyGps` | **ALLOW** (Đúng người nhận) | **DENY** (Chỉ đọc) | **DENY** | **ALLOW** (Tính toán) | **CÓ** | **PASS** |
+| **OP-07** | `VerifyQr` | **ALLOW** (Đúng người nhận) | **DENY** (Chỉ đọc) | **DENY** | **ALLOW** (Khớp mã) | **CÓ** | **PASS** |
+| **OP-08** | `ReportFieldIssue` | **ALLOW** (Đúng người nhận) | **DENY** (Chỉ duyệt xử lý) | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-09** | `ResumeBlockedTask` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-10** | `ReassignTask` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-11** | `CancelTask` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-12** | `CaptureProofEvidence` | **ALLOW** (Đúng người nhận) | **DENY** | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-13** | `CompleteChecklist` | **ALLOW** (Đúng người nhận) | **DENY** (Chỉ đọc) | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-14** | `RecordStructuredFindings` | **ALLOW** (Đúng người nhận) | **DENY** (Chỉ đọc) | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-15** | `SubmitEvidence` | **ALLOW** (Đúng người nhận) | **DENY** | **DENY** | **ALLOW** (Xác nhận mạng) | **CÓ** | **PASS** |
+| **OP-16** | `ViewReviewQueue` | **DENY** | **ALLOW** | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-17** | `ReviewTask` | **DENY** | **ALLOW** | **DENY** | **N/A** | **CÓ** | **PASS** |
+| **OP-18** | `ApproveTask` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-19** | `ApproveWithException` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-20** | `RequestRework` | **DENY** | **ALLOW** | **DENY** | **DENY** | **CÓ** | **PASS** |
+| **OP-21** | `ResubmitRework` | **ALLOW** (Đúng người nhận) | **DENY** | **DENY** | **ALLOW** (Xác nhận mạng) | **CÓ** | **PASS** |
+| **OP-22** | `ViewCareHistory` | **ALLOW** (Cây được giao) | **ALLOW** (`AUTHORIZED_OPERATIONAL_SCOPE`) | **ALLOW** (`PLATFORM_GOVERNANCE_SCOPE`) | **N/A** | **CÓ** | **PASS** |
+
+> **Ghi chú quan trọng:** Quyền xem `ViewAssignedTask` đối với Quản lý được thiết lập là `ALLOW` trong phạm vi `AUTHORIZED_OPERATIONAL_SCOPE` nhằm đảm bảo Quản lý giám sát được tiến độ của nhân viên cấp dưới. Quyền đọc `ViewCareHistory` của Admin là quyền chỉ đọc phục vụ giám sát, hoàn toàn không trao quyền đột biến nhiệm vụ hay cây xanh.
+
+---
+
+### 4.3. Danh Mục Hành Vi Quản Trị Nền Tảng Chuẩn Tắc (Frozen Governance Action Inventory GV-01..GV-22)
+
+Nguồn xác thực: [07-AUTHORIZATION-ACTION-ELIGIBILITY.md](file:///d:/ki7/EXE/tree/docs/business-reconciliation/07-AUTHORIZATION-ACTION-ELIGIBILITY.md) (Mục 7.2 & 7.3).
+Đảm bảo bao phủ **22 / 22 hành vi quản trị nền tảng** phân định rõ ranh giới MVP, NEXT, và REJECTED:
+
+| Mã GV | Tên Hành vi Quản trị (Canonical Action) | Field Staff | Operations Manager | Platform Admin | Phân loại & Ranh giới | Ngữ cảnh sở hữu |
+| :---: | :--- | :---: | :---: | :---: | :---: | :--- |
+| **GV-01** | `ProvisionUser` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-01`) | Identity & Access Management |
+| **GV-02** | `AssignRole` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-02`) | Identity & Access Management |
+| **GV-03** | `ActivateAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-03`) | Identity & Access Management |
+| **GV-04** | `SuspendAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-03`) | Identity & Access Management |
+| **GV-05** | `DisableAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-03`) | Identity & Access Management |
+| **GV-06** | `UnlockAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-04`) | Identity & Access Management |
+| **GV-07** | `RecoverAccount` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-04`) | Identity & Access Management |
+| **GV-08** | `ViewAuditLog` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-05`) | Audit & Compliance |
+| **GV-09** | `FilterAuditLog` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-05`) | Audit & Compliance |
+| **GV-10** | `CreateTree` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-06`) | Tree Asset Registry |
+| **GV-11** | `UpdateTreeMasterData` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-06`) | Tree Asset Registry |
+| **GV-12** | `ReplaceTreeQrCode` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-06`) | Tree Asset Registry |
+| **GV-13** | `UpdateCanonicalCoordinates` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-06`) | Tree Asset Registry |
+| **GV-14** | `RetireTree` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-06`) | Tree Asset Registry |
+| **GV-15** | `CreateTaskType` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-07`) | Policy & Template Governance |
+| **GV-16** | `ActivateTaskType` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-07`) | Policy & Template Governance |
+| **GV-17** | `DeactivateTaskType` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-07`) | Policy & Template Governance |
+| **GV-18** | `PublishProofPolicyVersion` | DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-08`) | Policy & Template Governance |
+| **GV-19** | `PublishChecklistTemplateVersion`| DENY | DENY | **ALLOW** | **MVP** (`CAP-ADM-09`) | Policy & Template Governance |
+| **GV-20** | `ManageDynamicFindingsTemplate` | DENY | DENY | **DENY (MVP) / NEXT** | **NEXT** (`CAP-ADM-10`) | Policy & Template Governance |
+| **GV-21** | `UseBreakGlass` | DENY | DENY | **DENY (MVP) / NEXT** | **NEXT** (`CAP-ADM-11`) | Governance Plane |
+| **GV-22** | `ManagePlatformSystemConfig` | DENY | DENY | **DENY** | **REJECTED** (`CAP-ADM-13`) | N/A (Bị loại bỏ) |
+
+---
+
+### 4.4. Danh Mục Lệnh Xuất Hiện Tường Minh Trong RTM (Explicit RTM Command Inventory)
+
+Nguồn xác thực: [REQUIREMENTS-TRACEABILITY.md](file:///d:/ki7/EXE/tree/docs/REQUIREMENTS-TRACEABILITY.md).
+RTM định nghĩa 43 yêu cầu với **37 tên token lệnh tường minh**:
+- 32 lệnh trùng khớp hoàn toàn với các định danh trong `OP-xx` và `GV-xx`.
+- **5 lệnh xuất hiện tường minh trong RTM nhưng không mang mã OP/GV độc lập:**
+  1. `ReportLocationException` (`BR-01b` — Báo cáo ngoại lệ vị trí thực địa khi GPS $> 10$m)
+  2. `ReportIdentityException` (`BR-02b` — Báo cáo ngoại lệ danh tính tem QR bị hỏng/mất)
+  3. `LookupTreeByQr` (`BR-13` — Tra cứu nhanh hồ sơ cây xanh qua quét mã QR)
+  4. `ProjectCareHistory` (`BR-11` — Tự động chiếu dữ liệu lịch sử chăm sóc từ task `COMPLETED`)
+  5. `ResetCredentialSetup` (`BR-ADM-04` — Cấp lại liên kết thiết lập thông tin xác thực an toàn, đi kèm `UnlockAccount`)
+
+---
+
+### 4.5. Phép Hợp Nhất & Khử Trùng Lặp Danh Mục Lệnh (Union Deduplicated Command Registry)
+
+Bằng phương pháp hợp nhất và đối soát khử trùng lặp định danh giữa hai tập hợp:
+$$\text{Union Unique Commands} = \{\text{Frozen Authorization Actions (44)}\} \cup \{\text{Canonical RTM Commands (37)}\}$$
+
+Thống kê chính xác từ script phân tích tự động:
+- **Số lượng hành vi phân quyền đóng băng (Authorization Actions):** **44** (22 Vận hành `OP-01..22` + 22 Quản trị `GV-01..22`)
+- **Số lượng token lệnh tường minh trong RTM (RTM Explicit Commands):** **37**
+- **Số lượng lệnh độc nhất trong toàn hệ thống (Union Unique Commands):** **49**
+
+```text
+TỔNG SỐ LỆNH VẬN HÀNH OP-01..22:       22
+TỔNG SỐ HÀNH VI QUẢN TRỊ GV-01..22:    22 (19 MVP, 2 NEXT, 1 REJECTED)
+TỔNG SỐ LỆNH RTM BỔ SUNG:              5
+--------------------------------------------------
+TỔNG SỐ LỆNH HỢP NHẤT ĐỘC NHẤT (UNION): 49
+```
 
 ---
 
@@ -115,126 +217,160 @@ Hệ thống xác lập chính xác mô hình **3 vai trò con người** và **
 
 ---
 
-## 6. Ma Trận Quyền Lệnh Tổng Hợp (Consolidated Role / Action Matrix)
+## 6. Ma Trận Quyền Lệnh Hợp Nhất Đầy Đủ (Full Consolidated Role / Action Matrix: 49 Lệnh)
 
-Bảng đối soát ma trận phân quyền thực tế trên toàn bộ 40 lệnh chuẩn tắc của hệ thống:
+Bảng đối soát ma trận phân quyền thực tế trên toàn bộ **49 lệnh chuẩn tắc** của hệ thống:
 
-| Lệnh nghiệp vụ (Command) | Field Staff | Operations Manager | Platform Administrator | System | Đơn vị sở hữu (Owner) | Kết quả kiểm toán |
-| :--- | :---: | :---: | :---: | :---: | :--- | :---: |
-| `ViewAssignedTask` | **ALLOW** | DENY | DENY | DENY | Field Staff | **PASS** |
-| `ViewOperationalTask` | DENY | **ALLOW** | DENY | DENY | Operations Manager | **PASS** |
-| `CreateTask` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `AssignTask` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `StartTask` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `VerifyGps` | **ALLOW** | DENY | **DENY** | DETERMINISTIC | Field Staff | **PASS** |
-| `VerifyQr` | **ALLOW** | DENY | **DENY** | DETERMINISTIC | Field Staff | **PASS** |
-| `ReportLocationException` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `ReportIdentityException` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `ReportFieldIssue` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `ResumeBlockedTask` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `ReassignTask` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `CancelTask` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `CaptureProofEvidence` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `CompleteChecklist` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `RecordStructuredFindings` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `SubmitEvidence` | **ALLOW** | DENY | **DENY** | DETERMINISTIC | Field Staff | **PASS** |
-| `ViewReviewQueue` | DENY | **ALLOW** | DENY | DENY | Operations Manager | **PASS** |
-| `ReviewTask` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `ApproveTask` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `ApproveWithException` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `RequestRework` | DENY | **ALLOW** | **DENY** | DENY | Operations Manager | **PASS** |
-| `ResubmitRework` | **ALLOW** | DENY | **DENY** | DENY | Field Staff | **PASS** |
-| `LookupTreeByQr` | **ALLOW** | **ALLOW** | DENY | DENY | Staff & Manager | **PASS** |
-| `ProjectCareHistory` | DENY | DENY | DENY | **DETERMINISTIC** | System | **PASS** |
-| `ProvisionUser` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `AssignRole` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `SuspendAccount` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `ActivateAccount` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `DisableAccount` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `UnlockAccount` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `ResetCredentialSetup` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `ViewAuditLog` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `FilterAuditLog` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `CreateTree` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `UpdateTreeMasterData` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `ReplaceTreeQrCode` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `UpdateCanonicalCoordinates`| DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `RetireTree` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `CreateTaskType` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `ActivateTaskType` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `DeactivateTaskType` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `PublishProofPolicyVersion` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `PublishChecklistTemplateVersion` | DENY | DENY | **ALLOW** | DENY | Platform Administrator | **PASS** |
-| `ManageDynamicFindingsTemplate` | DENY | DENY | **NEXT** | DENY | Platform Administrator | **PASS (NEXT)** |
-| `UseBreakGlass` | DENY | DENY | **NEXT** | DENY | Platform Administrator | **PASS (NEXT)** |
-| `ManagePlatformSystemConfig` | DENY | DENY | **REJECTED** | DENY | N/A | **PASS (REJECTED)** |
+| STT | Mã Lệnh / Tên Lệnh | Field Staff | Operations Manager | Platform Admin | System | Ngữ cảnh sở hữu | Tài nguyên miền | Trạng thái phạm vi | Kết quả |
+| :---: | :--- | :---: | :---: | :---: | :---: | :--- | :--- | :---: | :---: |
+| 1 | `OP-01: ViewAssignedTask` | **ALLOW** | **ALLOW** | DENY | N/A | Work Management | `Task` | MVP | **PASS** |
+| 2 | `OP-02: ViewOperationalTask` | DENY | **ALLOW** | DENY | N/A | Work Management | `Task` | MVP | **PASS** |
+| 3 | `OP-03: CreateTask` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `Task` | MVP | **PASS** |
+| 4 | `OP-04: AssignTask` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `Task` | MVP | **PASS** |
+| 5 | `OP-05: StartTask` | **ALLOW** | DENY | **DENY** | DENY | Work Management | `Task` | MVP | **PASS** |
+| 6 | `OP-06: VerifyGps` | **ALLOW** | DENY | **DENY** | DETERMINISTIC | Work Management | `SiteVerification` | MVP | **PASS** |
+| 7 | `OP-07: VerifyQr` | **ALLOW** | DENY | **DENY** | DETERMINISTIC | Work Management | `SiteVerification` | MVP | **PASS** |
+| 8 | `OP-08: ReportFieldIssue` | **ALLOW** | DENY | **DENY** | N/A | Work Management | `FieldIssue` | MVP | **PASS** |
+| 9 | `OP-09: ResumeBlockedTask` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `Task` | MVP | **PASS** |
+| 10 | `OP-10: ReassignTask` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `Task` | MVP | **PASS** |
+| 11 | `OP-11: CancelTask` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `Cancellation` | MVP | **PASS** |
+| 12 | `OP-12: CaptureProofEvidence` | **ALLOW** | DENY | **DENY** | N/A | Work Management | `TaskEvidence` | MVP | **PASS** |
+| 13 | `OP-13: CompleteChecklist` | **ALLOW** | DENY | **DENY** | N/A | Work Management | `ChecklistSnapshot` | MVP | **PASS** |
+| 14 | `OP-14: RecordStructuredFindings` | **ALLOW** | DENY | **DENY** | N/A | Work Management | `StructuredFindings` | MVP | **PASS** |
+| 15 | `OP-15: SubmitEvidence` | **ALLOW** | DENY | **DENY** | DETERMINISTIC | Work Management | `Task` | MVP | **PASS** |
+| 16 | `OP-16: ViewReviewQueue` | DENY | **ALLOW** | DENY | N/A | Work Management | Hàng đợi thẩm định | MVP | **PASS** |
+| 17 | `OP-17: ReviewTask` | DENY | **ALLOW** | **DENY** | N/A | Work Management | `Task` & Bằng chứng | MVP | **PASS** |
+| 18 | `OP-18: ApproveTask` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `ReviewDecision` | MVP | **PASS** |
+| 19 | `OP-19: ApproveWithException` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `ReviewDecision` | MVP | **PASS** |
+| 20 | `OP-20: RequestRework` | DENY | **ALLOW** | **DENY** | DENY | Work Management | `ReworkRequest` | MVP | **PASS** |
+| 21 | `OP-21: ResubmitRework` | **ALLOW** | DENY | **DENY** | DETERMINISTIC | Work Management | `Task` | MVP | **PASS** |
+| 22 | `OP-22: ViewCareHistory` | **ALLOW** | **ALLOW** | **ALLOW** | N/A | Tree Asset Registry | `CareHistory projection` | MVP | **PASS** |
+| 23 | `GV-01: ProvisionUser` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `User` | MVP (CAP-ADM-01) | **PASS** |
+| 24 | `GV-02: AssignRole` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `RoleAssignment` | MVP (CAP-ADM-02) | **PASS** |
+| 25 | `GV-03: ActivateAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `AccountStatus` | MVP (CAP-ADM-03) | **PASS** |
+| 26 | `GV-04: SuspendAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `AccountStatus` | MVP (CAP-ADM-03) | **PASS** |
+| 27 | `GV-05: DisableAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `AccountStatus` | MVP (CAP-ADM-03) | **PASS** |
+| 28 | `GV-06: UnlockAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `Account` | MVP (CAP-ADM-04) | **PASS** |
+| 29 | `GV-07: RecoverAccount` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `Account` | MVP (CAP-ADM-04) | **PASS** |
+| 30 | `GV-08: ViewAuditLog` | DENY | DENY | **ALLOW** | DENY | Audit & Compliance | `AuditEvent` | MVP (CAP-ADM-05) | **PASS** |
+| 31 | `GV-09: FilterAuditLog` | DENY | DENY | **ALLOW** | DENY | Audit & Compliance | `AuditEvent` | MVP (CAP-ADM-05) | **PASS** |
+| 32 | `GV-10: CreateTree` | DENY | DENY | **ALLOW** | DENY | Tree Asset Registry | `Tree` | MVP (CAP-ADM-06) | **PASS** |
+| 33 | `GV-11: UpdateTreeMasterData` | DENY | DENY | **ALLOW** | DENY | Tree Asset Registry | `TreeMasterData` | MVP (CAP-ADM-06) | **PASS** |
+| 34 | `GV-12: ReplaceTreeQrCode` | DENY | DENY | **ALLOW** | DENY | Tree Asset Registry | `TreeIdentity` | MVP (CAP-ADM-06) | **PASS** |
+| 35 | `GV-13: UpdateCanonicalCoordinates`| DENY | DENY | **ALLOW** | DENY | Tree Asset Registry | `TreeMasterData` | MVP (CAP-ADM-06) | **PASS** |
+| 36 | `GV-14: RetireTree` | DENY | DENY | **ALLOW** | DENY | Tree Asset Registry | `Tree` | MVP (CAP-ADM-06) | **PASS** |
+| 37 | `GV-15: CreateTaskType` | DENY | DENY | **ALLOW** | DENY | Policy & Template | `TaskTypeCatalog` | MVP (CAP-ADM-07) | **PASS** |
+| 38 | `GV-16: ActivateTaskType` | DENY | DENY | **ALLOW** | DENY | Policy & Template | `TaskTypeCatalog` | MVP (CAP-ADM-07) | **PASS** |
+| 39 | `GV-17: DeactivateTaskType` | DENY | DENY | **ALLOW** | DENY | Policy & Template | `TaskTypeCatalog` | MVP (CAP-ADM-07) | **PASS** |
+| 40 | `GV-18: PublishProofPolicyVersion`| DENY | DENY | **ALLOW** | DENY | Policy & Template | `ProofPolicyMapping` | MVP (CAP-ADM-08) | **PASS** |
+| 41 | `GV-19: PublishChecklistTemplateVersion` | DENY | DENY | **ALLOW** | DENY | Policy & Template | `ChecklistTemplate` | MVP (CAP-ADM-09) | **PASS** |
+| 42 | `GV-20: ManageDynamicFindingsTemplate` | DENY | DENY | **DENY (MVP)** | DENY | Policy & Template | `FindingsSchema` | NEXT (CAP-ADM-10) | **PASS** |
+| 43 | `GV-21: UseBreakGlass` | DENY | DENY | **DENY (MVP)** | DENY | Governance Plane | `N/A — Inactive` | NEXT (CAP-ADM-11) | **PASS** |
+| 44 | `GV-22: ManagePlatformSystemConfig` | DENY | DENY | **DENY** | DENY | N/A | N/A | REJECTED (CAP-ADM-13) | **PASS** |
+| 45 | `RTM-01: ReportLocationException` | **ALLOW** | DENY | **DENY** | DENY | Work Management | `VerificationException` | MVP (BR-01b) | **PASS** |
+| 46 | `RTM-02: ReportIdentityException` | **ALLOW** | DENY | **DENY** | DENY | Work Management | `VerificationException` | MVP (BR-02b) | **PASS** |
+| 47 | `RTM-03: LookupTreeByQr` | **ALLOW** | **ALLOW** | DENY | DENY | Tree Asset Registry | `Tree, CareHistory` | MVP (BR-13) | **PASS** |
+| 48 | `RTM-04: ProjectCareHistory` | DENY | DENY | DENY | **DETERMINISTIC** | Tree Asset Registry | `CareHistory projection` | MVP (BR-11) | **PASS** |
+| 49 | `RTM-05: ResetCredentialSetup` | DENY | DENY | **ALLOW** | DENY | Identity & Access | `Account` | MVP (BR-ADM-04) | **PASS** |
 
 ---
 
 ## 7. Kiểm Toán Ma Trận Năng Lực Quản Trị (Capability Matrix Audit)
 
-Toàn bộ 13 năng lực quản trị nền tảng (`CAP-ADM-01..13`) được kiểm chứng phân loại chính xác:
+Phân định rạch ròi giữa **Số lượng Năng lực (13 Capabilities)** và **Số lượng Lệnh (Commands)**:
+- **9 Năng lực MVP:** `CAP-ADM-01` đến `CAP-ADM-09` (Bao gồm 19 lệnh quản trị MVP `GV-01..19` và `ResetCredentialSetup`).
+- **3 Năng lực NEXT:** `CAP-ADM-10` (Dynamic Findings), `CAP-ADM-11` (Break-Glass), `CAP-ADM-12` (Security Notifications).
+- **1 Năng lực BỊ BÁC BỎ (REJECTED):** `CAP-ADM-13` (Platform System Configuration).
 
 | Mã năng lực | Tên năng lực chuẩn tắc | Tác nhân | Ngữ cảnh sở hữu | Tài nguyên quản trị | Trạng thái phạm vi | Danh mục lệnh chuẩn tắc | Kết quả kiểm toán |
 | :--- | :--- | :--- | :--- | :--- | :---: | :--- | :---: |
-| **CAP-ADM-01** | User Provisioning | Platform Admin | Identity & Access | `User`, `Account` | **MVP** | `ProvisionUser` | **PASS** |
-| **CAP-ADM-02** | Role Assignment | Platform Admin | Identity & Access | `RoleAssignment` | **MVP** | `AssignRole` | **PASS** |
-| **CAP-ADM-03** | Account Lifecycle | Platform Admin | Identity & Access | `Account` | **MVP** | `SuspendAccount`, `ActivateAccount`, `DisableAccount` | **PASS** |
-| **CAP-ADM-04** | Account Recovery / Unlock | Platform Admin | Identity & Access | `Account` | **MVP** | `UnlockAccount`, `ResetCredentialSetup` | **PASS** |
+| **CAP-ADM-01** | User Provisioning | Platform Admin | Identity & Access Management | `User`, `Account` | **MVP** | `ProvisionUser` | **PASS** |
+| **CAP-ADM-02** | Role Assignment | Platform Admin | Identity & Access Management | `RoleAssignment` | **MVP** | `AssignRole` | **PASS** |
+| **CAP-ADM-03** | Account Lifecycle | Platform Admin | Identity & Access Management | `AccountStatus` | **MVP** | `SuspendAccount`, `ActivateAccount`, `DisableAccount` | **PASS** |
+| **CAP-ADM-04** | Account Recovery / Unlock | Platform Admin | Identity & Access Management | `Account` | **MVP** | `UnlockAccount`, `RecoverAccount`, `ResetCredentialSetup` | **PASS** |
 | **CAP-ADM-05** | Audit Log Inspection | Platform Admin | Audit & Compliance | `AuditEvent` | **MVP** | `ViewAuditLog`, `FilterAuditLog` | **PASS** |
-| **CAP-ADM-06** | Tree Master Data Governance | Platform Admin | Tree Asset Registry | `Tree` | **MVP** | `CreateTree`, `UpdateTreeMasterData`, `ReplaceTreeQrCode`, `UpdateCanonicalCoordinates`, `RetireTree` | **PASS** |
-| **CAP-ADM-07** | TaskType Catalog Governance | Platform Admin | Policy & Template | `TaskTypeCatalog` | **MVP** | `CreateTaskType`, `ActivateTaskType`, `DeactivateTaskType` | **PASS** |
-| **CAP-ADM-08** | Proof Policy Governance | Platform Admin | Policy & Template | `ProofPolicyMapping` | **MVP** | `PublishProofPolicyVersion` | **PASS** |
-| **CAP-ADM-09** | Checklist Template Governance | Platform Admin | Policy & Template | `ChecklistTemplate` | **MVP** | `PublishChecklistTemplateVersion` | **PASS** |
-| **CAP-ADM-10** | Findings Template Governance | Platform Admin | Policy & Template | `FindingsSchema` | **NEXT** | `ManageDynamicFindingsTemplate` | **PASS** |
+| **CAP-ADM-06** | Tree Master Data Governance | Platform Admin | Tree Asset Registry | `Tree`, `TreeMasterData`, `TreeIdentity` | **MVP** | `CreateTree`, `UpdateTreeMasterData`, `ReplaceTreeQrCode`, `UpdateCanonicalCoordinates`, `RetireTree` | **PASS** |
+| **CAP-ADM-07** | TaskType Catalog Governance | Platform Admin | Policy & Template Governance | `TaskTypeCatalog` | **MVP** | `CreateTaskType`, `ActivateTaskType`, `DeactivateTaskType` | **PASS** |
+| **CAP-ADM-08** | Proof Policy Governance | Platform Admin | Policy & Template Governance | `ProofPolicyMapping` | **MVP** | `PublishProofPolicyVersion` | **PASS** |
+| **CAP-ADM-09** | Checklist Template Governance | Platform Admin | Policy & Template Governance | `ChecklistTemplate` | **MVP** | `PublishChecklistTemplateVersion` | **PASS** |
+| **CAP-ADM-10** | Findings Template Governance | Platform Admin | Policy & Template Governance | `FindingsSchema` | **NEXT** | `ManageDynamicFindingsTemplate` | **PASS** |
 | **CAP-ADM-11** | Break-Glass Access | Platform Admin | Governance Plane | `N/A — Inactive` | **NEXT** | `UseBreakGlass` | **PASS** |
 | **CAP-ADM-12** | Security & Governance Notifications | System | Audit & Compliance | `AuditEvent` | **NEXT** | `N/A — Event Projection` | **PASS** |
 | **CAP-ADM-13** | Platform System Configuration | N/A | N/A | N/A | **REJECTED** | `ManagePlatformSystemConfig` (Bác bỏ) | **PASS** |
 
-> **Tổng kết:** Đúng 9 năng lực MVP, đúng 3 năng lực NEXT, đúng 1 năng lực REJECTED, hoàn toàn không có năng lực RESERVED. Thứ tự gán `CAP-ADM-10` và `CAP-ADM-11` đạt chuẩn 100%.
+---
+
+## 8. Kiểm Toán Ranh Giới Sở Hữu Miền (Domain Ownership Audit)
+
+Đối soát sao chép nguyên trạng phân loại và tài nguyên chuẩn tắc từ [DOMAIN.md](file:///d:/ki7/EXE/tree/docs/DOMAIN.md):
+
+### 8.1. Phân Loại Chuẩn Tắc 5 Ngữ Cảnh Giới Hạn (Canonical Context Classifications)
+1. **`Work Management`** $\to$ **`CORE DOMAIN`**
+2. **`Tree Asset Registry`** $\to$ **`SUPPORTING SUBDOMAIN`** *(Tuyệt đối không dùng tên sai lệch "Core Asset Context")*
+3. **`Policy & Template Governance`** $\to$ **`SUPPORTING SUBDOMAIN`** *(Tuyệt đối không đổi tên thành "Policy & Checklist Templates")*
+4. **`Audit & Compliance`** $\to$ **`SUPPORTING SUBDOMAIN`**
+5. **`Identity & Access Management (IAM)`** $\to$ **`GENERIC SUBDOMAIN`**
 
 ---
 
-## 8. Kiểm Toán Sở Hữu Ngữ Cảnh (Domain Ownership Audit)
-
-Hệ thống tuân thủ nghiêm ngặt nguyên tắc **Đơn vị sở hữu thẩm quyền duy nhất (Single-Context Ownership)**:
+### 8.2. Tài Nguyên Sở Hữu Thẩm Quyền Độc Quyền (Canonical Owned Resources)
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 1. WORK MANAGEMENT (Core Operational Context)                           │
-│    - Thực thể sở hữu: Task, SiteVerification, TaskEvidence, FieldIssue,  │
-│      ProofProgress, ReviewDecision                                      │
-│    - Đột biến thẩm quyền: CHỈ chấp nhận lệnh từ Staff & Manager          │
-│    - Tích hợp: Verification & Review được hợp nhất; không tách rời context│
-└─────────────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 2. TREE ASSET REGISTRY (Core Asset Context)                             │
-│    - Thực thể sở hữu: Tree, TreeLocation, CareHistory                   │
-│    - Đột biến thẩm quyền: Master Data do Admin; CareHistory do System   │
-│    - Tích hợp: Task tham chiếu Tree qua treeId bất biến                 │
-└─────────────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 3. IDENTITY & ACCESS MANAGEMENT (IAM Context)                           │
-│    - Thực thể sở hữu: User, Account, RoleAssignment, Session            │
-│    - Đột biến thẩm quyền: Platform Administrator                        │
-│    - Ranh giới: Không trực tiếp sửa đổi TaskStatus khi khóa tài khoản   │
-└─────────────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 4. POLICY & CHECKLIST TEMPLATES (Governance Support Context)            │
-│    - Thực thể sở hữu: TaskTypeCatalog, ProofPolicyMapping,              │
-│      ChecklistTemplate, FindingsSchema                                  │
-│    - Đột biến thẩm quyền: Platform Administrator                        │
-│    - Nguyên tắc: Versioned snapshot; không áp dụng hồi tố task đang chạy│
-└─────────────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────────────┐
-│ 5. AUDIT & COMPLIANCE (System-Wide Support Context)                     │
-│    - Thực thể sở hữu: AuditEvent                                        │
-│    - Đột biến thẩm quyền: Ghi tự động (Append-Only) bởi System          │
-│    - Ranh giới: Bất biến; không actor nào được sửa hoặc xóa log         │
-└─────────────────────────────────────────────────────────────────────────┘
+Identity & Access Management (GENERIC SUBDOMAIN)
+ ├── User (Root Aggregate)
+ ├── Account (Entity)
+ ├── RoleAssignment (Entity)
+ └── AccountStatus (Enum: INVITED, ACTIVE, SUSPENDED, DISABLED)
+ [Lưu ý: "Session" KHÔNG PHẢI là tài nguyên nghiệp vụ được sở hữu thẩm quyền trong DOMAIN.md]
+
+Tree Asset Registry (SUPPORTING SUBDOMAIN)
+ ├── Tree (Root Aggregate)
+ ├── TreeMasterData (Entity)
+ ├── TreeIdentity (Value Object: treeId immutable, qrCode unique/mutable)
+ └── CareHistory projection (Derived Read-Model Projection từ các task COMPLETED)
+
+Work Management (CORE DOMAIN)
+ ├── Task (Root Aggregate - 7 states)
+ ├── TaskAssignment (Value Object)
+ ├── TaskLifecycle (Value Object)
+ ├── SiteVerification (Value Object)
+ ├── VerificationException (Value Object: LOCATION_EXCEPTION, IDENTITY_EXCEPTION)
+ ├── FieldIssue (Entity)
+ ├── TaskEvidence (Value Object)
+ ├── EvidenceAttempt (Entity - Multi-version submission attempts)
+ ├── StructuredFindings (Value Object - Khám bệnh cây có cấu trúc)
+ ├── ChecklistSnapshot (Value Object - Bản chụp snapshot biểu mẫu kiểm tra)
+ ├── ReviewDecision (Value Object - 4 kết luận thẩm định)
+ ├── ReworkRequest (Value Object)
+ └── Cancellation (Value Object)
+ [Lưu ý: "ProofProgress" là chiều trạng thái độc lập (State Dimension), KHÔNG PHẢI Entity miền độc lập]
+
+Policy & Template Governance (SUPPORTING SUBDOMAIN)
+ ├── TaskTypeCatalog (Audit-only Resource)
+ ├── ProofPolicyMapping (Versioned Policy Resource)
+ ├── ChecklistTemplate (Versioned Resource)
+ └── FindingsSchema (Policy Resource - Cố định trong MVP, Dynamic là NEXT)
+
+Audit & Compliance (SUPPORTING SUBDOMAIN)
+ └── AuditEvent (Domain Event - Append-only Record / Bất biến ngữ nghĩa)
 ```
 
-> **Kiểm chứng:** Không có hiện tượng một Bounded Context trực tiếp làm đột biến bảng dữ liệu hoặc trạng thái thẩm quyền của Bounded Context khác. Toàn bộ giao tiếp đều qua sự kiện miền hoặc tham chiếu khóa ngoại bất biến (`treeId`, `taskId`, `userId`).
+---
+
+### 8.3. Mô Hình Dẫn Xuất & Quan Ngại Kỹ Thuật (Derived & Technical Concerns)
+- **`Operational Notifications`:** Là mô hình đọc dẫn xuất phi thẩm quyền (`Derived Read Model / Projection`), **tuyệt đối KHÔNG PHẢI là Bounded Context độc lập** (`Authoritative Owning Context: N/A`).
+- **`Offline / Synchronization`:** Là giải pháp hạ tầng kỹ thuật lưu trữ ngoại tuyến (`Durable Outbox`, `Client Sync Transport`), **không phải Bounded Context nghiệp vụ**.
+
+---
+
+### 8.4. Tuyên Bố Bảo Lưu Kiến Trúc Tích Hợp Kỹ Thuật (Architecture Deferral)
+
+> **CƠ CHẾ TÍCH HỢP KỸ THUẬT: ĐƯỢC BẢO LƯU CHO KIẾN TRÚC KỸ THUẬT & ADR TẠI PHASE 11**
+> *(TECHNICAL INTEGRATION MECHANISM: DEFERRED TO PHASE 11 TECHNICAL ARCHITECTURE / ADR)*
+>
+> - **Ranh giới nghiệp vụ chuẩn tắc:** Một ngữ cảnh tuyệt đối **không thể trực tiếp làm đột biến** trạng thái nghiệp vụ thẩm quyền do ngữ cảnh khác sở hữu.
+> - **Bảo tồn quyền sở hữu:** Mọi trao đổi thông tin hoặc chuyển giao (handoff) giữa các ngữ cảnh bắt buộc phải tôn trọng nguyên tắc sở hữu thẩm quyền độc quyền (`Single Authoritative Ownership`).
+> - **Không áp đặt tô-pô kỹ thuật:** Kiểm toán Phase 9 chỉ xác nhận ranh giới sở hữu và luồng thẩm quyền nghiệp vụ; **tuyệt đối KHÔNG áp đặt** các giải pháp kỹ thuật cụ thể như khóa ngoại (`Foreign Keys`), bus sự kiện (`Event Bus`), hệ thống chuyển tin nhắn (`Message Broker`), chia tách hay dùng chung cơ sở dữ liệu (`Shared DB vs Separate DB`). Toàn bộ các quyết định này được bảo lưu nguyên trạng cho Phase 11 ADR.
 
 ---
 
@@ -300,10 +436,10 @@ Toàn bộ 8 quy tắc phân tách trách nhiệm cốt lõi đã được kiể
 | **ADM-SOD-01**| Cấm Tự Nâng Quyền | Platform Admin không được tự thay đổi vai trò hoặc cấp thêm quyền cho chính tài khoản của mình. | Lệnh `AssignRole` kiểm tra `targetUserId != actor.userId`. | **PASS** |
 | **ADM-SOD-02**| Bảo Toàn Tác Giả Lịch Sử| Việc thay đổi vai trò hoặc khóa tài khoản không được phép viết lại quyền tác giả của các bằng chứng/biên bản cũ. | Các bản ghi lịch sử gắn chặt với `actorId` tại thời điểm tạo; không cập nhật hồi tố. | **PASS** |
 | **ADM-SOD-03**| Tính Bất Biến Nhật Ký | Không một tác nhân con người nào (kể cả Admin) được sửa hoặc xóa nhật ký kiểm toán `AuditEvent`. | Bảng `AuditEvent` là Append-Only; không phơi bày API Update/Delete. | **PASS** |
-| **ADM-SOD-04**| Phân Lập Quản Trị & Vận Hành| Năng lực quản trị nền tảng không đồng nghĩa với quyền can thiệp vào tác vụ vận hành thực địa. | Admin bị DENY 100% trên toàn bộ các lệnh tác nghiệp Task (`CMD-OP-01..17`). | **PASS** |
-| **ADM-SOD-05**| Phân Lập Vận Hành & Quản Trị| Quyền Quản lý vận hành không đồng nghĩa với quyền thay đổi cấu hình nền tảng hoặc dữ liệu gốc. | Manager bị DENY 100% trên các lệnh quản trị nền tảng (`CMD-ADM-01..19`). | **PASS** |
+| **ADM-SOD-04**| Phân Lập Quản Trị & Vận Hành| Năng lực quản trị nền tảng không đồng nghĩa với quyền can thiệp vào tác vụ vận hành thực địa. | Admin bị DENY 100% trên toàn bộ các lệnh tác nghiệp Task (`OP-03..15`, `OP-17..21`). | **PASS** |
+| **ADM-SOD-05**| Phân Lập Vận Hành & Quản Trị| Quyền Quản lý vận hành không đồng nghĩa với quyền thay đổi cấu hình nền tảng hoặc dữ liệu gốc. | Manager bị DENY 100% trên các lệnh quản trị nền tảng (`GV-01..19`). | **PASS** |
 | **ADM-SOD-06**| Cấm Hệ Thống Tự Cấp Quyền | Tác nhân kỹ thuật System không thể tự động thăng cấp hoặc gán quyền Admin cho bất kỳ tài khoản nào. | `System` không sở hữu endpoint cấp quyền; chỉ con người Admin mới gọi `AssignRole`. | **PASS** |
-| **ADM-SOD-07**| Khóa Chặt Cứu Hộ Khẩn Cấp | Quyền cứu hộ khẩn cấp (`Break-Glass`) không phải là quyền mặc định hay thường trực trong MVP. | `CAP-ADM-11` bị khóa hoàn toàn tại MVP; không có cơ chế bypass quyền ngầm. | **PASS** |
+| **ADM-SOD-07**| Khóa Chặt Cứu Hộ Khẩn Cấp | Quyền cứu hộ khẩn cấp (`Break-Glass`) không phải là quyền mặc định hay thường trực trong MVP. | `CAP-ADM-11` / `GV-21` bị khóa hoàn toàn tại MVP; không có cơ chế bypass quyền ngầm. | **PASS** |
 
 ### Kiểm tra đặc thù: Thăng chức nhân viên thành Quản lý
 - **Tình huống:** Nhân viên A thực hiện nhiệm vụ $T$. Sau đó A được thăng chức thành Operations Manager.
@@ -316,8 +452,8 @@ Toàn bộ 8 quy tắc phân tách trách nhiệm cốt lõi đã được kiể
 
 Hệ thống bảo vệ tính toàn vẹn lịch sử trước các thao tác cập nhật quản trị nền tảng:
 1. **Dữ liệu Cây gốc (Tree Master Data):**
-   - Thay đổi tem QR (`ReplaceTreeQrCode`): Cấp mã QR mới cho cây, nhưng **không viết lại** lịch sử quét mã QR cũ trong các nhiệm vụ đã hoàn thành.
-   - Cập nhật tọa độ chuẩn trắc địa (`UpdateCanonicalCoordinates`): Cập nhật tọa độ tham chiếu mới, nhưng **không thay đổi** các tọa độ GPS thực địa mà nhân viên đã đo trong quá khứ.
+   - Thay đổi tem QR (`ReplaceTreeQrCode` / `GV-12`): Cấp mã QR mới cho cây, nhưng **không viết lại** lịch sử quét mã QR cũ trong các nhiệm vụ đã hoàn thành.
+   - Cập nhật tọa độ chuẩn trắc địa (`UpdateCanonicalCoordinates` / `GV-13`): Cập nhật tọa độ tham chiếu mới, nhưng **không thay đổi** các tọa độ GPS thực địa mà nhân viên đã đo trong quá khứ.
    - Định danh `treeId`: Bất biến vĩnh viễn từ lúc gieo trồng đến khi thanh lý (`RETIRED`).
 2. **Lịch sử Chăm sóc (CareHistory):**
    - Chỉ được sinh ra khi nhiệm vụ đạt trạng thái đóng thành công `COMPLETED`.
@@ -403,16 +539,16 @@ Kiểm toán xác nhận Phase 9 hoạt động ở chế độ kiểm toán đ�
 
 ---
 
-## 15. Bảng Bằng Chứng Các Cổng Kiểm Soát Phase 9 (P9-01..P9-08 Evidence Table)
+## 15. Bảng Bằng Chứng Các Cổng Kiểm Soát Phase 9 (P9-01..P9-08 Re-Evaluation)
 
 | Cổng kiểm soát | Câu hỏi kiểm toán chuẩn tắc | Phương pháp xác minh | Bằng chứng kiểm toán cụ thể | Mâu thuẫn chặn | Kết quả |
 | :--- | :--- | :--- | :--- | :---: | :---: |
-| **P9-01** | Có hành động nào không có tác nhân sở hữu rõ ràng? | Rà soát ma trận quyền lệnh 40 thao tác | 100% 40 lệnh đều có tác nhân sở hữu đơn nhất (Staff, Manager, Admin, System). 0 lệnh vô chủ, 0 lệnh TBD, 0 lệnh tranh chấp thẩm quyền. | 0 | **PASS** |
-| **P9-02** | Admin có vô tình trở thành superuser nghiệp vụ không? | Đối soát ranh giới phân quyền tại `ACCESS-CONTROL.md` và Biểu đồ 07 | Platform Admin bị **DENY 100%** trên toàn bộ các lệnh tác nghiệp Task (`CMD-OP-01..17`). Khả năng vượt quyền khẩn cấp (`Break-Glass`) bị khóa chặt ở nhóm NEXT. | 0 | **PASS** |
-| **P9-03** | Operations Manager có bị tước mất quyền vận hành cần thiết không? | Kiểm tra quyền hạn tại 7 trạng thái của Task | Manager toàn quyền: Tạo việc, Phân công, Phân công lại (`PENDING`/`BLOCKED`), Giải tỏa sự cố 3 lối thoát, 4 kết luận duyệt tại `WAITING_REVIEW`, và Hủy task tại mọi trạng thái nonterminal. | 0 | **PASS** |
-| **P9-04** | Luồng làm việc của Field Staff có bị phức tạp hóa bởi Admin không? | Kiểm tra sơ đồ swimlane `proposed-02` và luồng `WF-01..09` | Luồng hiện trường chuẩn tắc chỉ tương tác giữa Manager, Staff và System. Hoàn toàn không có bước duyệt hay phụ thuộc đồng bộ nào từ Admin. | 0 | **PASS** |
-| **P9-05** | Có điều khoản nào vi phạm nguyên tắc phân tách trách nhiệm (SoD) không? | Rà soát 8 quy tắc SoD và trường hợp thăng chức nhân viên | SoD-01 đến SoD-07 được thực thi nghiêm ngặt; nhân viên A thi công task sau khi thăng chức lên Manager bị cấm 100% duyệt task do chính mình thi công (`DR-HARD-02`). | 0 | **PASS** |
-| **P9-06** | Lịch sử kiểm toán và quyền tác giả có nguy cơ bị ghi đè không? | Rà soát bất biến dữ liệu tại `DOMAIN.md` và `WORKFLOWS.md` | Dữ liệu quét QR, tọa độ GPS, biên bản nghiệm thu, CareHistory và AuditEvent là Append-Only; Admin đổi tem QR hay đổi tọa độ chuẩn không làm biến đổi lịch sử cũ. | 0 | **PASS** |
+| **P9-01** | Có hành động nào không có tác nhân sở hữu rõ ràng? | Rà soát danh mục phân quyền đầy đủ: 22 lệnh `OP-01..22`, 22 hành vi `GV-01..22` và 5 lệnh RTM (Tổng hợp 49 lệnh độc nhất) | 100% 49 lệnh đều có tác nhân sở hữu thẩm quyền đơn nhất (Staff, Manager, Admin, System), ngữ cảnh sở hữu và trạng thái phạm vi xác định. 0 lệnh vô chủ, 0 lệnh TBD, 0 lệnh tranh chấp thẩm quyền. | 0 | **PASS** |
+| **P9-02** | Admin có vô tình trở thành superuser nghiệp vụ không? | Đối soát ranh giới phân quyền tại `ACCESS-CONTROL.md`, Quyết định 07 và Biểu đồ 07 | Platform Admin bị **DENY 100%** trên toàn bộ các lệnh tác nghiệp Task (`OP-03..15`, `OP-17..21`). Khả năng vượt quyền khẩn cấp (`Break-Glass` / `GV-21` / `CAP-ADM-11`) bị khóa chặt ở nhóm NEXT. | 0 | **PASS** |
+| **P9-03** | Operations Manager có bị tước mất quyền vận hành cần thiết không? | Kiểm tra quyền hạn tại 7 trạng thái của Task và toàn bộ các lệnh quản lý | Manager bảo lưu trọn vẹn quyền: `ViewAssignedTask` (ALLOW), `ViewOperationalTask`, `CreateTask`, `AssignTask`, `ReassignTask` (`PENDING`/`BLOCKED`), `ResumeBlockedTask`, `CancelTask` (mọi trạng thái nonterminal), `ViewReviewQueue`, `ReviewTask`, 4 kết luận duyệt tại `WAITING_REVIEW`, và `ViewCareHistory` (ALLOW). `AUTHORIZED_OPERATIONAL_SCOPE` duy trì tính trừu tượng. | 0 | **PASS** |
+| **P9-04** | Luồng làm việc của Field Staff có bị phức tạp hóa bởi Admin không? | Kiểm tra sơ đồ swimlane `proposed-02` và luồng `WF-01..09` | Luồng hiện trường chuẩn tắc chỉ tương tác giữa Manager, Staff và System. Hoàn toàn không có bước duyệt hay phụ thuộc đồng bộ nào từ Admin trong quy trình tác nghiệp. | 0 | **PASS** |
+| **P9-05** | Có điều khoản nào vi phạm nguyên tắc phân tách trách nhiệm (SoD) không? | Rà soát 8 quy tắc SoD và trường hợp thăng chức nhân viên | SoD-01 đến SoD-07 được thực thi nghiêm ngặt; nhân viên A thi công task sau khi thăng chức lên Manager bị cấm 100% duyệt task do chính mình thi công (`DR-HARD-02`, `BR-ADM-02b`). | 0 | **PASS** |
+| **P9-06** | Lịch sử kiểm toán và quyền tác giả có nguy cơ bị ghi đè không? | Rà soát bất biến dữ liệu tại `DOMAIN.md` và `WORKFLOWS.md` | Dữ liệu quét QR, tọa độ GPS, biên bản nghiệm thu, CareHistory và AuditEvent là Append-Only; Admin đổi tem QR (`ReplaceTreeQrCode`) hay đổi tọa độ chuẩn không làm biến đổi lịch sử cũ. | 0 | **PASS** |
 | **P9-07** | Ngữ nghĩa vòng đời Task chuẩn tắc có được bảo tồn nguyên vẹn không? | Đối soát máy trạng thái 7 trạng thái, 3 ProofProfiles, Offline | Đúng 7 trạng thái chuẩn tắc; đúng 3 Hồ sơ Bằng chứng; Structured Findings bắt buộc trong MVP; nộp offline giữ `TaskStatus = IN_PROGRESS`; không sinh trạng thái rác. | 0 | **PASS** |
 | **P9-08** | Biểu đồ có phản ánh đúng tài liệu chuẩn tắc hay tự sáng tác nghiệp vụ? | Đối soát chéo 16 biểu đồ với 5 tài liệu chuẩn tắc | Toàn bộ biểu đồ active đều là góc nhìn dẫn xuất bám sát 100% văn bản chuẩn tắc; biểu đồ lịch sử và As-Is mang banner phân loại rõ ràng; không tự sinh nghiệp vụ mới. | 0 | **PASS** |
 
@@ -434,7 +570,7 @@ TỔNG SỐ SAI LỆCH BIỂU ĐỒ SO VỚI VĂN BẢN CHUẨN TẮC: 0
 
 ## 17. Đánh Giá Mức Độ Sẵn Sàng Cho Phase 10 (Phase-10 Readiness Assessment)
 
-Bảng đối soát 10 chỉ số sẵn sàng trước khi đóng băng toàn diện đường cơ sở nghiệp vụ tại Phase 10:
+Bảng đối soát 10 chỉ số sẵn sàng được tính toán lại trực tiếp từ bằng chứng đã hiệu chỉnh:
 
 | Chỉ số sẵn sàng (Readiness Metric) | Ngưỡng yêu cầu | Kết quả thực tế đạt được | Đánh giá trạng thái |
 | :--- | :---: | :---: | :---: |
@@ -471,13 +607,16 @@ Các khoảng trống kỹ thuật trong mã nguồn ứng dụng hiện tại (
 ## KẾT LUẬN & TRẠNG THÁI CUỐI CÙNG (FINAL STATUS)
 
 ```text
-PHASE 9 PASS
+PHASE 9 PASS — AUDIT EVIDENCE VERIFIED
 — ZERO UNOWNED BUSINESS ACTIONS
+— AUTHORIZATION INVENTORY MATCHES FROZEN PHASE 4
+— DOMAIN OWNERSHIP MATCHES CANONICAL DOMAIN
 — ADMIN GOVERNANCE BOUNDARY CONSISTENT
 — OPERATIONAL AUTHORITY PRESERVED
 — SEPARATION OF DUTIES CONSISTENT
 — HISTORICAL INTEGRITY PRESERVED
 — CANONICAL TASK SEMANTICS CONSISTENT
 — DIAGRAMS MATCH CANONICAL BUSINESS DOCS
+— TECHNICAL INTEGRATION REMAINS DEFERRED
 — READY FOR PHASE 10 BUSINESS BASELINE FREEZE
 ```
