@@ -108,7 +108,7 @@
       </div>
       <h1>Kiến trúc Thông tin theo Vai trò (Role Information Architecture)</h1>
       <p class="desc">
-        Cấu trúc không gian làm việc và điều hướng cho 3 vai trò: Nhân viên (Field Staff Mobile App), Quản lý (Operations Manager), và Quản trị Nền tảng (Platform Administrator Workspace — Kênh phân phối hoãn lại cho Phase 11 ADR).
+        Cấu trúc không gian làm việc và điều hướng cho 3 vai trò: Nhân viên (Field Staff Mobile App), Quản lý (Operations Manager), và Quản trị Nền tảng (Platform Administrator Workspace — Dedicated Admin Web đã được chấp thuận tại ADR 0005).
       </p>
 
       <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ia-title ia-desc">
@@ -311,9 +311,9 @@
           <text x="20" y="34" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
             Không gian Quản trị Nền tảng
           </text>
-          <rect id="admin-channel-box" x="20" y="39" width="300" height="28" rx="3" fill="rgba(217,119,6,0.12)" />
-          <text data-owner-id="admin-channel-box" x="30" y="57" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#D97706">
-            KÊNH PHÂN PHỐI: TBD — PHASE 11 ADR
+          <rect id="admin-channel-box" x="20" y="39" width="310" height="28" rx="3" fill="rgba(37,99,235,0.12)" />
+          <text data-owner-id="admin-channel-box" x="30" y="57" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#2563EB">
+            KÊNH PHÂN PHỐI: DEDICATED ADMIN WEB (ADR 0005)
           </text>
           <line x1="20" y1="72" x2="330" y2="72" stroke="#E2E0D8" stroke-width="1" />
 
@@ -391,7 +391,7 @@
             • Biểu đồ này mô tả Cấu trúc Thông tin Khái niệm (Conceptual Product IA) của 3 vai trò người dùng trong hệ thống NOVYX.
           </text>
           <text x="20" y="64" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
-            • Tuyệt đối KHÔNG tự ý ấn định hình thái ứng dụng của Admin là "Web Console" hay "Mobile App". Quyết định kênh phân phối và cấu trúc gói triển khai được hoãn lại cho Phase 11 ADR.
+            • Kênh phân phối cho Platform Admin đã được chấp thuận chính thức tại ADR 0005 là Cổng Quản trị Web độc lập (apps/admin-web). Server API vẫn là ranh giới ủy quyền tối cao.
           </text>
         </g>
       </svg>

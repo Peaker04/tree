@@ -27,6 +27,8 @@
         --color-rule-solid: #e2e0d8;
         --color-accent: #166534;
         --color-lime: #84cc16;
+        --color-amber: #d97706;
+        --color-blue: #2563eb;
         --color-danger: #dc2626;
         --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
         --font-serif: 'Noto Serif', Georgia, serif;
@@ -45,24 +47,25 @@
       }
 
       .frame {
-        max-width: 1140px;
+        max-width: 1240px;
         width: 100%;
         margin: 0 auto;
       }
       .badge-container {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 12px;
         margin-bottom: 0.6rem;
       }
-      .badge-derived {
+      .badge-accepted {
         font-family: var(--font-mono);
         font-size: 0.72rem;
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #fff;
-        background: #166534;
+        background: var(--color-accent);
         padding: 4px 10px;
         border-radius: 4px;
         display: inline-block;
@@ -102,22 +105,25 @@
   <body>
     <div class="frame">
       <div class="badge-container">
-        <span class="badge-derived">STATUS: TECHNICAL DECISION DEFERRED TO PHASE 11 ADR</span>
-        <span class="source-ref">SOURCE: AGENTS.md &amp; docs/ARCHITECTURE.md · ADMIN DEPLOYMENT DEPENDENCY TBD — PHASE 11 ADR</span>
+        <span class="badge-accepted">STATUS: ACCEPTED ARCHITECTURE DEPENDENCY MAP — DERIVED VIEW</span>
+        <span class="source-ref">SOURCE: docs/ARCHITECTURE.md, AGENTS.md &amp; ADR 0001..0013 | DERIVED VIEW — NOT SOURCE OF TRUTH</span>
       </div>
       <h1>Bản đồ Phụ thuộc Gói &amp; Quy tắc Ranh giới (Dependency Map)</h1>
       <p class="desc">
-        Ranh giới thẩm quyền giữa các Workspace: Chiều phụ thuộc cho phép và các chiều nhập phụ thuộc bị nghiêm cấm
-        trong monorepo.
+        Ranh giới thẩm quyền giữa các Workspace: Chiều phụ thuộc được phép giữa các ứng dụng và gói dùng chung,
+        cùng các hướng nhập phụ thuộc bị nghiêm cấm trong toàn bộ Monorepo.
       </p>
 
-      <svg viewBox="0 0 1060 650" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dep-title dep-desc">
+      <svg viewBox="0 0 1200 980" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dep-title dep-desc">
         <title id="dep-title">NOVYX Architecture Dependency Map</title>
-        <desc id="dep-desc">Sơ đồ phụ thuộc giữa các package và ranh giới cấm trong monorepo.</desc>
+        <desc id="dep-desc">Sơ đồ phụ thuộc giữa các package và ranh giới cấm trong monorepo theo các quyết định kiến trúc đã chấp thuận.</desc>
 
         <defs>
           <marker id="arr-allowed" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#166534" />
+          </marker>
+          <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2563EB" />
           </marker>
           <marker id="arr-prohibited" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#DC2626" />
@@ -126,182 +132,351 @@
 
         <rect width="100%" height="100%" fill="#FBFBF9" />
 
-        <!-- TOP: APPS/MOBILE -->
-        <g transform="translate(370, 40)">
-          <rect x="0" y="0" width="320" height="115" rx="8" fill="#FFF" stroke="#166534" stroke-width="2" />
-          <rect x="20" y="-12" width="150" height="24" rx="4" fill="#166534" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
-            APPLICATION
+        <!-- ========================================== -->
+        <!-- TOP: APPLICATION WORKSPACES (apps/*)       -->
+        <!-- ========================================== -->
+
+        <!-- App 1: apps/mobile -->
+        <g transform="translate(30, 40)">
+          <rect x="0" y="0" width="350" height="150" rx="8" fill="#FFF" stroke="#166534" stroke-width="2" />
+          <rect x="15" y="-12" width="160" height="24" rx="4" fill="#166534" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#FFF">
+            APPLICATION (EXISTING)
           </text>
 
-          <text x="24" y="32" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+          <text x="20" y="32" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
             apps/mobile
           </text>
-          <text x="24" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Expo SDK 57 React Native App
+          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Expo SDK 57 React Native App (Field Staff &amp; Manager)
           </text>
-          <line x1="24" y1="62" x2="296" y2="62" stroke="#E2E0D8" />
-          <text x="24" y="82" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            Presentation, Hooks, Services
+          <line x1="20" y1="62" x2="330" y2="62" stroke="#E2E0D8" />
+          <text x="20" y="82" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Screens, Navigation, ViewModels, Device Hooks
           </text>
-          <text x="24" y="100" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-            Chỉ import Public API của packages
+          <text x="20" y="100" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • expo-sqlite + Outbox Queue (Offline Resilience)
+          </text>
+          <text x="20" y="126" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#166534">
+            → Import: contracts, ui, config
           </text>
         </g>
 
-        <!-- MIDDLE: SHARED PACKAGES -->
-        <!-- Pkg 1: contracts -->
-        <g transform="translate(45, 240)">
-          <rect x="0" y="0" width="280" height="135" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <rect x="20" y="-12" width="160" height="24" rx="4" fill="#112116" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16">
-            SHARED PACKAGES
+        <!-- App 2: apps/admin-web -->
+        <g transform="translate(425, 40)">
+          <rect x="0" y="0" width="350" height="150" rx="8" fill="#FFF" stroke="#2563EB" stroke-width="2" />
+          <rect x="15" y="-12" width="310" height="24" rx="4" fill="#D97706" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            TARGET COMPONENT — NOT YET IMPLEMENTED
+          </text>
+
+          <text x="20" y="32" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            apps/admin-web
+          </text>
+          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Dedicated Admin Web Console (Platform Administrator)
+          </text>
+          <line x1="20" y1="62" x2="330" y2="62" stroke="#E2E0D8" />
+          <text x="20" y="82" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Account Governance, Policy &amp; Templates, Audit Log
+          </text>
+          <text x="20" y="100" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Không gian làm việc riêng biệt (ADR 0005)
+          </text>
+          <text x="20" y="126" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#2563EB">
+            → Import: contracts, config, ui (web compatible)
+          </text>
+        </g>
+
+        <!-- App 3: apps/api -->
+        <g transform="translate(820, 40)">
+          <rect x="0" y="0" width="350" height="150" rx="8" fill="#FFF" stroke="#166534" stroke-width="2" />
+          <rect x="15" y="-12" width="310" height="24" rx="4" fill="#D97706" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#FFF">
+            TARGET COMPONENT — NOT YET IMPLEMENTED
+          </text>
+
+          <text x="20" y="32" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            apps/api
+          </text>
+          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Authoritative Modular Monolith (Node.js / TypeScript)
+          </text>
+          <line x1="20" y1="62" x2="330" y2="62" stroke="#E2E0D8" />
+          <text x="20" y="82" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Ranh giới ủy quyền tối cao &amp; Toàn vẹn nghiệp vụ
+          </text>
+          <text x="20" y="100" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • 5 Bounded Contexts nội bộ (Clean Architecture)
+          </text>
+          <text x="20" y="126" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#166534">
+            → Import: contracts, config (CẤM: packages/ui)
+          </text>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- MIDDLE: SHARED PACKAGES (packages/*)       -->
+        <!-- ========================================== -->
+
+        <!-- Pkg 1: packages/contracts -->
+        <g transform="translate(30, 270)">
+          <rect x="0" y="0" width="350" height="175" rx="8" fill="#FFF" stroke="#86EFAC" stroke-width="2" />
+          <rect x="15" y="-12" width="180" height="24" rx="4" fill="#166534" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#FFF">
+            SHARED CONTRACTS
           </text>
 
           <text x="20" y="32" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
             packages/contracts
           </text>
-          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            API Envelopes, DTOs &amp; Error Codes
+          <text x="20" y="50" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Contract-First REST v1 &amp; Zod Schema Validation
           </text>
-          <line x1="20" y1="62" x2="260" y2="62" stroke="#E2E0D8" />
-          <text x="20" y="82" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • ApiSuccess, ApiFailure, ApiList
+          <line x1="20" y1="60" x2="330" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="80" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Phong bì chuẩn: <tspan font-family="'Geist Mono', monospace">ApiSuccess, ApiFailure, ApiList</tspan>
           </text>
-          <text x="20" y="100" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • TaskDto, TreeDto, StaffDto
+          <text x="20" y="98" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • DTOs nghiệp vụ: Task, Tree, User, Audit, Policy
           </text>
-          <text x="20" y="120" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-            Zero runtime dependencies
+          <text x="20" y="116" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Mã lỗi chuẩn hóa &amp; Zod schemas (ADR 0010)
+          </text>
+          <text x="20" y="134" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Suy diễn kiểu TypeScript tự động qua <tspan font-family="'Geist Mono', monospace">z.infer&lt;T&gt;</tspan>
+          </text>
+          <text x="20" y="156" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#166534">
+            KHÔNG phụ thuộc vào apps/* hay hạ tầng DB
           </text>
         </g>
 
-        <!-- Pkg 2: config -->
-        <g transform="translate(390, 240)">
-          <rect x="0" y="0" width="280" height="135" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <rect x="20" y="-12" width="160" height="24" rx="4" fill="#112116" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16">
-            SHARED PACKAGES
+        <!-- Pkg 2: packages/config -->
+        <g transform="translate(425, 270)">
+          <rect x="0" y="0" width="350" height="175" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="15" y="-12" width="160" height="24" rx="4" fill="#112116" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#84CC16">
+            SHARED CONFIG
           </text>
 
           <text x="20" y="32" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
             packages/config
           </text>
-          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Environment Validation
+          <text x="20" y="50" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Xác thực Môi trường (Environment Validation)
           </text>
-          <line x1="20" y1="62" x2="260" y2="62" stroke="#E2E0D8" />
-          <text x="20" y="82" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • EXPO_PUBLIC_APP_ENV
+          <line x1="20" y1="60" x2="330" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="80" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Helpers kiểm tra biến môi trường nghiêm ngặt
           </text>
-          <text x="20" y="100" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • EXPO_PUBLIC_API_BASE_URL
+          <text x="20" y="98" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • API URL, App Environment, Feature Flags
           </text>
-          <text x="20" y="120" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-            Zod environment validation
+          <text x="20" y="116" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Ngăn chặn chạy ứng dụng khi thiếu biến bắt buộc
+          </text>
+          <text x="20" y="156" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#166534">
+            Zero app code dependencies
           </text>
         </g>
 
-        <!-- Pkg 3: ui -->
-        <g transform="translate(735, 240)">
-          <rect x="0" y="0" width="280" height="135" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <rect x="20" y="-12" width="160" height="24" rx="4" fill="#112116" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16">
-            SHARED PACKAGES
+        <!-- Pkg 3: packages/ui -->
+        <g transform="translate(820, 270)">
+          <rect x="0" y="0" width="350" height="175" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="15" y="-12" width="160" height="24" rx="4" fill="#112116" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#84CC16">
+            SHARED DESIGN
           </text>
 
           <text x="20" y="32" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
             packages/ui
           </text>
-          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Shared Design Tokens
+          <text x="20" y="50" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Shared Design Tokens (Hệ quy chuẩn Thiết kế)
           </text>
-          <line x1="20" y1="62" x2="260" y2="62" stroke="#E2E0D8" />
-          <text x="20" y="82" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • colors, spacing, radius tokens
+          <line x1="20" y1="60" x2="330" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="80" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Colors, Spacing, Radius Tokens
           </text>
-          <text x="20" y="100" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • typography tokens (400, 600, 700)
+          <text x="20" y="98" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Typography tokens (Weights 400, 600, 700)
           </text>
-          <text x="20" y="120" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-            Tuân thủ DESIGN.md
+          <text x="20" y="116" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            • Dành riêng cho Client Surfaces (Mobile, Admin Web)
+          </text>
+          <text x="20" y="156" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#DC2626">
+            CẤM apps/api IMPORT packages/ui
           </text>
         </g>
 
-        <!-- BOTTOM: EXTERNAL SUBMODULE (HERMES AGENT) -->
-        <g transform="translate(370, 470)">
-          <rect x="0" y="0" width="320" height="120" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.5" />
-          <rect x="20" y="-12" width="180" height="24" rx="4" fill="#68756B" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
-            EXTERNAL SUBMODULE
+        <!-- ========================================== -->
+        <!-- BOTTOM: ARCHITECTURAL BOUNDARY DETAILS    -->
+        <!-- ========================================== -->
+
+        <!-- Bottom Left: apps/api Internal Architecture Detail -->
+        <g transform="translate(30, 490)">
+          <rect x="0" y="0" width="745" height="270" rx="8" fill="#FFF" stroke="#166534" stroke-width="1.5" />
+          <rect x="15" y="-12" width="480" height="24" rx="4" fill="#166534" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#FFF">
+            apps/api NỘI BỘ: CLEAN ARCHITECTURE &amp; 5 BOUNDED CONTEXT MODULES
+          </text>
+
+          <g transform="translate(20, 25)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              Nguyên tắc Phân tầng Nội bộ &amp; Ranh giới Độc lập Mô-đun (ADR 0012 &amp; 0013)
+            </text>
+            <text x="0" y="32" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              • Hướng phụ thuộc Clean: <tspan font-weight="700" fill="#166534">Presentation/HTTP → Application → Domain Core</tspan>. Infrastructure cài đặt các Ports do Application/Domain định nghĩa.
+            </text>
+            <text x="0" y="50" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626" font-weight="600">
+              • CẤM Domain phụ thuộc vào Infrastructure, HTTP Framework (Fastify/Express) hay Database Vendor cụ thể.
+            </text>
+
+            <!-- 5 logical modules inner box -->
+            <rect x="0" y="65" width="705" height="110" rx="6" fill="#F8FAFC" stroke="#CBD5E1" />
+            <text x="14" y="22" font-family="'Geist Mono', monospace" font-size="11" font-weight="700" fill="#0F172A">
+              5 LOGICAL BOUNDED CONTEXT MODULES NẰM CHUNG TRONG apps/api (MODULAR MONOLITH):
+            </text>
+            <g transform="translate(14, 35)">
+              <rect x="0" y="0" width="130" height="60" rx="4" fill="#FFF" stroke="#166534" />
+              <text x="8" y="18" font-family="'Noto Sans', sans-serif" font-size="10.5" font-weight="700">Work Mgmt</text>
+              <text x="8" y="34" font-family="'Geist Mono', monospace" font-size="9" fill="#166534">CORE</text>
+              <text x="8" y="48" font-family="'Noto Sans', sans-serif" font-size="9" fill="#68756B">Tasks &amp; Outbox</text>
+
+              <rect x="140" y="0" width="130" height="60" rx="4" fill="#FFF" stroke="#CBD5E1" />
+              <text x="8" y="18" font-family="'Noto Sans', sans-serif" font-size="10.5" font-weight="700">Tree Asset</text>
+              <text x="8" y="34" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">SUPPORTING</text>
+              <text x="8" y="48" font-family="'Noto Sans', sans-serif" font-size="9" fill="#68756B">Trees &amp; History</text>
+
+              <rect x="280" y="0" width="130" height="60" rx="4" fill="#FFF" stroke="#CBD5E1" />
+              <text x="8" y="18" font-family="'Noto Sans', sans-serif" font-size="10.5" font-weight="700">Policy &amp; Tmpl</text>
+              <text x="8" y="34" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">SUPPORTING</text>
+              <text x="8" y="48" font-family="'Noto Sans', sans-serif" font-size="9" fill="#68756B">Proof Profiles</text>
+
+              <rect x="420" y="0" width="130" height="60" rx="4" fill="#FFF" stroke="#CBD5E1" />
+              <text x="8" y="18" font-family="'Noto Sans', sans-serif" font-size="10.5" font-weight="700">Audit &amp; Compl</text>
+              <text x="8" y="34" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">SUPPORTING</text>
+              <text x="8" y="48" font-family="'Noto Sans', sans-serif" font-size="9" fill="#68756B">Append-only log</text>
+
+              <rect x="560" y="0" width="130" height="60" rx="4" fill="#FFF" stroke="#CBD5E1" />
+              <text x="8" y="18" font-family="'Noto Sans', sans-serif" font-size="10.5" font-weight="700">IAM &amp; Auth</text>
+              <text x="8" y="34" font-family="'Geist Mono', monospace" font-size="9" fill="#68756B">GENERIC</text>
+              <text x="8" y="48" font-family="'Noto Sans', sans-serif" font-size="9" fill="#68756B">Session &amp; Token</text>
+            </g>
+
+            <text x="0" y="196" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="700" fill="#DC2626">
+              LƯU Ý CỐT LÕI: BOUNDED CONTEXT != NPM PACKAGE != MICROSERVICE != SEPARATE DATABASE
+            </text>
+            <text x="0" y="214" font-family="'Noto Sans', sans-serif" font-size="10.5" fill="#112116">
+              5 Bounded Contexts là các module logic được phân chia rõ ràng bên trong cùng một ứng dụng <tspan font-family="'Geist Mono', monospace">apps/api</tspan>, không tách thành microservice riêng biệt hay monorepo packages riêng lẻ. Giao tiếp liên module diễn ra thông qua in-process module interfaces.
+            </text>
+          </g>
+        </g>
+
+        <!-- Bottom Right: external/hermes-agent Submodule -->
+        <g transform="translate(820, 490)">
+          <rect x="0" y="0" width="350" height="270" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect x="15" y="-12" width="200" height="24" rx="4" fill="#68756B" />
+          <text x="25" y="4" font-family="'Geist Mono', monospace" font-size="10.5" font-weight="600" fill="#FFF">
+            EXTERNAL SUBMODULE (ADR 0002)
           </text>
 
           <text x="20" y="32" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
             external/hermes-agent
           </text>
-          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+          <text x="20" y="50" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
             Pinned upstream git submodule
           </text>
-          <line x1="20" y1="62" x2="300" y2="62" stroke="#E2E0D8" />
-          <text x="20" y="84" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
+          <line x1="20" y1="60" x2="330" y2="60" stroke="#E2E0D8" />
+          <text x="20" y="82" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
             CẤM CHỈNH SỬA TRỰC TIẾP TRONG PRODUCT WORK
           </text>
-          <text x="20" y="104" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
-            CẤM DEEP IMPORT VÀO MÃ NGUỒN MOBILE
+          <text x="20" y="102" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#DC2626">
+            CẤM DEEP IMPORT VÀO MÃ NGUỒN APPS HAY PACKAGES
+          </text>
+          <text x="20" y="130" font-family="'Noto Sans', sans-serif" font-size="10.5" fill="#68756B">
+            • Submodule được ghim (pinned commit) độc lập.
+          </text>
+          <text x="20" y="148" font-family="'Noto Sans', sans-serif" font-size="10.5" fill="#68756B">
+            • Mọi nâng cấp phải qua quy trình cập nhật submodule chính quy có biên bản ADR ghi nhận.
+          </text>
+          <text x="20" y="166" font-family="'Noto Sans', sans-serif" font-size="10.5" fill="#68756B">
+            • Ứng dụng nghiệp vụ không phụ thuộc trực tiếp vào internals của submodule.
           </text>
         </g>
 
-        <!-- ALLOWED ARROWS -->
-        <line x1="430" y1="155" x2="205" y2="235" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
-        <line x1="530" y1="155" x2="530" y2="235" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
-        <line x1="630" y1="155" x2="855" y2="235" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+        <!-- ========================================== -->
+        <!-- ALLOWED DEPENDENCY ARROWS                  -->
+        <!-- ========================================== -->
+        <!-- apps/mobile -> contracts -->
+        <line x1="150" y1="190" x2="150" y2="265" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+        <!-- apps/mobile -> config -->
+        <path d="M 230 190 L 230 220 L 520 220 L 520 265" fill="none" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+        <!-- apps/mobile -> ui -->
+        <path d="M 270 190 L 270 210 L 920 210 L 920 265" fill="none" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
 
-        <!-- PROHIBITED ARROWS -->
-        <!-- Reverse contracts -> mobile -->
-        <path
-          d="M 140 235 L 140 170 L 360 120"
-          fill="none"
-          stroke="#DC2626"
-          stroke-width="2"
-          stroke-dasharray="4,4"
-          marker-end="url(#arr-prohibited)"
-        />
-        <rect x="135" y="152" width="135" height="24" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1" />
-        <text
-          x="202"
-          y="168"
-          text-anchor="middle"
-          font-family="'Geist Mono', monospace"
-          font-size="11"
-          font-weight="700"
-          fill="#DC2626"
-        >
-          CẤM NGƯỢC CHIỀU
-        </text>
+        <!-- apps/admin-web -> contracts -->
+        <path d="M 500 190 L 500 230 L 250 230 L 250 265" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-blue)" />
+        <!-- apps/admin-web -> config -->
+        <line x1="600" y1="190" x2="600" y2="265" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-blue)" />
+        <!-- apps/admin-web -> ui -->
+        <path d="M 700 190 L 700 230 L 960 230 L 960 265" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-blue)" />
 
-        <!-- Mobile -> hermes internal deep import -->
-        <line
-          x1="530"
-          y1="375"
-          x2="530"
-          y2="465"
-          stroke="#DC2626"
-          stroke-width="2"
-          stroke-dasharray="4,4"
-          marker-end="url(#arr-prohibited)"
-        />
-        <rect x="462" y="405" width="136" height="24" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1" />
-        <text
-          x="530"
-          y="421"
-          text-anchor="middle"
-          font-family="'Geist Mono', monospace"
-          font-size="11"
-          font-weight="700"
-          fill="#DC2626"
-        >
-          CẤM DEEP IMPORT
-        </text>
+        <!-- apps/api -> contracts -->
+        <path d="M 900 190 L 900 240 L 330 240 L 330 265" fill="none" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+        <!-- apps/api -> config -->
+        <path d="M 980 190 L 980 230 L 710 230 L 710 265" fill="none" stroke="#166534" stroke-width="2" marker-end="url(#arr-allowed)" />
+
+        <!-- ========================================== -->
+        <!-- PROHIBITED CALLOUTS & ARROWS               -->
+        <!-- ========================================== -->
+
+        <!-- Prohibited 1: Packages importing Apps -->
+        <g transform="translate(30, 785)">
+          <rect x="0" y="0" width="550" height="75" rx="6" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.2" />
+          <text x="15" y="22" font-family="'Geist Mono', monospace" font-size="11" font-weight="700" fill="#DC2626">
+            NGHIÊM CẤM: GÓI DÙNG CHUNG NHẬP MÃ TỪ ỨNG DỤNG (PACKAGES → APPS)
+          </text>
+          <text x="15" y="42" font-family="'Noto Sans', sans-serif" font-size="10.5" fill="#7F1D1D">
+            Tuyệt đối không một package nào (contracts, config, ui) được phép import mã nguồn từ các ứng dụng (apps/mobile, apps/admin-web, apps/api). Chiều phụ thuộc luôn luôn là một chiều từ Apps vào Packages.
+          </text>
+          <text x="15" y="60" font-family="'Geist Mono', monospace" font-size="10" font-weight="600" fill="#DC2626">
+            Vi phạm nguyên tắc này sẽ lập tức làm đổ vỡ tính tái sử dụng và gây vòng lặp phụ thuộc.
+          </text>
+        </g>
+
+        <!-- Prohibited 2: Cross-Context SQL mutation & API importing UI -->
+        <g transform="translate(620, 785)">
+          <rect x="0" y="0" width="550" height="75" rx="6" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.2" />
+          <text x="15" y="22" font-family="'Geist Mono', monospace" font-size="11" font-weight="700" fill="#DC2626">
+            NGHIÊM CẤM: ĐỘT BIẾN SQL CHÉO MODULE &amp; API IMPORT UI TOKENS
+          </text>
+          <text x="15" y="42" font-family="'Noto Sans', sans-serif" font-size="10.5" fill="#7F1D1D">
+            • apps/api là backend thuần túy, tuyệt đối CẤM import packages/ui.
+          </text>
+          <text x="15" y="60" font-family="'Noto Sans', sans-serif" font-size="10.5" fill="#7F1D1D">
+            • Trong apps/api, CẤM Module A trực tiếp mutate dữ liệu của Module B qua SQL tùy tiện.
+          </text>
+        </g>
+
+        <!-- Footer Rule Summary -->
+        <g transform="translate(30, 880)">
+          <rect x="0" y="0" width="1140" height="75" rx="6" fill="#112116" />
+          <text x="20" y="24" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16" letter-spacing="0.08em">
+            TỔNG KẾT QUY TẮC PHỤ THUỘC MONOREPO (MONOREPO DEPENDENCY INVARIANTS — ADR 0001..0013)
+          </text>
+          <text x="20" y="44" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            1. Ứng dụng chỉ import Public API của các packages đã định nghĩa rõ trong monorepo.
+          </text>
+          <text x="20" y="62" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            2. Toàn bộ các gói packages/contracts, config, ui có tính gắn kết cao, độc lập với nền tảng runtime máy chủ cụ thể.
+          </text>
+          <text x="640" y="44" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            3. Server apps/api là Modular Monolith; 5 Bounded Contexts không phải là npm packages riêng lẻ.
+          </text>
+          <text x="640" y="62" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            4. apps/admin-web và apps/api là các thành phần mục tiêu ĐÃ ĐƯỢC CHẤP THUẬN nhưng CHƯA TRIỂN KHAI MÃ NGUỒN.
+          </text>
+        </g>
       </svg>
     </div>
   </body>
