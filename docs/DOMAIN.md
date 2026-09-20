@@ -6,198 +6,229 @@ Tài liệu này là chuẩn mực duy nhất định nghĩa **Ý NGHĨA NGHIỆ
 
 ## 1. Phân rã miền nghiệp vụ (Domain Decomposition)
 
-Dựa trên phân tích giá trị cạnh tranh cốt lõi của NOVYX, hệ thống được phân chia thành 3 phân vùng miền:
+Dựa trên phân tích giá trị nghiệp vụ và các quyết định phân ranh giới đã đóng băng tại Phase 3 (`05-DOMAIN-OWNERSHIP-MATRIX.md`, `06-BOUNDED-CONTEXT-DECISIONS.md`), hệ thống được phân chia thành 3 phân vùng miền nghiệp vụ chuẩn mực:
 
 ```text
 +-----------------------------------------------------------------------------------+
 |                           NOVYX DOMAIN LANDSCAPE                                  |
 +-----------------------------------------------------------------------------------+
-| [CORE DOMAIN - Lõi cạnh tranh cốt lõi]                                            |
-| * Field Work Verification (Xác thực tác nghiệp hiện trường)                       |
-|   Mục tiêu: Đảm bảo tính xác thực 100% về vị trí, đối tượng và kết quả can thiệp |
-|   thông qua Xác thực hiện trường hai tín hiệu và 3 Hồ sơ Bằng chứng Ngữ nghĩa.   |
+| [CORE DOMAIN - Vận hành & Quản lý Nhiệm vụ (Work Management)]                     |
+| * Work Management Context: Sở hữu toàn bộ vòng đời tác nghiệp hiện trường, bao gồm|
+|   khởi tạo, phân công, bắt đầu việc, xác thực hiện trường (Site Verification),    |
+|   thu thập bằng chứng theo 3 Proof Profiles, báo cáo sự cố (BLOCKED), thẩm định   |
+|   chất lượng 4 kết luận duyệt, và vòng lặp làm lại có mục tiêu (Targeted Rework). |
 +-----------------------------------------------------------------------------------+
 | [SUPPORTING SUBDOMAINS - Miền hỗ trợ chuyên biệt]                                 |
-| * Work Management: Điều phối, giao việc, phân loại TaskType, vòng đời 7 trạng thái|
-| * Tree Asset Registry: Quản lý hồ sơ cây xanh đô thị, rủi ro, Care History.     |
-| * Review & Quality Control: Thẩm định 4 kết luận duyệt, xử lý làm lại có mục tiêu.|
-| * Operational Notifications: Truyền tải tín hiệu biến động nghiệp vụ thời gian thực|
+| * Tree Asset Registry: Quản lý hồ sơ cây xanh, dữ liệu gốc, CareHistory chiếu     |
+| * Policy & Template Governance: Danh mục TaskType, ánh xạ ProofProfile, Checklist |
+| * Audit & Compliance: Sổ nhật ký kiểm toán bất biến append-only, sự kiện kiểm toán|
+| * Operational Notifications: Mô hình đọc dẫn xuất (Derived Read Model) cảnh báo   |
 +-----------------------------------------------------------------------------------+
-| [GENERIC SUBDOMAINS - Miền chung / Hạ tầng kỹ thuật]                              |
-| * Identity & Access Control: Danh tính, phiên làm việc, phân quyền Staff/Manager. |
-| * Device Hardware Services: Giao tiếp GPS, Camera, quyền thiết bị theo ngữ cảnh.  |
-| * Offline Sync & Local Persistence: Bảo toàn dữ liệu ngoại tuyến, phân tách sync. |
+| [GENERIC SUBDOMAIN - Miền dùng chung]                                             |
+| * Identity & Access Management (IAM): Tài khoản, danh tính, vai trò người dùng     |
++-----------------------------------------------------------------------------------+
+| [TECHNICAL CLIENT CONCERNS - Tầng kỹ thuật hỗ trợ (Không phải Bounded Context)]   |
+| - Mobile Offline Resilience, Durable Outbox & Client Sync Transport               |
+| - Contextual Device Hardware Adapters (GPS, Camera)                               |
 +-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 2. Các ngữ cảnh giới hạn (Bounded Contexts)
+## 2. Các ngữ cảnh giới hạn chuẩn tắc (Canonical Bounded Contexts)
 
-Mỗi Bounded Context sở hữu một mô hình dữ liệu riêng, ranh giới trách nhiệm rõ ràng và giao tiếp với các ngữ cảnh khác qua các hợp đồng hoặc sự kiện xác định:
+Mỗi Bounded Context sở hữu một tập hợp thực thể độc quyền với **quyền sở hữu thẩm quyền duy nhất (Single Authoritative Ownership)**:
 
-| Bounded Context               | Vai trò    | Trách nhiệm chính                                                                                                              | Mô hình sở hữu (Owned Models)                                             | Quan hệ phụ thuộc                                                                      |
-| ----------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **Field Work Verification**   | **CORE**   | Thu thập Site Verification (QR & GPS), xử lý ngoại lệ có kiểm soát, thu thập bằng chứng theo 3 Proof Profiles, báo sự cố.      | `SiteVerification`, `TaskEvidence`, `VerificationException`, `FieldIssue` | Lắng nghe `Work Management` (`Task`), dùng `Tree Asset Registry` (`TreeId`, `QrCode`). |
-| **Work Management**           | SUPPORTING | Quản lý vòng đời 7 trạng thái của nhiệm vụ; quản trị ánh xạ TaskType $\to$ ProofProfile; phân công lại và hủy việc.            | `Task`, `TaskAssignment`, `TaskType`, `ProofProfile`                      | Cung cấp nhiệm vụ cho `Field Work Verification`, nhận kết quả từ `Review & QC`.        |
-| **Tree Asset Registry**       | SUPPORTING | Quản lý thông tin tài sản cây xanh, vị trí tọa độ, mã QR định danh, trạng thái sinh trưởng và Lịch sử chăm sóc chính thức.     | `Tree`, `CareHistory` _(Chỉ chiếu từ các Task `COMPLETED`)_               | Độc lập; được tra cứu bởi `Work Management` và `Verification`.                         |
-| **Review & Quality Control**  | SUPPORTING | Cổng thẩm định chất lượng do Quản lý vận hành; ra 4 kết luận dứt điểm (`APPROVE`, `REQUEST_REWORK`, `EXCEPTION`, `CANCEL`).    | `ReviewAudit`, `ReviewDecision`, `ReworkRequest`                          | Đọc chuỗi bằng chứng từ `Verification`, cập nhật trạng thái sang `Work Management`.    |
-| **Operational Notifications** | SUPPORTING | Phát và lưu trữ thông báo vận hành khi trạng thái công việc thay đổi hoặc phát sinh sự cố hiện trường.                         | `Notification`, `NotificationPreference`                                  | Nhận sự kiện từ `Work Management` và `Review & QC`.                                    |
-| **Identity & Session**        | GENERIC    | Xác thực tài khoản, lưu trữ phiên đăng nhập và cung cấp vai trò (`Staff` hoặc `Manager`).                                      | `User`, `AuthSession`, `Role`                                             | Cung cấp danh tính cho toàn bộ hệ thống.                                               |
-| **Device Hardware Adapter**   | GENERIC    | Quản lý quyền hệ điều hành (Camera, Location) và điều phối phần cứng tránh xung đột tài nguyên.                                | `DevicePermissionState`, `CameraResourceLock`                             | Cung cấp luồng dữ liệu phần cứng cho `Verification` và `Tree Registry`.                |
-| **Local Persistence & Sync**  | GENERIC    | Lưu trữ bền vững ngoại tuyến, phân tách độc lập giữa trạng thái công việc (`TaskStatus`) và trạng thái đồng bộ (`SyncStatus`). | `LocalSubmissionStatus`, `DurableStore`, `OutboxQueue`                    | Đảm bảo chống mất dữ liệu khi mất mạng hoặc tắt ứng dụng.                              |
+| Bounded Context | Phân loại | Trách nhiệm nghiệp vụ chính | Thực thể & Tài nguyên sở hữu độc quyền (Owned Resources) | Ranh giới & Phụ thuộc |
+|---|:---:|---|---|---|
+| **`Work Management`** | **CORE** | Quản lý toàn vẹn chu trình tác nghiệp từ tạo việc đến đóng việc; điều phối phân công; thu thập Site Verification và Proof; xử lý sự cố `BLOCKED`; thẩm định nghiệm thu 4 kết luận; điều phối làm lại có mục tiêu. | `Task` (Root Aggregate), `TaskAssignment`, `TaskLifecycle`, `SiteVerification`, `VerificationException`, `FieldIssue`, `TaskEvidence`, `EvidenceAttempt` *(Entity)*, `StructuredFindings`, `ChecklistSnapshot`, `ReviewDecision`, `ReworkRequest`, `Cancellation`. | Nhận `treeId` từ Tree Registry; nhận `policyVersionId` từ Policy Governance; phát sinh sự kiện kiểm toán sang Audit & Compliance; chiếu kết quả `COMPLETED` sang `CareHistory`. |
+| **`Tree Asset Registry`** | SUPPORTING | Sổ bộ quản trị tài sản cây xanh đô thị, mã định danh `treeId`, mã tem `qrCode`, tọa độ chuẩn trắc địa, thuộc tính thực vật học và bản chiếu Lịch sử chăm sóc chính thức. | `Tree` (Root Aggregate), `TreeMasterData`, `TreeIdentity`, `CareHistory` *(Projection Read-Model)*. | Độc lập về mặt dữ liệu gốc; cung cấp dữ liệu tra cứu cho Work Management. Không sở hữu tiến trình thi công. |
+| **`Policy & Template Governance`** | SUPPORTING | Quản trị các quy chuẩn lâm sinh, danh mục loại việc, quy tắc ánh xạ bắt buộc sang hồ sơ bằng chứng, và phiên bản các biểu mẫu kiểm tra kỹ thuật. | `TaskTypeCatalog` *(Audit-only Resource)*, `ProofPolicyMapping` *(Versioned Policy Resource)*, `ChecklistTemplate` *(Versioned Resource)*, `FindingsSchema` *(Policy)*. | Cung cấp hợp đồng và biểu mẫu snapshot cho Work Management khi tạo/bắt đầu task. Không tham gia vận hành tác nghiệp. |
+| **`Audit & Compliance`** | SUPPORTING | Lưu trữ và bảo vệ chuỗi sự kiện kiểm toán độc lập, bất biến (Append-only), phục vụ thanh tra, giám sát an ninh và điều tra sự cố. | `AuditEvent` *(Domain Event / Tamper-evident Store)*. | Ghi nhận sự kiện từ toàn bộ các context; chỉ cung cấp giao diện đọc/lọc cho Platform Administrator. Cấm sửa/xóa log. |
+| **`Identity & Access Management`** | GENERIC | Quản trị vòng đời tài khoản người dùng, cấp phát định danh, gán vai trò và quản lý trạng thái tài khoản. | `User` (Aggregate Root), `Account`, `RoleAssignment`, `AccountStatus`. | Cung cấp thông tin xác thực danh tính cho toàn hệ thống. Khi khóa tài khoản, chỉ phát thông tin `USER_NOT_OPERATIONALLY_AVAILABLE` chứ không tự ý can thiệp Task. |
+| **`Operational Notifications`** | DERIVED | Mô hình đọc dẫn xuất (Read Model) tiếp nhận sự kiện vòng đời công việc để phát thông báo hiển thị cho người dùng. | `Notification` *(Derived Read-Model Projection)*. | Nhận sự kiện từ Work Management, IAM, Audit; không phải là aggregate thẩm quyền gốc. |
 
 ---
 
-## 3. Từ vựng chuẩn tắc (Ubiquitous Language)
+## 3. Phân định Tài nguyên & Ranh giới Sở hữu Tuyệt đối (Authoritative Ownership Matrix)
 
-Mọi thành viên nhóm phát triển, tài liệu và mã nguồn phải sử dụng nhất quán các thuật ngữ dưới đây:
-
-| Thuật ngữ chuẩn (Canonical Term) | Định nghĩa chuẩn trong NOVYX                                                                                                                     | Thuật ngữ trong code hiện tại `[VERIFIED]`            | Thuật ngữ trên UI `[VERIFIED]`                                       | Phân loại & Ghi chú chuẩn hóa                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Tree**                         | Thực thể cây xanh đô thị được quản lý, có tọa độ cố định và mã QR vật lý gắn cố định trên thân cây.                                              | `TreeDto`, `Tree`                                     | `Cây`, `Cây của tôi`                                                 | Thực thể tài sản trung tâm.                                           |
-| **Task**                         | Một nhiệm vụ chăm sóc cây cụ thể được giao cho nhân viên, gắn với đúng một cây và một loại việc (`TaskType`).                                    | `TaskDto`, `Task`                                     | `Công việc`, `Nhiệm vụ`                                              | Chuẩn hóa thành "Công việc" trên giao diện.                           |
-| **TaskType**                     | Phân loại chuyên môn của nhiệm vụ (Cắt tỉa, Bón phân, Khảo sát bệnh...). Ánh xạ tất định sang `ProofProfile` và Checklist/Findings template mẫu. | `taskType` string                                     | `Loại việc`, `Hạng mục`                                              | Quản lý chọn khi tạo việc; hệ thống suy ra ProofProfile tương ứng.    |
-| **ProofProfile**                 | Hồ sơ ngữ nghĩa quy định hợp đồng bằng chứng bắt buộc: `CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`.                                      | _(Chưa có - Cần thêm)_                                | _(Chưa hiển thị)_                                                    | Thay thế hoàn toàn giả thuyết 5 chốt cứng nhắc cũ.                    |
-| **TaskStatus**                   | Vòng đời 7 trạng thái của nhiệm vụ: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`.          | `TaskStatus` (Thiếu BLOCKED & CANCELLED)              | `Chờ bắt đầu`, `Đang làm`, `Tạm dừng`, `Chờ duyệt`, `Cần làm lại...` | Độc lập hoàn toàn với `SyncStatus` và `ProofProgress`.                |
-| **SiteVerification**             | Xác thực hiện trường gồm hai tín hiệu độc lập: Định danh cây qua QR và Vị trí qua GPS ($\le 10$m). Thu thập thứ tự tùy chọn.                     | `GpsCheckDto`, `QrCheckDto`                           | `Xác thực hiện trường`, `GPS & Mã QR`                                | Không làm thay đổi `TaskStatus`.                                      |
-| **VerificationException**        | Cờ ngoại lệ có kiểm soát khi gặp sự cố khách quan: `LOCATION_EXCEPTION`, `IDENTITY_EXCEPTION`, `EVIDENCE_INTEGRITY_EXCEPTION`.                   | _(Chưa có - Cần thêm)_                                | `Ngoại lệ vị trí`, `Ngoại lệ danh tính`                              | Cho phép tiếp tục luồng nhưng bắt buộc giải trình để Quản lý hậu kiểm |
-| **FieldIssue**                   | Báo cáo sự cố hiện trường do nhân viên gửi khi bị cản trở không thể thi công $\to$ đưa task sang `BLOCKED`.                                      | _(Chưa có - Cần thêm)_                                | `Báo cáo sự cố`, `Tạm dừng việc`                                     | Sự cố có ảnh chụp, mô tả và lý do cản trở thực địa.                   |
-| **ReviewDecision**               | Quyết định thẩm định của Quản lý tại `WAITING_REVIEW`: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`.                          | `ReviewDecisionRequest` (`approve`, `request_rework`) | `Phê duyệt`, `Yêu cầu làm lại`, `Nghiệm thu ngoại lệ`, `Hủy việc`    | Bổ sung `APPROVE_WITH_EXCEPTION` và `CANCEL`.                         |
-| **Targeted Rework**              | Làm lại có mục tiêu: Quản lý chỉ định rõ khâu bằng chứng sai sót; hệ thống bảo lưu bằng chứng hợp lệ cũ và lưu vết lịch sử nhiều phiên bản.      | `rejectReason`, `rejectChips`                         | `Yêu cầu làm lại`, `Sửa bằng chứng`                                  | Không bao giờ xóa sạch toàn bộ bằng chứng cũ.                         |
-| **CareHistory**                  | Bản chiếu lịch sử chăm sóc chính thức của cây. **CHỈ SINH RA KHI TASK ĐẠT `COMPLETED`**. Bảo lưu cờ ngoại lệ nếu có.                             | `CareHistoryDto`                                      | `Lịch sử chăm sóc`                                                   | Task bị Hủy hoặc chưa hoàn thành tuyệt đối không vào Care History.    |
-| **SyncStatus**                   | Trạng thái đồng bộ mạng: `SYNCED`, `PENDING_SYNC`, `SYNC_FAILED`.                                                                                | _(Chưa phân tách độc lập)_                            | `Đã đồng bộ`, `Chờ gửi`, `Lỗi gửi`                                   | Tách biệt hoàn toàn với `TaskStatus`.                                 |
-
----
-
-## 4. Mô hình thực thể miền (Domain Object Model)
-
-Phân định rạch ròi: **Mô hình miền (Domain Model) $\ne$ Dữ liệu truyền tải (DTO)**.
+Bảo đảm **nguyên tắc một tài nguyên chỉ có đúng một chủ sở hữu thẩm quyền**:
 
 ```text
-+---------------------+           1..*          +-----------------------------------+
-|        Tree         | <---------------------- |               Task                |
-| (Root Aggregate)    |                         |         (Root Aggregate)          |
-+---------------------+                         +-----------------------------------+
-  - id: TreeId                                    - id: TaskId
-  - qrCode: QrCodeString (Immutable)              - treeId: TreeId (Immutable)
-  - location: Coordinates (Immutable)             - taskType: TaskType
-  - healthStatus: HealthStatus                    - proofProfile: ProofProfile
-  - riskStatus: RiskStatus                        - assignedStaffId: StaffId
-  - careHistory: CareHistory[] (Proj)             - status: TaskStatus (7 states)
-                                                  - deadline: IsoDateTime
-                                                  - siteVerification: SiteVerification
-                                                  - proofProgress: ProofProgress
-                                                  - evidenceHistory: TaskEvidenceAttempt[]
-                                                  - fieldIssue: FieldIssue?
-                                                  - reviewAudit: ReviewAudit?
-                                                            |
-                                                            | 1
-                                                            v 1
-                                                +-----------------------------------+
-                                                |         SiteVerification          |
-                                                |           (Value Object)          |
-                                                +-----------------------------------+
-                                                  - qrVerification: QrVerification
-                                                  - locationVerification: LocationVerification
-                                                  - identityException: IdentityException?
-                                                  - locationException: LocationException?
+Identity & Access Management
+ ├── User (Root Aggregate)
+ ├── Account (Entity)
+ ├── RoleAssignment (Entity)
+ └── AccountStatus (Enum: INVITED, ACTIVE, SUSPENDED, DISABLED)
+
+Tree Asset Registry
+ ├── Tree (Root Aggregate)
+ ├── TreeMasterData (Entity)
+ ├── TreeIdentity (Value Object: treeId immutable, qrCode unique/mutable)
+ └── CareHistory (Derived Read-Model Projection from COMPLETED tasks)
+
+Work Management (Core Domain)
+ ├── Task (Root Aggregate - 7 states)
+ ├── TaskAssignment (Value Object)
+ ├── SiteVerification (Value Object)
+ ├── VerificationException (Value Object: LOCATION_EXCEPTION, IDENTITY_EXCEPTION)
+ ├── FieldIssue (Entity)
+ ├── TaskEvidence (Value Object)
+ ├── EvidenceAttempt (Entity - Multi-version submission attempts)
+ ├── StructuredFindings (Value Object)
+ ├── ChecklistSnapshot (Value Object - Decoupled template snapshot)
+ ├── ReviewDecision (Value Object - 4 outcomes)
+ ├── ReworkRequest (Value Object)
+ └── Cancellation (Value Object)
+
+Policy & Template Governance
+ ├── TaskTypeCatalog (Audit-only Resource)
+ ├── ProofPolicyMapping (Versioned Policy Resource)
+ ├── ChecklistTemplate (Versioned Resource)
+ └── FindingsSchema (Policy Resource - Fixed in MVP)
+
+Audit & Compliance
+ └── AuditEvent (Domain Event - Append-only Record)
 ```
-
-### 4.1. Chi tiết thực thể và Ranh giới sở hữu
-
-#### A. Thực thể Cây xanh (Tree Aggregate)
-
-- **Định danh:** `TreeId` (duy nhất toàn hệ thống, ví dụ `TREE-01`).
-- **Trường bất biến:** `id`, `qrCode`, `lat`, `lng`. Tọa độ và mã QR không được tự ý sửa đổi trong các thao tác bảo dưỡng thường nhật.
-- **Trường khả biến:** `healthStatus`, `riskStatus`.
-- **Tính toán dẫn xuất:** `careHistory` là bản chiếu (Read-only Projection) tập hợp từ các `Task` có trạng thái `COMPLETED` gắn với cây này.
-
-#### B. Thực thể Nhiệm vụ (Task Aggregate)
-
-- **Định danh:** `TaskId` (ví dụ `TSK-01`).
-- **Tính chất liên kết:** Gắn cố định với đúng một `TreeId` và một `TaskType`. Cây mục tiêu **bất biến trong suốt quá trình thực thi**.
-- **Quản trị ProofProfile:** `taskType` xác định tất định `proofProfile` (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`). Quản lý không được tùy tiện hạ cấp hồ sơ bằng chứng.
-- **Lịch sử bằng chứng đa phiên bản (Versioned Evidence):** `evidenceHistory` lưu vết từng lần nộp (`Attempt 1`, `Attempt 2`), không ghi đè dữ liệu cũ.
-
-#### C. Đối tượng Bằng chứng (TaskEvidence Value Object)
-
-- **Đặc điểm:** Bất biến (Immutable). Một khi đã chụp và nộp, bằng chứng gắn liền với thời điểm (`capturedAt`), người chụp (`capturedByUserId`), tọa độ lúc chụp, và phiên bản nộp (`attemptNumber`).
-- **Phân loại theo Profile:**
-  - `CHANGE_PROOF`: Cần `beforePhoto`, `checklist`, `afterPhoto`.
-  - `SERVICE_PROOF`: Cần `checklist`, `completionPhoto`.
-  - `INSPECTION_PROOF`: Cần `structuredFindings`, `conditionPhotos[]`.
 
 ---
 
-## 5. Phân loại quy tắc nghiệp vụ chuẩn tắc (Business Rule Classification)
+## 4. Từ vựng chuẩn tắc (Ubiquitous Language)
 
-Mọi quy tắc nghiệp vụ trong NOVYX GreenOps được phân loại nghiêm ngặt theo 6 tầng giá trị:
+| Thuật ngữ chuẩn (Canonical Term) | Định nghĩa chuẩn mực trong NOVYX GreenOps | Phân loại Mô hình | Ngữ cảnh Sở hữu | Ghi chú chuẩn hóa |
+|---|---|:---:|:---:|---|
+| **Field Staff** | Nhân viên hiện trường (`staff`): Thực thi công việc ngoài trời, xác thực hiện trường, thu thập bằng chứng theo ProofProfile. | Human Actor | Operational Plane | Chuẩn hóa từ "Staff", "Công nhân", "Kỹ thuật viên". |
+| **Operations Manager** | Quản lý vận hành (`manager`): Điều phối, giao việc, xử lý sự cố hiện trường `BLOCKED`, thẩm định 100% hồ sơ với 4 kết luận duyệt. | Human Actor | Operational Plane | Chuẩn hóa từ "Manager", "Giám sát", "Điều hành". |
+| **Platform Administrator** | Quản trị hệ thống (`admin`): Quản trị nền tảng, danh mục cây xanh, tài khoản IAM, chính sách bằng chứng, thanh tra kiểm toán. Không thao tác Task thực địa. | Human Actor | Governance Plane | Hoạt động thực tế trong MVP (`ACTIVE IN MVP`). |
+| **System** | Hệ thống tự động: Thực thi các tác vụ tính toán và xử lý tất định (tính khoảng cách GPS, snapshot biểu mẫu, lưu trữ outbox, ghi log). | Technical Actor | Technical Automation | Không phải là UserRole con người. |
+| **Tree** | Thực thể cây xanh đô thị được quản lý, có mã định danh `treeId` bất biến và mã tem `qrCode` duy nhất toàn hệ thống. | Root Aggregate | Tree Asset Registry | Đối tượng tài sản cốt lõi. |
+| **Task** | Một nhiệm vụ chăm sóc cây cụ thể gắn cố định với đúng 1 cây và 1 loại việc (`TaskType`), trải qua vòng đời 7 trạng thái. | Root Aggregate | Work Management | Cây mục tiêu bất biến trong suốt vòng đời. |
+| **TaskStatus** | Vòng đời 7 trạng thái tất định của nhiệm vụ: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`. | State Machine | Work Management | Hoàn toàn độc lập với `SyncStatus`. |
+| **ProofProfile** | Hồ sơ ngữ nghĩa quy định hợp đồng bằng chứng bắt buộc: `CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`. | Domain Policy | Policy Governance | Gán tất định từ TaskType, cấm Quản lý hạ cấp per-task. |
+| **SiteVerification** | Xác thực hiện trường gồm hai tín hiệu độc lập: Định danh cây qua QR và Vị trí qua GPS ($\le 10$m). Thứ tự linh hoạt, không đổi TaskStatus. | Value Object | Work Management | Phục vụ đối soát trung thực hiện trường. |
+| **VerificationException** | Cờ ngoại lệ có kiểm soát khi gặp sự cố khách quan: `LOCATION_EXCEPTION`, `IDENTITY_EXCEPTION`, `EVIDENCE_INTEGRITY_EXCEPTION`. | Value Object | Work Management | Cho phép tiếp tục nhưng bắt buộc giải trình để hậu kiểm. |
+| **FieldIssue** | Báo cáo sự cố hiện trường do nhân viên gửi khi bị cản trở $\to$ chuyển task sang `BLOCKED`. | Entity | Work Management | Bắt buộc có ảnh hiện trường và lý do cản trở. |
+| **ReviewDecision** | Quyết định thẩm định của Quản lý tại `WAITING_REVIEW`: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`. | Value Object | Work Management | Chuẩn tắc đúng 4 kết luận dứt điểm. |
+| **Targeted Rework** | Làm lại có mục tiêu: Quản lý chỉ định rõ khâu sai sót; bảo lưu bằng chứng hợp lệ cũ; nộp theo phiên bản đa nỗ lực (`EvidenceAttempt`). | Workflow Rule | Work Management | Cấm xóa sạch bằng chứng cũ của nhân viên. |
+| **CareHistory** | Bản chiếu lịch sử chăm sóc chính thức của cây. **DUY NHẤT sinh ra khi Task đạt `COMPLETED`**. Bảo lưu cờ ngoại lệ nếu có. | Read-Model Projection | Tree Asset Registry | Task Hủy hoặc chưa hoàn thành cấm vào CareHistory. |
+| **EvidenceAttempt** | Phiên nộp bằng chứng độc lập (`Attempt 1`, `Attempt 2`), lưu giữ đầy đủ bằng chứng, timestamp và tác giả. | Entity | Work Management | Bảo toàn lịch sử phục vụ kiểm toán và làm lại có mục tiêu. |
+| **AuditEvent** | Bản ghi sự kiện kiểm toán bất biến, lưu vết tác nhân, hành động, đối tượng, thời điểm và lý do. | Domain Event | Audit & Compliance | Lưu trong kho Append-Only, cấm sửa/xóa. |
+| **LocalSubmissionStatus** | Trạng thái đồng bộ máy khách: `PENDING_SYNC`, `SYNCED`, `SYNC_FAILED`. | Technical State | Client Outbox | Tách biệt 100% với `TaskStatus`. |
+
+---
+
+## 5. Ngữ nghĩa Định danh Cây xanh & Dữ liệu gốc (Tree Identity Semantics)
+
+Hệ thống phân định rạch ròi giữa mã định danh logic, tem vật lý và tọa độ trắc địa:
+
+1. **`treeId` (Mã định danh cây):**
+   - Là khóa chính logic duy nhất toàn cục, bất biến vĩnh viễn (ví dụ: `TREE-01`, `TREE-VN-HN-001`).
+   - `Task.treeId` gắn cố định khi tạo việc và **bất biến tuyệt đối trong suốt vòng đời nhiệm vụ** (`DR-HARD-01`). Cấm chuyển việc sang cây khác.
+2. **`qrCode` (Mã tem QR vật lý):**
+   - Là mã định danh vật lý duy nhất toàn hệ thống tại một thời điểm, gắn trên thân cây.
+   - Thuộc quyền sở hữu của Tree Asset Registry, **có thể cấp đổi có kiểm soát** (`ReplaceTreeQrCode`) bởi Platform Administrator khi tem ngoài thực địa bị rách/mờ/mất.
+   - Khi cấp đổi tem mới, mã mới phải đảm bảo tính duy nhất; việc cấp đổi tem mới **tuyệt đối không viết lại dữ liệu quét QR lịch sử** của các task cũ trong quá khứ.
+3. **Tọa độ chuẩn trắc địa (Canonical Coordinates - Latitude, Longitude):**
+   - Là thông số vị trí gốc cây được kiểm tra **tính hợp lệ về định dạng và phạm vi trắc địa**, **KHÔNG PHẢI LÀ KHÓA DUY NHẤT DANH TÍNH**.
+   - Hai cây xanh có thể trồng sát nhau hoặc có tọa độ làm tròn trùng nhau tùy theo độ chính xác của phép đo GPS.
+   - Tọa độ chuẩn có thể được cập nhật (`UpdateCanonicalCoordinates`) bởi Platform Administrator khi có số liệu trắc địa đo đạc lại chính xác hơn (kèm lý do bắt buộc). Thao tác này không viết lại tọa độ GPS thực tế mà nhân viên đã đo trong các nhiệm vụ lịch sử.
+
+---
+
+## 6. Vòng đời Nhiệm vụ 7 Trạng thái (The Seven Task States)
+
+Vòng đời của thực thể `Task` bao gồm đúng 7 trạng thái tất định. Tuyệt đối không đưa thêm bất kỳ trạng thái trung gian kỹ thuật nào:
 
 ```text
-+-----------------------------------------------------------------------------------+
-|                        BUSINESS RULE CLASSIFICATION                               |
-+-----------------------------------------------------------------------------------+
-| 1. HARD DOMAIN INVARIANT   | Bất biến miền cứng, cấm vi phạm trong mọi hoàn cảnh  |
-| 2. MVP DOMAIN INVARIANT    | Bất biến miền cốt lõi của phạm vi MVP hiện tại       |
-| 3. MVP POLICY              | Chính sách vận hành đã chốt cho MVP (có thể mở rộng) |
-| 4. SOFT CONTROL            | Cơ chế kiểm soát mềm / Đường phục hồi có hướng dẫn   |
-| 5. OPERATIONAL GUIDANCE    | Hướng dẫn thao tác tối ưu ngoài hiện trường          |
-| 6. TECHNICAL CONSTRAINT    | Ràng buộc kiến trúc kỹ thuật & nền tảng phần cứng    |
-+-----------------------------------------------------------------------------------+
+[Khởi tạo Task]
+      │
+      ▼
+   PENDING ──────────────(CancelTask)───────────────┐
+      │                                             │
+ (StartTask)                                        │
+      │                                             │
+      ▼                                             │
+ IN_PROGRESS ────────────(CancelTask)───────────────┤
+   │       ▲                                        │
+   │       │ (ResumeBlockedTask)                    │
+(Report)   │                                        │
+   │   (ReassignTask Case B)                        │
+   ▼       │                                        │
+BLOCKED ───┴─────────────(CancelTask)───────────────┤
+   │                                                │
+   │ (SubmitEvidence)                               │
+   ▼                                                │
+WAITING_REVIEW ──────────(CancelTask)───────────────┤
+   │        │                                       │
+(Approve/   │ (RequestRework)                       │
+ ApproveExc)│                                       │
+   │        ▼                                       │
+   │  REWORK_REQUIRED ───(CancelTask)───────────────┤
+   │        │                                       │
+   │        │ (ResubmitRework)                      │
+   │        └──────────────┐                        │
+   ▼                       ▼                        ▼
+COMPLETED ◄───────── WAITING_REVIEW             CANCELLED
+(Terminal Success)                              (Terminal Void)
 ```
 
-### 5.1. Bất biến miền cứng (HARD DOMAIN INVARIANT)
+### Các trạng thái không tồn tại trong miền (Prohibited Domain States):
+- CẤM `OFFLINE_SUBMITTED`: Nộp khi mất mạng chỉ đổi cờ máy khách `LocalSubmissionStatus = PENDING_SYNC`, trên server Task vẫn là `IN_PROGRESS`.
+- CẤM `COMPLETED_WITH_EXCEPTION`: Nghiệm thu có ngoại lệ thì trạng thái Task vẫn là `COMPLETED`, cờ `HAS_EXCEPTION` được ghi vào bản ghi chiếu `CareHistory`.
+- CẤM `ADMIN_CANCELLED`, `STAFF_UNAVAILABLE`, `ACCOUNT_SUSPENDED`: Không sinh trạng thái phụ khi nhân sự bị khóa hoặc đổi quyền.
 
-| Mã quy tắc     | Tên quy tắc / Nội dung bất biến                                                                                                                                                                 | Hành vi khi vi phạm (Violation Behavior)                                                                                                               |
-| :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **DR-HARD-01** | **Bất biến cây mục tiêu (Task Tree Immutability):** Cây mục tiêu gắn với Task là cố định tuyệt đối trong suốt vòng đời. Nhân viên không được phép chuyển việc sang cây khác.                    | Chặn mọi thao tác đổi `treeId`. Nếu quét sai cây, báo lỗi sai đối tượng và yêu cầu quét lại đúng cây được giao.                                        |
-| **DR-HARD-02** | **Phân tách thực thi và thẩm định (Separation of Execution and Approval):** Nhân viên thực hiện không bao giờ được tự duyệt công việc của chính mình.                                           | Giao diện Staff không có nút Duyệt; API từ chối nếu `reviewerId === assignedStaffId`.                                                                  |
-| **DR-HARD-03** | **Bảo toàn quyền tác giả bằng chứng lịch sử (Evidence Authorship Preservation):** Khi phân công lại task (Reassign), toàn bộ bằng chứng do nhân viên cũ tạo ra phải giữ nguyên tác giả ban đầu. | Hệ thống cấm ghi đè trường `capturedByUserId` của các bản ghi bằng chứng cũ.                                                                           |
-| **DR-HARD-04** | **Cấm ngụy tạo bằng chứng lịch sử (No Evidence Fabrication):** Bằng chứng lịch sử không thể tái tạo trung thực (ví dụ quên chụp ảnh Trước mà cây đã cắt tỉa xong) tuyệt đối không được làm giả. | Bắt buộc ghi nhận `EVIDENCE_INTEGRITY_EXCEPTION` để Quản lý xem xét chấp thuận ngoại lệ hoặc xử lý kỷ luật.                                            |
-| **DR-HARD-05** | **Bất biến của trạng thái đóng (Terminal State Immutability):** Nhiệm vụ đã ở trạng thái `COMPLETED` hoặc `CANCELLED` là đóng vĩnh viễn, không thể mở lại hoặc sửa đổi dữ liệu.                 | Chặn mọi lệnh sửa đổi (Mutation Commands); toàn bộ giao diện chuyển sang chế độ xem (Read-only).                                                       |
-| **DR-HARD-06** | **Cấm phân công lại trực tiếp khi đang làm hoặc chờ duyệt:** Không được đổi người khi task đang `IN_PROGRESS` hoặc `WAITING_REVIEW`.                                                            | Nút Phân công lại bị ẩn/khóa. Muốn đổi người ở `IN_PROGRESS`, bắt buộc phải qua `ReportFieldIssue` $\to$ `BLOCKED` $\to$ `Reassign`.                   |
-| **DR-HARD-07** | **Biên giới Lịch sử chăm sóc (Care History Boundary):** CHỈ nhiệm vụ có trạng thái `COMPLETED` mới được sinh bản ghi Lịch sử chăm sóc chính thức cho cây.                                       | Các trạng thái khác (`PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `CANCELLED`) không bao giờ được chiếu vào Care History. |
+---
 
-### 5.2. Bất biến miền MVP (MVP DOMAIN INVARIANT)
+## 7. Phân tách rạch ròi các chiều trạng thái (Separate State Dimensions)
 
-| Mã quy tắc    | Tên quy tắc / Nội dung bất biến                                                                                                                                                                             | Hành vi khi vi phạm                                                                                                 |
-| :------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
-| **DR-MVP-01** | **Một việc gắn đúng một cây (One Task = One Tree):** Mỗi nhiệm vụ chỉ thao tác trên duy nhất 1 thực thể cây xanh đô thị.                                                                                    | Không hỗ trợ gộp nhiều cây vào một task trong phiên bản MVP.                                                        |
-| **DR-MVP-02** | **Quản trị TaskType $\to$ ProofProfile:** `TaskType` xác định tất định `ProofProfile` và hợp đồng bằng chứng bắt buộc. Quản lý không được tùy tiện hạ cấp ProofProfile của từng task.                       | Hệ thống tự động gán ProofProfile khi tạo task; trường ProofProfile bị khóa đối với chỉnh sửa thủ công của Quản lý. |
-| **DR-MVP-03** | **Vòng đời 7 trạng thái tất định:** Vòng đời Task gồm đúng 7 trạng thái: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`.                                | Không đưa thêm bất kỳ trạng thái lai ghép nào (`OFFLINE_SUBMITTED`, `COMPLETED_WITH_EXCEPTION`...) vào TaskStatus.  |
-| **DR-MVP-04** | **Khởi đầu thực địa tất định:** DUY NHẤT hành động Nhân viên bấm `StartTask` mới chuyển `PENDING` $\to$ `IN_PROGRESS`.                                                                                      | Mở xem chi tiết, quét QR, đo GPS hay thao tác thử nghiệm không làm thay đổi trạng thái nhiệm vụ.                    |
-| **DR-MVP-05** | **Đình chỉ phi kết thúc (Non-terminal BLOCKED):** `BLOCKED` là trạng thái tạm dừng khi gặp sự cố, chỉ vào từ `IN_PROGRESS` qua `ReportFieldIssue`, chỉ ra qua 3 lối thoát (`RESUME`, `REASSIGN`, `CANCEL`). | Nhân viên không thể tự hủy việc khi bị chặn; Quản lý là người thẩm quyền quyết định 1 trong 3 lối thoát.            |
-| **DR-MVP-06** | **Bốn kết luận duyệt tại WAITING_REVIEW:** Quản lý chỉ có đúng 4 kết luận: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`.                                                                 | Cung cấp đúng 4 hành động nghiệp vụ tại màn hình thẩm định của Quản lý.                                             |
+Tuyệt đối không gộp chung các chiều trạng thái độc lập vào nhau:
 
-### 5.3. Chính sách vận hành MVP (MVP POLICY)
+1. **`TaskStatus` (Vòng đời nghiệp vụ):** 7 trạng thái chuẩn tắc (`PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`).
+2. **`ProofProgress` (Tiến độ bằng chứng):** Trạng thái đáp ứng hợp đồng bằng chứng của nhiệm vụ (`NOT_STARTED`, `IN_PROGRESS`, `READY_FOR_SUBMISSION`).
+3. **`VerificationState` / `VerificationException` (Xác thực hiện trường):** Trạng thái xác minh hai tín hiệu (`UNVERIFIED`, `VERIFIED`, `HAS_LOCATION_EXCEPTION`, `HAS_IDENTITY_EXCEPTION`).
+4. **`SyncStatus` / `LocalSubmissionStatus` (Đồng bộ máy khách):** Trạng thái truyền tải dữ liệu kỹ thuật (`SYNCED`, `PENDING_SYNC`, `SYNC_FAILED`).
+5. **`NavigationState` (Điều hướng giao diện):** Trạng thái luồng màn hình trên ứng dụng di động.
 
-| Mã quy tắc    | Tên chính sách / Nội dung                                                                                                                                                                                          | Cơ chế thực thi                                                                                   |
-| :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
-| **DR-POL-01** | **Thẩm định 100% hồ sơ:** Quản lý thẩm định 100% nhiệm vụ được nộp trước khi đóng việc; không áp dụng tự động duyệt (Auto-approval) trong MVP.                                                                     | Toàn bộ nhiệm vụ nộp đều chuyển vào hàng đợi `WAITING_REVIEW` của Quản lý.                        |
-| **DR-POL-02** | **Tiêu chuẩn mục tiêu khoảng cách GPS $\le 10$m:** Tiêu chuẩn xác thực vị trí là sai lệch không quá 10 mét. Không tồn tại ngưỡng phụ 25m.                                                                          | Hiển thị thước đo khoảng cách; nếu vượt quá 10m yêu cầu nhân viên di chuyển lại gần hoặc thử lại. |
-| **DR-POL-03** | **Làm lại có mục tiêu (Targeted Rework):** Yêu cầu làm lại bắt buộc chỉ rõ khâu sai sót (`rejectReason` & `targetedField`); bảo lưu toàn bộ bằng chứng hợp lệ cũ.                                                  | Giao diện làm lại của Staff chỉ mở đúng khâu bị từ chối; không bắt thu thập lại toàn bộ từ đầu.   |
-| **DR-POL-04** | **Hủy việc có lý do bắt buộc (Mandatory Cancellation Reason):** Quản lý có thể hủy việc từ bất kỳ trạng thái chưa đóng nào, nhưng bắt buộc nhập lý do, lưu vết người hủy và thời điểm.                             | Nút Hủy việc mở hộp thoại bắt buộc nhập lý do; không hỗ trợ xóa cứng (Hard Delete).               |
-| **DR-POL-05** | **Nghiệm thu có ngoại lệ (Approve with Exception):** Chỉ áp dụng khi công việc thực tế đã làm đạt chuẩn nhưng có lỗi định vị/danh tính/bằng chứng không thể tái tạo; Quản lý chịu trách nhiệm phê duyệt kèm lý do. | Sinh bản ghi Care History mang cờ `HAS_EXCEPTION` kèm tham chiếu lý do của Quản lý.               |
+---
 
-### 5.4. Cơ chế kiểm soát mềm (SOFT CONTROL)
+## 8. Mô hình Bằng chứng Ngữ nghĩa (Proof Domain Model)
 
-| Mã quy tắc     | Tên cơ chế / Nội dung                                                                                                                                                      | Cơ chế thực thi                                                                                           |
-| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
-| **DR-SOFT-01** | **Ngoại lệ vị trí có kiểm soát (`LOCATION_EXCEPTION`):** Sau khi Staff bấm thử lại GPS bất thành do tán lá rậm/nhà cao tầng, cho phép gửi giải trình để Quản lý hậu kiểm.  | Gắn cờ ngoại lệ vị trí vào Task; không coi ngoại lệ là xác thực GPS thành công thông thường.              |
-| **DR-SOFT-02** | **Ngoại lệ danh tính có kiểm soát (`IDENTITY_EXCEPTION`):** Khi tem QR bị rách/mờ/mất, cho phép chụp ảnh tem hỏng và nhập mã số thủ công đối chiếu với đúng cây được giao. | Gắn cờ ngoại lệ danh tính; mã nhập tay chỉ được đối chiếu với cây của task, không được đổi sang cây khác. |
+Hệ thống áp dụng 3 hồ sơ bằng chứng chuẩn tắc:
 
-### 5.5. Hướng dẫn thao tác vận hành (OPERATIONAL GUIDANCE)
+1. **`CHANGE_PROOF` (Biến đổi vật lý trực quan):**
+   - Áp dụng: Cắt tỉa, đốn hạ cành mục, trồng mới, giải tỏa khẩn cấp.
+   - Hợp đồng bắt buộc: Site Verification + Ảnh Trước (`beforePhoto`) + 100% Checklist thao tác kỹ thuật + Ảnh Sau (`afterPhoto`).
+2. **`SERVICE_PROOF` (Bảo dưỡng định kỳ):**
+   - Áp dụng: Tưới nước, bón phân gốc, làm cỏ bồn cây, xử lý đất.
+   - Hợp đồng bắt buộc: Site Verification + 100% Checklist thao tác kỹ thuật + Ảnh Hoàn thành (`completionPhoto`). Không bắt ảnh Trước.
+3. **`INSPECTION_PROOF` (Khảo sát & Kiểm tra chuyên sâu):**
+   - Áp dụng: Khảo sát lâm sinh, đánh giá sâu bệnh, đo độ nghiêng rủi ro.
+   - Hợp đồng bắt buộc: Site Verification + Bảng phát hiện có cấu trúc (`StructuredFindings`) + Ảnh hiện trạng chi tiết vị trí bệnh/khuyết tật (`conditionPhotos[]`). Không áp dụng checklist thao tác chung chung.
 
-| Mã quy tắc      | Tên hướng dẫn / Nội dung                                                                                                                          | Khuyến nghị vận hành                                                                |
-| :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------- |
-| **DR-GUIDE-01** | **Thứ tự thu thập Site Verification linh hoạt:** Quét QR và lấy tọa độ GPS có thể thực hiện theo bất kỳ thứ tự nào.                               | Công nhân có thể quét mã QR ngay khi đến gốc cây mà không cần chờ chip GPS ổn định. |
-| **DR-GUIDE-02** | **Xử lý GPS yếu ngoài thực địa:** Nhân viên nên di chuyển ra khỏi vùng tán cây rậm rạp hoặc giơ cao thiết bị trước khi kích hoạt ngoại lệ vị trí. | Giúp giảm thiểu số lượng giải trình ngoại lệ không cần thiết cho Quản lý.           |
+> **Quy tắc bất biến:** `TaskType` quyết định tất định `ProofProfile` thông qua phiên bản chính sách `ProofPolicyMapping`. Operations Manager không được tùy tiện chọn hoặc hạ cấp ProofProfile của từng task riêng lẻ (`DR-MVP-02`). Biểu mẫu `StructuredFindings` áp dụng Fixed Schema trong MVP; việc tùy biến động (`FindingsSchema`) được bảo lưu tại giai đoạn `NEXT`.
 
-### 5.6. Ràng buộc kỹ thuật nền tảng (TECHNICAL CONSTRAINT)
+---
 
-| Mã quy tắc     | Tên ràng buộc / Nội dung                                                                                                                                                                                                      | Ràng buộc kiến trúc                                                                       |
-| :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------- |
-| **DR-TECH-01** | **Phân tách độc lập giữa TaskStatus và SyncStatus:** Nộp khi mất mạng đặt `LocalSubmissionStatus = PENDING_SYNC`; trên server `TaskStatus` vẫn giữ nguyên `IN_PROGRESS` cho đến khi đồng bộ thành công sang `WAITING_REVIEW`. | Không đưa các trạng thái trung gian mạng (`OFFLINE_SUBMITTED`) vào enum `TaskStatus`.     |
-| **DR-TECH-02** | **Độc quyền tài nguyên phần cứng Camera:** Tại một thời điểm, chỉ một thành phần giao diện được quyền sở hữu `CameraView` (`activeCameraPurpose`).                                                                            | Tránh hiện tượng tranh chấp luồng camera dẫn đến sập ứng dụng (Crash).                    |
-| **DR-TECH-03** | **Ảo hóa danh sách hiển thị:** Mọi danh sách dữ liệu có khả năng tăng trưởng (Danh sách Task, Danh mục Cây) bắt buộc dùng `FlatList` với key ổn định.                                                                         | Nghiêm cấm dùng `ScrollView` kết hợp hàm `map()` gây tràn bộ nhớ trên máy Android giá rẻ. |
+## 9. Bất biến miền nghiệp vụ chuẩn tắc (Canonical Domain Invariants)
+
+| Mã quy tắc | Tên quy tắc | Nội dung bất biến chuẩn mực |
+|---|---|---|
+| **DR-HARD-01** | **Bất biến cây mục tiêu (Task Tree Immutability)** | Cây mục tiêu gắn với Task là cố định tuyệt đối trong suốt vòng đời. Nhân viên không được phép đổi sang cây khác. |
+| **DR-HARD-02** | **Phân tách thực thi và thẩm định (Separation of Execution and Review)** | Người thi công không bao giờ được tự duyệt công việc của mình. Kể cả khi Staff được thăng chức lên Manager, người đó vẫn bị cấm duyệt các task do chính mình làm trong quá khứ. |
+| **DR-HARD-03** | **Bảo toàn quyền tác giả bằng chứng lịch sử (Evidence Authorship Preservation)** | Khi phân công lại task (`Reassign`), toàn bộ bằng chứng do nhân viên cũ tạo ra phải giữ nguyên tác giả ban đầu (`capturedByUserId`). |
+| **DR-HARD-04** | **Cấm ngụy tạo bằng chứng lịch sử (No Evidence Fabrication)** | Bằng chứng lịch sử không thể tái tạo trung thực tuyệt đối không được làm giả. Bắt buộc ghi nhận `EVIDENCE_INTEGRITY_EXCEPTION` để Quản lý xem xét. |
+| **DR-HARD-05** | **Bất biến của trạng thái đóng (Terminal State Immutability)** | Nhiệm vụ đã ở trạng thái `COMPLETED` hoặc `CANCELLED` là đóng vĩnh viễn, không thể mở lại hoặc sửa đổi dữ liệu. |
+| **DR-HARD-06** | **Cấm phân công lại trực tiếp khi đang làm hoặc chờ duyệt** | Không được đổi người khi task đang `IN_PROGRESS`, `WAITING_REVIEW` hoặc `REWORK_REQUIRED`. Tại `IN_PROGRESS`, bắt buộc qua `ReportFieldIssue` $\to$ `BLOCKED` $\to$ `Reassign`. |
+| **DR-HARD-07** | **Biên giới Lịch sử chăm sóc (Care History Boundary)** | CHỈ nhiệm vụ có trạng thái `COMPLETED` mới được sinh bản ghi Lịch sử chăm sóc chính thức cho cây. Các trạng thái khác cấm sinh CareHistory. |
+| **DR-MVP-01** | **Một việc gắn đúng một cây (One Task = One Tree)** | Mỗi nhiệm vụ chỉ thao tác trên duy nhất 1 thực thể cây xanh đô thị. |
+| **DR-MVP-02** | **Quản trị TaskType $\to$ ProofProfile tập trung** | `TaskType` xác định tất định `ProofProfile`. Quản lý không được tùy tiện hạ cấp profile từng việc. |
+| **DR-MVP-03** | **Vòng đời 7 trạng thái tất định** | Vòng đời Task gồm đúng 7 trạng thái: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`. |
+| **DR-MVP-04** | **Khởi đầu thực địa tất định** | DUY NHẤT hành động Nhân viên bấm `StartTask` mới chuyển `PENDING` $\to$ `IN_PROGRESS`. Mở xem chi tiết không đổi trạng thái. |
+| **DR-MVP-05** | **Đình chỉ phi kết thúc (Non-terminal BLOCKED)** | `BLOCKED` là trạng thái tạm dừng, chỉ vào từ `IN_PROGRESS` qua `ReportFieldIssue`, chỉ ra qua 3 lối thoát (`RESUME`, `REASSIGN`, `CANCEL`). |
+| **DR-MVP-06** | **Bốn kết luận duyệt tại WAITING_REVIEW** | Quản lý chỉ có đúng 4 kết luận: `APPROVE`, `REQUEST_REWORK`, `APPROVE_WITH_EXCEPTION`, `CANCEL`. Không có kết luận thứ năm. |
+| **DR-POL-01** | **Thẩm định 100% hồ sơ do con người thực hiện** | Quản lý thẩm định 100% nhiệm vụ được nộp trước khi đóng việc; cấm hoàn toàn tự động duyệt (Auto-approval). |
+| **DR-POL-02** | **Tiêu chuẩn khoảng cách GPS $\le 10$m** | Tiêu chuẩn xác thực vị trí là sai lệch không quá 10 mét. Không tồn tại ngưỡng phụ 25m. |
+| **DR-POL-03** | **Làm lại có mục tiêu (Targeted Rework)** | Yêu cầu làm lại bắt buộc chỉ rõ khâu sai sót (`targetedArea`); bảo lưu toàn bộ bằng chứng hợp lệ cũ. |
+| **DR-POL-04** | **Hủy việc có lý do bắt buộc** | Quản lý có thể hủy việc từ bất kỳ trạng thái chưa đóng nào, bắt buộc nhập lý do văn bản; lưu vết kiểm toán đầy đủ. |
+| **DR-POL-05** | **Nghiệm thu có ngoại lệ (Approve with Exception)** | Sinh bản ghi CareHistory mang cờ `HAS_EXCEPTION` kèm tham chiếu lý do chịu trách nhiệm của Quản lý; trạng thái task vẫn là `COMPLETED`. |
+| **DR-TECH-01**| **Phân tách độc lập giữa TaskStatus và SyncStatus** | Nộp offline chỉ đổi cờ máy khách; máy chủ giữ nguyên `IN_PROGRESS` cho đến khi máy chủ chấp thuận gói tin sang `WAITING_REVIEW`. |

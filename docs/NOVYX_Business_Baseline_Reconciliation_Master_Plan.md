@@ -457,6 +457,27 @@ Không sửa diagram trước docs.
 | P6-09 | No silent promotion proposed→canonical |
 | P6-10 | Every new business requirement appears in RTM |
 
+## Artifact
+
+```text
+docs/business-reconciliation/
+  09-CANONICAL-DOCUMENT-RECONCILIATION-REPORT.md
+```
+
+## Exit Gate
+
+```text
+P6 PASS
+```
+
+Chỉ khi:
+- 5 tài liệu chuẩn tắc (`PRODUCT.md`, `DOMAIN.md`, `ACCESS-CONTROL.md`, `WORKFLOWS.md`, `REQUIREMENTS-TRACEABILITY.md`) được đồng bộ hóa hoàn toàn theo đúng thứ tự
+- Thuật ngữ tác nhân, phân tầng vai trò, định danh năng lực và lệnh thao tác nhất quán 100%
+- Platform Administrator là vai trò Quản trị nền tảng hoạt động thực tế trong MVP (`ACTIVE IN MVP`), sở hữu 9 năng lực quản trị cốt lõi, không có thẩm quyền vận hành thực địa
+- Vòng đời 7 trạng thái, 3 ProofProfiles, CareHistory chỉ sinh từ COMPLETED và tính bất biến của trạng thái đóng được bảo vệ tuyệt đối
+- Toàn bộ delta nghiệp vụ mới xuất hiện từ Phase 1–5 đều được tích hợp đầy đủ vào RTM (`BR-ACT-01`, `BR-ADM-01..13`, `BR-DOM-01..04`)
+- Cả 10 tiêu chí nghiệm thu P6-01..P6-10 và 16 bài kiểm thử phủ định P6-NT-01..16 đều PASS có bằng chứng đối soát trong báo cáo 09.
+
 ---
 
 # PHASE 7 — RTM EXPANSION & ACCEPTANCE ORACLES

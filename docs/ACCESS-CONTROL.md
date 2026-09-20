@@ -1,94 +1,140 @@
 # NOVYX GreenOps — Access Control, Actor Model & Action Eligibility
 
-Tài liệu này là chuẩn mực duy nhất định nghĩa **MÔ HÌNH TÁC NHÂN (Actor Model)**, **QUYỀN HẠN & TRÁCH NHIỆM (Role & Responsibility)** và **MA TRẬN ĐIỀU KIỆN KÍCH HOẠT HÀNH ĐỘNG (Action Eligibility Matrix)**.
+Tài liệu này là chuẩn mực duy nhất định nghĩa **MÔ HÌNH TÁC NHÂN (Actor Model)**, **QUYỀN HẠN & TRÁCH NHIỆM (Role & Responsibility)**, **QUY TẮC RÀNG BUỘC PHẠM VI (Resource Scope)** và **MA TRẬN ĐIỀU KIỆN KÍCH HOẠT HÀNH ĐỘNG (Action Eligibility Matrix)**.
 
 ---
 
-## 1. Sổ đăng ký tác nhân (Actor Registry)
+## 1. Nguyên lý phân quyền cốt lõi (Core Authorization Principles)
 
-Trong NOVYX GreenOps, quyền hạn không được gán ghép tùy tiện. Hệ thống phân loại chính thức các tác nhân:
+Hệ thống tuân thủ nghiêm ngặt công thức 4 yếu tố xác định tính hợp lệ của mọi hành động nghiệp vụ:
 
-| Tác nhân (Actor)                  | Trạng thái MVP            | Định danh trong Hợp đồng `[VERIFIED]`              | Phạm vi dữ liệu đọc (Readable Scope)                                                                                                                           | Phạm vi dữ liệu ghi (Writable Scope)                                                                                                                                                                                                          | Mục đích vận hành                                                                                               |
-| :-------------------------------- | :------------------------ | :------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
-| **Nhân viên hiện trường (Staff)** | **CURRENT MVP**           | `Role = 'Staff'`, `UserRole = 'staff'`, `StaffDto` | Chỉ các cây được giao, chỉ các nhiệm vụ được phân công (`assignedStaffId === user.id`), thông báo cá nhân, lịch sử chăm sóc cây liên quan.                     | Bấm bắt đầu (`StartTask`), quét QR, đo GPS, báo ngoại lệ, chụp ảnh bằng chứng, tích checklist, báo sự cố (`ReportFieldIssue`), nộp duyệt (`SubmitTaskEvidence`), bổ sung làm lại.                                                             | Thực thi công tác chăm sóc cây ngoài thực địa và thu thập chuỗi bằng chứng xác thực theo ProofProfile.          |
-| **Quản lý vận hành (Manager)**    | **CURRENT MVP**           | `Role = 'Manager'`, `UserRole = 'manager'`         | Toàn bộ danh mục cây đô thị, toàn bộ danh sách nhiệm vụ toàn tuyến, danh sách nhân viên, sự cố `BLOCKED`, hàng đợi duyệt `WAITING_REVIEW`, thông báo vận hành. | Tạo nhiệm vụ mới, phân công nhân viên, đổi người (`Reassign`), hủy việc (`CancelTask`), giải tỏa sự cố `BLOCKED` (Resume/Reassign/Cancel), phê duyệt (`Approve`), duyệt ngoại lệ (`ApproveWithException`), yêu cầu làm lại (`RequestRework`). | Điều phối nguồn lực, giám sát tiến độ toàn tuyến, xử lý ách tắc hiện trường và thẩm định chất lượng bằng chứng. |
-| **Quản trị hệ thống (Admin)**     | **OUT OF MVP / RESERVED** | `UserRole = 'admin'`                               | Toàn bộ hệ thống, cấu hình tham số, nhật ký kiểm toán (Audit Logs), người dùng và phân quyền.                                                                  | Khởi tạo tài khoản, phân quyền, cấu hình danh mục cây, mở khóa nghiệp vụ đặc biệt (Break-glass).                                                                                                                                              | Quản trị nền tảng đô thị thông minh. **Tuyệt đối không tạo màn hình hoặc tính năng Admin trong phạm vi MVP**.   |
-| **Hệ thống tự động (System)**     | **TECHNICAL ACTOR**       | `System`                                           | Trạng thái cảm biến thiết bị, bộ đệm ngoại tuyến, token phiên.                                                                                                 | Tự động đồng bộ cache, kiểm soát quyền camera/vị trí, làm mới token, đẩy hàng đợi Outbox.                                                                                                                                                     | Điều phối kỹ thuật nền tảng và bảo toàn dữ liệu.                                                                |
+$$\text{ACTION ELIGIBILITY} = \text{ACTOR ROLE} \land \text{RESOURCE SCOPE} \land \text{DOMAIN STATE} \land \text{BUSINESS PRECONDITIONS}$$
 
----
-
-## 2. Mô hình Vai trò — Trách nhiệm — Ranh giới cấm (Role & Responsibility)
-
-### 2.1. Nhân viên hiện trường (Staff)
-
-- **Trách nhiệm chính:**
-  - Tiếp nhận nhiệm vụ trong hàng đợi cá nhân và chủ động bấm `StartTask`.
-  - Đến đúng vị trí thực địa, thực hiện Site Verification (quét QR và đo GPS $\le 10$m).
-  - Thu thập đầy đủ bằng chứng theo đúng hợp đồng của `ProofProfile` được giao.
-  - Báo cáo trung thực sự cố hiện trường (`ReportFieldIssue`) khi gặp trở ngại bất khả kháng.
-  - Nộp báo cáo nghiệm thu đúng hạn; khắc phục đúng khâu bị Quản lý yêu cầu làm lại.
-- **Hành động bị cấm tuyệt đối (Forbidden):**
-  - **CẤM tự phê duyệt nhiệm vụ của chính mình (DR-HARD-02).**
-  - CẤM tự tạo nhiệm vụ mới hoặc tự ý phân công lại task cho người khác.
-  - CẤM chuyển đổi nhiệm vụ sang cây khác (DR-HARD-01: Cây mục tiêu là bất biến).
-  - CẤM ngụy tạo bằng chứng lịch sử không thể tái tạo (DR-HARD-04).
-  - CẤM nộp hồ sơ khi chưa đủ hợp đồng bằng chứng theo ProofProfile.
-
-### 2.2. Quản lý vận hành (Manager)
-
-- **Trách nhiệm chính:**
-  - Tạo nhiệm vụ gắn đúng cây và chọn `TaskType` phù hợp để hệ thống xác định `ProofProfile`.
-  - Phân công đúng người, cân bằng tải công việc giữa các nhân viên.
-  - Xử lý các sự cố hiện trường `BLOCKED` một cách nhanh chóng (tiếp tục, đổi người, hoặc hủy).
-  - Thẩm định 100% hồ sơ nộp dựa trên bằng chứng khách quan.
-  - Ra quyết định chuẩn xác: Phê duyệt đạt chuẩn, Phê duyệt có ngoại lệ (kèm lý do), hoặc Yêu cầu làm lại có mục tiêu.
-- **Hành động bị cấm tuyệt đối (Forbidden):**
-  - CẤM tùy tiện hạ cấp `ProofProfile` của một nhiệm vụ riêng lẻ (DR-MVP-02).
-  - CẤM phân công lại trực tiếp khi task đang `IN_PROGRESS` hoặc `WAITING_REVIEW` (DR-HARD-06).
-  - CẤM phê duyệt nhiệm vụ còn thiếu bằng chứng bắt buộc mà không qua luồng ngoại lệ có lý do.
-  - CẤM yêu cầu làm lại mà không chỉ rõ khâu sai sót và không có lý do cụ thể (DR-POL-03).
-  - CẤM hủy nhiệm vụ mà không nhập lý do bắt buộc (DR-POL-04).
-  - CẤM sửa đổi dữ liệu của nhiệm vụ đã ở trạng thái `COMPLETED` hoặc `CANCELLED` (DR-HARD-05).
+### Các nguyên tắc quản trị quyền hạn bắt buộc:
+1. **Vai trò đơn thuần không đủ để cấp quyền (Role alone $\ne$ Authorization):** Có vai trò `manager` nhưng task không thuộc phạm vi phụ trách hoặc task đang ở trạng thái đóng thì vẫn bị từ chối 100%.
+2. **Phân quyền không đồng nhất với hiển thị giao diện (Authorization $\ne$ UI Visibility):** Ẩn nút trên UI chỉ là hỗ trợ trải nghiệm người dùng (UX); toàn bộ logic phân quyền bắt buộc phải được bảo vệ độc lập tại tầng nghiệp vụ máy chủ.
+3. **Phân định rõ rệt các mức độ thẩm quyền:**
+   $$\text{READ} \ne \text{MUTATE} \ne \text{DECIDE} \ne \text{ADMINISTER}$$
+   - Xem dữ liệu không đồng nghĩa có quyền sửa.
+   - Quản trị nền tảng (Administer) không đồng nghĩa có quyền can thiệp vận hành (Operate/Decide).
+4. **Không có quan hệ kế thừa cấp bậc (No Role Inheritance):** Tuyệt đối **KHÔNG CÓ** mô hình phân cấp `Admin > Manager > Staff`. Admin không được tự động thừa hưởng quyền của Manager; Manager không thể làm thay việc của Staff.
 
 ---
 
-## 3. Mô hình điều kiện kích hoạt hành động (Action Eligibility Model)
+## 2. Sổ đăng ký tác nhân & Ranh giới phạm vi (Actor Registry & Scope Model)
 
-Một hành động nghiệp vụ chỉ hợp lệ khi thỏa mãn công thức 4 yếu tố:
+Hệ thống phân định rạch ròi giữa **Mặt bằng Tác nghiệp (Operational Plane)**, **Mặt bằng Quản trị Nền tảng (Governance Plane)** và **Tác nhân Kỹ thuật (Technical Automation)**:
 
-$$\text{Action Eligibility} = \text{Role} \land \text{Resource Scope} \land \text{Task State} \land \text{Preconditions}$$
+```text
+NOVYX ACTOR MODEL
+├── Operational Plane
+│   ├── Field Staff (staff) ───────────── Scope: task.assignedStaffId == actor.userId
+│   └── Operations Manager (manager) ──── Scope: AUTHORIZED_OPERATIONAL_SCOPE
+├── Governance Plane
+│   └── Platform Administrator (admin) ── Scope: PLATFORM_GOVERNANCE_SCOPE
+└── Technical Automation
+    └── System (technical actor) ──────── Scope: Deterministic system functions
+```
 
-### 3.1. Các trạng thái hiển thị của nút thao tác trên UI
+### 2.1. Bảng phân định thẩm quyền và phạm vi dữ liệu
 
-1. **Khả dụng (Visible & Enabled):** Người dùng có vai trò hợp lệ, đối tượng thuộc phạm vi sở hữu, ở đúng trạng thái nghiệp vụ và thỏa mãn 100% điều kiện tiên quyết.
-2. **Bị khóa kèm lý do (Visible & Disabled with Rationale):** Người dùng có quyền, nhưng điều kiện tiên quyết chưa đạt (ví dụ: Nút "Gửi duyệt" bị mờ và hiển thị "Thiếu ảnh sau" khi chưa chụp đủ bằng chứng theo hồ sơ).
-3. **Ẩn hoàn toàn (Hidden / Not Rendered):** Người dùng không có vai trò hoặc hành động bị cấm ở trạng thái hiện tại (ví dụ: Staff không nhìn thấy nút "Phê duyệt" hay "Hủy việc").
+| Tác nhân (Canonical Term) | Tên tiếng Việt | Mã vai trò | Mặt bằng | Phạm vi tài nguyên được phép (Resource Scope) | Thẩm quyền cốt lõi được cấp | Hành vi bị CẤM tuyệt đối (Forbidden) |
+|---|---|:---:|:---:|---|---|---|
+| **Field Staff** | Nhân viên hiện trường | `staff` | Operational | `task.assignedStaffId == actor.userId` (Chỉ nhiệm vụ được giao). | Xem việc được giao, `StartTask`, đo GPS, quét QR, báo ngoại lệ, chụp bằng chứng, tích checklist, điền findings, `ReportFieldIssue`, nộp việc, sửa làm lại. | **CẤM tự duyệt việc của mình (`DR-HARD-02`)**; CẤM tạo việc, phân công lại, hủy việc, hoặc sửa dữ liệu của nhân viên khác. |
+| **Operations Manager** | Quản lý vận hành | `manager` | Operational | `AUTHORIZED_OPERATIONAL_SCOPE` (Phạm vi địa bàn/tuyến quản lý được ủy quyền). | Tạo task, giao việc, Reassign ở `PENDING`, gỡ sự cố `BLOCKED` (Resume/Reassign/Cancel), `CancelTask`, thẩm định 4 kết luận duyệt (`Approve`, `ApproveWithException`, `RequestRework`, `Cancel`). | **CẤM can thiệp IAM/tài khoản người dùng**; CẤM tự ý hạ cấp ProofProfile; CẤM tạo/sửa Tree Master Data; CẤM sửa việc đã đóng (`COMPLETED`/`CANCELLED`). |
+| **Platform Administrator** | Quản trị hệ thống | `admin` | Governance | `PLATFORM_GOVERNANCE_SCOPE` (Toàn bộ tài nguyên quản trị nền tảng). | Quản trị người dùng & vai trò (IAM), quản trị tài khoản, tra cứu nhật ký kiểm toán, quản trị dữ liệu gốc cây xanh, quản trị danh mục loại việc, ban hành chính sách bằng chứng & mẫu checklist. | **CẤM 100% các hành vi tác nghiệp nhiệm vụ thông thường (Zero normal task operations)**: CẤM tạo việc, giao việc, đổi người, bấm bắt đầu, nộp duyệt, hoặc phê duyệt task thực địa. |
+| **System** | Hệ thống tự động | `System` | Technical | Toàn bộ các dịch vụ kỹ thuật nền tảng và hàng đợi máy tính. | Tự động hóa tất định: kiểm tra điều kiện tiên quyết, đo khoảng cách GPS, snapshot checklist, ánh xạ profile, chuyển gói tin Outbox, ghi nhật ký kiểm toán bất biến. | **System không phải là UserRole**. CẤM tự động phân công thay Quản lý; CẤM tự động duyệt việc (`DR-POL-01`); CẤM tự ý xóa cờ ngoại lệ. |
 
 ---
 
-## 4. Ma trận điều kiện kích hoạt hành động chuẩn tắc (Canonical Action Eligibility Matrix)
+## 3. Trạng thái Vòng đời & Tính Khả dụng của Hành động (Task State vs Action Eligibility)
 
-| Hành động (Action)               | Tác nhân (Actor) | Tài nguyên (Resource) | Trạng thái hợp lệ (Valid States)                                         | Điều kiện tiên quyết (Preconditions)                                                 | Chuyển dịch trạng thái (Transition)    | Lý do bị chặn nếu không hợp lệ (Block Reason)                            | Cơ chế kiểm soát mục tiêu (Target Gate)  | MVP?         |
-| :------------------------------- | :--------------- | :-------------------- | :----------------------------------------------------------------------- | :----------------------------------------------------------------------------------- | :------------------------------------- | :----------------------------------------------------------------------- | :--------------------------------------- | :----------- |
-| **Tạo nhiệm vụ mới**             | Manager          | `Task`                | _(Khởi tạo)_                                                             | Chọn đúng cây, chọn nhân viên hợp lệ, chọn `TaskType`, hạn chót tương lai.           | $\to$ `PENDING`                        | Thiếu thông tin bắt buộc hoặc hạn chót trong quá khứ.                    | Application Use Case & Form Guard        | **YES**      |
-| **Phân công lại ở PENDING**      | Manager          | `Task`                | `PENDING`                                                                | Chọn nhân viên mới khác nhân viên cũ.                                                | Giữ `PENDING`                          | Chưa chọn nhân viên mới hoặc chọn trùng nhân viên hiện tại.              | Application Use Case & State Guard       | **YES**      |
-| **Hủy nhiệm vụ (Cancel)**        | Manager          | `Task`                | `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED` | Bắt buộc nhập lý do hủy (`cancelReason`).                                            | $\to$ `CANCELLED`                      | Lý do hủy rỗng hoặc task đã ở trạng thái đóng (`COMPLETED`/`CANCELLED`). | Domain Mutation Guard & Audit Service    | **YES**      |
-| **Bắt đầu làm việc (StartTask)** | Staff            | `Task`                | `PENDING`                                                                | Task thuộc sở hữu của Staff (`assignedStaffId === user.id`).                         | $\to$ `IN_PROGRESS`                    | Không phải task của mình hoặc task chưa ở trạng thái PENDING.            | Route Guard & Domain Transition Guard    | **YES**      |
-| **Xác thực GPS**                 | Staff            | `SiteVerification`    | `IN_PROGRESS`                                                            | Quyền Location granted; khoảng cách tới gốc cây $\le 10$m.                           | Ghi nhận `gpsVerified = true`          | Khoảng cách $> 10$m hoặc chưa cấp quyền định vị.                         | Device Hardware Adapter & Location Guard | **YES**      |
-| **Báo ngoại lệ GPS**             | Staff            | `SiteVerification`    | `IN_PROGRESS`                                                            | Đã thử lại GPS bất thành; khoảng cách $> 10$m; có lý do giải trình.                  | Ghi nhận `LOCATION_EXCEPTION`          | Chưa thử lại đo GPS hoặc lý do rỗng.                                     | Site Verification Domain Service         | **YES**      |
-| **Quét mã QR cây**               | Staff            | `SiteVerification`    | `IN_PROGRESS`                                                            | Quyền Camera granted; mã quét khớp 100% với cây của task.                            | Ghi nhận `qrVerified = true`           | Quét sai mã cây hoặc mã hỏng không đọc được.                             | Site Verification Domain Service         | **YES**      |
-| **Báo ngoại lệ tem QR**          | Staff            | `SiteVerification`    | `IN_PROGRESS`                                                            | Tem QR bị mờ/rách/mất; chụp ảnh tem hỏng + nhập lý do đối chiếu.                     | Ghi nhận `IDENTITY_EXCEPTION`          | Thiếu ảnh chụp tem hỏng hoặc cố tình đổi sang cây khác.                  | Site Verification Domain Service         | **YES**      |
-| **Thu thập bằng chứng (Proof)**  | Staff            | `TaskEvidence`        | `IN_PROGRESS`                                                            | Thu thập theo đúng `ProofProfile` (Ảnh Trước/Sau, Checklist, hoặc Findings).         | Thêm bản ghi `TaskEvidence`            | Chụp mờ, thiếu ảnh hoặc checklist chưa tích đủ.                          | Proof Acquisition Domain Service         | **YES**      |
-| **Báo sự cố hiện trường**        | Staff            | `FieldIssue`          | `IN_PROGRESS`                                                            | Gặp chướng ngại vật ngoài ý muốn; có ảnh chụp sự cố + lý do mô tả.                   | $\to$ `BLOCKED`                        | Chưa chụp ảnh sự cố hoặc mô tả lý do rỗng.                               | Application Use Case & Transition Guard  | **YES**      |
-| **Giải tỏa sự cố — Tiếp tục**    | Manager          | `Task`                | `BLOCKED`                                                                | Sự cố đã được xử lý ngoài thực địa; cho phép Staff tiếp tục.                         | $\to$ `IN_PROGRESS`                    | Task không ở trạng thái BLOCKED.                                         | Manager Resolution Use Case              | **YES**      |
-| **Giải tỏa sự cố — Đổi người**   | Manager          | `Task`                | `BLOCKED`                                                                | Đổi nhân viên thực hiện mới; bảo toàn tác giả bằng chứng cũ.                         | $\to$ `PENDING`                        | Chưa chọn nhân viên mới.                                                 | Manager Resolution Use Case              | **YES**      |
-| **Giải tỏa sự cố — Hủy việc**    | Manager          | `Task`                | `BLOCKED`                                                                | Sự cố bất khả kháng; bắt buộc có lý do hủy.                                          | $\to$ `CANCELLED`                      | Lý do hủy rỗng.                                                          | Manager Resolution Use Case              | **YES**      |
-| **Nộp chuỗi bằng chứng**         | Staff            | `Task`                | `IN_PROGRESS`                                                            | **Đủ 100% bằng chứng theo ProofProfile** (hoặc ngoại lệ được ghi nhận).              | $\to$ `WAITING_REVIEW`                 | Còn thiếu bằng chứng bắt buộc chưa hoàn thành.                           | Proof Gate & Application Use Case        | **YES**      |
-| **Phê duyệt chuẩn (Approve)**    | Manager          | `Task`                | `WAITING_REVIEW`                                                         | **100% bằng chứng và xác thực đạt chuẩn, không có lỗi**.                             | $\to$ `COMPLETED`                      | Hồ sơ còn lỗ hổng chưa được xử lý.                                       | Manager Review Audit Gate                | **YES**      |
-| **Duyệt có ngoại lệ**            | Manager          | `Task`                | `WAITING_REVIEW`                                                         | Việc đã làm thật, có ngoại lệ không thể tái tạo; Quản lý chịu trách nhiệm kèm lý do. | $\to$ `COMPLETED` _(Cờ HAS_EXCEPTION)_ | Lý do ngoại lệ rỗng hoặc phát hiện gian lận.                             | Manager Review Audit Gate                | **YES**      |
-| **Yêu cầu làm lại (Rework)**     | Manager          | `Task`                | `WAITING_REVIEW`                                                         | Phát hiện sai sót; **chỉ rõ khâu sai sót (`targetedArea`) + nhập lý do**.            | $\to$ `REWORK_REQUIRED`                | Chưa chỉ rõ khâu cần sửa hoặc lý do từ chối rỗng.                        | Manager Review Audit Gate                | **YES**      |
-| **Nộp lại khâu làm lại**         | Staff            | `Task`                | `REWORK_REQUIRED`                                                        | Task thuộc sở hữu Staff; đã sửa đúng khâu bị từ chối.                                | $\to$ `WAITING_REVIEW`                 | Khâu bị từ chối vẫn chưa được bổ sung hợp lệ.                            | Targeted Rework Use Case                 | **YES**      |
-| **Tra cứu nhanh QR cây**         | Staff, Manager   | `Tree`                | Bất kỳ                                                                   | Đã cấp quyền Camera; mã quét thuộc danh mục quản lý.                                 | Xem thông tin cây & Care History       | Mã không tồn tại trong hệ thống.                                         | Query Use Case                           | **YES**      |
-| **Phân công lại khi đang làm**   | Manager          | `Task`                | `IN_PROGRESS`                                                            | **BỊ CẤM TUYỆT ĐỐI (DR-HARD-06)**                                                    | Không đổi                              | Phải qua `ReportFieldIssue` $\to$ `BLOCKED` $\to$ `Reassign`.            | State Machine Transition Guard           | **NO (CẤM)** |
-| **Nhân viên tự duyệt việc**      | Staff            | `Task`                | `WAITING_REVIEW`                                                         | **BỊ CẤM TUYỆT ĐỐI (DR-HARD-02)**                                                    | Không đổi                              | Nhân viên không có quyền thẩm định việc của mình.                        | Authorization Guard                      | **NO (CẤM)** |
-| **Sửa đổi việc đã đóng**         | Bất kỳ           | `Task`                | `COMPLETED`, `CANCELLED`                                                 | **BỊ CẤM TUYỆT ĐỐI (DR-HARD-05)**                                                    | Không đổi                              | Nhiệm vụ đã đóng vĩnh viễn (Terminal State).                             | Domain Aggregate Immutability Guard      | **NO (CẤM)** |
+Quyền thao tác trên thực thể `Task` phụ thuộc chặt chẽ vào trạng thái vòng đời 7 bước:
+
+| Trạng thái Task (`TaskStatus`) | Lệnh được phép kích hoạt | Tác nhân hợp lệ | Điều kiện tiên quyết cốt lõi | Hành vi bị CẤM TUYỆT ĐỐI tại trạng thái này |
+|---|---|:---:|---|---|
+| **`PENDING`** | `StartTask`<br>`ReassignTask (Case A)`<br>`CancelTask` | Staff<br>Manager<br>Manager | `assignedStaffId == actor.userId`<br>Chọn nhân sự mới `ACTIVE`<br>Nhập lý do hủy bắt buộc | CẤM Staff phân công lại hoặc hủy việc.<br>CẤM đo GPS hay nộp hồ sơ khi chưa bắt đầu. |
+| **`IN_PROGRESS`** | `ReportFieldIssue`<br>`SubmitEvidence`<br>`CancelTask` | Staff<br>Staff<br>Manager | Có ảnh hiện trường + mô tả sự cố<br>100% bằng chứng đạt chuẩn ProofProfile<br>Nhập lý do hủy bắt buộc | **CẤM Quản lý phân công lại trực tiếp (`DR-HARD-06`)**.<br>CẤM chuyển sang `WAITING_REVIEW` khi chưa đủ ảnh/checklist. |
+| **`BLOCKED`** | `ResumeBlockedTask`<br>`ReassignTask (Case B)`<br>`CancelTask` | Manager<br>Manager<br>Manager | Trở ngại đã giải tỏa, cùng nhân viên cũ tiếp tục<br>Chọn nhân sự mới `ACTIVE`, bảo toàn bằng chứng cũ<br>Lý do hủy bất khả kháng | **CẤM Staff tự ý mở lại hoặc tự hủy việc**.<br>CẤM chuyển trực tiếp từ `BLOCKED` sang `COMPLETED`. |
+| **`WAITING_REVIEW`** | `ApproveTask`<br>`ApproveWithException`<br>`RequestRework`<br>`CancelTask` | Manager<br>Manager<br>Manager<br>Manager | Hồ sơ đạt 100% tiêu chuẩn chất lượng<br>Có lý do ngoại lệ hợp lệ, Quản lý chịu trách nhiệm<br>Chỉ rõ khâu sai sót (`targetedArea`) + lý do<br>Lý do hủy bắt buộc | **CẤM người thi công tự duyệt việc của mình (`DR-HARD-02`)**.<br>CẤM Admin phê duyệt thay Quản lý.<br>CẤM phân công lại khi đang chờ duyệt. |
+| **`REWORK_REQUIRED`** | `ResubmitRework`<br>`CancelTask` | Staff<br>Manager | Sửa đúng khâu bị từ chối, tạo phiên nộp mới<br>Nhập lý do hủy khi không thể khắc phục | **CẤM phân công lại trực tiếp**.<br>**CẤM gọi lệnh `ReportFieldIssue` để sang `BLOCKED`**.<br>CẤM Quản lý sửa hộ bài của nhân viên. |
+| **`COMPLETED`** | _(Không có lệnh ghi)_ | Không ai | **TRẠNG THÁI ĐÓNG BẤT BIẾN (Terminal Success)** | **CẤM 100% mọi hành vi sửa đổi dữ liệu hoặc mở lại (`DR-HARD-05`)**. |
+| **`CANCELLED`** | _(Không có lệnh ghi)_ | Không ai | **TRẠNG THÁI ĐÓNG BẤT BIẾN (Terminal Void)** | **CẤM 100% mọi hành vi sửa đổi dữ liệu hoặc phục hồi (`DR-HARD-05`)**. |
+
+---
+
+## 4. Ma trận Phân quyền Tác nghiệp Thực địa (Operational Action Matrix)
+
+| Mã Lệnh | Tên Hành động Nghiệp vụ | Tác nhân Hợp lệ | Tài nguyên Thao tác | Trạng thái Hợp lệ | Ràng buộc Thẩm quyền & Tiên quyết | Chuyển dịch Trạng thái |
+|:---:|---|:---:|---|:---:|---|:---:|
+| **CMD-OP-01** | `CreateTask` | Operations Manager | `Task` | *(Khởi tạo)* | Thuộc `AUTHORIZED_OPERATIONAL_SCOPE`; cây tồn tại; `TaskType` đang `ACTIVE`; hạn chót tương lai. | $\to$ `PENDING` |
+| **CMD-OP-02** | `StartTask` | Field Staff | `Task` | `PENDING` | `task.assignedStaffId == actor.userId`. DUY NHẤT lệnh này được mở đầu việc. | $\to$ `IN_PROGRESS` |
+| **CMD-OP-03** | `VerifyGps` | Field Staff | `SiteVerification` | `IN_PROGRESS` | `assignedStaffId == actor.userId`; khoảng cách $\le 10$m. Không đổi TaskStatus. | Giữ `IN_PROGRESS` |
+| **CMD-OP-04** | `ReportLocationException` | Field Staff | `VerificationException`| `IN_PROGRESS` | Đã thử lại GPS; khoảng cách $> 10$m; có văn bản giải trình. | Giữ `IN_PROGRESS` |
+| **CMD-OP-05** | `VerifyQr` | Field Staff | `SiteVerification` | `IN_PROGRESS` | Mã quét khớp 100% với cây được giao của Task. Không đổi TaskStatus. | Giữ `IN_PROGRESS` |
+| **CMD-OP-06** | `ReportIdentityException` | Field Staff | `VerificationException`| `IN_PROGRESS` | Tem QR hỏng/mất; chụp ảnh tem tại gốc + đối chiếu cây được giao. | Giữ `IN_PROGRESS` |
+| **CMD-OP-07** | `CaptureProofEvidence` | Field Staff | `TaskEvidence` | `IN_PROGRESS` | Thu thập ảnh/checklist theo đúng hợp đồng của `ProofProfile`. | Giữ `IN_PROGRESS` |
+| **CMD-OP-08** | `ReportFieldIssue` | Field Staff | `FieldIssue` | `IN_PROGRESS` | Phát sinh chướng ngại vật thực địa; bắt buộc ảnh chụp + lý do cản trở. | $\to$ `BLOCKED` |
+| **CMD-OP-09** | `SubmitEvidence` | Field Staff | `Task` | `IN_PROGRESS` | Đạt 100% bằng chứng theo Profile; máy chủ tiếp nhận thành công. | $\to$ `WAITING_REVIEW` |
+| **CMD-OP-10** | `ReviewApprove` | Operations Manager | `Task` | `WAITING_REVIEW` | Thuộc scope; 100% đạt chuẩn; `actor.userId != task.assignedStaffId`. | $\to$ `COMPLETED` |
+| **CMD-OP-11** | `ReviewApproveWithException` | Operations Manager | `Task` | `WAITING_REVIEW` | Thuộc scope; việc đã làm thật; bắt buộc có lý do bảo lãnh của Quản lý. | $\to$ `COMPLETED` *(HAS_EXCEPTION)* |
+| **CMD-OP-12** | `ReviewRequestRework` | Operations Manager | `Task` | `WAITING_REVIEW` | Thuộc scope; bắt buộc chỉ rõ `targetedArea` và lý do từ chối. | $\to$ `REWORK_REQUIRED` |
+| **CMD-OP-13** | `ResubmitRework` | Field Staff | `Task` | `REWORK_REQUIRED` | `assignedStaffId == actor.userId`; đã khắc phục đúng khâu chỉ định. | $\to$ `WAITING_REVIEW` |
+| **CMD-OP-14** | `ResumeBlockedTask` | Operations Manager | `Task` | `BLOCKED` | Thuộc scope; trở ngại thực địa đã được tháo gỡ; cho nhân viên cũ tiếp tục. | $\to$ `IN_PROGRESS` |
+| **CMD-OP-15** | `ReassignTask (Case A)` | Operations Manager | `Task` | `PENDING` | Thuộc scope; chọn nhân sự mới `ACTIVE` khác nhân sự hiện tại. | Giữ `PENDING` |
+| **CMD-OP-16** | `ReassignTask (Case B)` | Operations Manager | `Task` | `BLOCKED` | Thuộc scope; chọn nhân sự mới `ACTIVE`; bảo toàn quyền tác giả cũ. | $\to$ `PENDING` |
+| **CMD-OP-17** | `CancelTask` | Operations Manager | `Task` | Phi kết thúc | Thuộc scope; bắt buộc nhập lý do văn bản; cấm hủy task đã đóng. | $\to$ `CANCELLED` |
+
+---
+
+## 5. Ma trận Phân quyền Quản trị Nền tảng (Platform Governance Action Matrix)
+
+19 lệnh quản trị nền tảng của Platform Administrator tương ứng với **9 năng lực quản trị MVP** (`CAP-ADM-01..09`):
+
+| Mã Lệnh | Tên Lệnh Quản trị | Năng lực Tương ứng | Tài nguyên Thao tác | Điều kiện Tiên quyết & Quy tắc Quản trị | Yêu cầu Kiểm toán | Trạng thái MVP |
+|:---:|---|:---:|---|---|:---:|:---:|
+| **CMD-ADM-01** | `ProvisionUser` | `CAP-ADM-01` | `User`, `Account` | Admin `ACTIVE`; email/phone duy nhất; khởi tạo kích hoạt an toàn. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-02** | `AssignRole` | `CAP-ADM-02` | `RoleAssignment` | Admin `ACTIVE`; cấm tự đổi quyền (`ADM-SOD-01`); đối soát trách nhiệm dở dang. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-03** | `SuspendAccount` | `CAP-ADM-03` | `Account` | Admin `ACTIVE`; nhập lý do; tài khoản không còn khả năng xác thực. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-04** | `ActivateAccount` | `CAP-ADM-03` | `Account` | Admin `ACTIVE`; chỉ mở tài khoản đang `SUSPENDED` hoặc `INVITED`. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-05** | `DisableAccount` | `CAP-ADM-03` | `Account` | Admin `ACTIVE`; nhân viên nghỉ việc; thu hồi quyền vĩnh viễn, không xóa vật lý. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-06** | `UnlockAccount` | `CAP-ADM-04` | `Account` | Admin `ACTIVE`; mở khóa khi tài khoản bị khóa do nhập sai mật khẩu. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-07** | `ResetCredentialSetup` | `CAP-ADM-04` | `Account` | Admin `ACTIVE`; gửi cơ chế thiết lập lại mật khẩu an toàn cho người dùng. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-08** | `ViewAuditLog` | `CAP-ADM-05` | `AuditEvent` | Admin `ACTIVE`; truy vấn sổ nhật ký kiểm toán append-only chỉ-đọc. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-09** | `FilterAuditLog` | `CAP-ADM-05` | `AuditEvent` | Admin `ACTIVE`; lọc theo thời gian, actor, hành động hoặc resource. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-10** | `CreateTree` | `CAP-ADM-06` | `Tree` | `treeId` duy nhất; `qrCode` duy nhất; tọa độ GPS hợp lệ định dạng/dải đo. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-11** | `UpdateTreeMasterData` | `CAP-ADM-06` | `TreeMasterData` | Cập nhật chiều cao, tán lá, rủi ro; bắt buộc nhập lý do điều chỉnh. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-12** | `ReplaceTreeQrCode` | `CAP-ADM-06` | `Tree` | Nhận báo cáo tem hỏng; cấp chuỗi QR mới duy nhất; giữ nguyên `treeId`. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-13** | `UpdateCanonicalCoordinates` | `CAP-ADM-06` | `Tree` | Tọa độ mới hợp lệ dải trắc địa; bắt buộc có biên bản/lý do đo đạc lại. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-14** | `RetireTree` | `CAP-ADM-06` | `Tree` | Cây đã chết/đốn hạ $\to$ `RETIRED`; chặn tạo task mới về sau; không xóa vật lý. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-15** | `CreateTaskType` | `CAP-ADM-07` | `TaskTypeCatalog` | Nhập mã `taskTypeId`, tên, mô tả. Cần có ánh xạ ProofProfile trước khi giao việc. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-16** | `DeactivateTaskType` | `CAP-ADM-07` | `TaskTypeCatalog` | Chuyển sang `INACTIVE` để ẩn khỏi danh mục giao việc; cấm xóa cứng. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-17** | `ActivateTaskType` | `CAP-ADM-07` | `TaskTypeCatalog` | Mở lại loại việc phục vụ tạo task vận hành. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-18** | `PublishProofPolicyVersion` | `CAP-ADM-08` | `ProofPolicyMapping` | Ban hành phiên bản ánh xạ `TaskType -> ProofProfile`; không áp dụng hồi tố. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-19** | `PublishChecklistTemplateVersion` | `CAP-ADM-09` | `ChecklistTemplate` | Ban hành phiên bản mẫu checklist kỹ thuật; áp dụng cho các task tương lai. | `AUDIT_REQUIRED` | **MVP** |
+| **CMD-ADM-20** | `ManageDynamicFindingsTemplate` | `CAP-ADM-10` | `FindingsSchema` | Thiết kế biểu mẫu khám bệnh động. | `AUDIT_REQUIRED` | **NEXT (Khóa tại MVP)** |
+| **CMD-ADM-21** | `UseBreakGlass` | `CAP-ADM-11` | Khẩn cấp | Can thiệp vượt quyền trong phiên giới hạn thời gian khi có thiên tai. | `CRITICAL_AUDIT` | **NEXT (Khóa tại MVP)** |
+| **CMD-ADM-22** | `ManagePlatformSystemConfig` | `CAP-ADM-13` | Hệ thống | Cấu hình tham số hạ tầng tùy tiện. | N/A | **REJECTED (Bác bỏ)** |
+
+---
+
+## 6. Các Hành Động Bị Cấm Tuyệt Đối (Strict Forbidden Boundaries)
+
+Bảng tổng hợp các ranh giới cấm nghiêm ngặt bảo vệ tính liêm chính của toàn bộ hệ thống:
+
+| Tác nhân | Hành vi Cấm Tuyệt Đối | Căn cứ Bất biến / Quy tắc | Cơ chế Chặn (Enforcement Mechanism) |
+|---|---|---|---|
+| **Field Staff** | Tự phê duyệt nghiệm thu nhiệm vụ của chính mình | `DR-HARD-02` | API từ chối nếu `reviewerId == assignedStaffId`; giao diện không có nút duyệt. |
+| **Field Staff** | Tự ý chuyển việc sang cây xanh khác | `DR-HARD-01` | Cây mục tiêu bất biến; API chặn mọi lệnh cập nhật `treeId`. |
+| **Field Staff** | Tự tạo việc hoặc tự phân công lại task | Phân tách vai trò | Chặn quyền tại tầng Use Case; chỉ Quản lý mới có quyền tạo/giao việc. |
+| **Field Staff** | Báo sự cố khi đang ở `REWORK_REQUIRED` | `P4-SC-01` | Cấm gọi lệnh `ReportFieldIssue` tại trạng thái làm lại. |
+| **Operations Manager** | Can thiệp vào tài khoản, mật khẩu hoặc gán vai trò IAM | Phân tách mặt bằng | Manager không có quyền trên các thực thể của `Identity & Access Management`. |
+| **Operations Manager** | Tự ý hạ cấp `ProofProfile` của một nhiệm vụ đơn lẻ | `DR-MVP-02` | Profile được suy ra tất định từ `TaskType`; UI và API khóa trường này. |
+| **Operations Manager** | Phân công lại trực tiếp khi task đang `IN_PROGRESS` | `DR-HARD-06` | Phải qua quy trình báo sự cố `ReportFieldIssue` $\to$ `BLOCKED` $\to$ `Reassign`. |
+| **Operations Manager** | Sửa đổi nhiệm vụ đã ở trạng thái `COMPLETED` hoặc `CANCELLED` | `DR-HARD-05` | Trạng thái đóng là bất biến vĩnh viễn; chặn mọi lệnh Mutation. |
+| **Platform Administrator** | Thực hiện bất kỳ thao tác vận hành Task thực địa thông thường | `P4-09` | **CẤM 100%**: Admin không có quyền tạo task, giao việc, duyệt việc hay hủy task vận hành. |
+| **Platform Administrator** | Tự điều chỉnh vai trò của chính mình | `ADM-SOD-01` | API từ chối nếu `targetUserId == currentAdminId`; chống tự leo thang đặc quyền. |
+| **Platform Administrator** | Chỉnh sửa hoặc xóa các bản ghi sự kiện kiểm toán | `ADM-SOD-03` | Kho kiểm toán là Append-Only; không tồn tại API Update/Delete log. |
+| **Platform Administrator** | Sửa đổi mã định danh `treeId` | Quản trị dữ liệu gốc | `treeId` là bất biến duy nhất; cấm sửa đổi trong mọi hoàn cảnh. |
+| **System** | Tự động phân công công việc thay Quản lý | Quyền hạn con người | Chỉ con người Quản lý mới được quyết định điều phối nhân lực. |
+| **System** | Tự động phê duyệt nghiệm thu (`Auto-approval`) | `DR-POL-01` | 100% công việc phải do Quản lý con người thẩm định và chịu trách nhiệm. |
