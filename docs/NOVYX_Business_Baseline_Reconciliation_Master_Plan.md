@@ -605,6 +605,39 @@ Content correctness
 
 Không được chỉ validate geometry rồi kết luận nghiệp vụ đúng.
 
+## Artifact
+
+```text
+docs/business-reconciliation/
+  11-DIAGRAM-SUITE-RECONCILIATION-REPORT.md
+```
+
+## Exit Gate
+
+```text
+PHASE 8 PASS
+— DIAGRAM SUITE RECONCILED
+— ACTOR AND DOMAIN VIEWS ALIGNED
+— AUTHORIZATION AND IA VIEWS ALIGNED
+— HISTORICAL AND AS-IS VIEWS PRESERVED
+— ARCHITECTURE-UNRESOLVED CONTENT DEFERRED
+— DIAGRAMS REMAIN DERIVED VIEWS
+— READY FOR PHASE 9 BUSINESS CONSISTENCY AUDIT
+```
+
+Chỉ khi:
+- Toàn bộ 16 tệp biểu đồ HTML standalone và `docs/diagrams/README.md` được đối soát và đồng bộ hóa với đường cơ sở nghiệp vụ đã đóng băng Phase 1–7.
+- Biểu đồ 01 phản ánh đúng mô hình 3 tác nhân con người (`Field Staff`, `Operations Manager`, `Platform Administrator`) và System, tách biệt 2 mặt phẳng Vận hành và Quản trị MVP 9 năng lực, phân định rõ NEXT/REJECTED.
+- Biểu đồ 02 phản ánh đúng 5 Bounded Contexts chuẩn tắc; Verification và Review được hợp nhất vào Work Management; Notifications là Projection; Offline/Sync là technical concern; không đột biến chéo ngữ cảnh trực tiếp.
+- Biểu đồ 07 tách biệt phân quyền Vận hành (Staff & Manager) và Quản trị Nền tảng (Admin), khóa chặt các điều kiện bảo vệ trạng thái/phạm vi, cấm Admin can thiệp tác vụ Task.
+- Biểu đồ 08 phản ánh 3 không gian vai trò; kênh triển khai Admin ghi rõ `TBD — Phase 11 ADR`; cấm đưa tác vụ hiện trường vào điều hướng Admin.
+- Biểu đồ 09 bảo tồn nguyên vẹn hiện trạng As-Is của commit baseline `2f9a26b` và gán nhãn rõ khuyết tật `[AS-IS DEFECT]` tại ép admin về Manager.
+- Biểu đồ 10 và 12 khẳng định hoãn lại các quyết định kiến trúc kỹ thuật triển khai cho Phase 11 ADR; không tự ý sáng tác Admin Web App hay gói `apps/admin-web`.
+- Các biểu đồ đề xuất (`proposed-01..04`) bảo tồn trọn vẹn luồng vận hành 3 làn bơi không có Admin, vòng đời 7 trạng thái tất định, và 3 Hồ sơ Bằng chứng ngữ nghĩa.
+- Toàn bộ 11 biểu đồ active/target/deferred/derived đạt chuẩn hình học `[VERIFIED PASS]` qua kiểm thử headless (`scripts/diagram_tool.py validate`).
+- Cả 12 cổng kiểm soát Phase 8 (`P8-01..P8-12`) và 16 bài kiểm thử phủ định (`P8-NT-01..16`) đều PASS có bằng chứng đối soát trong báo cáo 11.
+
+
 ---
 
 # PHASE 9 — BUSINESS CONSISTENCY AUDIT

@@ -1,13 +1,13 @@
 <!doctype html>
+<!-- SOURCE: docs/PRODUCT.md, docs/ACCESS-CONTROL.md, docs/WORKFLOWS.md -->
+<!-- PROFILE: NOVYX GreenOps -->
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>08 - NOVYX Role Information Architecture</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&amp;family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap"
       rel="stylesheet"
     />
     <style>
@@ -27,6 +27,8 @@
         --color-rule-solid: #e2e0d8;
         --color-accent: #166534;
         --color-lime: #84cc16;
+        --color-danger: #dc2626;
+        --color-amber: #d97706;
         --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
         --font-serif: 'Noto Serif', Georgia, serif;
         --font-mono: 'Geist Mono', ui-monospace, monospace;
@@ -44,7 +46,7 @@
       }
 
       .frame {
-        max-width: 1180px;
+        max-width: 1240px;
         width: 100%;
         margin: 0 auto;
       }
@@ -102,362 +104,295 @@
     <div class="frame">
       <div class="badge-container">
         <span class="badge-derived">CANONICAL CURRENT-STATE — DERIVED VIEW</span>
-        <span class="source-ref">SOURCE: docs/ACCESS-CONTROL.md &amp; docs/MOBILE_UI_RULES.md</span>
+        <span class="source-ref">SOURCE: docs/PRODUCT.md, docs/ACCESS-CONTROL.md &amp; docs/WORKFLOWS.md | STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH</span>
       </div>
-      <h1>Kiến trúc Thông tin &amp; Điều hướng theo Vai trò (Information Architecture)</h1>
+      <h1>Kiến trúc Thông tin theo Vai trò (Role Information Architecture)</h1>
       <p class="desc">
-        Cấu trúc thanh điều hướng 5 vị trí (Notched Bottom Navigation) và không gian làm việc theo vai trò: Nhân viên
-        (Staff) và Quản lý (Manager).
+        Cấu trúc không gian làm việc và điều hướng cho 3 vai trò: Nhân viên (Field Staff Mobile App), Quản lý (Operations Manager), và Quản trị Nền tảng (Platform Administrator Workspace — Kênh phân phối hoãn lại cho Phase 11 ADR).
       </p>
 
-      <svg viewBox="0 0 1120 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ia-title ia-desc">
+      <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ia-title ia-desc">
         <title id="ia-title">NOVYX Role Information Architecture</title>
-        <desc id="ia-desc">
-          Sơ đồ cây cấu trúc màn hình và điều hướng theo vai trò người dùng trong ứng dụng di động NOVYX GreenOps.
-        </desc>
+        <desc id="ia-desc">Cây cấu trúc không gian làm việc chức năng của 3 vai trò con người trong hệ thống NOVYX GreenOps.</desc>
 
         <defs>
-          <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
-            <polygon points="0 0, 7 2.5, 0 5" fill="#166534" />
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#166534" />
+          </marker>
+          <marker id="arr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#68756B" />
           </marker>
         </defs>
 
         <rect width="100%" height="100%" fill="#FBFBF9" />
 
-        <!-- ROOT: APP AUTH SHELL -->
-        <g transform="translate(460, 25)">
-          <rect x="0" y="0" width="200" height="46" rx="6" fill="#112116" />
-          <text
-            x="100"
-            y="29"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="13"
-            font-weight="700"
-            fill="#84CC16"
-          >
-            NOVYX Mobile App
+        <!-- ROOT NODE: NOVYX CONCEPTUAL IA -->
+        <g id="root-node" transform="translate(360, 20)">
+          <rect id="root-card" x="0" y="0" width="480" height="54" rx="6" fill="#112116" />
+          <text x="240" y="24" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16" letter-spacing="0.08em">
+            NOVYX GREENOPS · CONCEPTUAL PRODUCT INFORMATION ARCHITECTURE
+          </text>
+          <text x="240" y="42" text-anchor="middle" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            3 Không gian chức năng độc lập theo vai trò · Phân định ranh giới tác quyền
           </text>
         </g>
 
-        <!-- Branch lines -->
-        <line x1="560" y1="71" x2="280" y2="115" stroke="#166534" stroke-width="1.8" marker-end="url(#arr)" />
-        <line x1="560" y1="71" x2="840" y2="115" stroke="#166534" stroke-width="1.8" marker-end="url(#arr)" />
+        <!-- CONNECTORS FROM ROOT TO 3 WORKSPACES -->
+        <!-- Root to Staff (Left) -->
+        <path d="M 440 74 V 95 H 205 V 110" fill="none" stroke="#68756B" stroke-width="1.5" marker-end="url(#arr-gray)" />
+        <!-- Root to Manager (Center) -->
+        <path d="M 600 74 V 110" fill="none" stroke="#166534" stroke-width="1.8" marker-end="url(#arr)" />
+        <!-- Root to Admin (Right) -->
+        <path d="M 760 74 V 95 H 995 V 110" fill="none" stroke="#68756B" stroke-width="1.5" marker-end="url(#arr-gray)" />
 
-        <!-- STAFF BRANCH (LEFT) -->
-        <g transform="translate(150, 115)">
-          <rect x="0" y="0" width="260" height="52" rx="6" fill="#166534" />
-          <text
-            x="130"
-            y="24"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="13"
-            font-weight="700"
-            fill="#FFF"
-          >
-            KHÔNG GIAN NHÂN VIÊN
-          </text>
-          <text
-            x="130"
-            y="41"
-            text-anchor="middle"
-            font-family="'Geist Mono', monospace"
-            font-size="11"
-            font-weight="600"
-            fill="#84CC16"
-          >
-            Role: Staff (Field Worker)
-          </text>
-        </g>
-
-        <!-- STAFF 5-ACTION NAV (TABS) -->
-        <g transform="translate(40, 185)">
-          <!-- Tab 1 -->
-          <rect x="0" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="46"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Trang chủ
+        <!-- COLUMN 1: FIELD STAFF WORKSPACE -->
+        <g id="staff-workspace" transform="translate(30, 110)">
+          <rect id="staff-ws-card" x="0" y="0" width="350" height="660" rx="8" fill="#FFF" stroke="#166534" stroke-width="1.8" />
+          <rect id="staff-ws-badge" x="16" y="-13" width="160" height="26" rx="3" fill="#166534" />
+          <text data-owner-id="staff-ws-badge" x="96" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+            FIELD STAFF WORKSPACE
           </text>
 
-          <!-- Tab 2 -->
-          <rect x="100" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="146"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Cây của tôi
+          <text x="20" y="34" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            Không gian Tác nghiệp Hiện trường
+          </text>
+          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Kênh ứng dụng: Mobile App (Android / Expo)
+          </text>
+          <line x1="20" y1="64" x2="330" y2="64" stroke="#E2E0D8" stroke-width="1" />
+
+          <!-- Notched Nav 5 actions -->
+          <rect id="staff-nav-box" x="16" y="74" width="318" height="62" rx="4" fill="#F0EFEA" stroke="#E2E0D8" />
+          <text data-owner-id="staff-nav-box" x="26" y="92" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            NOTCHED BOTTOM NAV (5 VỊ TRÍ):
+          </text>
+          <text data-owner-id="staff-nav-box" x="26" y="110" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            1. Lịch việc · 2. Quét QR · 3. Bằng chứng
+          </text>
+          <text data-owner-id="staff-nav-box" x="26" y="126" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            4. Lịch sử chăm sóc · 5. Hồ sơ cá nhân
           </text>
 
-          <!-- Center FAB -->
-          <rect x="200" y="0" width="98" height="42" rx="4" fill="#166534" />
-          <text
-            x="249"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="700"
-            fill="#84CC16"
-          >
-            Quét QR (FAB)
-          </text>
-
-          <!-- Tab 3 -->
-          <rect x="300" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="346"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Công việc
-          </text>
-
-          <!-- Tab 4 -->
-          <rect x="400" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="446"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Tài khoản
-          </text>
-        </g>
-
-        <!-- STAFF DEEP WORKFLOW: PROOF FLOW -->
-        <g transform="translate(40, 250)">
-          <rect
-            x="0"
-            y="0"
-            width="492"
-            height="375"
-            rx="8"
-            fill="rgba(132,204,22,0.05)"
-            stroke="#84CC16"
-            stroke-width="1.5"
-          />
-          <text x="20" y="30" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#166534">
-            Luồng chuyên sâu: StaffProofFlow (Ẩn Bottom Nav)
-          </text>
-          <text x="20" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Kích hoạt từ thẻ việc cần làm hoặc bấm nút Quét QR FAB thực địa
-          </text>
-          <line x1="20" y1="60" x2="472" y2="60" stroke="#E2E0D8" stroke-width="1" />
-
-          <!-- Steps list -->
-          <g transform="translate(20, 78)">
-            <!-- Item 1 -->
-            <rect x="0" y="0" width="452" height="58" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-            <text x="14" y="24" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
-              1. Bắt đầu tác vụ &amp; Báo sự cố (TaskDetailScreen)
+          <!-- Screens & Execution Flows -->
+          <g transform="translate(16, 148)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Hàng đợi việc cá nhân (My Tasks)
             </text>
-            <text x="14" y="44" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Bắt đầu tất định (StartTask); nút báo kẹt ReportFieldIssue -&gt; BLOCKED
+            <text x="10" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Bộ lọc: PENDING, IN_PROGRESS, REWORK_REQUIRED
             </text>
 
-            <!-- Item 2 -->
-            <rect x="0" y="68" width="452" height="58" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-            <text x="14" y="92" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
-              2. Xác thực hiện trường (SiteVerificationScreen)
+            <text x="0" y="54" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
+              • Bắt đầu tất định (StartTask)
             </text>
-            <text x="14" y="112" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Đo GPS (&lt;= 10m) &amp; Quét QR cây (thứ tự độc lập; hỗ trợ ngoại lệ)
+            <text x="10" y="70" font-family="'Noto Sans', sans-serif" font-size="11" fill="#166534">
+              Nút "Bắt đầu" tại PENDING -&gt; Chuyển sang IN_PROGRESS
             </text>
 
-            <!-- Item 3 -->
-            <rect x="0" y="136" width="452" height="74" rx="4" fill="#FFF" stroke="#166534" stroke-width="1" />
-            <text x="14" y="158" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
-              3. Thu thập theo Hồ sơ (ProofEvidenceCollectionScreen)
+            <text x="0" y="94" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Màn hình Xác thực Site (Verification)
             </text>
-            <text x="14" y="178" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
-              CHANGE_PROOF · SERVICE_PROOF · INSPECTION_PROOF
-            </text>
-            <text x="14" y="196" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Chụp ảnh hiện trường độc quyền, kiểm tra checklist kỹ thuật
+            <text x="10" y="110" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Quét mã QR thân cây &amp; Đo khoảng cách GPS (&lt;= 10m)
             </text>
 
-            <!-- Item 4 -->
-            <rect x="0" y="220" width="452" height="58" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-            <text x="14" y="244" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
-              4. Xem lại &amp; Nộp hồ sơ (ReviewReworkSubmissionScreen)
+            <text x="0" y="134" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Thu thập chứng cứ (Proof Capture)
             </text>
-            <text x="14" y="264" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Chuyển WAITING_REVIEW; bảo toàn bằng chứng cũ nếu làm lại lượt N
+            <text x="10" y="150" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Form theo Profile: Change, Service, hoặc Inspection
+            </text>
+
+            <text x="0" y="174" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#D97706">
+              • Báo cáo kẹt hiện trường (Field Issue)
+            </text>
+            <text x="10" y="190" font-family="'Noto Sans', sans-serif" font-size="11" fill="#D97706">
+              Chụp ảnh hiện trạng &amp; gửi lý do -&gt; Chuyển sang BLOCKED
+            </text>
+
+            <text x="0" y="214" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Sửa chữa có mục tiêu (Targeted Rework)
+            </text>
+            <text x="10" y="230" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Xem rõ mục bị từ chối; chụp lại ảnh khắc phục
+            </text>
+
+            <text x="0" y="254" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Hộp thư gửi ngoại tuyến (Offline Outbox)
+            </text>
+            <text x="10" y="270" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Bộ đệm cục bộ lưu chứng cứ và tự gửi khi có sóng
             </text>
           </g>
         </g>
 
-        <!-- MANAGER BRANCH (RIGHT) -->
-        <g transform="translate(710, 115)">
-          <rect x="0" y="0" width="260" height="52" rx="6" fill="#112116" />
-          <text
-            x="130"
-            y="24"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="13"
-            font-weight="700"
-            fill="#FFF"
-          >
-            KHÔNG GIAN QUẢN LÝ
-          </text>
-          <text
-            x="130"
-            y="41"
-            text-anchor="middle"
-            font-family="'Geist Mono', monospace"
-            font-size="11"
-            font-weight="600"
-            fill="#84CC16"
-          >
-            Role: Manager (Supervisor)
-          </text>
-        </g>
-
-        <!-- MANAGER 5-ACTION NAV (TABS) -->
-        <g transform="translate(585, 185)">
-          <!-- Tab 1 -->
-          <rect x="0" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="46"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Tổng quan
+        <!-- COLUMN 2: OPERATIONS MANAGER WORKSPACE -->
+        <g id="manager-workspace" transform="translate(410, 110)">
+          <rect id="mgr-ws-card" x="0" y="0" width="380" height="660" rx="8" fill="#FFF" stroke="#166534" stroke-width="1.8" />
+          <rect id="mgr-ws-badge" x="16" y="-13" width="220" height="26" rx="3" fill="#166534" />
+          <text data-owner-id="mgr-ws-badge" x="126" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+            OPERATIONS MANAGER WORKSPACE
           </text>
 
-          <!-- Tab 2 -->
-          <rect x="100" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="146"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Giao việc
+          <text x="20" y="34" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            Không gian Vận hành &amp; Kiểm duyệt
+          </text>
+          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Kênh ứng dụng: Mobile / Operational Client
+          </text>
+          <line x1="20" y1="64" x2="360" y2="64" stroke="#E2E0D8" stroke-width="1" />
+
+          <!-- Notched Nav 5 actions -->
+          <rect id="mgr-nav-box" x="16" y="74" width="348" height="62" rx="4" fill="#F0EFEA" stroke="#E2E0D8" />
+          <text data-owner-id="mgr-nav-box" x="26" y="92" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            BOTTOM NAV QUẢN LÝ (5 VỊ TRÍ):
+          </text>
+          <text data-owner-id="mgr-nav-box" x="26" y="110" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
+            1. Bàn làm việc · 2. Phân việc · 3. Bản đồ cây
+          </text>
+          <text data-owner-id="mgr-nav-box" x="26" y="126" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            4. Xét duyệt hồ sơ · 5. Quản lý đội ngũ
           </text>
 
-          <!-- Center FAB -->
-          <rect x="200" y="0" width="92" height="42" rx="4" fill="#112116" />
-          <text
-            x="246"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="700"
-            fill="#84CC16"
-          >
-            Tra cứu QR
-          </text>
-
-          <!-- Tab 3 -->
-          <rect x="300" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="346"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Duyệt việc
-          </text>
-
-          <!-- Tab 4 -->
-          <rect x="400" y="0" width="92" height="42" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-          <text
-            x="446"
-            y="26"
-            text-anchor="middle"
-            font-family="'Noto Sans', sans-serif"
-            font-size="11"
-            font-weight="600"
-            fill="#112116"
-          >
-            Tài khoản
-          </text>
-        </g>
-
-        <!-- MANAGER DEEP WORKFLOW: REVIEW & LOOKUP -->
-        <g transform="translate(585, 250)">
-          <rect x="0" y="0" width="492" height="375" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="20" y="30" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
-            Các màn hình chuyên sâu của Quản lý
-          </text>
-          <text x="20" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Thẩm định bằng chứng theo hồ sơ và điều hành vận hành
-          </text>
-          <line x1="20" y1="60" x2="472" y2="60" stroke="#E2E0D8" stroke-width="1" />
-
-          <g transform="translate(20, 78)">
-            <!-- Item 1 -->
-            <rect x="0" y="0" width="452" height="68" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-            <text x="14" y="22" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
-              • ManagerReviewDetailScreen (Thẩm định bằng chứng)
+          <!-- Screens & Execution Flows -->
+          <g transform="translate(16, 148)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Tổng quan vận hành (Operational Dashboard)
             </text>
-            <text x="14" y="40" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Đối soát GPS, QR, ảnh theo ProofProfile; 4 kết luận dứt điểm
-            </text>
-            <text x="14" y="56" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-              APPROVE · APPROVE_WITH_EXCEPTION · REQUEST_REWORK · CANCEL
+            <text x="10" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Theo dõi tiến độ, cảnh báo nhiệm vụ quá hạn, việc bị tắc
             </text>
 
-            <!-- Item 2 -->
-            <rect x="0" y="78" width="452" height="58" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-            <text x="14" y="100" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
-              • ManagerBlockedResolution (Xử lý sự cố BLOCKED)
+            <text x="0" y="54" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Điều phối công việc (Task Queue &amp; Dispatch)
             </text>
-            <text x="14" y="120" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              3 lối thoát: Resume (thợ cũ) / Reassign (về PENDING) / Cancel (hủy việc)
+            <text x="10" y="70" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Tạo việc (CreateTask), Gán thợ (Assign), Điều phối (Reassign)
             </text>
 
-            <!-- Item 3 -->
-            <rect x="0" y="146" width="452" height="58" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-            <text x="14" y="168" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
-              • ManagerQrLookupScreen (Tra cứu cây thực địa)
+            <text x="0" y="94" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#D97706">
+              • Xử lý sự cố hiện trường (Blocked Resolution)
             </text>
-            <text x="14" y="188" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Quét mã QR cây -&gt; Hiển thị thông số và CareHistory (chỉ task COMPLETED)
+            <text x="10" y="110" font-family="'Noto Sans', sans-serif" font-size="11" fill="#D97706">
+              3 lối thoát BLOCKED: Tiếp tục việc, Đổi thợ, hoặc Hủy
             </text>
 
-            <!-- Item 4 -->
-            <rect x="0" y="214" width="452" height="58" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-            <text x="14" y="236" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
-              • ManagerCreateTaskScreen (Biểu mẫu giao việc)
+            <text x="0" y="134" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
+              • Hàng đợi kiểm duyệt (Review Queue)
             </text>
-            <text x="14" y="256" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Giao việc theo cây, thợ, hạn chót và gắn ProofProfile bất biến
+            <text x="10" y="150" font-family="'Noto Sans', sans-serif" font-size="11" fill="#166534">
+              Thẩm định hồ sơ nộp duyệt tại WAITING_REVIEW
+            </text>
+
+            <text x="0" y="174" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • 4 Kết luận thẩm định chất lượng
+            </text>
+            <text x="10" y="190" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Phê duyệt chuẩn, Duyệt ngoại lệ, Trả sửa chữa, Hủy bỏ
+            </text>
+
+            <text x="0" y="214" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Giám sát tài sản cây xanh (Tree Map &amp; Health)
+            </text>
+            <text x="10" y="230" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Tra cứu vị trí cây, xem lịch sử chăm sóc CareHistory
             </text>
           </g>
+        </g>
+
+        <!-- COLUMN 3: PLATFORM ADMINISTRATOR WORKSPACE -->
+        <g id="admin-workspace" transform="translate(820, 110)">
+          <rect id="admin-ws-card" x="0" y="0" width="350" height="660" rx="8" fill="#FFF" stroke="#112116" stroke-width="1.8" />
+          <rect id="admin-ws-badge" x="16" y="-13" width="180" height="26" rx="3" fill="#112116" />
+          <text data-owner-id="admin-ws-badge" x="106" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16">
+            PLATFORM ADMIN WORKSPACE
+          </text>
+
+          <text x="20" y="34" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            Không gian Quản trị Nền tảng
+          </text>
+          <rect id="admin-channel-box" x="20" y="39" width="300" height="28" rx="3" fill="rgba(217,119,6,0.12)" />
+          <text data-owner-id="admin-channel-box" x="30" y="57" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#D97706">
+            KÊNH PHÂN PHỐI: TBD — PHASE 11 ADR
+          </text>
+          <line x1="20" y1="72" x2="330" y2="72" stroke="#E2E0D8" stroke-width="1" />
+
+          <!-- Governance Workspace Functional Areas -->
+          <g transform="translate(16, 85)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              1. Quản trị Tài khoản (Account Governance)
+            </text>
+            <text x="10" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Cấp tài khoản mới (INVITED/ACTIVE) · Kích hoạt
+            </text>
+            <text x="10" y="46" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Đình chỉ (Suspend) · Vô hiệu hóa (Disable)
+            </text>
+            <text x="10" y="62" font-family="'Noto Sans', sans-serif" font-size="11" fill="#166534">
+              Mở khóa bảo mật tạm thời (UnlockAccount)
+            </text>
+
+            <text x="0" y="88" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              2. Quản trị Phân quyền (Role Governance)
+            </text>
+            <text x="10" y="104" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Gán hoặc thu hồi vai trò staff, manager, admin
+            </text>
+            <text x="10" y="120" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Đối soát trách nhiệm còn mở trước khi đổi vai trò
+            </text>
+
+            <text x="0" y="146" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              3. Dữ liệu Cây gốc (Tree Master Data)
+            </text>
+            <text x="10" y="162" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Thêm mới hồ sơ cây, hiệu chỉnh tọa độ tham chiếu
+            </text>
+            <text x="10" y="178" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Hủy định danh cây giải tỏa (DecommissionTreeMaster)
+            </text>
+
+            <text x="0" y="204" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              4. Danh mục Loại việc &amp; Chính sách Mẫu
+            </text>
+            <text x="10" y="220" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Đăng ký loại việc, ban hành phiên bản ProofProfile
+            </text>
+            <text x="10" y="236" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Quản lý danh sách tiêu chí kiểm tra kỹ thuật mẫu
+            </text>
+
+            <text x="0" y="262" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              5. Nhật ký Kiểm toán (Audit Inspection)
+            </text>
+            <text x="10" y="278" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Tra cứu dòng kiểm toán bất biến (InspectAuditTrail)
+            </text>
+            <text x="10" y="294" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Xuất tài liệu kiểm toán phục vụ thanh tra tuân thủ
+            </text>
+
+            <text x="0" y="324" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#DC2626">
+              • CẤM TÁC VỤ HIỆN TRƯỜNG TRÊN ADMIN
+            </text>
+            <text x="10" y="340" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+              Không có: Việc của tôi, Bắt đầu việc, Xét duyệt
+            </text>
+          </g>
+        </g>
+
+        <!-- FOOTER CALLOUT: ARCHITECTURAL BOUNDARY -->
+        <g id="footer-callout" transform="translate(30, 790)">
+          <rect id="footer-card" x="0" y="0" width="1140" height="85" rx="6" fill="#112116" />
+          <text x="20" y="24" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16" letter-spacing="0.08em">
+            KỶ LUẬT RANH GIỚI KIẾN TRÚC: Ý NIỆM SẢN PHẨM KHÔNG TỰ QUYẾT ĐỊNH KÊNH CÔNG NGHỆ
+          </text>
+          <text x="20" y="44" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            • Biểu đồ này mô tả Cấu trúc Thông tin Khái niệm (Conceptual Product IA) của 3 vai trò người dùng trong hệ thống NOVYX.
+          </text>
+          <text x="20" y="64" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            • Tuyệt đối KHÔNG tự ý ấn định hình thái ứng dụng của Admin là "Web Console" hay "Mobile App". Quyết định kênh phân phối và cấu trúc gói triển khai được hoãn lại cho Phase 11 ADR.
+          </text>
         </g>
       </svg>
     </div>

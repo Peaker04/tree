@@ -1,68 +1,79 @@
 # NOVYX GreenOps — Diagram Suite Inventory & Visual Index
 
-Tài liệu này quản lý toàn bộ hệ thống sơ đồ kiến trúc, quy trình vận hành và máy trạng thái của **NOVYX GreenOps**.
+Tài liệu này quản lý toàn bộ hệ thống sơ đồ kiến trúc, quy trình vận hành, phân quyền và máy trạng thái của **NOVYX GreenOps**.
 
 Toàn bộ biểu đồ được thiết kế và lưu trữ dưới dạng **Standalone HTML (Inline SVG & CSS)** tuân thủ quy chuẩn thiết kế [`diagram-design`](../../.agents/skills/diagram-design/SKILL.md) và bảng mã màu Seed/Linear tại [`DESIGN.md`](../../DESIGN.md). Các file này có thể mở trực tiếp trên mọi trình duyệt web hiện đại độc lập, không phụ thuộc vào công cụ vẽ bên thứ ba hay máy chủ render.
 
 ---
 
-## 0. Mô hình phân loại 3 tầng chuẩn tắc (3-Tier Classification Model)
+## 0. Nguyên tắc Thẩm quyền Nguồn & Quy tắc Ranh giới (Source of Truth & Governance Rules)
 
-Mọi biểu đồ trong hệ thống bắt buộc phải thuộc chính xác 1 trong 3 nhóm phân loại sau:
+> ### ⚠️ NGUYÊN TẮC THẨM QUYỀN NGUỒN (SOURCE OF TRUTH PRINCIPLE)
+>
+> **TẤT CẢ BIỂU ĐỒ ĐỀU LÀ GÓC NHÌN DẪN XUẤT (`DERIVED VIEW`). BIỂU ĐỒ TUYỆT ĐỐI KHÔNG PHẢI NGUỒN TẠO NGHIỆP VỤ MỚI.**
+>
+> Nguồn chân lý chuẩn tắc duy nhất (`Authoritative Canonical Business Baseline`) của NOVYX GreenOps nằm tại 5 tài liệu nghiệp vụ đã đóng băng:
+> 1. [`PRODUCT.md`](../PRODUCT.md) — Tầm nhìn sản phẩm, mô hình 3 tác nhân con người (`Field Staff`, `Operations Manager`, `Platform Administrator`) và danh mục năng lực nghiệp vụ.
+> 2. [`DOMAIN.md`](../DOMAIN.md) — 5 Bounded Contexts chuẩn tắc, ranh giới sở hữu tài nguyên và các Invariants.
+> 3. [`ACCESS-CONTROL.md`](../ACCESS-CONTROL.md) — Ma trận phân quyền 4 chiều (`Role ∧ Scope ∧ State ∧ Preconditions`) tách biệt 2 mặt phẳng Vận hành và Quản trị Nền tảng.
+> 4. [`WORKFLOWS.md`](../WORKFLOWS.md) — Vòng đời 7 trạng thái tất định của Task, 3 Hồ sơ Bằng chứng ngữ nghĩa và 18 quy trình chuẩn.
+> 5. [`REQUIREMENTS-TRACEABILITY.md`](../REQUIREMENTS-TRACEABILITY.md) — Ma trận truy vết yêu cầu và các Acceptance Oracles nhị phân.
+>
+> **QUY TẮC BẮT BUỘC:**
+> - **Nếu một biểu đồ xung đột với văn bản chuẩn tắc, văn bản chuẩn tắc luôn luôn chiến thắng (`canonical text wins`).**
+> - **Nếu hai văn bản chuẩn tắc mâu thuẫn: DỪNG LẠI và ghi nhận blocker.**
+> - **TUYỆT ĐỐI KHÔNG sửa văn bản chuẩn tắc chỉ để làm cho biểu đồ dễ vẽ hơn.**
+> - **Không một biểu đồ nào được tự tạo ra: vai trò (`role`), lệnh (`command`), trạng thái (`state`), năng lực (`capability`), sở hữu tài nguyên (`resource ownership`), chuyển dịch quy trình (`workflow transition`), hoặc quyết định kiến trúc kỹ thuật (`technical architecture decision`) khi chưa được phê duyệt.**
 
-1. **CANONICAL CURRENT-STATE (Hiện trạng chuẩn tắc & Đường cơ sở đã chốt):**
-   - Mô tả hiện trạng thực tế của mã nguồn baseline (`2f9a26b`) hoặc các quy tắc nghiệp vụ/bảo mật đã được chốt chính thức trong tài liệu Markdown chuẩn tắc (`WORKFLOWS.md`, `DOMAIN.md`, `PRODUCT.md`, `ACCESS-CONTROL.md`, `AGENTS.md`, `DESIGN.md`).
-   - Tuyệt đối không chứa các giả định kiến trúc tương lai chưa được phê duyệt (`speculative / unapproved`).
-   - Huy hiệu hiển thị: `CANONICAL CURRENT-STATE — DERIVED VIEW`, `CANONICAL CURRENT-STATE — HISTORICAL AS-IS`, hoặc `GOVERNANCE & ARCHITECTURE BOUNDARIES`.
+Mọi biểu đồ trong hệ thống bắt buộc phải thuộc chính xác **1 trong 6 nhóm phân loại chuẩn tắc**:
 
-2. **PROPOSED TARGET / RECOMMENDED (Định hướng kiến trúc mục tiêu & Khuyến nghị chuẩn hóa):**
-   - Mô tả hướng cải tiến, kiến trúc mục tiêu phân tầng Clean / Ports & Adapters, hoặc lộ trình chuyển đổi từ mô hình cũ sang luồng vận hành linh hoạt.
-   - Bắt buộc phải gắn nhãn hiển thị `PROPOSED TARGET / RECOMMENDED` hoặc `PROPOSED TARGET ARCHITECTURE — PENDING ADR APPROVAL` kèm cờ cảnh báo chờ phê duyệt ADR.
-   - Không tự ý xem là hợp đồng bắt buộc cho đến khi được phê duyệt qua Architecture Decision Record (ADR).
-
-3. **HISTORICAL / SUPERSEDED (Biểu đồ lịch sử đã hết hiệu lực):**
-   - Lưu trữ phục vụ kiểm toán lịch sử và đối chiếu phân tích khoảng cách (gap analysis).
-   - Bắt buộc mang banner cảnh báo viền đỏ nổi bật: `[SUPERSEDED / HISTORICAL — KHÔNG DÙNG LÀM CHUẨN THIẾT KẾ]` và trích dẫn rõ biểu đồ chuẩn tắc thay thế.
-
----
-
-## 1. Danh mục biểu đồ dẫn xuất chuẩn tắc đang hoạt động (Active Derived Views)
-
-> **Nguyên tắc thẩm quyền cốt lõi:** Mọi biểu đồ đang hoạt động đều là **GÓC NHÌN DẪN XUẤT (`DERIVED VIEW`)** trực quan từ các tài liệu chuẩn tắc Markdown hoặc mã nguồn baseline đã kiểm toán. Biểu đồ KHÔNG BAO GIỜ là chủ sở hữu hợp đồng độc lập (`NEVER A CANONICAL CONTRACT`).
-
-| File                                                                                                   | Tên biểu đồ                                 | Phân tầng kiến trúc (Classification) | Huy hiệu hiển thị (Status Badge)                      | Nguồn chuẩn tắc (`SOURCE`)                       | Mục đích & Nội dung mô hình thể hiện                                                                                                                       | Trạng thái Export (Artifacts)                        |
-| :----------------------------------------------------------------------------------------------------- | :------------------------------------------ | :----------------------------------- | :---------------------------------------------------- | :----------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------- |
-| [`proposed-01-current-vs-recommended-workflow.html`](proposed-01-current-vs-recommended-workflow.html) | So sánh Hiện trạng vs Chuẩn hóa Khuyến nghị | **PROPOSED TARGET / RECOMMENDED**    | `PROPOSED TARGET / RECOMMENDED — DERIVED VIEW`        | [`docs/WORKFLOWS.md`](../WORKFLOWS.md)           | So sánh đối chiếu trực quan mô hình 5 chốt tuần tự cũ và luồng Xác thực hiện trường linh hoạt kết hợp 3 Hồ sơ Bằng chứng.                                  | SVG, PNG @2x, PNG @3x, full PNG, PDF, full PDF (6/6) |
-| [`proposed-02-mvp-operational-swimlane.html`](proposed-02-mvp-operational-swimlane.html)               | Luồng Vận hành Liên vai trò MVP             | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — DERIVED VIEW`              | [`docs/WORKFLOWS.md`](../WORKFLOWS.md)           | Chu trình vận hành MVP: Bắt đầu tất định `StartTask`, Xác thực hiện trường linh hoạt, Báo sự cố `BLOCKED` (3 lối thoát), 4 kết luận thẩm định.             | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`proposed-03-minimal-task-lifecycle.html`](proposed-03-minimal-task-lifecycle.html)                   | Vòng đời Nhiệm vụ 7 Trạng thái Tất định     | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — DERIVED VIEW`              | [`docs/WORKFLOWS.md`](../WORKFLOWS.md)           | Máy trạng thái 7 trạng thái tất định cho MVP: Khởi đầu `StartTask`, các lối thoát `BLOCKED`, duyệt ngoại lệ, 2 trạng thái đóng (`COMPLETED`, `CANCELLED`). | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html)                 | 3 Hồ sơ Ngữ nghĩa & Làm lại Trọng tâm       | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — DERIVED VIEW`              | [`docs/DOMAIN.md`](../DOMAIN.md)                 | Chi tiết 3 Hồ sơ Bằng chứng (`CHANGE`, `SERVICE`, `INSPECTION`), làm lại có mục tiêu lưu vết đa phiên bản (`attempt 1..N`), xử lý ngoại lệ.                | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`01-product-capability-map.html`](01-product-capability-map.html)                                     | Bản đồ Năng lực Nghiệp vụ (Capability Map)  | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — DERIVED VIEW`              | [`docs/PRODUCT.md`](../PRODUCT.md)               | Phân rã năng lực từ `CAP-01` đến `CAP-08`: Core Domain (Field Work Verification), Supporting Subdomains, Generic Platform Capabilities.                    | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`02-domain-context-map.html`](02-domain-context-map.html)                                             | Bản đồ Ngữ cảnh Bounded Contexts            | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — DERIVED VIEW`              | [`docs/DOMAIN.md`](../DOMAIN.md)                 | Thể hiện mối quan hệ Upstream/Downstream giữa Verification Context và các Subdomain vệ tinh (Scheduling, Catalog, Identity, Storage).                      | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`07-action-eligibility-security-matrix.html`](07-action-eligibility-security-matrix.html)             | Ma trận Phân quyền & Kích hoạt Hành động    | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — DERIVED VIEW`              | [`docs/ACCESS-CONTROL.md`](../ACCESS-CONTROL.md) | Quyền thực thi lệnh dựa trên công thức 4 yếu tố: Role $\land$ Scope $\land$ State $\land$ Preconditions.                                                   | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`08-role-information-architecture.html`](08-role-information-architecture.html)                       | Kiến trúc Thông tin & Điều hướng Vai trò    | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — DERIVED VIEW`              | [`/DESIGN.md`](../../DESIGN.md)                  | Cấu trúc thanh điều hướng Notched Bottom Nav 5 vị trí và cây màn hình chi tiết cho Staff và Manager.                                                       | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`09-system-current-state.html`](09-system-current-state.html)                                         | Hiện trạng Kiến trúc Hệ thống As-Is         | **CANONICAL CURRENT-STATE**          | `CANONICAL CURRENT-STATE — HISTORICAL AS-IS`          | Mã nguồn baseline (`2f9a26b`)                    | Phản ánh trung thực mã nguồn hiện tại: Khối MobileApp 2.054 dòng, service quá tải, thiếu outbox và bộ đệm RAM dễ mất dữ liệu.                              | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`10-system-target-architecture.html`](10-system-target-architecture.html)                             | Kiến trúc Mục tiêu Clean Architecture       | **PROPOSED TARGET / RECOMMENDED**    | `PROPOSED TARGET ARCHITECTURE — PENDING ADR APPROVAL` | [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)     | Cấu trúc phân tầng Clean / Ports & Adapters đề xuất cho tương lai (chờ phê duyệt ADR).                                                                     | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-| [`12-architecture-dependency-map.html`](12-architecture-dependency-map.html)                           | Bản đồ Phụ thuộc Gói & Ranh giới Monorepo   | **CANONICAL CURRENT-STATE**          | `GOVERNANCE & ARCHITECTURE BOUNDARIES`                | [`AGENTS.md`](../../AGENTS.md)                   | Chiều phụ thuộc cho phép giữa `apps/mobile` và các `packages/`, cùng các ranh giới bị nghiêm cấm trong monorepo.                                           | SVG, PNG @2x, full PNG, PDF, full PDF (5/5)          |
-
----
-
-## 2. Danh mục biểu đồ lịch sử đã bị thay thế (Superseded / Historical Diagrams)
-
-Các biểu đồ dưới đây thuộc thiết kế sơ khởi ban đầu (sử dụng chuỗi 5 bước cố định, thiếu trạng thái `BLOCKED` và `CANCELLED`, hoặc duyệt nhị phân). Chúng được lưu giữ để bảo toàn lịch sử phân tích, nhưng **TUYỆT ĐỐI KHÔNG ĐƯỢC COI LÀ CONTRACT ĐANG HOẠT ĐỘNG**:
-
-| File                                                                           | Tên biểu đồ ban đầu                | Phân loại kỹ thuật          | Biểu đồ chuẩn tắc thay thế (Replaced By)                                                               | Lý do thay thế                                                                                                                             |
-| :----------------------------------------------------------------------------- | :--------------------------------- | :-------------------------- | :----------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
-| [`03-mvp-operational-swimlane.html`](03-mvp-operational-swimlane.html)         | Quy trình Vận hành Liên vai trò    | **SUPERSEDED / HISTORICAL** | [`proposed-02-mvp-operational-swimlane.html`](proposed-02-mvp-operational-swimlane.html)               | Mô hình cũ ép buộc 5 chốt tuần tự và duyệt nhị phân; thay thế bởi luồng vận hành linh hoạt có `BLOCKED` (3 lối thoát) và 4 kết luận duyệt. |
-| [`04-task-lifecycle.html`](04-task-lifecycle.html)                             | Vòng đời Nhiệm vụ (Task Lifecycle) | **SUPERSEDED / HISTORICAL** | [`proposed-03-minimal-task-lifecycle.html`](proposed-03-minimal-task-lifecycle.html)                   | Vòng đời cũ chỉ có 4 trạng thái; thay thế bởi máy trạng thái 7 trạng thái tất định với lệnh `StartTask` tường minh.                        |
-| [`05-proof-workflow.html`](05-proof-workflow.html)                             | Quy trình Thu thập Bằng chứng      | **SUPERSEDED / HISTORICAL** | [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html)                 | Chuỗi 5 bước cố định vi phạm tính thích ứng ngoài thực địa; thay thế bởi 3 Hồ sơ Bằng chứng ngữ nghĩa (`CHANGE`, `SERVICE`, `INSPECTION`). |
-| [`06-review-rework-lifecycle.html`](06-review-rework-lifecycle.html)           | Quy trình Thẩm định của Quản lý    | **SUPERSEDED / HISTORICAL** | [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html) & `proposed-02` | Cổng duyệt cũ chỉ có Duyệt/Từ chối nhị phân; thay thế bởi 4 kết luận duyệt và làm lại có mục tiêu (`targetedArea`, đa phiên bản).          |
-| [`11-evidence-submission-sequence.html`](11-evidence-submission-sequence.html) | Chuỗi Tương tác Nộp Bằng chứng     | **SUPERSEDED / HISTORICAL** | [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html)                 | Trình tự nộp cũ dựa trên giả định 5 chốt bằng chứng cố định và thiếu hỗ trợ ngoại tuyến tin cậy.                                           |
+1. **`CURRENT_DERIVED_VIEW` (Góc nhìn dẫn xuất chuẩn tắc đang hoạt động):**
+   - Biểu đồ phản ánh chính xác các quy tắc nghiệp vụ, phân quyền, cấu trúc ngữ cảnh và vòng đời đã được đóng băng từ Phase 1–7.
+   - Huy hiệu hiển thị: `CANONICAL CURRENT-STATE — DERIVED VIEW` kèm trích dẫn `SOURCE: ... | STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
+2. **`HISTORICAL_SUPERSEDED` (Biểu đồ lịch sử đã bị thay thế — Chỉ dùng tham chiếu):**
+   - Lưu trữ phục vụ kiểm toán lịch sử và đối chiếu phân tích khoảng cách. Giữ nguyên nội dung lịch sử ban đầu để bảo toàn bằng chứng tiến hóa.
+   - Bắt buộc mang banner: `STATUS: HISTORICAL / SUPERSEDED — REFERENCE ONLY` và chỉ rõ biểu đồ thay thế.
+3. **`AS_IS_IMPLEMENTATION_VIEW` (Góc nhìn hiện trạng mã nguồn thực tế):**
+   - Phản ánh trung thực mã nguồn hiện hữu tại commit baseline `2f9a26b` (bao gồm cả các khuyết tật mã nguồn như ép role admin về manager). Tuyệt đối không xóa bỏ khuyết tật để làm đẹp hiện trạng.
+   - Bắt buộc mang banner: `STATUS: CURRENT IMPLEMENTATION / AS-IS — NOT TARGET BUSINESS MODEL` và gán nhãn khuyết tật rõ ràng `[AS-IS DEFECT]`.
+4. **`TARGET_DIRECTION_NOT_ARCHITECTURE` (Định hướng mục tiêu — Chưa chốt kiến trúc kỹ thuật):**
+   - Mô tả định hướng kiến trúc mục tiêu ở cấp độ nghiệp vụ, phân tầng Clean Architecture. Không tự ý quyết định hình thái ứng dụng (Web, Mobile), dịch vụ nền hay cơ sở dữ liệu.
+   - Bắt buộc mang banner: `STATUS: TARGET DIRECTION — TECHNICAL ARCHITECTURE NOT YET FINAL`. Quyết định kênh triển khai hoãn lại cho Phase 11 ADR.
+5. **`DEFERRED_UNTIL_ADR` (Góc nhìn phụ thuộc kiến trúc — Hoãn lại chờ ADR):**
+   - Thể hiện các ranh giới monorepo hiện có. Mọi phụ thuộc ứng dụng/dịch vụ mới của Admin chưa được quyết định đều bị hoãn lại.
+   - Bắt buộc mang banner: `STATUS: TECHNICAL DECISION DEFERRED TO PHASE 11 ADR`.
+6. **`REFERENCE_COMPARISON` (Biểu đồ đối chiếu tham chiếu):**
+   - Dùng để so sánh đối chiếu giữa mô hình tuần tự cũ và mô hình chuẩn hóa linh hoạt mới. Không trình bày phía "cũ" như là đích đến.
+   - Bắt buộc mang banner: `STATUS: REFERENCE COMPARISON — DERIVED VIEW`.
 
 ---
 
-## 3. Quy chuẩn Hình học & Kiểu chữ Tiếng Việt (Visual, Geometry & Typography Rules)
+## 1. Danh mục Toàn bộ Biểu đồ Hệ thống (Master Diagram Suite Catalog)
 
-Toàn bộ 11 biểu đồ active đã được xác minh tự động thông qua công cụ kiểm tra hình học trình duyệt headless (`scripts/diagram_tool.py validate`) với các chỉ tiêu nghiêm ngặt:
+| Mã số / Tên tệp | Tên biểu đồ | Phân loại chuẩn tắc (`Classification`) | Nguồn chuẩn tắc (`Primary Source`) | Trạng thái thẩm quyền (`Status`) | Lần đối soát gần nhất | Ghi chú & Nội dung chuẩn tắc |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| [`01-product-capability-map.html`](01-product-capability-map.html) | Bản đồ Năng lực Nghiệp vụ | `CURRENT_DERIVED_VIEW` | [`docs/PRODUCT.md`](../PRODUCT.md), [`docs/ACCESS-CONTROL.md`](../ACCESS-CONTROL.md) | `DERIVED VIEW — NOT SOURCE OF TRUTH` | Phase 8 Reconciled | 3 vai trò con người + System; 2 mặt phẳng (Vận hành & Quản trị MVP 9 năng lực CAP-ADM-01..09); Tách biệt NEXT (CAP-ADM-10..12) & REJECTED (CAP-ADM-13); Admin cấm tác vụ Task. |
+| [`02-domain-context-map.html`](02-domain-context-map.html) | Bản đồ Ngữ cảnh Nghiệp vụ (Context Map) | `CURRENT_DERIVED_VIEW` | [`docs/DOMAIN.md`](../DOMAIN.md), [`docs/business-reconciliation/06-BOUNDED-CONTEXT-DECISIONS.md`](../business-reconciliation/06-BOUNDED-CONTEXT-DECISIONS.md) | `DERIVED VIEW — NOT SOURCE OF TRUTH` | Phase 8 Reconciled | Đúng 5 Bounded Contexts (Core: Work Management gộp Verification & Review; Supporting: Tree Asset Registry, Policy & Template, Audit; Generic: IAM); Notifications là Projection; Offline/Sync là technical concern; Không trực tiếp đột biến chéo ngữ cảnh. |
+| [`03-mvp-operational-swimlane.html`](03-mvp-operational-swimlane.html) | Quy trình Vận hành 5 Chốt Cũ | `HISTORICAL_SUPERSEDED` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md) (Historical Baseline) | `HISTORICAL / SUPERSEDED — REFERENCE ONLY` | Phase 8 Reconciled | Mô hình 5 chốt tuần tự cũ; Đã được thay thế chính thức bởi `proposed-02-mvp-operational-swimlane.html`. |
+| [`04-task-lifecycle.html`](04-task-lifecycle.html) | Vòng đời Nhiệm vụ 4 Trạng thái Cũ | `HISTORICAL_SUPERSEDED` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md) (Historical Baseline) | `HISTORICAL / SUPERSEDED — REFERENCE ONLY` | Phase 8 Reconciled | Vòng đời 4 trạng thái cũ thiếu `BLOCKED` và `CANCELLED`; Đã được thay thế bởi `proposed-03-minimal-task-lifecycle.html`. |
+| [`05-proof-workflow.html`](05-proof-workflow.html) | Quy trình Lấy Bằng chứng Cố định Cũ | `HISTORICAL_SUPERSEDED` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md) (Historical Baseline) | `HISTORICAL / SUPERSEDED — REFERENCE ONLY` | Phase 8 Reconciled | Chuỗi 5 bước tuần tự cứng nhắc; Đã được thay thế bởi `proposed-04-proof-policy-and-rework.html` (3 hồ sơ ngữ nghĩa). |
+| [`06-review-rework-lifecycle.html`](06-review-rework-lifecycle.html) | Quy trình Thẩm định Nhị phân Cũ | `HISTORICAL_SUPERSEDED` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md) (Historical Baseline) | `HISTORICAL / SUPERSEDED — REFERENCE ONLY` | Phase 8 Reconciled | Cổng duyệt nhị phân cũ; Đã được thay thế bởi mô hình 4 kết luận duyệt và làm lại có mục tiêu trong `proposed-02` & `proposed-04`. |
+| [`07-action-eligibility-security-matrix.html`](07-action-eligibility-security-matrix.html) | Ma trận Phân quyền & Kích hoạt Hành động | `CURRENT_DERIVED_VIEW` | [`docs/ACCESS-CONTROL.md`](../ACCESS-CONTROL.md), [`docs/REQUIREMENTS-TRACEABILITY.md`](../REQUIREMENTS-TRACEABILITY.md) | `DERIVED VIEW — NOT SOURCE OF TRUTH` | Phase 8 Reconciled | Tách biệt 2 mặt phẳng: (A) Phân quyền Vận hành (Staff assignedId, Manager authorized scope; StartTask PENDING only, ReportFieldIssue IN_PROGRESS only, Reassign PENDING/BLOCKED only, cấm REWORK->BLOCKED, cấm IN_PROGRESS direct reassign; Admin DENY), (B) Phân quyền Quản trị Nền tảng (Admin MVP 9 năng lực; Staff/Manager DENY; NEXT & REJECTED tách biệt), và (C) Tự động hóa Hệ thống (System deterministic). |
+| [`08-role-information-architecture.html`](08-role-information-architecture.html) | Kiến trúc Thông tin theo Vai trò | `CURRENT_DERIVED_VIEW` | [`docs/PRODUCT.md`](../PRODUCT.md), [`docs/ACCESS-CONTROL.md`](../ACCESS-CONTROL.md), [`docs/WORKFLOWS.md`](../WORKFLOWS.md) | `DERIVED VIEW — NOT SOURCE OF TRUTH` | Phase 8 Reconciled | 3 không gian chức năng: Field Staff Mobile App, Operations Manager Workspace, và Platform Admin Governance Workspace (kênh phân phối ghi rõ TBD — Phase 11 ADR); Cấm đưa tác vụ hiện trường vào điều hướng Admin. |
+| [`09-system-current-state.html`](09-system-current-state.html) | Hiện trạng Kiến trúc Hệ thống (As-Is) | `AS_IS_IMPLEMENTATION_VIEW` | Mã nguồn baseline `2f9a26b` | `CURRENT IMPLEMENTATION / AS-IS — NOT TARGET BUSINESS MODEL` | Phase 8 Reconciled | Bảo toàn nguyên vẹn hiện trạng mã nguồn baseline: Monolithic MobileApp, RAM Cache, ép admin về Manager [AS-IS DEFECT]. Tuyệt đối không ngụy tạo mã nguồn để làm đẹp hiện trạng. |
+| [`10-system-target-architecture.html`](10-system-target-architecture.html) | Kiến trúc Mục tiêu Hệ thống Clean Architecture | `TARGET_DIRECTION_NOT_ARCHITECTURE` | [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) | `TARGET DIRECTION — TECHNICAL ARCHITECTURE NOT YET FINAL` | Phase 8 Reconciled | Cấu trúc phân tầng Clean / Ports & Adapters; Hoãn lại toàn bộ quyết định triển khai ứng dụng Admin cho Phase 11 ADR; Không tự ý sáng tác Admin Web App hay microservice backend. |
+| [`11-evidence-submission-sequence.html`](11-evidence-submission-sequence.html) | Chuỗi Nộp Bằng chứng 5 Chốt Cũ | `HISTORICAL_SUPERSEDED` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md) (Historical Baseline) | `HISTORICAL / SUPERSEDED — REFERENCE ONLY` | Phase 8 Reconciled | Chuỗi nộp 5 chốt cũ; Đã được thay thế bởi luồng nộp theo hồ sơ ngữ nghĩa và lưu vết phiên bản trong `proposed-04`. |
+| [`12-architecture-dependency-map.html`](12-architecture-dependency-map.html) | Bản đồ Phụ thuộc Gói & Ranh giới Monorepo | `DEFERRED_UNTIL_ADR` | [`AGENTS.md`](../../AGENTS.md), [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) | `TECHNICAL DECISION DEFERRED TO PHASE 11 ADR` | Phase 8 Reconciled | Thể hiện ranh giới các gói monorepo hiện có; Cấm deep import; Ghi rõ phụ thuộc triển khai Admin hoãn lại cho Phase 11 ADR, cấm tự tạo `apps/admin-web` khi chưa có ADR. |
+| [`proposed-01-current-vs-recommended-workflow.html`](proposed-01-current-vs-recommended-workflow.html) | So sánh Quy trình Hiện tại vs Chuẩn hóa Khuyến nghị | `REFERENCE_COMPARISON` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md), [`docs/PRODUCT.md`](../PRODUCT.md) | `REFERENCE COMPARISON — DERIVED VIEW` | Phase 8 Reconciled | Đối chiếu mô hình ép buộc tuần tự cũ và mô hình Xác thực hiện trường linh hoạt kết hợp 3 Hồ sơ Bằng chứng ngữ nghĩa mới; Không trình bày luồng cũ như mục tiêu. |
+| [`proposed-02-mvp-operational-swimlane.html`](proposed-02-mvp-operational-swimlane.html) | Quy trình Vận hành Liên vai trò MVP | `CURRENT_DERIVED_VIEW` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md), [`docs/ACCESS-CONTROL.md`](../ACCESS-CONTROL.md) | `DERIVED VIEW — NOT SOURCE OF TRUTH` | Phase 8 Reconciled | 3 làn bơi tác nghiệp chuẩn tắc: Operations Manager, Field Staff, và System (deterministic); Tuyệt đối không có làn bơi Admin trong quy trình hiện trường thông thường; Đầy đủ 4 kết luận duyệt và 3 lối thoát BLOCKED. |
+| [`proposed-03-minimal-task-lifecycle.html`](proposed-03-minimal-task-lifecycle.html) | Vòng đời Nhiệm vụ 7 Trạng thái Tất định | `CURRENT_DERIVED_VIEW` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md), [`docs/DOMAIN.md`](../DOMAIN.md) | `DERIVED VIEW — NOT SOURCE OF TRUTH` | Phase 8 Reconciled | Đúng 7 trạng thái chuẩn tắc: PENDING, IN_PROGRESS, BLOCKED, WAITING_REVIEW, REWORK_REQUIRED, COMPLETED, CANCELLED; Không có trạng thái lạ; Không có bước chuyển của Admin. |
+| [`proposed-04-proof-policy-and-rework.html`](proposed-04-proof-policy-and-rework.html) | 3 Hồ sơ Bằng chứng Ngữ nghĩa & Rework Trọng tâm | `CURRENT_DERIVED_VIEW` | [`docs/WORKFLOWS.md`](../WORKFLOWS.md), [`docs/DOMAIN.md`](../DOMAIN.md) | `DERIVED VIEW — NOT SOURCE OF TRUTH` | Phase 8 Reconciled | Chuẩn 3 Profiles: CHANGE_PROOF (site verification + trước + checklist + sau), SERVICE_PROOF (site verification + checklist + hoàn tất), INSPECTION_PROOF (site verification + structured findings + ảnh hiện trạng); Rework bảo toàn lịch sử bằng chứng hợp lệ. |
+
+---
+
+## 2. Quy chuẩn Hình học & Kiểu chữ Tiếng Việt (Visual, Geometry & Typography Rules)
+
+Toàn bộ 11 biểu đồ active/derived/target/deferred đã được xác minh tự động thông qua công cụ kiểm tra hình học trình duyệt headless (`scripts/diagram_tool.py validate`) với các chỉ tiêu nghiêm ngặt:
 
 - **Bảng màu Semantic Seed/Linear:** Tuân thủ 100% token của [`DESIGN.md`](../../DESIGN.md):
   - Paper canvas: `#FCFCF7` (`snowWhite`) / fill phụ: `#EEEEE9` (`warmStone`) hoặc `#FFFFFF`
@@ -80,16 +91,3 @@ Toàn bộ 11 biểu đồ active đã được xác minh tự động thông qu
   - **Zero Non-Owner Crossing:** Đầu nhãn và connector không cắt xuyên qua các khối nội dung không liên quan.
   - **Zero Viewport Clipping / Boundary Overflow:** Toàn bộ text nằm trọn vẹn trong thẻ hộp chứa và khung nhìn SVG.
   - **Safe Internal Padding:** Khoảng đệm an toàn tối thiểu từ mép chữ tới viền hộp $x \ge 4\text{px}, y \ge 3\text{px}$ trên 100% các phần tử.
-
----
-
-## 4. Hệ thống Artifact Xuất Bản Đa Định Dạng (Multi-Format Export Pipeline)
-
-Toàn bộ các tệp xuất bản phục vụ tài liệu, in ấn và trình chiếu được lưu trữ tập trung tại thư mục `dist/diagrams_verification/` với 56 artifact được tái tạo đồng bộ:
-
-1. **Standalone SVG (`*.svg` - 11 tệp):** Trích xuất SVG độc lập, XML-valid, nhúng Google Fonts an toàn, chuẩn hóa mã màu RGBA thành Hex + Opacity chống lỗi đen nền trên PowerPoint và Figma.
-2. **Diagram-Only PNG (`*.png` @2x - 11 tệp):** Rasterization độ phân giải cao tỉ lệ 2x, ôm sát bounding box của biểu đồ (không viền trang thừa).
-3. **High-Res Diagram PNG (`proposed-01@3x.png` @3x - 1 tệp):** Rasterization siêu nét tỉ lệ 3x (3180x2040px) dành cho biểu đồ so sánh phức tạp.
-4. **Full-Page PNG (`*.full.png` @2x - 11 tệp):** Chụp toàn bộ trang tài liệu bao gồm tiêu đề, thanh phân loại và khối chú thích.
-5. **Diagram-Only PDF (`*.pdf` - 11 tệp):** Định dạng vector PDF 0-margin khớp chính xác kích thước biểu đồ cho việc in ấn kỹ thuật.
-6. **Full-Page PDF (`*.full.pdf` - 11 tệp):** Định dạng PDF trang đầy đủ chuẩn tài liệu kỹ thuật.

@@ -1,13 +1,13 @@
 <!doctype html>
+<!-- SOURCE: docs/DOMAIN.md, docs/business-reconciliation/05-DOMAIN-OWNERSHIP-MATRIX.md, docs/business-reconciliation/06-BOUNDED-CONTEXT-DECISIONS.md -->
+<!-- PROFILE: NOVYX GreenOps -->
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>02 - NOVYX Domain Context Map</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap"
       rel="stylesheet"
     />
     <style>
@@ -27,6 +27,8 @@
         --color-rule-solid: #e2e0d8;
         --color-accent: #166534;
         --color-lime: #84cc16;
+        --color-danger: #dc2626;
+        --color-amber: #d97706;
         --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
         --font-serif: 'Noto Serif', Georgia, serif;
         --font-mono: 'Geist Mono', ui-monospace, monospace;
@@ -40,11 +42,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 2rem 1.5rem;
+        padding: 2.5rem 1.5rem;
       }
 
       .frame {
-        max-width: 1140px;
+        max-width: 1240px;
         width: 100%;
         margin: 0 auto;
       }
@@ -102,266 +104,352 @@
     <div class="frame">
       <div class="badge-container">
         <span class="badge-derived">CANONICAL CURRENT-STATE — DERIVED VIEW</span>
-        <span class="source-ref">SOURCE: docs/DOMAIN.md &amp; docs/WORKFLOWS.md</span>
+        <span class="source-ref">SOURCE: docs/DOMAIN.md, 05-DOMAIN-OWNERSHIP-MATRIX.md &amp; 06-BOUNDED-CONTEXT-DECISIONS.md</span>
       </div>
-      <h1>Bản đồ Ngữ cảnh Bounded Contexts (Context Map)</h1>
+      <h1>Bản đồ Ngữ cảnh Nghiệp vụ (Domain Context Map)</h1>
       <p class="desc">
-        Mô hình hóa quan hệ Upstream/Downstream giữa Core Domain (Xác thực hiện trường &amp; Hồ sơ Bằng chứng) và các
-        Subdomain vệ tinh.
+        Hệ thống 5 Bounded Context chuẩn tắc: Miền lõi Work Management (đã hợp nhất Xác thực &amp; Kiểm duyệt), 3 Miền hỗ trợ (Tree Registry, Policy Governance, Audit), và 1 Miền dùng chung (IAM). Thông báo là mô hình chiếu dẫn xuất, đồng bộ ngoại tuyến là quan ngại kỹ thuật.
       </p>
 
-      <svg viewBox="0 0 1200 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ctx-title ctx-desc">
-        <title id="ctx-title">NOVYX Bounded Context Map</title>
-        <desc id="ctx-desc">Mối quan hệ và luồng sự kiện giữa các Bounded Context trong hệ thống NOVYX GreenOps.</desc>
+      <svg viewBox="0 0 1200 880" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ctx-title ctx-desc">
+        <title id="ctx-title">NOVYX Domain Context Map</title>
+        <desc id="ctx-desc">Sơ đồ 5 Bounded Contexts chuẩn tắc của NOVYX GreenOps và quan hệ tương tác ngữ nghĩa giữa các miền.</desc>
 
         <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#68756B" />
           </marker>
-          <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#166534" />
+          </marker>
+          <marker id="arr-lime" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#84CC16" />
           </marker>
         </defs>
 
         <rect width="100%" height="100%" fill="#FBFBF9" />
 
-        <!-- CENTER: CORE DOMAIN (Field Work Verification) -->
-        <g transform="translate(390, 200)">
-          <rect
-            x="0"
-            y="0"
-            width="370"
-            height="215"
-            rx="10"
-            fill="rgba(132,204,22,0.08)"
-            stroke="#84CC16"
-            stroke-width="2.5"
-          />
-          <rect x="20" y="-14" width="140" height="28" rx="4" fill="#166534" />
-          <text x="30" y="4" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
-            CORE CONTEXT
+        <!-- CONNECTORS BETWEEN CONTEXTS (DRAWN BEFORE NODES) -->
+        <!-- Tree Registry -> Work Management (Reference) -->
+        <path d="M 350 250 H 380" fill="none" stroke="#68756B" stroke-width="1.6" marker-end="url(#arr)" />
+        <!-- Work Management -> Tree Registry (CareHistory Projection) -->
+        <path d="M 380 290 H 350" fill="none" stroke="#166534" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arr-green)" />
+
+        <!-- Policy Governance -> Work Management (Policy Resolution) -->
+        <path d="M 850 250 H 820" fill="none" stroke="#68756B" stroke-width="1.6" marker-end="url(#arr)" />
+
+        <!-- IAM -> Work Management (Identity & Role Resolution) -->
+        <path d="M 390 530 L 430 460" fill="none" stroke="#68756B" stroke-width="1.6" marker-end="url(#arr)" />
+
+        <!-- Work Management -> Audit & Compliance (Audit Events) -->
+        <path d="M 770 460 L 810 530" fill="none" stroke="#166534" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arr-green)" />
+
+        <!-- Work Management -> Notifications Projection -->
+        <path d="M 600 460 V 500" fill="none" stroke="#84CC16" stroke-width="1.8" stroke-dasharray="4,3" marker-end="url(#arr-lime)" />
+
+        <!-- CENTER: CORE BOUNDED CONTEXT (Work Management) -->
+        <g id="core-context" transform="translate(380, 110)">
+          <rect id="core-card" x="0" y="0" width="440" height="350" rx="10" fill="rgba(132,204,22,0.06)" stroke="#84CC16" stroke-width="2.5" />
+          <rect id="core-badge" x="20" y="-14" width="220" height="28" rx="4" fill="#166534" />
+          <text data-owner-id="core-badge" x="130" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+            CORE BOUNDED CONTEXT
           </text>
 
-          <text x="24" y="32" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
-            Field Work Verification
+          <text x="24" y="36" font-family="'Noto Sans', sans-serif" font-size="17" font-weight="700" fill="#112116">
+            Work Management (Quản lý Công việc)
           </text>
-          <text x="24" y="52" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Xác thực hiện trường &amp; 3 Hồ sơ Bằng chứng ngữ nghĩa
+          <text x="24" y="56" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#166534">
+            ĐÃ HỢP NHẤT: Xác thực hiện trường &amp; Kiểm duyệt chất lượng
           </text>
-          <line x1="24" y1="62" x2="346" y2="62" stroke="rgba(17,33,22,0.08)" />
+          <line x1="24" y1="68" x2="416" y2="68" stroke="#E2E0D8" stroke-width="1" />
 
-          <text x="24" y="82" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-            OWNED AGGREGATES &amp; VALUES:
+          <text x="24" y="90" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
+            AUTHORITATIVE RESOURCES &amp; AGGREGATES:
           </text>
-          <text x="24" y="104" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • SiteVerification (GPS &lt;= 10m &amp; Quét QR; thứ tự độc lập)
-          </text>
-          <text x="24" y="124" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • ProofProfilePolicy (CHANGE, SERVICE, INSPECTION)
-          </text>
-          <text x="24" y="144" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • TaskEvidence (Ảnh hiện trường độc quyền, checklist)
-          </text>
-          <text x="24" y="164" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • FieldIssueReport (Kẹt hiện trường -&gt; BLOCKED)
-          </text>
-          <text x="24" y="184" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • ReworkAttempt (Làm lại có mục tiêu, bảo toàn lịch sử)
-          </text>
+
+          <g transform="translate(24, 110)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Task Aggregate Root
+            </text>
+            <text x="14" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Vòng đời 7 trạng thái chuẩn: PENDING &rarr; IN_PROGRESS &rarr; BLOCKED &rarr; ...
+            </text>
+
+            <text x="0" y="52" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • SiteVerification Entity
+            </text>
+            <text x="14" y="68" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Đối soát GPS (&lt;= 10m) và Quét QR thân cây độc lập, gắn cờ ngoại lệ
+            </text>
+
+            <text x="0" y="90" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • TaskEvidence &amp; Structured Findings
+            </text>
+            <text x="14" y="106" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Hồ sơ ảnh theo ProofProfile; bảng phát hiện khảo sát lâm sinh
+            </text>
+
+            <text x="0" y="128" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • FieldIssue Entity (Sự cố kẹt hiện trường)
+            </text>
+            <text x="14" y="144" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Khai báo lý do bất khả kháng đưa Task sang trạng thái BLOCKED
+            </text>
+
+            <text x="0" y="166" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • ReviewDecision &amp; ReworkAttempt
+            </text>
+            <text x="14" y="182" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              4 kết luận duyệt; cơ chế sửa chữa có mục tiêu bảo toàn lịch sử
+            </text>
+          </g>
         </g>
 
-        <!-- TOP: WORK MANAGEMENT CONTEXT -->
-        <g transform="translate(375, 30)">
-          <rect x="0" y="0" width="400" height="115" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="20" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
-            Work Management Context
+        <!-- LEFT: SUPPORTING CONTEXT (Tree Asset Registry) -->
+        <g id="tree-registry-context" transform="translate(30, 110)">
+          <rect id="tree-card" x="0" y="0" width="320" height="350" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect id="tree-badge" x="16" y="-13" width="180" height="26" rx="3" fill="#68756B" />
+          <text data-owner-id="tree-badge" x="106" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+            SUPPORTING CONTEXT
           </text>
-          <text x="20" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Sở hữu Vòng đời Task 7 trạng thái tất định (PENDING..COMPLETED)
-          </text>
-          <text x="20" y="70" font-family="'Geist Mono', monospace" font-size="11" fill="#112116">
-            Aggregates: Task, Assignment, Deadline, ProofProfile
-          </text>
-          <text x="20" y="92" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-            [UPSTREAM - Cung cấp Task cho Verification]
-          </text>
-        </g>
 
-        <!-- LEFT: TREE ASSET REGISTRY -->
-        <g transform="translate(30, 200)">
-          <rect x="0" y="0" width="250" height="190" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="18" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
+          <text x="20" y="36" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
             Tree Asset Registry
           </text>
-          <text x="18" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Hồ sơ tài sản cây xanh
+          <text x="20" y="54" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Hồ sơ lý lịch &amp; Quản lý tài sản cây xanh
           </text>
-          <line x1="18" y1="58" x2="232" y2="58" stroke="rgba(17,33,22,0.08)" />
-          <text x="18" y="80" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • Tree (Id, QrCode, Lat, Lng)
-          </text>
-          <text x="18" y="102" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • Tình trạng sức khỏe &amp; rủi ro
-          </text>
-          <text x="18" y="124" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • CareHistory (Chỉ task COMPLETED)
-          </text>
-          <text x="18" y="160" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#68756B">
-            [UPSTREAM - Tra cứu đối soát]
-          </text>
-        </g>
+          <line x1="20" y1="68" x2="300" y2="68" stroke="#E2E0D8" stroke-width="1" />
 
-        <!-- RIGHT: REVIEW & QUALITY CONTROL -->
-        <g transform="translate(870, 200)">
-          <rect x="0" y="0" width="270" height="190" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
-          <text x="18" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
-            Review &amp; QC Context
-          </text>
-          <text x="18" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Cổng thẩm định chất lượng
-          </text>
-          <line x1="18" y1="58" x2="252" y2="58" stroke="rgba(17,33,22,0.08)" />
-          <text x="18" y="80" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • ReviewAudit (Thẩm định hồ sơ)
-          </text>
-          <text x="18" y="102" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • 4 Kết luận: Approve/Rework/Cancel
-          </text>
-          <text x="18" y="124" font-family="'Noto Sans', sans-serif" font-size="11" fill="#112116">
-            • ReworkOrder (Kèm reworkReason)
-          </text>
-          <text x="18" y="160" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#166534">
-            [DOWNSTREAM - Thẩm định kết luận]
-          </text>
-        </g>
+          <g transform="translate(20, 85)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Tree (Thực thể cây xanh)
+            </text>
+            <text x="10" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Định danh treeId, mã QRCode duy nhất
+            </text>
 
-        <!-- BOTTOM: OPERATIONAL NOTIFICATIONS & PLATFORM -->
-        <g transform="translate(240, 480)">
-          <rect x="0" y="0" width="670" height="135" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.2" />
-          <text x="24" y="28" font-family="'Noto Sans', sans-serif" font-size="14" font-weight="700" fill="#112116">
-            Operational Alerts &amp; Platform Generic Contexts
-          </text>
-          <text x="24" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-            Truyền phát sự kiện vận hành, quản lý phiên và điều phối phần cứng thiết bị
-          </text>
-          <line x1="24" y1="58" x2="646" y2="58" stroke="rgba(17,33,22,0.08)" />
+            <text x="0" y="54" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • TreeMasterData (Hồ sơ gốc)
+            </text>
+            <text x="10" y="70" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Tọa độ tham chiếu chuẩn, loài cây, năm trồng
+            </text>
 
-          <g transform="translate(24, 75)">
-            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#112116">
-              Notifications
+            <text x="0" y="94" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Tình trạng sức khỏe &amp; rủi ro
             </text>
-            <text x="0" y="32" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Lắng nghe Domain Events
+            <text x="10" y="110" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Đánh giá sâu bệnh, nghiêng mục, cành khô
             </text>
-          </g>
-          <g transform="translate(230, 75)">
-            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#112116">
-              Identity &amp; Session
+
+            <text x="0" y="134" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#166534">
+              • CareHistory (Projection dẫn xuất)
             </text>
-            <text x="0" y="32" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              JWT, vai trò Staff / Manager
+            <text x="10" y="150" font-family="'Noto Sans', sans-serif" font-size="11" fill="#166534">
+              CHỈ ghi nhận từ Task đã duyệt COMPLETED
             </text>
-          </g>
-          <g transform="translate(450, 75)">
-            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="700" fill="#112116">
-              Device Context
-            </text>
-            <text x="0" y="32" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
-              Quyền Camera &amp; Location SDK 57
+
+            <text x="0" y="180" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">
+              Quan hệ: Reference &amp; Projection
             </text>
           </g>
         </g>
 
-        <!-- ARROWS & LABELS (WITH SAFE BACKGROUND PILLS) -->
-        <!-- Work Mgmt -> Verification (Assign task) -->
-        <line x1="575" y1="145" x2="575" y2="195" stroke="#166534" stroke-width="2" marker-end="url(#arrow-green)" />
-        <rect x="515" y="155" width="120" height="28" rx="4" fill="#FFF" stroke="#166534" stroke-width="1" />
-        <text
-          x="575"
-          y="173"
-          text-anchor="middle"
-          font-family="'Geist Mono', monospace"
-          font-size="11"
-          font-weight="600"
-          fill="#166534"
-        >
-          TaskAssigned
-        </text>
+        <!-- RIGHT: SUPPORTING CONTEXT (Policy & Template Governance) -->
+        <g id="policy-context" transform="translate(850, 110)">
+          <rect id="policy-card" x="0" y="0" width="320" height="350" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect id="policy-badge" x="16" y="-13" width="180" height="26" rx="3" fill="#68756B" />
+          <text data-owner-id="policy-badge" x="106" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+            SUPPORTING CONTEXT
+          </text>
 
-        <!-- Tree Registry -> Verification (Coordinates & QR) -->
-        <line x1="280" y1="295" x2="385" y2="295" stroke="#68756B" stroke-width="1.8" marker-end="url(#arrow)" />
-        <rect x="287" y="283" width="90" height="28" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-        <text
-          x="332"
-          y="301"
-          text-anchor="middle"
-          font-family="'Geist Mono', monospace"
-          font-size="11"
-          font-weight="600"
-          fill="#68756B"
-        >
-          TreeFacts
-        </text>
+          <text x="20" y="36" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            Policy &amp; Template
+          </text>
+          <text x="20" y="54" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Quản trị Chính sách &amp; Biểu mẫu lâm sinh
+          </text>
+          <line x1="20" y1="68" x2="300" y2="68" stroke="#E2E0D8" stroke-width="1" />
 
-        <!-- Verification -> Review & QC (Submit evidence) -->
-        <line x1="760" y1="295" x2="865" y2="295" stroke="#166534" stroke-width="2" marker-end="url(#arrow-green)" />
-        <rect x="765" y="283" width="106" height="28" rx="4" fill="#FFF" stroke="#166534" stroke-width="1" />
-        <text
-          x="818"
-          y="301"
-          text-anchor="middle"
-          font-family="'Geist Mono', monospace"
-          font-size="11"
-          font-weight="600"
-          fill="#166534"
-        >
-          SubmitProof
-        </text>
+          <g transform="translate(20, 85)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • TaskTypeCatalog
+            </text>
+            <text x="10" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Danh mục loại công việc và ràng buộc mùa vụ
+            </text>
 
-        <!-- Review & QC -> Work Mgmt (Approved / ReworkRequired) -->
-        <path
-          d="M 1000 200 L 1000 85 L 780 85"
-          fill="none"
-          stroke="#68756B"
-          stroke-width="1.8"
-          marker-end="url(#arrow)"
-        />
-        <rect x="824" y="73" width="126" height="28" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-        <text
-          x="887"
-          y="91"
-          text-anchor="middle"
-          font-family="'Geist Mono', monospace"
-          font-size="11"
-          font-weight="600"
-          fill="#68756B"
-        >
-          ReviewDecision
-        </text>
+            <text x="0" y="54" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • ProofPolicyMapping
+            </text>
+            <text x="10" y="70" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Ánh xạ loại việc &rarr; CHANGE, SERVICE, INSP
+            </text>
 
-        <!-- Verification / Review -> Notifications -->
-        <line
-          x1="575"
-          y1="415"
-          x2="575"
-          y2="475"
-          stroke="#68756B"
-          stroke-width="1.8"
-          stroke-dasharray="4,4"
-          marker-end="url(#arrow)"
-        />
-        <rect x="515" y="434" width="120" height="28" rx="4" fill="#FFF" stroke="#E2E0D8" stroke-width="1" />
-        <text
-          x="575"
-          y="452"
-          text-anchor="middle"
-          font-family="'Geist Mono', monospace"
-          font-size="11"
-          font-weight="600"
-          fill="#68756B"
-        >
-          DomainEvents
-        </text>
+            <text x="0" y="94" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • ChecklistTemplate
+            </text>
+            <text x="10" y="110" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Mẫu tiêu chí kiểm tra kỹ thuật chuẩn hóa
+            </text>
+
+            <text x="0" y="134" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • FindingsSchema
+            </text>
+            <text x="10" y="150" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Cấu trúc bảng phát hiện bệnh học cho INSP
+            </text>
+
+            <text x="0" y="180" font-family="'Geist Mono', monospace" font-size="11" fill="#68756B">
+              Quan hệ: Policy Resolution (Versioned)
+            </text>
+          </g>
+        </g>
+
+        <!-- BOTTOM-LEFT: GENERIC CONTEXT (IAM) -->
+        <g id="iam-context" transform="translate(30, 490)">
+          <rect id="iam-card" x="0" y="0" width="350" height="230" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect id="iam-badge" x="16" y="-13" width="160" height="26" rx="3" fill="#112116" />
+          <text data-owner-id="iam-badge" x="96" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#E2E0D8">
+            GENERIC CONTEXT
+          </text>
+
+          <text x="20" y="36" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            Identity &amp; Access (IAM)
+          </text>
+          <text x="20" y="54" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Định danh, Phân quyền &amp; Vòng đời Tài khoản
+          </text>
+          <line x1="20" y1="66" x2="330" y2="66" stroke="#E2E0D8" stroke-width="1" />
+
+          <g transform="translate(20, 80)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • User &amp; Account Aggregates
+            </text>
+            <text x="10" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Mã người dùng, thông tin liên hệ và chứng thực
+            </text>
+
+            <text x="0" y="52" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • RoleAssignment (staff, manager, admin)
+            </text>
+            <text x="10" y="68" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Gán vai trò tường minh, không phân cấp kế thừa
+            </text>
+
+            <text x="0" y="90" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • AccountStatus (4 trạng thái chuẩn tắc)
+            </text>
+            <text x="10" y="106" font-family="'Geist Mono', monospace" font-size="11" fill="#166534">
+              INVITED | ACTIVE | SUSPENDED | DISABLED
+            </text>
+            <text x="10" y="124" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+              (Khóa tạm thời là trạng thái bảo mật, cấm thêm LOCKED)
+            </text>
+          </g>
+        </g>
+
+        <!-- BOTTOM-CENTER: DERIVED PROJECTIONS & TECHNICAL CONCERNS -->
+        <g id="derived-technical-box" transform="translate(410, 490)">
+          <rect id="derived-card" x="0" y="0" width="380" height="230" rx="8" fill="#F0EFEA" stroke="#E2E0D8" stroke-width="1.2" />
+          <rect id="derived-badge" x="16" y="-13" width="310" height="26" rx="3" fill="#D97706" />
+          <text data-owner-id="derived-badge" x="171" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+            DERIVED PROJECTIONS &amp; TECHNICAL CONCERNS
+          </text>
+
+          <text x="20" y="34" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+            1. Operational Notifications (Thông báo)
+          </text>
+          <text x="20" y="52" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#D97706">
+            LÀ BẢN CHIẾU ĐỌC DẪN XUẤT (DERIVED PROJECTION)
+          </text>
+          <text x="20" y="70" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            • Lắng nghe Domain Events từ Work Management và IAM
+          </text>
+          <text x="20" y="88" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+            • TUYỆT ĐỐI KHÔNG PHẢI Bounded Context độc lập
+          </text>
+
+          <line x1="20" y1="102" x2="360" y2="102" stroke="#E2E0D8" stroke-width="1" />
+
+          <text x="20" y="124" font-family="'Noto Sans', sans-serif" font-size="13" font-weight="700" fill="#112116">
+            2. Offline / Synchronization (Đồng bộ)
+          </text>
+          <text x="20" y="142" font-family="'Noto Sans', sans-serif" font-size="11" font-weight="600" fill="#166534">
+            LÀ QUAN NGẠI KỸ THUẬT (TECHNICAL CONCERN)
+          </text>
+          <text x="20" y="160" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            • Quản lý trạng thái LocalSubmissionStatus / SyncStatus
+          </text>
+          <text x="20" y="178" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            • Thuộc tầng tích hợp di động, hoãn lại cho Kiến trúc
+          </text>
+          <text x="20" y="196" font-family="'Noto Sans', sans-serif" font-size="11" fill="#DC2626">
+            • KHÔNG PHẢI Bounded Context nghiệp vụ
+          </text>
+        </g>
+
+        <!-- BOTTOM-RIGHT: SUPPORTING CONTEXT (Audit & Compliance) -->
+        <g id="audit-context" transform="translate(820, 490)">
+          <rect id="audit-card" x="0" y="0" width="350" height="230" rx="8" fill="#FFF" stroke="#E2E0D8" stroke-width="1.5" />
+          <rect id="audit-badge" x="16" y="-13" width="180" height="26" rx="3" fill="#68756B" />
+          <text data-owner-id="audit-badge" x="106" y="4" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#FFF">
+            SUPPORTING CONTEXT
+          </text>
+
+          <text x="20" y="36" font-family="'Noto Sans', sans-serif" font-size="15" font-weight="700" fill="#112116">
+            Audit &amp; Compliance
+          </text>
+          <text x="20" y="54" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+            Ghi nhận vết kiểm toán &amp; Giám sát tuân thủ
+          </text>
+          <line x1="20" y1="66" x2="330" y2="66" stroke="#E2E0D8" stroke-width="1" />
+
+          <g transform="translate(20, 80)">
+            <text x="0" y="14" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • AuditEvent (Thực thể kiểm toán)
+            </text>
+            <text x="10" y="30" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Dòng nhật ký bất biến: actorId, command, timestamp
+            </text>
+
+            <text x="0" y="54" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Phạm vi kiểm toán bắt buộc (AUDIT_REQUIRED)
+            </text>
+            <text x="10" y="70" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Cấp tài khoản, đổi vai trò, mở khóa, duyệt ngoại lệ
+            </text>
+
+            <text x="0" y="94" font-family="'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#112116">
+              • Phục vụ tra cứu &amp; xuất báo cáo
+            </text>
+            <text x="10" y="110" font-family="'Noto Sans', sans-serif" font-size="11" fill="#68756B">
+              Chỉ xem (InspectAuditTrail), xuất tài liệu tuân thủ
+            </text>
+
+            <text x="0" y="136" font-family="'Geist Mono', monospace" font-size="11" fill="#DC2626">
+              (CẤM sửa hoặc xóa vết kiểm toán)
+            </text>
+          </g>
+        </g>
+
+        <!-- FOOTER: INTERACTION PRINCIPLES -->
+        <g id="footer-principles" transform="translate(30, 750)">
+          <rect id="principles-card" x="0" y="0" width="1140" height="105" rx="6" fill="#112116" />
+          <text x="20" y="26" font-family="'Geist Mono', monospace" font-size="11" font-weight="600" fill="#84CC16" letter-spacing="0.08em">
+            NGUYÊN TẮC LIÊM CHÍNH RANH GIỚI BOUNDED CONTEXT (ZERO CROSS-CONTEXT DIRECT MUTATION)
+          </text>
+          <text x="20" y="48" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            • Tuyệt đối KHÔNG có hành vi một ngữ cảnh trực tiếp làm biến đổi trạng thái thẩm quyền (authoritative state) của một ngữ cảnh khác.
+          </text>
+          <text x="20" y="68" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            • Mọi tương tác liên ngữ cảnh đều tuân thủ các giao thức thuần ngữ nghĩa: Tham chiếu (Reference), Phân giải chính sách (Policy Resolution),
+          </text>
+          <text x="20" y="88" font-family="'Noto Sans', sans-serif" font-size="11" fill="#E2E0D8">
+            Bản chiếu dữ liệu (Projection), và Phát sinh sự kiện kiểm toán (Audit Emission). Không tự ý suy diễn hàng đợi kỹ thuật (Kafka/Bus) trước Phase 11 ADR.
+          </text>
+        </g>
       </svg>
     </div>
   </body>
