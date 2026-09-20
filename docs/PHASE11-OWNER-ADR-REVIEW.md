@@ -1,6 +1,6 @@
 # PHASE 11B — ARCHITECTURE DECISION OWNER REVIEW PACKET
 
-**Document Version:** 2.0.0
+**Document Version:** 2.0.1
 **Status:** OWNER REVIEW DECISIONS FINALIZED (9 ACCEPTED | 0 PROPOSED | 0 REJECTED)
 **Repository Branch:** `base-setup`
 **Reference Baseline Commit:** `56ed66d4a21cf980368cff016fc5df3397e2be0f`
@@ -15,11 +15,11 @@ This document serves as the authoritative **Owner Architecture Review Packet** f
 
 ### 1.2 Strict Review Boundaries
 In strict accordance with project governance rules:
-1. **Zero Automated Acceptance:** Antigravity does NOT mark any ADR as `ACCEPTED` or choose architecture unilaterally for the Owner.
+1. **No Autonomous Acceptance:** Antigravity never accepts an ADR autonomously. ADR status may change to `ACCEPTED` only following an explicit binding Owner `APPROVE` decision.
 2. **Zero Code Implementation:** No source code in `apps/**` or `packages/**` is modified or introduced in Phase 11B.
 3. **Zero Business Baseline Drift:** The frozen business documentation (`PRODUCT.md`, `DOMAIN.md`, `ACCESS-CONTROL.md`, `WORKFLOWS.md`, `REQUIREMENTS-TRACEABILITY.md`, `docs/business-reconciliation/**`), diagrams (`docs/diagrams/**`), and canonical `ARCHITECTURE.md` are 100% immutable.
 4. **Historical ADR Integrity:** Existing foundational ADRs (`ADR 0001` through `ADR 0004`) remain untouched in their accepted state.
-5. **State Invariant:** All 9 candidate ADRs (`0005..0013`) remain strictly in `Status: PROPOSED`.
+5. **Final Governance State:** All 9 Phase-11 candidate ADRs (`0005..0013`) were initially submitted in `Status: PROPOSED` for Owner evaluation and are now fully **`ACCEPTED`** following Owner Decision Batch 1 and Batch 2 (Final Counts: 9 ACCEPTED, 0 PROPOSED, 0 REJECTED).
 
 ### 1.3 Evaluation Rating Scale
 Every ADR is evaluated against 13 objective architectural dimensions using the four-level qualitative rating scale (no synthetic weighted scores):
@@ -299,7 +299,7 @@ How should the IAM boundary, authentication mechanism, session lifecycle, author
   1. Confirmation of Argon2id as the mandatory password hashing algorithm.
   2. Final approval of token TTLs (proposed: 15m access token, 30d refresh token).
 - **Risk if accepted:** If user lookups are poorly indexed, high API traffic could add database latency (mitigated by indexed query or cache).
-- **Risk if rejected:** Plain JWTs leave a dangerous vulnerability window where suspended accounts continue accessing sensitive audit and task data. Stateful sessions break mobile offline continuity.
+- **Risk if rejected:** Rejecting the accepted server-authoritative freshness model would risk inconsistent revocation semantics, stale privileges after suspension/role change, or divergent session behavior across mobile and Admin Web.
 - **Reversibility:** High.
 
 ```markdown
@@ -714,15 +714,18 @@ To ensure logical consistency and prevent downstream rework, the Owner is advise
 
 ## 6. Formal Verification Checklist
 
-- [x] All 9 candidate ADRs (`0005` through `0013`) verified in status `PROPOSED`.
+- [x] All 9 candidate ADRs (`0005` through `0013`) verified in final status `ACCEPTED`.
+- [x] Owner Decision Governance Provenance preserved:
+  - Owner Decision Batch 1: 5 APPROVED, 4 REQUEST_REVISION
+  - Owner Decision Batch 2: 4 revised candidates APPROVED
+  - Final Candidate Set: 9 ACCEPTED, 0 PROPOSED, 0 REJECTED
 - [x] Canonical business command identity (`OP-01..22`, `GV-01..22`, 4 supplementary) preserved across all reviews.
 - [x] Invariant enforced: Suspension and deactivation block ALL protected online requests (Reads and Mutations).
 - [x] Invariant enforced: Platform Admin has zero normal task mutation/review authority; read-only `OP-22 ViewCareHistory` preserved.
 - [x] Invariant enforced: Bounded Context $\neq$ Microservice; Foreign Key $\neq$ Business Authority.
 - [x] Offline durability claims empirically bounded and tied to physical fault test suites.
-- [x] All Owner Decision checkboxes remain clean and un-checked.
 - [x] Zero changes to source code (`apps/**`, `packages/**`), business reconciliation reports, or diagrams.
 
 ---
 
-*This concludes the Phase 11B Owner Review Packet. The engineering harness is paused awaiting formal System Owner determination.*
+*This concludes the finalized Phase 11B Owner Review Packet. All 9 candidate ADRs are formally ACCEPTED and frozen, ready for Phase 11C Technical Architecture Document & Diagram Reconciliation.*
