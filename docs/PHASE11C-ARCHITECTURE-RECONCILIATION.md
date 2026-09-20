@@ -215,8 +215,9 @@ Tài liệu [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) đã được tái cấu t
 ## 13. Quyết Định Xử Lý Biểu Đồ 08 (Diagram 08 Reconciliation)
 
 - **Tệp:** [`docs/diagrams/08-role-information-architecture.html`](diagrams/08-role-information-architecture.html).
-- **Hiện trạng trước đối soát:** Chứa 3 vị trí ghi nhận kênh phân phối của Admin là *"TBD — Hoãn lại cho Phase 11 ADR"*.
-- **Xử lý đối soát:** Hiệu chỉnh phẫu thuật đúng 3 phát biểu kỹ thuật này:
+- **Hiện trạng trước đối soát:** Chứa 3 vị trí ghi nhận kênh phân phối của Admin là *"TBD — Hoãn lại cho Phase 11 ADR"* và banner nguồn gốc chưa dẫn chiếu quyết định ADR 0005.
+- **Xử lý đối soát:** Hiệu chỉnh phẫu thuật đúng các phát biểu kỹ thuật này:
+  - Dòng 107: Cập nhật banner nguồn gốc hiển thị: `SOURCE: docs/PRODUCT.md, docs/ACCESS-CONTROL.md, docs/WORKFLOWS.md + ADR 0005 | STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
   - Dòng 111: `...Platform Administrator Workspace — Dedicated Admin Web đã được chấp thuận tại ADR 0005.`
   - Dòng 314-317: Đổi nhãn sang màu xanh dương, cập nhật nội dung: `KÊNH PHÂN PHỐI: DEDICATED ADMIN WEB (ADR 0005)`.
   - Dòng 394: `• Kênh phân phối cho Platform Admin đã được chấp thuận chính thức tại ADR 0005 là Cổng Quản trị Web độc lập (apps/admin-web). Server API vẫn là ranh giới ủy quyền tối cao.`
@@ -402,3 +403,24 @@ PHASE 11C COMPLETE
 — NO SOURCE IMPLEMENTATION
 — READY FOR POST-ADR IMPLEMENTATION PLANNING
 ```
+
+---
+
+## 22. Đóng Đối Soát Góc Nhìn Dẫn Xuất Cuối Cùng (Final Derived-View Closure)
+
+Khắc phục triệt để 2 độ lệch góc nhìn dẫn xuất (derived-view drift) cuối cùng của Phase 11C:
+
+1. **C11C-FINAL-01: PASS**
+   - Đã loại bỏ hoàn toàn hành động tự sáng tác *"Revoke Session"* khỏi vùng hiển thị năng lực của Platform Administrator trên Biểu đồ 10 ([`docs/diagrams/10-system-target-architecture.html`](diagrams/10-system-target-architecture.html)).
+   - Thay thế bằng danh mục lệnh chuẩn tắc theo `docs/ACCESS-CONTROL.md`: `ProvisionUser · AssignRole · Account Lifecycle · Unlock / ResetCredentialSetup`.
+   - Tái khẳng định: Vô hiệu hóa phiên làm việc / xóa bản ghi refresh token là **hệ quả kỹ thuật phía máy chủ** (server-side consequence) của các lệnh `SuspendAccount`, `DisableAccount` hoặc thay đổi vai trò (ADR 0006), **tuyệt đối không phải là một lệnh nghiệp vụ độc lập của con người**.
+
+2. **C11C-FINAL-02: PASS**
+   - Đã bổ sung mã quyết định `ADR 0005` vào biểu ngữ nguồn gốc hiển thị trên Biểu đồ 08 ([`docs/diagrams/08-role-information-architecture.html`](diagrams/08-role-information-architecture.html)):
+     `SOURCE: docs/PRODUCT.md, docs/ACCESS-CONTROL.md, docs/WORKFLOWS.md + ADR 0005 | STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
+   - Xác nhận nguồn gốc kỹ thuật chuẩn tắc cho tuyên bố Dedicated Admin Web (`apps/admin-web`), giữ nguyên 100% cấu trúc thông tin và phân quyền vai trò.
+
+**Tái Khẳng Định Các Cổng Trọng Tâm Sau Hiệu Chỉnh:**
+- **G11C-05: PASS** — Kiến trúc mục tiêu hoàn toàn khớp với bộ ADR 0005..0013.
+- **G11C-07: PASS** — Biểu đồ 10 phản ánh chính xác mục tiêu đã phê duyệt, không có lệnh tự chế.
+- **G11C-09: PASS** — Nguồn gốc và phân loại biểu đồ đồng bộ, nhất quán với `docs/diagrams/README.md`.
