@@ -1,7 +1,51 @@
 # ADR 0006: Identity & Access Management, Session Lifecycle & Role Administration
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+
+ACCEPTED:
+
+1. Canonical AccountStatus remains exactly:
+   - `INVITED`
+   - `ACTIVE`
+   - `SUSPENDED`
+   - `DISABLED`
+
+2. Temporary credential lock is NOT AccountStatus.
+
+3. Every protected authenticated server request:
+   - READ
+   - MUTATE
+   - DECIDE
+   - ADMINISTER
+   must establish current authoritative authorization state.
+
+4. `SUSPENDED`: protected requests DENY.
+
+5. `DISABLED`: protected requests DENY.
+
+6. Effective role change: stale privilege DENY.
+
+7. Refresh credentials rotate.
+
+8. Server-side revocation/freshness is authoritative.
+
+9. Mobile offline drafts remain locally preservable without implying online authorization.
+
+NOT LOCKED BY THIS ADR:
+- opaque access token vs JWT
+- HS256
+- RS256
+- ES256
+- JWKS
+- exact access credential TTL
+- exact refresh credential TTL
+- Redis/cache technology
+- password hashing algorithm choice
+
+These are bounded security implementation decisions unless separately governed later.
 
 ## Context
 The frozen business baseline (Phase 0–10) establishes a three-role human actor model (`staff`, `manager`, `admin`) and four canonical account lifecycle states (`INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`). A technical invariant strictly mandates that `LOCKED` is NOT an `AccountStatus`, but rather a temporary credential lock condition managed by the Identity & Access Management (IAM) bounded context (`CAP-ADM-04`, `BR-ADM-04`).
@@ -117,7 +161,7 @@ This revised decision focuses on what is architecturally vital: absolute complia
 2. What are the final approved TTL values for access credentials and refresh credentials? (To be decided during security review).
 3. Which access credential representation (opaque token vs signed JWT) is preferred during implementation? (Bounded technical choice).
 
-## Owner Decision Required
-- [ ] **APPROVE** Option B (Signed Short-Lived JWT + Refresh Token Rotation + Authoritative Account Version Check).
-- [ ] **REJECT** and mandate alternative option.
-- [x] **REQUEST_REVISION** (Batch 1: Revised candidate removing asymmetric JWT mandate; token representation retained as bounded implementation choice).
+## Owner Decision Record
+- **Owner Decision:** APPROVED — REVISED CANDIDATE
+- **Accepted Decision:** Server-authoritative session architecture with short-lived access credential, rotating refresh credential, and mandatory authorization freshness.
+- **Historical Note:** Batch 1 requested revision to remove premature token format lock-in; Batch 2 confirmed final approval of the revised server-authoritative candidate.

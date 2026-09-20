@@ -1,7 +1,28 @@
 # ADR 0010: Contract Evolution, Runtime Schema Validation & Governance API Extension
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+
+ACCEPTED:
+- `@novyx/contracts` remains a derived technical representation of the frozen business baseline.
+- Zod provides runtime boundary validation across incoming untrusted payloads.
+- TypeScript types inferred directly from Zod schemas where appropriate (`z.infer`).
+- Canonical business enums reflected exactly (`TaskStatus`, `ProofProfile`, `ReviewDecision`, `AccountStatus`).
+- Business commands remain canonical; Business Command $\neq$ HTTP Route $\neq$ DTO $\neq$ Transport Header.
+- HTTP body, query, path, and header schemas may be modeled separately.
+- `Idempotency-Key` belongs exclusively to HTTP transport metadata (headers), not business body fields.
+- `expectedVersion` supports accepted Optimistic Concurrency Control (OCC) architecture.
+
+expectedVersion PRECISION:
+- `expectedVersion` is required for mutating operations against an EXISTING VERSIONED RESOURCE / AGGREGATE where optimistic concurrency protection applies (e.g., `SubmitEvidence`, `ReassignTask`, `CancelTask`, `ApproveTask`, `ApproveWithException`, `RequestRework`, `ResubmitRework`, `UpdateTreeMasterData`, and other updates on existing versioned aggregates).
+- `expectedVersion` is NOT mechanically required for creation commands where no prior aggregate version exists (e.g., `CreateTask`, `ProvisionUser`, `CreateTree`, `CreateTaskType`), unless their specific technical contract has an independently justified precondition.
+
+NO API COUNT COERCION:
+- The 48 canonical business commands represent the business action inventory.
+- 48 business commands $\neq$ 48 public endpoints.
+- Certain commands are classified as `CLIENT_LOCAL_ADVISORY`, `SYSTEM_INTERNAL`, `FUTURE_NOT_ACTIVE`, or `NOT_NETWORK_EXPOSED`.
 
 ## Context
 In `ADR 0003`, the project established a **Contract-first REST API** under `/v1` using shared TypeScript envelopes and error codes in `packages/contracts`. `ADR 0003` explicitly noted the tradeoff: *"Runtime schema validation still needs to be added before real backend endpoints ship."*
@@ -163,7 +184,7 @@ How should `@novyx/contracts` be restructured and extended to support the full f
    - `ReviewDecision`: `'APPROVE' | 'APPROVE_WITH_EXCEPTION' | 'REQUEST_REWORK' | 'CANCEL'`
    - `AccountStatus`: `'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED'`
 3. **Command Payload vs Transport Metadata Separation:**
-   - **Business Command Payload Schemas:** All state-mutating command payload schemas enforce `expectedVersion: number` alongside command-specific domain fields. They do **NOT** contain `idempotencyKey`.
+   - **Business Command Payload Schemas:** All state-mutating command payload schemas targeting an existing versioned resource/aggregate enforce `expectedVersion: number` alongside command-specific domain fields (creation commands without an existing aggregate version do not require `expectedVersion`). They do **NOT** contain `idempotencyKey`.
    - **HTTP Transport Metadata Schemas:** Transport headers (such as `Idempotency-Key: <UUIDv4>`) are validated via distinct technical request header schemas (e.g., `MutationRequestHeadersSchema`). Technical Zod schemas distinctly model `body`, `query`, `params`, and `headers` at the API boundary without merging transport concerns into domain payload objects.
 
 ## Rationale
@@ -196,7 +217,7 @@ Option B provides robust runtime schema validation without imposing heavy code g
 ## Open Questions
 - None. Follows established `ADR 0003` baseline.
 
-## Owner Decision Required
-- [ ] **APPROVE** Option B (Zod Schema-First Contracts).
-- [ ] **REJECT** and mandate alternative option.
-- [x] **REQUEST_REVISION** (Batch 1: Revised candidate strictly separating HTTP transport headers like Idempotency-Key from business command payload schemas).
+## Owner Decision Record
+- **Owner Decision:** APPROVED — REVISED OPTION B
+- **Accepted Decision:** Zod schema-first contracts with automatic TypeScript inference, transport metadata separation, and precise OCC expectedVersion targeting for existing versioned aggregates.
+- **Historical Note:** Batch 1 requested revision to separate transport headers from business DTO schemas; Batch 2 confirmed final approval of the revised Option B.

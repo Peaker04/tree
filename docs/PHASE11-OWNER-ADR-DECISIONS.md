@@ -1,8 +1,8 @@
 # Phase 11 Owner ADR Decisions
 
 **Baseline Review Packet Commit:** `8e73f71c478a5ca7d58d7b7ffb2f132b2c92cedc`
-**Governance State:** BINDING OWNER DECISION LEDGER
-**Batch Summary:** 5 ACCEPTED | 4 PROPOSED (REQUEST_REVISION) | 0 REJECTED
+**Governance State:** BINDING OWNER DECISION LEDGER — FINAL ACCEPTANCE
+**Final Candidate Set Summary:** 9 ACCEPTED | 0 PROPOSED | 0 REJECTED
 
 ---
 
@@ -22,10 +22,27 @@
 
 ---
 
+## Decision Batch 2 — Final ADR Acceptance
+
+| ADR | Owner Decision | Final Accepted Direction | Final Status |
+| :--- | :--- | :--- | :--- |
+| **ADR 0006** | **APPROVE** | **Revised server-authoritative session architecture** with short-lived access credential, rotating refresh credential, and mandatory authorization freshness across all protected online actions (reads and mutations). Access token format retained as bounded implementation choice. | **ACCEPTED** |
+| **ADR 0008** | **APPROVE** | **SQLite (`expo-sqlite`) + filesystem + durable Outbox** with transport `Idempotency-Key` separation and authoritative server reconciliation upon conflict. | **ACCEPTED** |
+| **ADR 0010** | **APPROVE** | **Zod schema-first contracts with transport separation** and precise OCC `expectedVersion` targeting for existing versioned aggregates. | **ACCEPTED** |
+| **ADR 0011** | **APPROVE** | **DB privilege-separated append-only audit without hash-chain MVP**; stream hash-chaining retained as optional future hardening. | **ACCEPTED** |
+
+---
+
 ## Ledger Summary Statistics
 
-- **Total Decisions Evaluated:** 9
-- **Total ACCEPTED:** 5 (ADR 0013, ADR 0005, ADR 0007, ADR 0012, ADR 0009)
-- **Total PROPOSED (Under Owner Revision):** 4 (ADR 0006, ADR 0008, ADR 0010, ADR 0011)
-- **Total REJECTED:** 0
-- **Status Invariant:** Existing foundational ADRs `0001` through `0004` remain unchanged in historical `ACCEPTED` status.
+- **Phase-11 Candidate ADRs (0005..0013):**
+  - **9 ACCEPTED** (ADR 0005, ADR 0006, ADR 0007, ADR 0008, ADR 0009, ADR 0010, ADR 0011, ADR 0012, ADR 0013)
+  - **0 PROPOSED**
+  - **0 REJECTED**
+- **Foundation ADRs (0001..0004):**
+  - **4 ACCEPTED** (ADR 0001, ADR 0002, ADR 0003, ADR 0004)
+- **Total Repository ADR Files (0001..0013):**
+  - **13 ACCEPTED**
+  - **0 PROPOSED**
+  - **0 REJECTED**
+- **Next Controlled Step:** Ready for Technical Architecture Document & Diagram Reconciliation (Phase 11C). Zero source code implementation.

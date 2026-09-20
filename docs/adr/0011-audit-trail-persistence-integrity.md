@@ -1,7 +1,41 @@
 # ADR 0011: Audit Trail Persistence & Tamper-Evident Integrity Architecture
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+
+ACCEPTED:
+- `AuditEvent` persisted centrally on the authoritative server side.
+- Append-only behavior enforced at the database engine level.
+- Application runtime database identity granted `INSERT` and `SELECT` permissions.
+- Normal `UPDATE`, `DELETE`, `TRUNCATE` authority over audit history denied.
+- Database-level privilege separation provides defense-in-depth within the application and standard database user trust boundary.
+- Efficient query and composite index support for `ViewAuditLog` and `FilterAuditLog` on Admin Web.
+- Technical metadata (`clientIp`, `userAgent`, `correlationId`, summaries) may be added.
+
+NOT ACCEPTED FOR MVP:
+- Stream hash chaining
+- Global hash chaining
+- Blockchain / distributed ledgers
+- External Merkle anchoring
+- WORM storage requirement
+- Cryptographic non-repudiation claim
+
+SECURITY CLAIM PRECISION:
+- Append-only integrity operates within the application and normal database-user trust boundary.
+- It protects against product actors, application bugs, compromised application credentials, and accidental application `UPDATE`/`DELETE`.
+- It does NOT prove cryptographic non-repudiation against a root DBA, infrastructure owner, or cloud storage administrator with privileged direct mutation ability.
+
+DATABASE VENDOR NEUTRALITY:
+- ADR 0013 accepted the Relational Database Family; it did not lock PostgreSQL.
+- SQL syntax examples (such as `BIGSERIAL`, `TIMESTAMPTZ`, `JSONB`, `GRANT`/`REVOKE`) are ILLUSTRATIVE / POSTGRESQL-LIKE EXAMPLES and not vendor-neutral architectural requirements.
+- The architectural invariant is that the selected relational engine must support equivalent privilege separation, append-only enforcement, indexing, and required data types.
+
+STREAM HASH CHAINING:
+- Stream-partitioned hash chaining remains OPTIONAL FUTURE HARDENING.
+- It may be activated only through a new formal security or compliance decision if regulatory mandates, external audit requirements, carbon-credit certification, or a privileged-infrastructure threat model justify it.
+- It must not be silently implemented without explicit governance.
 
 ## Context
 In the reconciled and frozen business baseline (Phase 0–10), the **Audit & Compliance** bounded context (`Audit & Compliance Subdomain`) is established as a critical supporting capability. The Platform Administrator is empowered in MVP with `CAP-ADM-05` to view and filter audit records (`ViewAuditLog`, `FilterAuditLog`).
@@ -24,7 +58,7 @@ In the current AS-IS implementation:
 - Additional technical attributes proposed for diagnostics and forensic analysis: `clientIp`, `userAgent`, `correlationId`, `beforeState` (summary), `afterState` (summary). These are classified as **PROPOSED TECHNICAL METADATA** and do not alter frozen business requirements.
 
 ## NFR / Quality Drivers
-- **Defense-in-Depth & Non-Repudiation:** Technical assurance that past audit logs cannot be modified undetected within the application and standard database user trust boundary.
+- **Defense-in-Depth & Application-Boundary Integrity:** Technical assurance that past audit logs cannot be modified or deleted within the application and standard database user trust boundary.
 - **Query Performance & Scalability:** Efficient pagination and indexing over hundreds of thousands of audit records without degrading operational database performance.
 - **Cost-Proportional Simplicity:** Avoid premature, overly complex cryptographic chaining or distributed ledger schemes that add write latency and operational overhead without clear business justification.
 
@@ -85,14 +119,14 @@ What technical architecture, persistence strategy, and integrity mechanisms shou
 *Recommendation Confidence: HIGH (revised per Owner Decision Batch 1 to establish pragmatic MVP baseline; hash chaining deferred to optional future hardening).*
 
 1. **Database Privilege Controls (Architecture Invariant):**
-   - For relational databases (per accepted `ADR 0013`), configure application user privileges:
+   - For relational databases (per accepted `ADR 0013`), configure application user privileges (illustrative / PostgreSQL-like example):
      ```sql
-     -- Required technical property: application user cannot UPDATE or DELETE audit records
+     -- Illustrative / PostgreSQL-like example: application user cannot UPDATE or DELETE audit records
      GRANT SELECT, INSERT ON audit_events TO novyx_app_user;
      REVOKE UPDATE, DELETE, TRUNCATE ON audit_events FROM novyx_app_user;
      ```
-   - Exact SQL grant/revoke syntax remains engine-specific.
-2. **Schema Definition (Candidate Relational Schema):**
+   - Exact SQL grant/revoke syntax remains engine-specific. The architectural invariant is that the selected engine must support equivalent privilege separation and append-only enforcement.
+2. **Schema Definition (Illustrative / PostgreSQL-Like Relational Schema Example):**
    - Fields: `id UUID PRIMARY KEY`, `sequence_number BIGSERIAL`, `timestamp TIMESTAMPTZ`, `actor_id VARCHAR(64)`, `actor_role VARCHAR(32)`, `action_type VARCHAR(64)`, `resource_type VARCHAR(64)`, `resource_id VARCHAR(64)`, `outcome VARCHAR(16)`, `payload_summary JSONB`.
    - Technical metadata fields: `client_ip VARCHAR(45)`, `user_agent TEXT`, `correlation_id VARCHAR(64)`.
 3. **Stream Hash-Chaining Reclassified as Optional Future Hardening:**
@@ -111,7 +145,7 @@ Option B satisfies 100% of the frozen business baseline requirements (`CAP-ADM-0
 - **Neutral:** Cold storage archiving policies (e.g., archiving events older than 1 year) can be established during future operations.
 
 ## Security Impact
-- Non-repudiation of operational and governance actions within the application trust boundary.
+- Append-only integrity of operational and governance actions within the application and standard database user trust boundary.
 - Database engine blocks any application-level attempt to modify or delete audit rows.
 
 ## Offline / Reliability Impact
@@ -125,7 +159,7 @@ Option B satisfies 100% of the frozen business baseline requirements (`CAP-ADM-0
 ## Open Questions
 1. Is external cryptographic anchoring (e.g., daily external Merkle root publication) mandated by any upcoming compliance standard? (To be evaluated during compliance review).
 
-## Owner Decision Required
-- [ ] **APPROVE** Option B (Database Privilege Separation + Append-Only Table + Indexes Without Hash Chaining).
-- [ ] **REJECT** and mandate alternative option.
-- [x] **REQUEST_REVISION** (Batch 1: Revised candidate setting Database Privilege Separation without hash chaining as MVP target; hash chaining deferred to optional future hardening).
+## Owner Decision Record
+- **Owner Decision:** APPROVED — REVISED OPTION B
+- **Accepted Decision:** Database privilege separation + append-only table + indexed admin queries without mandatory hash chaining in MVP.
+- **Historical Note:** Batch 1 requested revision to remove mandatory hash chaining from MVP; Batch 2 confirmed final approval of the revised Option B.

@@ -1,10 +1,10 @@
 # PHASE 11B — ARCHITECTURE DECISION OWNER REVIEW PACKET
 
-**Document Version:** 1.0.0
-**Status:** OWNER REVIEW READY
+**Document Version:** 2.0.0
+**Status:** OWNER REVIEW DECISIONS FINALIZED (9 ACCEPTED | 0 PROPOSED | 0 REJECTED)
 **Repository Branch:** `base-setup`
 **Reference Baseline Commit:** `56ed66d4a21cf980368cff016fc5df3397e2be0f`
-**Target Candidate Set:** ADRs `0005` through `0013` (all currently in status `PROPOSED`)
+**Target Candidate Set:** ADRs `0005` through `0013` (all 9 ACCEPTED across Decision Batch 1 and Batch 2)
 
 ---
 
@@ -41,15 +41,15 @@ The 9 candidate ADRs are ordered below by architectural dependency hierarchy, pr
 | :--- | :--- | :--- | :---: | :--- | :--- | :---: |
 | **0013** | Backend Runtime & Relational Persistence Topology | **Option A:** Modular Monolith (`apps/api`) + Relational DB Family | `MEDIUM` | Monolith discipline required to prevent ad-hoc cross-module SQL coupling | Independent Foundation | **APPROVED** |
 | **0005** | Platform Administrator Client Delivery Topology | **Option B:** Dedicated Admin Web App (`apps/admin-web`) | `MEDIUM` | Second frontend workspace in monorepo; CI/CD pipeline expansion | Independent Foundation | **APPROVED** |
-| **0010** | Contract Evolution & Runtime Schema Validation | **Option B:** Zod Schema-First Contracts in `@novyx/contracts` | `HIGH` | Zod runtime bundle size overhead (~14KB min/gzip) | Independent Foundation | **REQUEST_REVISION** |
-| **0006** | IAM, Session Lifecycle & Role Administration | **Option B:** Signed Access Token + Refresh Rotation + AuthVersion Gate | `MEDIUM` | Freshness check required on all protected server actions (Reads & Mutations) | `ADR 0013`, `ADR 0005` | **REQUEST_REVISION** |
+| **0010** | Contract Evolution & Runtime Schema Validation | **Option B:** Zod Schema-First Contracts in `@novyx/contracts` with transport separation | `HIGH` | Zod runtime bundle size overhead (~14KB min/gzip) | Independent Foundation | **APPROVED** |
+| **0006** | IAM, Session Lifecycle & Role Administration | **Server-Authoritative Session Architecture** with short-lived access credential + rotating refresh credential + authorization freshness | `MEDIUM` | Freshness check required on all protected server actions (Reads & Mutations) | `ADR 0013`, `ADR 0005` | **APPROVED** |
 | **0007** | Multi-Tier Authorization Enforcement | **Option B:** Multi-Tier Defense-in-Depth (Client Advisory, HTTP Gate, Domain Core) | `HIGH` | Maintenance of eligibility rules across both advisory client and domain core | `ADR 0006`, `ADR 0010` | **APPROVED** |
 | **0012** | Clean Architecture Layering & Facade Decomposition | **Option B:** Pragmatic Ports & Adapters within Monorepo | `HIGH` | Refactoring effort to untangle existing 856-line `greenOpsService` facade | `ADR 0007`, `ADR 0008` | **APPROVED** |
-| **0008** | Mobile Offline Durable Storage & Outbox | **Option B:** `expo-sqlite` Relational Outbox + Sandbox Filesystem Photos | `HIGH` | SQLite schema migration management; empirical verification required | Independent Mobile | **REQUEST_REVISION** |
+| **0008** | Mobile Offline Durable Storage & Outbox | **Option B:** `expo-sqlite` Relational Outbox + Sandbox Filesystem Photos | `HIGH` | SQLite schema migration management; empirical verification required | Independent Mobile | **APPROVED** |
 | **0009** | Concurrency Control & Idempotency Strategy | **Option B:** Command Payload OCC (`expectedVersion`) + Header Idempotency | `HIGH` | Server must maintain idempotency cache; clients must handle `409 CONFLICT` | `ADR 0008`, `ADR 0010` | **APPROVED** |
-| **0011** | Audit Trail Persistence & Integrity Architecture | **Option B:** Database Privilege Separation + Stream Hash-Chaining | `MEDIUM` | Hash-chaining adds overhead; does not defend against root DBA without external anchor | `ADR 0013` | **REQUEST_REVISION** |
+| **0011** | Audit Trail Persistence & Integrity Architecture | **Option B:** Database Privilege Separation + Append-Only Table + Indexed Queries WITHOUT mandatory hash chaining in MVP | `MEDIUM` | Privilege configuration required; does not defend against root DBA without external anchor | `ADR 0013` | **APPROVED** |
 
-*Note: Owner Decisions recorded per Decision Batch 1 (Baseline Commit: `8e73f71c478a5ca7d58d7b7ffb2f132b2c92cedc`).*
+*Note: Owner Decisions recorded across Decision Batch 1 (5 APPROVED, 4 REQUEST_REVISION) and Decision Batch 2 (4 APPROVED revised candidates). All 9 candidate ADRs are now APPROVED.*
 
 ---
 
@@ -242,7 +242,7 @@ How should `@novyx/contracts` be restructured and extended to support the full f
 
 ```markdown
 Owner Decision:
-REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
+APPROVED — REVISED OPTION B (Batch 2 Final Acceptance; Batch 1 REQUEST_REVISION history preserved)
 ```
 
 ---
@@ -255,11 +255,12 @@ REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
 How should the IAM boundary, authentication mechanism, session lifecycle, authorization freshness across protected reads and mutations, and token storage be architected across mobile and admin clients?
 
 ##### 2. Recommended Option
-**Option B: Signed Short-Lived Access Token + Refresh Token Rotation + Authoritative Account Version Check**
-- Short-lived asymmetric JWT access tokens (RS256/ES256, proposed 15m TTL).
-- Long-lived cryptographically random refresh tokens stored in `expo-secure-store` (mobile) and `HttpOnly` cookies (web), with single-use rotation (RTR).
-- **Mandatory Freshness Invariant:** For EVERY protected authenticated server request (READ, MUTATE, DECIDE, ADMINISTER), server verifies `accountStatus === 'ACTIVE'` and `token.authVersion === user.authVersion`.
-- Offline field drafting is preserved; however, offline persistence conveys zero server authorization upon reconnection.
+**Server-Authoritative Session Architecture with short-lived access credential + rotating refresh credential + authorization freshness**
+- Server establishes current authoritative authorization state across ALL protected actions (READ, MUTATE, DECIDE, ADMINISTER).
+- Rotating refresh credentials stored in `expo-secure-store` (mobile) and `HttpOnly` cookies (web).
+- **Mandatory Freshness Invariant:** For EVERY protected authenticated server request, server verifies `accountStatus === 'ACTIVE'` and current `authVersion`.
+- Token representation (opaque token vs signed JWT) retained as bounded technical implementation choice.
+- Offline field drafting is preserved; offline persistence conveys zero server authorization upon reconnection.
 
 ##### 3. Critical Architectural Analysis
 - **Critical Comparison: JWT vs Fully Stateful Sessions:**
@@ -303,7 +304,7 @@ How should the IAM boundary, authentication mechanism, session lifecycle, author
 
 ```markdown
 Owner Decision:
-REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
+APPROVED — REVISED CANDIDATE (Batch 2 Final Acceptance; Batch 1 REQUEST_REVISION history preserved)
 ```
 
 ---
@@ -474,7 +475,7 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
 
 ```markdown
 Owner Decision:
-REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
+APPROVED — REVISED OPTION B (Batch 2 Final Acceptance; Batch 1 REQUEST_REVISION history preserved)
 ```
 
 ---
@@ -541,9 +542,9 @@ APPROVED
 What technical architecture, persistence strategy, and integrity mechanisms should be selected for the NOVYX Audit Trail to enforce append-only immutability, support concurrent writes, and provide fast administrative querying?
 
 ##### 2. Recommended Option
-**Option B: Database Privilege Separation + Append-Only Table + Stream-Partitioned Hash Chaining**
+**Option B: Database Privilege Separation + Append-Only Table + Indexed Queries WITHOUT mandatory hash chaining in MVP**
 - Application user privileges strictly restricted to `INSERT, SELECT` on `audit_events`. `UPDATE`, `DELETE`, `TRUNCATE`, and `DROP` are explicitly revoked at the database engine level.
-- Stream-partitioned hash chaining (partitioned by resource or bounded context stream) to prevent global database write serialization bottlenecks.
+- Stream-partitioned hash chaining retained as optional future hardening if compliance mandates require it.
 - Composite indexes to power multi-criteria administrative queries (`CAP-ADM-05`, `GV-08`, `GV-09`).
 
 ##### 3. Critical Architectural Analysis & Owner Scrutiny
@@ -599,7 +600,7 @@ This decision warrants the most critical Owner examination. We explicitly separa
 
 ```markdown
 Owner Decision:
-REQUEST_REVISION — UPDATED CANDIDATE PENDING FINAL REVIEW
+APPROVED — REVISED OPTION B (Batch 2 Final Acceptance; Batch 1 REQUEST_REVISION history preserved)
 ```
 
 ---

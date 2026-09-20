@@ -1,7 +1,44 @@
 # ADR 0008: Mobile Offline Durable Storage Engine & Outbox Synchronization Architecture
 
 ## Status
-PROPOSED
+ACCEPTED
+
+## Acceptance Scope
+
+ACCEPTED:
+- `expo-sqlite` for structured local persistence
+- Persistent application sandbox filesystem for binary evidence
+- Durable Outbox queue
+- Stable `Idempotency-Key` stored as transport/retry metadata
+- `SubmitEvidence` canonical command
+- `SubmitEvidenceRequest` canonical DTO direction
+- Empirical reliability verification (process kill, transaction interruption, dropout cycles)
+- Local evidence retained on sync/conflict failure
+
+STATE DIMENSIONS REMAIN SEPARATE:
+- `TaskStatus`
+- `LocalSubmissionStatus`
+- `SyncStatus`
+
+TECHNICAL CLIENT STATES:
+- Values such as `IDLE`, `SAVED_DRAFT`, `SYNCING`, and `PENDING_SYNC` are technical client-local state vocabulary.
+- They do NOT extend frozen business `TaskStatus`.
+- They do NOT redefine the canonical business baseline.
+- `PENDING_SYNC` remains local submission state, not server `TaskStatus`.
+
+AUTHORITATIVE SERVER RECONCILIATION:
+- If server did not accept the submission and authoritative server state remains `IN_PROGRESS`, `TaskStatus` remains `IN_PROGRESS`.
+- However, if the server responds with conflict or current resource state showing that authoritative `TaskStatus` has changed because of another legitimate action (e.g., Manager cancellation, reassignment, or state transition), the client must reconcile and display the authoritative server state.
+- Local evidence MUST still be retained.
+- Therefore: LOCAL EVIDENCE PRESERVATION $\neq$ FORCING LOCAL `TaskStatus` OVER SERVER AUTHORITY. Server remains authoritative.
+
+PHOTO RETENTION:
+- Local photo retention period (such as 7 days post-completion) is NOT locked by this ADR.
+- Numeric retention period remains an operational implementation parameter.
+- Accepted architecture requires:
+  - Safe retention until authoritative server acknowledgement.
+  - Zero premature evidence deletion.
+  - Later garbage collection policy implementation.
 
 ## Context
 In the reconciled and frozen business baseline (Phase 0–10), Field Staff operate in urban parks, streets, and rural nurseries where cellular data connectivity (3G/4G) is frequently degraded or entirely lost.
@@ -100,7 +137,7 @@ What local storage engine, binary management strategy, and Outbox synchronizatio
      4. **On Client/Validation/Conflict Failure (HTTP 4xx):**
         - **Failure Retention Rule:** The worker sets `SyncStatus = SYNC_FAILED` with `syncFailureReason = 'VALIDATION_FAILED' | 'CONFLICT' | 'FORBIDDEN'`.
         - **Local Evidence Preservation:** Local evidence photos, notes, and outbox payload are **NEVER discarded or silently deleted**.
-        - The authoritative `TaskStatus` remains `IN_PROGRESS` (unless server confirmed a terminal state).
+        - If the server did not accept the submission and authoritative server state remains `IN_PROGRESS`, `TaskStatus` remains `IN_PROGRESS`. However, if the server responds with conflict or current resource state showing that authoritative `TaskStatus` has changed because of another legitimate action (e.g., Manager cancellation, reassignment, or state transition), the client must reconcile and display the authoritative server state while preserving local evidence (LOCAL EVIDENCE PRESERVATION $\neq$ FORCING LOCAL `TaskStatus` OVER SERVER AUTHORITY).
         - Worker halts automatic retries to prevent server spam and displays a descriptive error banner for user resolution.
      5. **On Network / Server Error (HTTP 5xx / Timeout):** Worker sets `SyncStatus = SYNC_FAILED`, increments `attemptCount`, applies exponential backoff ($2^n \times 1000\text{ms}$ up to 60s), and automatically retries upon next connectivity event.
 
@@ -135,9 +172,9 @@ The architecture provides the durability primitives designed to meet `QAS-OFFLIN
 - **Option C (WatermelonDB / Realm):** Rejected due to build fragility, heavy footprint, and protocol mismatch with REST baseline.
 
 ## Open Questions
-1. What is the local photo retention period after confirmed server sync? (Open operational question; 7 days post-completion is a proposed baseline subject to field disk usage measurement).
+1. What is the operational policy and threshold for local photo garbage collection after confirmed server sync? (Operational implementation parameter; requires safe retention until authoritative acknowledgement, zero premature evidence deletion, and later garbage collection policy without locking a fixed numeric day count).
 
-## Owner Decision Required
-- [ ] **APPROVE** Option B (`expo-sqlite` Relational Outbox + Sandbox Filesystem).
-- [ ] **REJECT** and mandate alternative option.
-- [x] **REQUEST_REVISION** (Batch 1: Revised candidate aligning canonical SubmitEvidenceRequest DTO and binding Idempotency-Key to HTTP header transport metadata).
+## Owner Decision Record
+- **Owner Decision:** APPROVED — REVISED OPTION B
+- **Accepted Decision:** Relational SQLite Engine (`expo-sqlite`) for structured data & Outbox + Sandbox Filesystem for binary photos, with transport `Idempotency-Key` separation and authoritative server reconciliation.
+- **Historical Note:** Batch 1 requested revision to align DTO and transport metadata; Batch 2 confirmed final approval of the revised Option B.
