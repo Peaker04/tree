@@ -1,7 +1,7 @@
 # PHASE 13 — WAVE 4 OPERATIONAL DOMAIN EVIDENCE
 
 **Document Purpose**: Authoritative factual evidence record for Wave 4 implementation of NOVYX GreenOps.
-**Status**: IMPLEMENTED / READY FOR CI AND INDEPENDENT ACCEPTANCE
+**Status**: IMPLEMENTED / VERIFIED IN REMOTE CI
 **Wave 5**: LOCKED (DO NOT START)
 
 ---
@@ -10,6 +10,9 @@
 
 - **Authorized Entry Commit**: `0bd7cc95bd8700e2f0fca1a2d96317ff68d65114`
 - **Authorized Entry Tree**: `810f82dd0627213dae766c063d950b7f7dd0d0a5`
+- **Wave 4 Implementation Commit**: `a462e8fcd1f82f841ad63af33626a43020295143`
+- **Wave 4 CI Verified Commit**: `346db348687b4bad4311c65bda8739c346d28e50`
+- **Wave 4 CI Verified Tree**: `4a2ca2f347046c043effa591a0436eba110f46c9`
 - **Branch**: `base-setup`
 - **Node Version**: v22.14.0
 - **NPM Version**: 10.9.2
@@ -183,11 +186,36 @@ No `DRAFT`, `ASSIGNED`, `SUBMITTED`, `APPROVED`, `REJECTED`.
 | `npm run typecheck --workspace @novyx/contracts` | PASS | Code 0 |
 | `npm run typecheck --workspace @novyx/api` | PASS | Code 0 |
 | `npm run build --workspace @novyx/api` | PASS | Clean TypeScript compilation to dist |
-| `npm test` | PASS | 188 passed, 12 skipped (real DB/S3 tests skipped locally, run in CI), 0 failed (200 total) |
+| `npm test` (local) | PASS | 188 passed, 12 skipped (real DB/S3 tests skipped locally, run in CI), 0 failed (200 total) |
 | `git diff --check` | PASS | Clean whitespace / line endings |
 | `git diff --name-only 0bd7cc... -- apps/mobile ...` | PASS | Empty (100% untouched) |
 | Frozen docs diff check | PASS | Empty (100% untouched) |
 | `npm audit --omit=dev` | WARN | 24 pre-existing upstream vulnerabilities from Wave 0..3 baseline (no fix executed per rule) |
+
+### 8.2 Remote GitHub Actions CI Verification
+
+- **Workflow Run ID**: `35591875006`
+- **Workflow Run URL**: `https://github.com/Peaker04/tree/actions/runs/35591875006`
+- **Workflow Job ID**: `106307846522` (`Code Quality & Test Verification`)
+- **Status**: SUCCESS / PASS in 1m57s
+- **Commit SHA**: `346db348687b4bad4311c65bda8739c346d28e50`
+- **Tree SHA**: `4a2ca2f347046c043effa591a0436eba110f46c9`
+
+| CI Pipeline Step | Result | Log Output / Verification |
+|---|---|---|
+| `Initialize containers` | PASS | PostgreSQL 17-alpine service container initialized |
+| `Checkout repository` | PASS | Branch `base-setup` checked out |
+| `Setup Node.js` | PASS | Node.js 22.x configured with npm cache |
+| `Install dependencies` | PASS | Clean install via `npm ci` |
+| `Check code formatting` | PASS | `prettier . --check` -> All matched files use Prettier code style |
+| `Lint codebase` | PASS | `eslint .` -> 0 errors, 0 warnings |
+| `Typecheck monorepo` | PASS | `tsc -b --noEmit` across all 5 monorepo workspaces |
+| `Build API workspace` | PASS | Clean TypeScript compilation to `apps/api/dist` |
+| `Start disposable MinIO container` | PASS | `quay.io/minio/minio server /data` on port 9000 |
+| `Setup test S3 bucket` | PASS | `scripts/setup-s3-test.cjs` -> Verified test S3 bucket `novyx-evidence` is accessible |
+| `Run PostgreSQL migrations and role bootstrap` | PASS | 17 tables migrated; role separation & non-bypassable immutability triggers created |
+| `Verify PostgreSQL schema and roles` | PASS | `[verify] All database & privilege checks passed successfully.` |
+| `Run automated test suite (including DB and S3 integration)` | PASS | **15 test files passed (15/15), 199 tests passed, 1 skipped, 0 failed (200 total)** |
 
 ---
 
