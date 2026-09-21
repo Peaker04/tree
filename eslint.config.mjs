@@ -9,7 +9,7 @@ export default tseslint.config(
   {
     ignores: [
       'node_modules/**',
-      'dist/**',
+      '**/dist/**',
       '.expo/**',
       '.agents/**',
       '.claude/**',
