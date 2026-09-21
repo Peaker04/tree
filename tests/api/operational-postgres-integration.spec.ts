@@ -11,6 +11,7 @@ import { DrizzleIdempotencyRepository } from '../../apps/api/src/infrastructure/
 import { DrizzleEvidenceRepository } from '../../apps/api/src/infrastructure/persistence/repositories/drizzle-evidence-repository';
 import { DrizzleCareHistoryRepository } from '../../apps/api/src/infrastructure/persistence/repositories/drizzle-care-history-repository';
 import { DrizzlePolicyRepository } from '../../apps/api/src/infrastructure/persistence/repositories/drizzle-policy-repository';
+import { DrizzleManagerScopeRepository } from '../../apps/api/src/infrastructure/persistence/repositories/drizzle-manager-scope-repository';
 import { DrizzleOperationalUnitOfWork } from '../../apps/api/src/infrastructure/persistence/repositories/drizzle-operational-unit-of-work';
 import { DrizzleAuditWriter } from '../../apps/api/src/infrastructure/persistence/repositories/drizzle-audit-writer';
 import { AuditService } from '../../apps/api/src/modules/audit-compliance/application/services/audit.service';
@@ -51,6 +52,7 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
   let evidenceRepo: DrizzleEvidenceRepository;
   let careHistoryRepo: DrizzleCareHistoryRepository;
   let policyRepo: DrizzlePolicyRepository;
+  let scopeRepo: DrizzleManagerScopeRepository;
   let auditWriter: DrizzleAuditWriter;
   let operationalUow: DrizzleOperationalUnitOfWork;
   let storageAdapter: IObjectStoragePort;
@@ -67,6 +69,7 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       evidenceRepo = new DrizzleEvidenceRepository(db);
       careHistoryRepo = new DrizzleCareHistoryRepository(db);
       policyRepo = new DrizzlePolicyRepository(db);
+      scopeRepo = new DrizzleManagerScopeRepository(db);
       auditWriter = new DrizzleAuditWriter(db);
       operationalUow = new DrizzleOperationalUnitOfWork(db);
     }
@@ -324,8 +327,8 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
         taskRepo,
         evidenceRepo,
         storageAdapter,
-        new AuditService(auditWriter),
         treeRepo,
+        new AuditService(auditWriter),
         operationalUow,
       );
 
@@ -447,11 +450,14 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       });
       await taskRepo.save(task);
 
+      await scopeRepo.addScope(managerId, treeId);
+
       const reviewUseCase = new ReviewTaskUseCase(
         taskRepo,
-        careHistoryRepo,
-        new AuditService(auditWriter),
         evidenceRepo,
+        careHistoryRepo,
+        scopeRepo,
+        new AuditService(auditWriter),
         operationalUow,
       );
 
@@ -497,14 +503,14 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
         .digest('hex');
 
       const [claim1, claim2] = await Promise.all([
-        idempotencyRepo.claimProcessing({
+        idempotencyRepo.claim({
           id: crypto.randomUUID(),
           idempotencyKey,
           actorId,
           requestRoute,
           requestHash,
         }),
-        idempotencyRepo.claimProcessing({
+        idempotencyRepo.claim({
           id: crypto.randomUUID(),
           idempotencyKey,
           actorId,
@@ -513,8 +519,8 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
         }),
       ]);
 
-      const states = [claim1.state, claim2.state].sort();
-      expect(states).toEqual(['CLAIMED', 'PROCESSING']);
+      const results = [claim1, claim2].sort();
+      expect(results).toEqual([false, true]);
 
       await idempotencyRepo.complete({
         actorId,
@@ -594,8 +600,8 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       taskRepo,
       evidenceRepo,
       storageAdapter,
-      new AuditService(auditWriter),
       treeRepo,
+      new AuditService(auditWriter),
       operationalUow,
     );
 
@@ -724,6 +730,8 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
         authVersion: 1,
       });
 
+      await scopeRepo.addScope(managerId, treeId);
+
       await policyRepo.saveProofPolicyVersion(
         new ProofPolicyVersion({
           id: `POL-V1-${Date.now()}`,
@@ -747,8 +755,8 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       const createTaskUseCase = new CreateTaskUseCase(
         taskRepo,
         treeRepo,
-        taskTypeRepo,
-        policyRepo,
+        userRepo,
+        scopeRepo,
         resolveUseCase,
         new AuditService(auditWriter),
         operationalUow,
@@ -757,6 +765,7 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       const task1Result = await createTaskUseCase.execute(
         {
           title: 'Task under v1',
+          description: 'Description for task 1 under v1',
           taskTypeId: ttId,
           treeId,
           assignedStaffId: staffId,
@@ -791,6 +800,7 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       const task2Result = await createTaskUseCase.execute(
         {
           title: 'Task under v2',
+          description: 'Description for task 2 under v2',
           taskTypeId: ttId,
           treeId,
           assignedStaffId: staffId,

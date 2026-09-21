@@ -225,7 +225,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       // 8. Staff presigns evidence upload
       const presignBeforeRes = await app.inject({
         method: 'POST',
-        url: `/v1/tasks/${task.id}/evidence/presign-upload`,
+        url: `/v1/tasks/${task.id}/evidence/presign`,
         headers: {
           authorization: `Bearer ${staff.token}`,
           'idempotency-key': randomUUID(),
@@ -240,7 +240,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
 
       const presignAfterRes = await app.inject({
         method: 'POST',
-        url: `/v1/tasks/${task.id}/evidence/presign-upload`,
+        url: `/v1/tasks/${task.id}/evidence/presign`,
         headers: {
           authorization: `Bearer ${staff.token}`,
           'idempotency-key': randomUUID(),
@@ -409,12 +409,14 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
         headers: { authorization: `Bearer ${manager.token}`, 'idempotency-key': randomUUID() },
         payload: {
           title: 'Soil Treatment',
+          description: 'Quarterly soil treatment and fertilization',
           taskTypeId: taskType.id,
           treeId,
           assignedStaffId: staff.userId,
           deadline: '2026-11-30T17:00:00Z',
         },
       });
+      expect(taskRes.statusCode).toBe(201);
       const task = taskRes.json().data;
 
       // Staff starts task
@@ -424,15 +426,17 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
         headers: { authorization: `Bearer ${staff.token}`, 'idempotency-key': randomUUID() },
         payload: { taskId: task.id, expectedVersion: task.version },
       });
+      expect(startRes.statusCode).toBe(200);
       const startedTask = startRes.json().data;
 
       // Staff presigns and uploads photo
       const presignRes = await app.inject({
         method: 'POST',
-        url: `/v1/tasks/${task.id}/evidence/presign-upload`,
+        url: `/v1/tasks/${task.id}/evidence/presign`,
         headers: { authorization: `Bearer ${staff.token}`, 'idempotency-key': randomUUID() },
         payload: { fileName: 'soil.jpg', contentType: 'image/jpeg' },
       });
+      expect(presignRes.statusCode).toBe(200);
       const photo1 = presignRes.json().data;
 
       await storageAdapter.putObjectDirect({
@@ -484,10 +488,11 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       // Staff presigns and uploads rework photo
       const presign2Res = await app.inject({
         method: 'POST',
-        url: `/v1/tasks/${task.id}/evidence/presign-upload`,
+        url: `/v1/tasks/${task.id}/evidence/presign`,
         headers: { authorization: `Bearer ${staff.token}`, 'idempotency-key': randomUUID() },
         payload: { fileName: 'soil-rework.jpg', contentType: 'image/jpeg' },
       });
+      expect(presign2Res.statusCode).toBe(200);
       const photo2 = presign2Res.json().data;
 
       await storageAdapter.putObjectDirect({
@@ -500,7 +505,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       // Staff resubmits rework
       const resubmitRes = await app.inject({
         method: 'POST',
-        url: `/v1/tasks/${task.id}/rework`,
+        url: `/v1/tasks/${task.id}/rework/resubmit`,
         headers: { authorization: `Bearer ${staff.token}`, 'idempotency-key': randomUUID() },
         payload: {
           taskId: task.id,
@@ -602,12 +607,14 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
         headers: { authorization: `Bearer ${manager.token}`, 'idempotency-key': randomUUID() },
         payload: {
           title: 'Trim High Branches',
+          description: 'Specialized high branch trimming near electrical infrastructure',
           taskTypeId: taskType.id,
           treeId,
           assignedStaffId: staff1.userId,
           deadline: '2026-11-30T17:00:00Z',
         },
       });
+      expect(taskRes.statusCode).toBe(201);
       const task = taskRes.json().data;
 
       // Staff 1 starts task
