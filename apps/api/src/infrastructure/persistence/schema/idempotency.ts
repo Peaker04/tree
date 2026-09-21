@@ -12,8 +12,9 @@ export const idempotencyRecords = pgTable(
     actorId: varchar('actor_id', { length: 128 }).notNull(),
     requestRoute: varchar('request_route', { length: 255 }).notNull(),
     requestHash: varchar('request_hash', { length: 128 }).notNull(),
-    responseStatus: integer('response_status').notNull(),
-    responseBody: text('response_body').notNull(),
+    status: varchar('status', { length: 32 }).notNull().default('COMPLETED'),
+    responseStatus: integer('response_status'),
+    responseBody: text('response_body'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({

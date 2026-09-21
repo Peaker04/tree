@@ -47,6 +47,7 @@ import type {
   ProofPolicyVersion,
   ChecklistTemplateVersion,
 } from '../../../modules/policy-template-governance/domain/policy-version.entity';
+import { ValidationError } from '../../../core/errors';
 
 export interface GovernanceOperationalRouteOptions {
   createTreeUseCase: CreateTreeUseCase;
@@ -151,6 +152,11 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
       preHandler: adminPreHandlers,
     },
     async (request, reply) => {
+      if (request.body.treeId && request.body.treeId !== request.params.id) {
+        throw new ValidationError(
+          `Path treeId (${request.params.id}) does not match body treeId (${request.body.treeId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const tree = await options.updateTreeMasterDataUseCase.execute(
         { ...request.body, treeId: request.params.id },
@@ -170,6 +176,11 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
       preHandler: adminPreHandlers,
     },
     async (request, reply) => {
+      if (request.body.treeId && request.body.treeId !== request.params.id) {
+        throw new ValidationError(
+          `Path treeId (${request.params.id}) does not match body treeId (${request.body.treeId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const tree = await options.replaceTreeQrCodeUseCase.execute(
         { ...request.body, treeId: request.params.id },
@@ -189,6 +200,11 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
       preHandler: adminPreHandlers,
     },
     async (request, reply) => {
+      if (request.body.treeId && request.body.treeId !== request.params.id) {
+        throw new ValidationError(
+          `Path treeId (${request.params.id}) does not match body treeId (${request.body.treeId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const tree = await options.updateCanonicalCoordinatesUseCase.execute(
         { ...request.body, treeId: request.params.id },
@@ -208,6 +224,11 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
       preHandler: adminPreHandlers,
     },
     async (request, reply) => {
+      if (request.body.treeId && request.body.treeId !== request.params.id) {
+        throw new ValidationError(
+          `Path treeId (${request.params.id}) does not match body treeId (${request.body.treeId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const tree = await options.retireTreeUseCase.execute({ ...request.body, treeId: request.params.id }, actor);
       return reply.status(200).send({ data: toTreeDto(tree) });
@@ -241,6 +262,11 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
       preHandler: adminPreHandlers,
     },
     async (request, reply) => {
+      if (request.body.taskTypeId && request.body.taskTypeId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskTypeId (${request.params.id}) does not match body taskTypeId (${request.body.taskTypeId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const taskType = await options.activateTaskTypeUseCase.execute(
         { ...request.body, taskTypeId: request.params.id },
@@ -260,6 +286,11 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
       preHandler: adminPreHandlers,
     },
     async (request, reply) => {
+      if (request.body.taskTypeId && request.body.taskTypeId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskTypeId (${request.params.id}) does not match body taskTypeId (${request.body.taskTypeId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const taskType = await options.deactivateTaskTypeUseCase.execute(
         { ...request.body, taskTypeId: request.params.id },

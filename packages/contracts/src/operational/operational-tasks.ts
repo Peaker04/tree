@@ -3,6 +3,7 @@ import { TaskStatusSchema } from './task-status';
 import { ProofProfileSchema } from './proof-profile';
 import { ChecklistItemSchema, ProofPayloadSchema } from './evidence';
 import { GpsCheckSchema, QrCheckSchema } from './verification';
+import { ReviewDecisionSchema } from './review-decision';
 
 /**
  * Stable catalog identifier for TaskType in operational commands.
@@ -124,6 +125,26 @@ export const ResubmitReworkRequestSchema = z.object({
 });
 
 export type ResubmitReworkRequest = z.infer<typeof ResubmitReworkRequestSchema>;
+
+/**
+ * Unified Review Task HTTP Payload Schema (Phase 13 Wave 4 - W4-C06)
+ */
+export const ReviewTaskBodySchema = z.object({
+  expectedVersion: z.number().int().nonnegative(),
+  decision: ReviewDecisionSchema,
+  notes: z.string().optional(),
+  exceptionReason: z.string().optional(),
+  targetedArea: z.string().optional(),
+  reworkReason: z.string().optional(),
+});
+
+export type ReviewTaskBody = z.infer<typeof ReviewTaskBodySchema>;
+
+export const ReviewTaskRequestSchema = ReviewTaskBodySchema.extend({
+  taskId: z.string().min(1).optional(),
+});
+
+export type ReviewTaskRequest = z.infer<typeof ReviewTaskRequestSchema>;
 
 /**
  * Canonical Task DTO Schema — includes version: number for OCC,

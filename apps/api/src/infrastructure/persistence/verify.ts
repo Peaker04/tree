@@ -39,9 +39,9 @@ export async function verifyDatabase(runtimeUrl?: string): Promise<DbVerificatio
       await client.query('SELECT 1');
       result.connected = true;
 
-      // 2. Check table existence (all 17 persistence tables)
+      // 2. Check table existence (all 18 persistence tables)
       const tablesRes = await client.query<{ table_name: string }>(
-        `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('users', 'sessions', 'audit_events', 'spent_refresh_tokens', 'credential_setup_tokens', 'trees', 'task_types', 'proof_policy_versions', 'checklist_template_versions', 'manager_operational_scopes', 'tasks', 'evidence_objects', 'evidence_attempts', 'field_issues', 'task_reviews', 'care_histories', 'idempotency_records')`,
+        `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('users', 'sessions', 'audit_events', 'spent_refresh_tokens', 'credential_setup_tokens', 'trees', 'task_types', 'proof_policy_versions', 'checklist_template_versions', 'manager_operational_scopes', 'tasks', 'evidence_objects', 'evidence_attempts', 'field_issues', 'task_reviews', 'care_histories', 'idempotency_records', 'evidence_upload_reservations')`,
       );
       result.tablesFound = tablesRes.rows.map((r) => r.table_name);
 
@@ -123,7 +123,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       console.log('[verify] Result:', JSON.stringify(res, null, 2));
       const allPassed =
         res.connected &&
-        res.tablesFound.length === 17 &&
+        res.tablesFound.length === 18 &&
         !res.runtimeOwnsAuditEvents &&
         res.auditSelectAllowed &&
         res.auditInsertAllowed &&

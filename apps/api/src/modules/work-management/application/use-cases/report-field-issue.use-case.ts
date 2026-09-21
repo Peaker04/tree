@@ -1,5 +1,6 @@
 import type { ITaskRepository } from '../ports/task-repository.port';
 import type { IEvidenceRepository } from '../ports/evidence-repository.port';
+import type { IOperationalUnitOfWork } from '../ports/operational-unit-of-work.port';
 import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../../../core/errors';
 import type { ReportFieldIssueRequest } from '@novyx/contracts';
@@ -11,6 +12,7 @@ export class ReportFieldIssueUseCase {
     private readonly taskRepo: ITaskRepository,
     private readonly evidenceRepo: IEvidenceRepository,
     private readonly auditService: AuditService,
+    private readonly uow?: IOperationalUnitOfWork,
   ) {}
 
   async execute(
@@ -21,65 +23,79 @@ export class ReportFieldIssueUseCase {
       throw new ForbiddenError('Only Field Staff may report field issues');
     }
 
-    const task = await this.taskRepo.findById(request.taskId);
-    if (!task) {
-      throw new NotFoundError(`Task with ID ${request.taskId} not found`);
-    }
+    const run = async (repos: {
+      taskRepo: ITaskRepository;
+      evidenceRepo: IEvidenceRepository;
+      auditService: AuditService;
+    }): Promise<Task> => {
+      const task = await repos.taskRepo.findById(request.taskId);
+      if (!task) {
+        throw new NotFoundError(`Task with ID ${request.taskId} not found`);
+      }
 
-    if (task.assignedStaffId !== context.actorId) {
-      throw new ForbiddenError('Cannot report field issue on a task assigned to another staff member');
-    }
+      if (task.assignedStaffId !== context.actorId) {
+        throw new ForbiddenError('Cannot report field issue on a task assigned to another staff member');
+      }
 
-    if (task.version !== request.expectedVersion) {
-      throw new ConflictError('Task version conflict', {
-        subtype: 'STALE_VERSION',
-        currentVersion: task.version,
-        expectedVersion: request.expectedVersion,
-      });
-    }
+      if (task.version !== request.expectedVersion) {
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: task.version,
+          expectedVersion: request.expectedVersion,
+        });
+      }
 
-    if (task.status !== 'IN_PROGRESS') {
-      throw new ValidationError(
-        `Cannot report field issue in status ${task.status}. Field issues can only be reported from IN_PROGRESS.`,
-      );
-    }
+      if (task.status !== 'IN_PROGRESS') {
+        throw new ValidationError(
+          `Cannot report field issue in status ${task.status}. Field issues can only be reported from IN_PROGRESS.`,
+        );
+      }
 
-    task.reportFieldIssue(context.actorId);
+      task.reportFieldIssue(context.actorId);
 
-    const updated = await this.taskRepo.update(task, request.expectedVersion);
-    if (!updated) {
-      const current = await this.taskRepo.findById(request.taskId);
-      throw new ConflictError('Task version conflict', {
-        subtype: 'STALE_VERSION',
-        currentVersion: current ? current.version : task.version,
-        expectedVersion: request.expectedVersion,
-      });
-    }
+      const updated = await repos.taskRepo.update(task, request.expectedVersion);
+      if (!updated) {
+        const current = await repos.taskRepo.findById(request.taskId);
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: current ? current.version : task.version,
+          expectedVersion: request.expectedVersion,
+        });
+      }
 
-    // Save field issue record
-    await this.evidenceRepo.saveFieldIssue({
-      id: `ISS-${randomUUID().slice(0, 8)}`,
-      taskId: task.id,
-      reportedByUserId: context.actorId,
-      issueDescription: request.issueDescription,
-      issuePhotoStorageRef: request.issuePhotoUri,
-      reportedAt: new Date(),
-    });
-
-    await this.auditService.logEvent({
-      actorId: context.actorId,
-      actorRole: context.actorRole,
-      action: 'ReportFieldIssue',
-      targetResourceType: 'Task',
-      targetResourceId: task.id,
-      outcome: 'SUCCESS',
-      details: {
-        newStatus: task.status,
+      // Save field issue record
+      await repos.evidenceRepo.saveFieldIssue({
+        id: `ISS-${randomUUID().slice(0, 8)}`,
+        taskId: task.id,
+        reportedByUserId: context.actorId,
         issueDescription: request.issueDescription,
-        updatedVersion: task.version,
-      },
-    });
+        issuePhotoStorageRef: request.issuePhotoUri,
+        reportedAt: new Date(),
+      });
 
-    return task;
+      await repos.auditService.logEvent({
+        actorId: context.actorId,
+        actorRole: context.actorRole,
+        action: 'ReportFieldIssue',
+        targetResourceType: 'Task',
+        targetResourceId: task.id,
+        outcome: 'SUCCESS',
+        details: {
+          newStatus: task.status,
+          issueDescription: request.issueDescription,
+          updatedVersion: task.version,
+        },
+      });
+
+      return task;
+    };
+
+    if (this.uow) {
+      return await this.uow.execute(async (tx) => {
+        return run({ taskRepo: tx.taskRepo, evidenceRepo: tx.evidenceRepo, auditService: tx.auditService });
+      });
+    }
+
+    return run({ taskRepo: this.taskRepo, evidenceRepo: this.evidenceRepo, auditService: this.auditService });
   }
 }

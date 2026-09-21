@@ -1,7 +1,8 @@
 import type { ITaskRepository } from '../ports/task-repository.port';
-import type { IEvidenceRepository } from '../ports/evidence-repository.port';
+import type { IEvidenceRepository, EvidenceObjectRecord } from '../ports/evidence-repository.port';
 import type { IObjectStoragePort } from '../ports/object-storage.port';
 import type { ITreeRepository } from '../../../tree-asset-registry/application/ports/tree-repository.port';
+import type { IOperationalUnitOfWork } from '../ports/operational-unit-of-work.port';
 import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../../../core/errors';
 import type { SubmitEvidenceRequest } from '@novyx/contracts';
@@ -15,6 +16,7 @@ export class SubmitEvidenceUseCase {
     private readonly storagePort: IObjectStoragePort,
     private readonly treeRepo: ITreeRepository,
     private readonly auditService: AuditService,
+    private readonly uow?: IOperationalUnitOfWork,
   ) {}
 
   async execute(
@@ -139,81 +141,176 @@ export class SubmitEvidenceUseCase {
       photoUrisToVerify.push(request.identityException.damagedQrPhotoUri);
     }
 
-    // 6. Object Storage verification and durable metadata persistence (Sections 30, 31, 32)
+    // 6. Read-Only Object Storage & Provenance Verification (W4-C03, Sections 13, 14, 15, 16)
+    const verifiedObjects: EvidenceObjectRecord[] = [];
+
     for (const uri of photoUrisToVerify) {
+      // W4-C03: Strictly reject temporary presigned HTTP/HTTPS URLs
       const objectKey = this.extractObjectKey(uri);
+
       const metadata = await this.storagePort.getObjectMetadata(objectKey);
       if (!metadata) {
         throw new ValidationError(`Evidence photo object "${objectKey}" was not found in object storage`);
       }
 
-      const existingObj = await this.evidenceRepo.findEvidenceObjectByKey(objectKey);
-      if (!existingObj) {
-        await this.evidenceRepo.saveEvidenceObject({
-          id: `EVO-${randomUUID().slice(0, 8)}`,
-          taskId: task.id,
-          objectKey,
-          storageRef: uri.startsWith('s3://') ? uri : `storage://${objectKey}`,
-          contentHash: metadata.contentHash || metadata.etag || 'hash-verified',
-          contentType: metadata.contentType || 'image/jpeg',
-          sizeBytes: metadata.sizeBytes,
-          uploadedByUserId: context.actorId,
-          createdAt: new Date(),
-        });
+      // Check reservation provenance if tracked in DB
+      const reservation = await this.evidenceRepo.findReservationByKey(objectKey);
+      if (reservation) {
+        if (reservation.taskId !== task.id) {
+          throw new ForbiddenError(
+            `Evidence object "${objectKey}" belongs to task ${reservation.taskId}, cannot be submitted for task ${task.id}`,
+          );
+        }
+        if (reservation.actorId !== context.actorId) {
+          throw new ForbiddenError(
+            `Evidence object "${objectKey}" was uploaded by another user, cannot be claimed by ${context.actorId}`,
+          );
+        }
+        if (
+          reservation.expectedContentHash &&
+          metadata.contentHash &&
+          metadata.contentHash !== reservation.expectedContentHash
+        ) {
+          throw new ValidationError(
+            `Checksum mismatch for evidence object "${objectKey}": expected ${reservation.expectedContentHash}, got ${metadata.contentHash}`,
+          );
+        }
+      } else {
+        // Verify via object storage custom metadata
+        if (metadata.taskId && metadata.taskId !== task.id) {
+          throw new ForbiddenError(
+            `Evidence object "${objectKey}" belongs to task ${metadata.taskId}, cannot be submitted for task ${task.id}`,
+          );
+        }
+        if (metadata.uploadedBy && metadata.uploadedBy !== context.actorId) {
+          throw new ForbiddenError(
+            `Evidence object "${objectKey}" was uploaded by another user, cannot be claimed by ${context.actorId}`,
+          );
+        }
+        // Reject random unissued object adopting
+        if (!metadata.taskId && !metadata.uploadedBy && !objectKey.startsWith(`tasks/${task.id}/evidence/`)) {
+          throw new ForbiddenError(
+            `Evidence object "${objectKey}" was not issued through the authorized evidence boundary for task ${task.id}`,
+          );
+        }
       }
-    }
 
-    // 7. Save immutable EvidenceAttempt (Section 21)
-    const existingAttempts = await this.evidenceRepo.getEvidenceAttempts(task.id);
-    const attemptNumber = existingAttempts.length + 1;
-    const attemptId = `ATT-${randomUUID().slice(0, 8)}`;
+      // Real integrity verification (W4-C03 / Section 15): do not use literal "hash-verified"
+      const contentHash = metadata.contentHash || metadata.etag;
+      if (!contentHash || contentHash === 'hash-verified') {
+        throw new ValidationError(
+          `Object integrity verification failed for "${objectKey}": valid checksum could not be verified`,
+        );
+      }
 
-    await this.evidenceRepo.saveEvidenceAttempt({
-      id: attemptId,
-      taskId: task.id,
-      attemptNumber,
-      submittedByUserId: context.actorId, // Historical authorship preserved!
-      proofProfile: request.proof.proofProfile,
-      proofData: request.proof as unknown as Record<string, unknown>,
-      siteVerification: request.siteVerification as unknown as Record<string, unknown> | undefined,
-      locationException: request.locationException as unknown as Record<string, unknown> | undefined,
-      identityException: request.identityException as unknown as Record<string, unknown> | undefined,
-      notes: request.notes,
-      submittedAt: new Date(),
-    });
-
-    // 8. Mutate task to WAITING_REVIEW
-    task.submitEvidence(context.actorId);
-
-    const updated = await this.taskRepo.update(task, request.expectedVersion);
-    if (!updated) {
-      const current = await this.taskRepo.findById(request.taskId);
-      throw new ConflictError('Task version conflict', {
-        subtype: 'STALE_VERSION',
-        currentVersion: current ? current.version : task.version,
-        expectedVersion: request.expectedVersion,
+      verifiedObjects.push({
+        id: `EVO-${randomUUID().slice(0, 8)}`,
+        taskId: task.id,
+        objectKey,
+        storageRef: uri.startsWith('s3://') ? uri : `storage://${objectKey}`,
+        contentHash,
+        contentType: metadata.contentType || 'image/jpeg',
+        sizeBytes: metadata.sizeBytes,
+        uploadedByUserId: context.actorId,
+        createdAt: new Date(),
       });
     }
 
-    await this.auditService.logEvent({
-      actorId: context.actorId,
-      actorRole: context.actorRole,
-      action: 'SubmitEvidence',
-      targetResourceType: 'Task',
-      targetResourceId: task.id,
-      outcome: 'SUCCESS',
-      details: {
-        attemptNumber,
-        proofProfile: task.proofProfile,
-        newStatus: task.status,
-        updatedVersion: task.version,
-      },
-    });
+    // 7. Atomic DB-side acceptance in ONE PostgreSQL transaction (W4-C01, Section 5)
+    const attemptId = `ATT-${randomUUID().slice(0, 8)}`;
 
-    return task;
+    const performDbAcceptance = async (
+      taskRepo: ITaskRepository,
+      evidenceRepo: IEvidenceRepository,
+      auditService: AuditService,
+    ) => {
+      // Re-verify authoritative version and state under transaction lock
+      const authoritativeTask = await taskRepo.findById(request.taskId);
+      if (!authoritativeTask || authoritativeTask.version !== request.expectedVersion) {
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: authoritativeTask ? authoritativeTask.version : task.version,
+          expectedVersion: request.expectedVersion,
+        });
+      }
+      if (authoritativeTask.status !== 'IN_PROGRESS') {
+        throw new ValidationError(
+          `Cannot submit evidence in status ${authoritativeTask.status}. Evidence may only be submitted from IN_PROGRESS.`,
+        );
+      }
+
+      // Save durable evidence objects metadata
+      for (const obj of verifiedObjects) {
+        const existing = await evidenceRepo.findEvidenceObjectByKey(obj.objectKey);
+        if (!existing) {
+          await evidenceRepo.saveEvidenceObject(obj);
+        }
+      }
+
+      // Save EvidenceAttempt
+      const existingAttempts = await evidenceRepo.getEvidenceAttempts(task.id);
+      const attemptNumber = existingAttempts.length + 1;
+
+      await evidenceRepo.saveEvidenceAttempt({
+        id: attemptId,
+        taskId: task.id,
+        attemptNumber,
+        submittedByUserId: context.actorId, // Historical authorship preserved!
+        proofProfile: request.proof.proofProfile,
+        proofData: request.proof as unknown as Record<string, unknown>,
+        siteVerification: request.siteVerification as unknown as Record<string, unknown> | undefined,
+        locationException: request.locationException as unknown as Record<string, unknown> | undefined,
+        identityException: request.identityException as unknown as Record<string, unknown> | undefined,
+        notes: request.notes,
+        submittedAt: new Date(),
+      });
+
+      // OCC transition Task: IN_PROGRESS -> WAITING_REVIEW
+      authoritativeTask.submitEvidence(context.actorId);
+
+      const updated = await taskRepo.update(authoritativeTask, request.expectedVersion);
+      if (!updated) {
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: authoritativeTask.version,
+          expectedVersion: request.expectedVersion,
+        });
+      }
+
+      // Write SUCCESS audit
+      await auditService.logEvent({
+        actorId: context.actorId,
+        actorRole: context.actorRole,
+        action: 'SubmitEvidence',
+        targetResourceType: 'Task',
+        targetResourceId: authoritativeTask.id,
+        outcome: 'SUCCESS',
+        details: {
+          attemptNumber,
+          proofProfile: authoritativeTask.proofProfile,
+          newStatus: authoritativeTask.status,
+          updatedVersion: authoritativeTask.version,
+        },
+      });
+
+      return authoritativeTask;
+    };
+
+    if (this.uow) {
+      return await this.uow.execute(async (tx) => {
+        return await performDbAcceptance(tx.taskRepo, tx.evidenceRepo, tx.auditService);
+      });
+    } else {
+      return await performDbAcceptance(this.taskRepo, this.evidenceRepo, this.auditService);
+    }
   }
 
   private extractObjectKey(uri: string): string {
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      throw new ValidationError(
+        'Temporary presigned HTTP/HTTPS URLs are rejected as durable evidence identity. Provide server-issued objectKey or storageRef.',
+      );
+    }
     if (uri.startsWith('s3://')) {
       const withoutScheme = uri.slice(5);
       const slashIdx = withoutScheme.indexOf('/');
@@ -221,10 +318,6 @@ export class SubmitEvidenceUseCase {
     }
     if (uri.startsWith('storage://')) {
       return uri.slice(10);
-    }
-    if (uri.startsWith('http://') || uri.startsWith('https://')) {
-      const url = new URL(uri);
-      return url.pathname.replace(/^\/+/, '');
     }
     return uri;
   }

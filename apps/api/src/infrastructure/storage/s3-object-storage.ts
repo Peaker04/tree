@@ -97,6 +97,10 @@ export class S3ObjectStorageAdapter implements IObjectStoragePort {
         meta.etag = etag;
         meta.contentHash = etag;
       }
+      if (response.Metadata) {
+        meta.taskId = response.Metadata['taskid'] ?? response.Metadata['taskId'];
+        meta.uploadedBy = response.Metadata['uploadedby'] ?? response.Metadata['uploadedBy'];
+      }
       return meta;
     } catch (err: unknown) {
       const awsErr = err as { name?: string; $metadata?: { httpStatusCode?: number } };
@@ -119,12 +123,23 @@ export class S3ObjectStorageAdapter implements IObjectStoragePort {
     objectKey: string;
     data: Buffer;
     contentType: string;
+    metadata?:
+      | {
+          taskId?: string | undefined;
+          uploadedBy?: string | undefined;
+        }
+      | undefined;
   }): Promise<{ contentHash?: string; etag?: string }> {
+    const s3Metadata: Record<string, string> = {};
+    if (params.metadata?.taskId) s3Metadata.taskid = params.metadata.taskId;
+    if (params.metadata?.uploadedBy) s3Metadata.uploadedby = params.metadata.uploadedBy;
+
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: params.objectKey,
       Body: params.data,
       ContentType: params.contentType,
+      ...(Object.keys(s3Metadata).length > 0 ? { Metadata: s3Metadata } : {}),
     });
     const result = await this.client.send(command);
     const etag = result.ETag?.replace(/"/g, '');

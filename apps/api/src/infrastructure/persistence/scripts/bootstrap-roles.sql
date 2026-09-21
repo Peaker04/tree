@@ -23,6 +23,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE field_issues TO app_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE task_reviews TO app_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE care_histories TO app_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE idempotency_records TO app_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE evidence_upload_reservations TO app_runtime;
 
 -- STRICT APPEND-ONLY PRIVILEGE CONTROL ON audit_events:
 -- ALLOW: SELECT, INSERT

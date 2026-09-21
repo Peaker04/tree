@@ -49,6 +49,19 @@ export interface TaskReviewRecord {
   reviewedAt?: Date | undefined;
 }
 
+export interface EvidenceReservationRecord {
+  id: string;
+  taskId: string;
+  actorId: string;
+  objectKey: string;
+  storageRef: string;
+  expectedContentType: string;
+  expectedSizeBytes?: number | undefined;
+  expectedContentHash?: string | undefined;
+  createdAt?: Date | undefined;
+  expiresAt: Date;
+}
+
 export interface IEvidenceRepository {
   saveEvidenceObject(obj: EvidenceObjectRecord): Promise<void>;
   findEvidenceObjectByKey(objectKey: string): Promise<EvidenceObjectRecord | null>;
@@ -58,4 +71,6 @@ export interface IEvidenceRepository {
   getFieldIssues(taskId: string): Promise<FieldIssueRecord[]>;
   saveTaskReview(review: TaskReviewRecord): Promise<void>;
   getTaskReviews(taskId: string): Promise<TaskReviewRecord[]>;
+  saveReservation(reservation: EvidenceReservationRecord): Promise<void>;
+  findReservationByKey(objectKey: string): Promise<EvidenceReservationRecord | null>;
 }

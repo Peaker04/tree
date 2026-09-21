@@ -2,6 +2,7 @@ import type { ITaskRepository } from '../ports/task-repository.port';
 import type { IEvidenceRepository } from '../ports/evidence-repository.port';
 import type { ICareHistoryRepository } from '../../../tree-asset-registry/application/ports/care-history-repository.port';
 import type { IOperationalScopeRepository } from '../ports/operational-scope-repository.port';
+import type { IOperationalUnitOfWork } from '../ports/operational-unit-of-work.port';
 import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../../../core/errors';
 import { CareHistoryRecord } from '../../../tree-asset-registry/domain/care-history.entity';
@@ -25,6 +26,7 @@ export class ReviewTaskUseCase {
     private readonly careHistoryRepo: ICareHistoryRepository,
     private readonly scopeRepo: IOperationalScopeRepository,
     private readonly auditService: AuditService,
+    private readonly uow?: IOperationalUnitOfWork,
   ) {}
 
   async execute(
@@ -68,64 +70,11 @@ export class ReviewTaskUseCase {
       );
     }
 
-    const existingAttempts = await this.evidenceRepo.getEvidenceAttempts(task.id);
-    const latestAttempt = existingAttempts.length > 0 ? existingAttempts[existingAttempts.length - 1] : undefined;
-
-    const reviewId = `REV-${randomUUID().slice(0, 8)}`;
-
-    if (command.decision === 'APPROVE') {
-      task.approve();
-
-      // Create CareHistory projection (DR-HARD-07 / Sections 23, 46)
-      const careHistory = new CareHistoryRecord({
-        id: `CH-${randomUUID().slice(0, 8)}`,
-        treeId: task.treeId,
-        taskId: task.id,
-        taskTitle: task.title,
-        staffId: task.assignedStaffId,
-        staffName: task.assignedStaffName,
-        completedAt: new Date(),
-        status: 'COMPLETED',
-        hasException: false,
-        gpsCheck: latestAttempt?.siteVerification?.['gpsCheck'] as Record<string, unknown> | undefined,
-        qrCheck: latestAttempt?.siteVerification?.['qrCheck'] as Record<string, unknown> | undefined,
-        beforePhoto: (latestAttempt?.proofData?.['beforePhotoUri'] as string) || undefined,
-        afterPhoto:
-          (latestAttempt?.proofData?.['afterPhotoUri'] as string) ||
-          (latestAttempt?.proofData?.['completionPhotoUri'] as string) ||
-          undefined,
-        notes: command.notes,
-      });
-      await this.careHistoryRepo.save(careHistory);
-    } else if (command.decision === 'APPROVE_WITH_EXCEPTION') {
+    // Validation of decision-specific parameters
+    if (command.decision === 'APPROVE_WITH_EXCEPTION') {
       if (!command.exceptionReason || command.exceptionReason.trim().length < 5) {
         throw new ValidationError('Exception reason must be at least 5 characters');
       }
-
-      task.approveWithException(command.exceptionReason);
-
-      // Create CareHistory projection with exception flag (DR-POL-05 / Section 47)
-      const careHistory = new CareHistoryRecord({
-        id: `CH-${randomUUID().slice(0, 8)}`,
-        treeId: task.treeId,
-        taskId: task.id,
-        taskTitle: task.title,
-        staffId: task.assignedStaffId,
-        staffName: task.assignedStaffName,
-        completedAt: new Date(),
-        status: 'COMPLETED',
-        hasException: true,
-        exceptionReason: command.exceptionReason,
-        gpsCheck: latestAttempt?.siteVerification?.['gpsCheck'] as Record<string, unknown> | undefined,
-        qrCheck: latestAttempt?.siteVerification?.['qrCheck'] as Record<string, unknown> | undefined,
-        beforePhoto: (latestAttempt?.proofData?.['beforePhotoUri'] as string) || undefined,
-        afterPhoto:
-          (latestAttempt?.proofData?.['afterPhotoUri'] as string) ||
-          (latestAttempt?.proofData?.['completionPhotoUri'] as string) ||
-          undefined,
-        notes: command.notes,
-      });
-      await this.careHistoryRepo.save(careHistory);
     } else if (command.decision === 'REQUEST_REWORK') {
       if (!command.targetedArea || command.targetedArea.trim().length === 0) {
         throw new ValidationError('Targeted area is required for rework request');
@@ -133,61 +82,152 @@ export class ReviewTaskUseCase {
       if (!command.reworkReason || command.reworkReason.trim().length < 5) {
         throw new ValidationError('Rework reason must be at least 5 characters');
       }
-
-      task.requestRework(command.targetedArea, command.reworkReason);
-      // Notice: NO CareHistory projection created!
-    } else if (command.decision === 'CANCEL') {
-      const cancelReason = command.reworkReason || command.notes || 'Cancelled during review';
-      task.cancel(context.actorId, cancelReason);
-      // Cancellation MUST NOT create CareHistory (Section 8)
-    } else {
+    } else if (command.decision !== 'APPROVE' && command.decision !== 'CANCEL') {
       throw new ValidationError(`Unknown review decision: ${command.decision}`);
     }
 
-    // Save review record
-    await this.evidenceRepo.saveTaskReview({
-      id: reviewId,
-      taskId: task.id,
-      evidenceAttemptId: latestAttempt?.id,
-      reviewerId: context.actorId,
-      decision: command.decision,
-      notes: command.notes,
-      exceptionReason: command.exceptionReason,
-      targetedArea: command.targetedArea,
-      reworkReason: command.reworkReason,
-      reviewedAt: new Date(),
-    });
+    const existingAttempts = await this.evidenceRepo.getEvidenceAttempts(task.id);
+    const latestAttempt = existingAttempts.length > 0 ? existingAttempts[existingAttempts.length - 1] : undefined;
 
-    const updated = await this.taskRepo.update(task, command.expectedVersion);
-    if (!updated) {
-      const current = await this.taskRepo.findById(command.taskId);
-      throw new ConflictError('Task version conflict', {
-        subtype: 'STALE_VERSION',
-        currentVersion: current ? current.version : task.version,
-        expectedVersion: command.expectedVersion,
-      });
-    }
+    const reviewId = `REV-${randomUUID().slice(0, 8)}`;
 
-    await this.auditService.logEvent({
-      actorId: context.actorId,
-      actorRole: context.actorRole,
-      action:
-        command.decision === 'REQUEST_REWORK'
-          ? 'RequestRework'
-          : command.decision === 'CANCEL'
-            ? 'CancelTask'
-            : 'ApproveTask',
-      targetResourceType: 'Task',
-      targetResourceId: task.id,
-      outcome: 'SUCCESS',
-      reason: command.reworkReason || command.exceptionReason || command.notes,
-      details: {
+    const performReviewTransaction = async (
+      taskRepo: ITaskRepository,
+      evidenceRepo: IEvidenceRepository,
+      careHistoryRepo: ICareHistoryRepository,
+      auditService: AuditService,
+    ): Promise<Task> => {
+      // Re-fetch under transaction to ensure atomic authoritative state & OCC lock
+      const authoritativeTask = await taskRepo.findById(command.taskId);
+      if (!authoritativeTask || authoritativeTask.version !== command.expectedVersion) {
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: authoritativeTask ? authoritativeTask.version : task.version,
+          expectedVersion: command.expectedVersion,
+        });
+      }
+
+      if (authoritativeTask.status !== 'WAITING_REVIEW') {
+        throw new ValidationError(
+          `Cannot review task in status ${authoritativeTask.status}. Reviews are only valid when task is WAITING_REVIEW.`,
+        );
+      }
+
+      let careHistory: CareHistoryRecord | undefined;
+
+      if (command.decision === 'APPROVE') {
+        authoritativeTask.approve();
+
+        careHistory = new CareHistoryRecord({
+          id: `CH-${randomUUID().slice(0, 8)}`,
+          treeId: authoritativeTask.treeId,
+          taskId: authoritativeTask.id,
+          taskTitle: authoritativeTask.title,
+          staffId: authoritativeTask.assignedStaffId,
+          staffName: authoritativeTask.assignedStaffName,
+          completedAt: new Date(),
+          status: 'COMPLETED',
+          hasException: false,
+          gpsCheck: latestAttempt?.siteVerification?.['gpsCheck'] as Record<string, unknown> | undefined,
+          qrCheck: latestAttempt?.siteVerification?.['qrCheck'] as Record<string, unknown> | undefined,
+          beforePhoto: (latestAttempt?.proofData?.['beforePhotoUri'] as string) || undefined,
+          afterPhoto:
+            (latestAttempt?.proofData?.['afterPhotoUri'] as string) ||
+            (latestAttempt?.proofData?.['completionPhotoUri'] as string) ||
+            undefined,
+          notes: command.notes,
+        });
+      } else if (command.decision === 'APPROVE_WITH_EXCEPTION') {
+        authoritativeTask.approveWithException(command.exceptionReason!);
+
+        careHistory = new CareHistoryRecord({
+          id: `CH-${randomUUID().slice(0, 8)}`,
+          treeId: authoritativeTask.treeId,
+          taskId: authoritativeTask.id,
+          taskTitle: authoritativeTask.title,
+          staffId: authoritativeTask.assignedStaffId,
+          staffName: authoritativeTask.assignedStaffName,
+          completedAt: new Date(),
+          status: 'COMPLETED',
+          hasException: true,
+          exceptionReason: command.exceptionReason,
+          gpsCheck: latestAttempt?.siteVerification?.['gpsCheck'] as Record<string, unknown> | undefined,
+          qrCheck: latestAttempt?.siteVerification?.['qrCheck'] as Record<string, unknown> | undefined,
+          beforePhoto: (latestAttempt?.proofData?.['beforePhotoUri'] as string) || undefined,
+          afterPhoto:
+            (latestAttempt?.proofData?.['afterPhotoUri'] as string) ||
+            (latestAttempt?.proofData?.['completionPhotoUri'] as string) ||
+            undefined,
+          notes: command.notes,
+        });
+      } else if (command.decision === 'REQUEST_REWORK') {
+        authoritativeTask.requestRework(command.targetedArea!, command.reworkReason!);
+        // Notice: NO CareHistory projection created for rework!
+      } else if (command.decision === 'CANCEL') {
+        const cancelReason = command.reworkReason || command.notes || 'Cancelled during review';
+        authoritativeTask.cancel(context.actorId, cancelReason);
+        // Notice: NO CareHistory projection created for cancellation!
+      }
+
+      // 1. OCC transition Task first or in same transaction
+      const updated = await taskRepo.update(authoritativeTask, command.expectedVersion);
+      if (!updated) {
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: authoritativeTask.version,
+          expectedVersion: command.expectedVersion,
+        });
+      }
+
+      // 2. Persist CareHistory if approved
+      if (careHistory) {
+        await careHistoryRepo.save(careHistory);
+      }
+
+      // 3. Save review record
+      await evidenceRepo.saveTaskReview({
+        id: reviewId,
+        taskId: authoritativeTask.id,
+        evidenceAttemptId: latestAttempt?.id,
+        reviewerId: context.actorId,
         decision: command.decision,
-        newStatus: task.status,
-        updatedVersion: task.version,
-      },
-    });
+        notes: command.notes,
+        exceptionReason: command.exceptionReason,
+        targetedArea: command.targetedArea,
+        reworkReason: command.reworkReason,
+        reviewedAt: new Date(),
+      });
 
-    return task;
+      // 4. Record SUCCESS audit
+      await auditService.logEvent({
+        actorId: context.actorId,
+        actorRole: context.actorRole,
+        action:
+          command.decision === 'REQUEST_REWORK'
+            ? 'RequestRework'
+            : command.decision === 'CANCEL'
+              ? 'CancelTask'
+              : 'ApproveTask',
+        targetResourceType: 'Task',
+        targetResourceId: authoritativeTask.id,
+        outcome: 'SUCCESS',
+        reason: command.reworkReason || command.exceptionReason || command.notes,
+        details: {
+          decision: command.decision,
+          newStatus: authoritativeTask.status,
+          updatedVersion: authoritativeTask.version,
+        },
+      });
+
+      return authoritativeTask;
+    };
+
+    if (this.uow) {
+      return await this.uow.execute(async (tx) => {
+        return await performReviewTransaction(tx.taskRepo, tx.evidenceRepo, tx.careHistoryRepo, tx.auditService);
+      });
+    } else {
+      return await performReviewTransaction(this.taskRepo, this.evidenceRepo, this.careHistoryRepo, this.auditService);
+    }
   }
 }

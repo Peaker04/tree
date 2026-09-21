@@ -170,7 +170,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     const scopeRepo: IOperationalScopeRepository =
       options.operationalScopeRepository ??
       (db ? new DrizzleManagerScopeRepository(db) : (null as unknown as IOperationalScopeRepository));
-    const _operationalUow: IOperationalUnitOfWork =
+    const operationalUow: IOperationalUnitOfWork =
       options.operationalUnitOfWork ??
       (db ? new DrizzleOperationalUnitOfWork(db) : (null as unknown as IOperationalUnitOfWork));
 
@@ -205,28 +205,34 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     );
 
     // Tree Asset Registry Use Cases
-    const createTreeUseCase = new CreateTreeUseCase(treeRepo, auditService);
-    const updateTreeMasterDataUseCase = new UpdateTreeMasterDataUseCase(treeRepo, auditService);
-    const replaceTreeQrCodeUseCase = new ReplaceTreeQrCodeUseCase(treeRepo, auditService);
-    const updateCanonicalCoordinatesUseCase = new UpdateCanonicalCoordinatesUseCase(treeRepo, auditService);
-    const retireTreeUseCase = new RetireTreeUseCase(treeRepo, auditService);
+    const createTreeUseCase = new CreateTreeUseCase(treeRepo, auditService, operationalUow);
+    const updateTreeMasterDataUseCase = new UpdateTreeMasterDataUseCase(treeRepo, auditService, operationalUow);
+    const replaceTreeQrCodeUseCase = new ReplaceTreeQrCodeUseCase(treeRepo, auditService, operationalUow);
+    const updateCanonicalCoordinatesUseCase = new UpdateCanonicalCoordinatesUseCase(
+      treeRepo,
+      auditService,
+      operationalUow,
+    );
+    const retireTreeUseCase = new RetireTreeUseCase(treeRepo, auditService, operationalUow);
     const getTreeUseCase = new GetTreeUseCase(treeRepo);
     const listTreesUseCase = new ListTreesUseCase(treeRepo);
     const getCareHistoryUseCase = new GetCareHistoryUseCase(careHistoryRepo);
 
     // Policy & Template Governance Use Cases
-    const createTaskTypeUseCase = new CreateTaskTypeUseCase(taskTypeRepo, auditService);
-    const activateTaskTypeUseCase = new ActivateTaskTypeUseCase(taskTypeRepo, auditService);
-    const deactivateTaskTypeUseCase = new DeactivateTaskTypeUseCase(taskTypeRepo, auditService);
+    const createTaskTypeUseCase = new CreateTaskTypeUseCase(taskTypeRepo, auditService, operationalUow);
+    const activateTaskTypeUseCase = new ActivateTaskTypeUseCase(taskTypeRepo, auditService, operationalUow);
+    const deactivateTaskTypeUseCase = new DeactivateTaskTypeUseCase(taskTypeRepo, auditService, operationalUow);
     const publishProofPolicyVersionUseCase = new PublishProofPolicyVersionUseCase(
       taskTypeRepo,
       policyRepo,
       auditService,
+      operationalUow,
     );
     const publishChecklistTemplateVersionUseCase = new PublishChecklistTemplateVersionUseCase(
       taskTypeRepo,
       policyRepo,
       auditService,
+      operationalUow,
     );
     const resolveTaskTypePolicyUseCase = new ResolveTaskTypePolicyUseCase(taskTypeRepo, policyRepo);
 
@@ -238,22 +244,31 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       scopeRepo,
       resolveTaskTypePolicyUseCase,
       auditService,
+      operationalUow,
     );
-    const startTaskUseCase = new StartTaskUseCase(taskRepo, auditService);
-    const reportFieldIssueUseCase = new ReportFieldIssueUseCase(taskRepo, evidenceRepo, auditService);
-    const resumeBlockedTaskUseCase = new ResumeBlockedTaskUseCase(taskRepo, scopeRepo, auditService);
-    const reassignTaskUseCase = new ReassignTaskUseCase(taskRepo, userRepo, scopeRepo, auditService);
-    const cancelTaskUseCase = new CancelTaskUseCase(taskRepo, scopeRepo, auditService);
-    const presignEvidenceUploadUseCase = new PresignEvidenceUploadUseCase(taskRepo, storagePort);
+    const startTaskUseCase = new StartTaskUseCase(taskRepo, auditService, operationalUow);
+    const reportFieldIssueUseCase = new ReportFieldIssueUseCase(taskRepo, evidenceRepo, auditService, operationalUow);
+    const resumeBlockedTaskUseCase = new ResumeBlockedTaskUseCase(taskRepo, scopeRepo, auditService, operationalUow);
+    const reassignTaskUseCase = new ReassignTaskUseCase(taskRepo, userRepo, scopeRepo, auditService, operationalUow);
+    const cancelTaskUseCase = new CancelTaskUseCase(taskRepo, scopeRepo, auditService, operationalUow);
+    const presignEvidenceUploadUseCase = new PresignEvidenceUploadUseCase(taskRepo, storagePort, evidenceRepo);
     const submitEvidenceUseCase = new SubmitEvidenceUseCase(
       taskRepo,
       evidenceRepo,
       storagePort,
       treeRepo,
       auditService,
+      operationalUow,
     );
-    const resubmitReworkUseCase = new ResubmitReworkUseCase(taskRepo, evidenceRepo, auditService);
-    const reviewTaskUseCase = new ReviewTaskUseCase(taskRepo, evidenceRepo, careHistoryRepo, scopeRepo, auditService);
+    const resubmitReworkUseCase = new ResubmitReworkUseCase(taskRepo, evidenceRepo, auditService, operationalUow);
+    const reviewTaskUseCase = new ReviewTaskUseCase(
+      taskRepo,
+      evidenceRepo,
+      careHistoryRepo,
+      scopeRepo,
+      auditService,
+      operationalUow,
+    );
     const getTaskUseCase = new GetTaskUseCase(taskRepo);
     const listTasksUseCase = new ListTasksUseCase(taskRepo);
 

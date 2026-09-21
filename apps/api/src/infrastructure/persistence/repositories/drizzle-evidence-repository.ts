@@ -6,6 +6,7 @@ import type {
   EvidenceAttemptRecord,
   FieldIssueRecord,
   TaskReviewRecord,
+  EvidenceReservationRecord,
 } from '../../../modules/work-management/application/ports/evidence-repository.port';
 import * as schema from '../schema';
 
@@ -154,5 +155,43 @@ export class DrizzleEvidenceRepository implements IEvidenceRepository {
       reworkReason: r.reworkReason ?? undefined,
       reviewedAt: r.reviewedAt,
     }));
+  }
+
+  async saveReservation(reservation: EvidenceReservationRecord): Promise<void> {
+    await this.db.insert(schema.evidenceUploadReservations).values({
+      id: reservation.id,
+      taskId: reservation.taskId,
+      actorId: reservation.actorId,
+      objectKey: reservation.objectKey,
+      storageRef: reservation.storageRef,
+      expectedContentType: reservation.expectedContentType,
+      expectedSizeBytes: reservation.expectedSizeBytes,
+      expectedContentHash: reservation.expectedContentHash,
+      createdAt: reservation.createdAt ?? new Date(),
+      expiresAt: reservation.expiresAt,
+    });
+  }
+
+  async findReservationByKey(objectKey: string): Promise<EvidenceReservationRecord | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.evidenceUploadReservations)
+      .where(eq(schema.evidenceUploadReservations.objectKey, objectKey))
+      .limit(1);
+
+    if (!rows || rows.length === 0 || !rows[0]) return null;
+    const r = rows[0];
+    return {
+      id: r.id,
+      taskId: r.taskId,
+      actorId: r.actorId,
+      objectKey: r.objectKey,
+      storageRef: r.storageRef,
+      expectedContentType: r.expectedContentType,
+      expectedSizeBytes: r.expectedSizeBytes !== null ? Number(r.expectedSizeBytes) : undefined,
+      expectedContentHash: r.expectedContentHash ?? undefined,
+      createdAt: r.createdAt,
+      expiresAt: r.expiresAt,
+    };
   }
 }

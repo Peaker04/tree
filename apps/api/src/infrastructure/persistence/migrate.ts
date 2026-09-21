@@ -69,6 +69,7 @@ export async function runMigrations(migrationUrl?: string, runtimeUrl?: string):
         await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE task_reviews TO ${safeRole}`);
         await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE care_histories TO ${safeRole}`);
         await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE idempotency_records TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE evidence_upload_reservations TO ${safeRole}`);
         await client.query(`GRANT SELECT, INSERT ON TABLE audit_events TO ${safeRole}`);
         await client.query(`REVOKE UPDATE, DELETE, TRUNCATE ON TABLE audit_events FROM ${safeRole}`);
         console.log(`[migrate] Role privileges applied successfully for ${runtimeUser}.`);

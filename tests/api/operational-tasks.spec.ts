@@ -288,7 +288,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const startRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/start`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           taskId: task.id,
           expectedVersion: task.version,
@@ -499,7 +502,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const createRes = await app.inject({
         method: 'POST',
         url: '/v1/tasks',
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           title: 'Aerate Oak Roots',
           description: 'Decompact soil around root zone',
@@ -515,7 +521,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const startRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/start`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: { taskId: task.id, expectedVersion: task.version },
       });
       const started = startRes.json().data;
@@ -526,13 +535,17 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
         objectKey: photoKey,
         data: Buffer.from('completion-photo-1'),
         contentType: 'image/jpeg',
+        metadata: { taskId: task.id, uploadedBy: staff1Id },
       });
 
       // 3. Staff submits initial evidence
       const submit1Res = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/evidence`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           taskId: task.id,
           expectedVersion: started.version,
@@ -556,7 +569,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const reworkRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/review`,
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           expectedVersion: waitingTask.version,
           decision: 'REQUEST_REWORK',
@@ -578,12 +594,16 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
         objectKey: photoKey2,
         data: Buffer.from('completion-photo-2'),
         contentType: 'image/jpeg',
+        metadata: { taskId: task.id, uploadedBy: staff1Id },
       });
 
       const resubmitRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/rework/resubmit`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           taskId: task.id,
           expectedVersion: reworkTask.version,
@@ -611,7 +631,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const approveRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/review`,
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           expectedVersion: reWaitingTask.version,
           decision: 'APPROVE_WITH_EXCEPTION',
@@ -677,7 +700,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const createRes = await app.inject({
         method: 'POST',
         url: '/v1/tasks',
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           title: 'Inspect Banyan Health',
           description: 'Quarterly health and lean check',
@@ -693,7 +719,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const startRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/start`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: { taskId: task.id, expectedVersion: task.version },
       });
       const started = startRes.json().data;
@@ -702,7 +731,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const directReassignRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/reassign`,
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           taskId: task.id,
           expectedVersion: started.version,
@@ -716,7 +748,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const issueRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/field-issue`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           taskId: task.id,
           expectedVersion: started.version,
@@ -732,7 +767,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const reassignRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/reassign`,
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           taskId: task.id,
           expectedVersion: blockedTask.version,
@@ -750,7 +788,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const oldStaffStartRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/start`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: { taskId: task.id, expectedVersion: reassignedTask.version },
       });
       expect(oldStaffStartRes.statusCode).toBe(403); // Forbidden!
@@ -759,7 +800,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const newStaffStartRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/start`,
-        headers: { authorization: `Bearer ${staff2Token}` },
+        headers: {
+          authorization: `Bearer ${staff2Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: { taskId: task.id, expectedVersion: reassignedTask.version },
       });
       expect(newStaffStartRes.statusCode).toBe(200);
@@ -808,7 +852,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const createRes = await app.inject({
         method: 'POST',
         url: '/v1/tasks',
-        headers: { authorization: `Bearer ${otherManagerToken}` },
+        headers: {
+          authorization: `Bearer ${otherManagerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           title: 'Out of scope task',
           description: 'Should fail scope check',
@@ -857,7 +904,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const reviewRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/review`,
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           expectedVersion: 2,
           decision: 'APPROVE',
@@ -892,7 +942,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const startRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/start`,
-        headers: { authorization: `Bearer ${staff1Token}` },
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           taskId: task.id,
           expectedVersion: 4, // Stale version!
@@ -1035,7 +1088,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const createRes = await app.inject({
         method: 'POST',
         url: '/v1/tasks',
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           title: 'Task on retired tree',
           description: 'Must fail',
@@ -1083,7 +1139,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const createRes = await app.inject({
         method: 'POST',
         url: '/v1/tasks',
-        headers: { authorization: `Bearer ${managerToken}` },
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
         payload: {
           title: 'Task on inactive type',
           description: 'Must fail',
@@ -1096,6 +1155,550 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
 
       expect(createRes.statusCode).toBe(400);
       expect(createRes.json().error.message).toContain('is currently inactive');
+    });
+  });
+
+  describe('Section 67: Wave 4 Final Corrections (W4-C01 to W4-C06)', () => {
+    it('proves Idempotency-Key header is strictly required on state-changing commands (W4-C02)', async () => {
+      // POST without Idempotency-Key
+      const resNoKey = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks',
+        headers: { authorization: `Bearer ${managerToken}` },
+        payload: {
+          title: 'Missing Key Task',
+          description: 'No key',
+          taskTypeId: 'TT-1',
+          treeId: 'TREE-1',
+          assignedStaffId: staff1Id,
+          deadline: '2026-10-30T17:00:00Z',
+        },
+      });
+      expect(resNoKey.statusCode).toBe(400);
+      expect(resNoKey.json().error.code).toBe('VALIDATION_FAILED');
+      expect(resNoKey.json().error.message).toContain('Idempotency-Key header is required');
+
+      // POST with invalid UUIDv4
+      const resInvalidKey = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks',
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': 'not-a-valid-uuid-v4',
+        },
+        payload: {
+          title: 'Invalid Key Task',
+          description: 'Invalid key',
+          taskTypeId: 'TT-1',
+          treeId: 'TREE-1',
+          assignedStaffId: staff1Id,
+          deadline: '2026-10-30T17:00:00Z',
+        },
+      });
+      expect(resInvalidKey.statusCode).toBe(400);
+      expect(resInvalidKey.json().error.code).toBe('VALIDATION_FAILED');
+      expect(resInvalidKey.json().error.message).toContain('must be a valid RFC 4122 UUIDv4');
+    });
+
+    it('proves path/body resource ID mismatch is strictly rejected with 400 VALIDATION_FAILED (Section 21)', async () => {
+      // 1. Task start mismatch
+      const taskMismatchRes = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks/TASK-ABC-123/start',
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: 'TASK-DIFFERENT-456',
+          expectedVersion: 0,
+        },
+      });
+      expect(taskMismatchRes.statusCode).toBe(400);
+      expect(taskMismatchRes.json().error.code).toBe('VALIDATION_FAILED');
+      expect(taskMismatchRes.json().error.message).toContain(
+        'Path taskId (TASK-ABC-123) does not match body taskId (TASK-DIFFERENT-456)',
+      );
+
+      // 2. Tree update mismatch
+      const treeMismatchRes = await app.inject({
+        method: 'PUT',
+        url: '/v1/governance/trees/TREE-PARAM-1',
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+        payload: {
+          treeId: 'TREE-BODY-2',
+          expectedVersion: 0,
+          name: 'Updated Tree',
+          species: 'Species',
+          address: 'Address',
+          healthStatus: 'Khỏe mạnh',
+          ageYears: 5,
+          reason: 'Routine tree maintenance',
+        },
+      });
+      expect(treeMismatchRes.statusCode).toBe(400);
+      expect(treeMismatchRes.json().error.code).toBe('VALIDATION_FAILED');
+      expect(treeMismatchRes.json().error.message).toContain(
+        'Path treeId (TREE-PARAM-1) does not match body treeId (TREE-BODY-2)',
+      );
+
+      // 3. TaskType activate mismatch
+      const ttMismatchRes = await app.inject({
+        method: 'POST',
+        url: '/v1/governance/task-types/TT-PARAM-1/activate',
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+        payload: {
+          taskTypeId: 'TT-BODY-2',
+          expectedVersion: 0,
+        },
+      });
+      expect(ttMismatchRes.statusCode).toBe(400);
+      expect(ttMismatchRes.json().error.code).toBe('VALIDATION_FAILED');
+      expect(ttMismatchRes.json().error.message).toContain(
+        'Path taskTypeId (TT-PARAM-1) does not match body taskTypeId (TT-BODY-2)',
+      );
+    });
+
+    it('proves past or malformed deadline is rejected with 400 VALIDATION_FAILED (W4-C05)', async () => {
+      await scopeRepo.addScope(managerId, 'GLOBAL');
+
+      // Past deadline
+      const pastDeadlineRes = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks',
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          title: 'Past Deadline Task',
+          description: 'Testing W4-C05',
+          taskTypeId: 'TT-1',
+          treeId: 'TREE-1',
+          assignedStaffId: staff1Id,
+          deadline: '2020-01-01T00:00:00Z', // Past!
+        },
+      });
+      expect(pastDeadlineRes.statusCode).toBe(400);
+      expect(pastDeadlineRes.json().error.code).toBe('VALIDATION_FAILED');
+      expect(pastDeadlineRes.json().error.message).toContain('deadline must be in the future');
+
+      // Malformed deadline
+      const malformedDeadlineRes = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks',
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          title: 'Malformed Deadline Task',
+          description: 'Testing W4-C05',
+          taskTypeId: 'TT-1',
+          treeId: 'TREE-1',
+          assignedStaffId: staff1Id,
+          deadline: 'not-a-timestamp',
+        },
+      });
+      expect(malformedDeadlineRes.statusCode).toBe(400);
+      expect(malformedDeadlineRes.json().error.code).toBe('VALIDATION_FAILED');
+      expect(malformedDeadlineRes.json().error.message).toContain('valid ISO-8601 timestamp');
+    });
+
+    it('proves CreateTask rejects TaskType without published ProofPolicy (W4-C04: fallback removed)', async () => {
+      await scopeRepo.addScope(managerId, 'GLOBAL');
+
+      const tree = new (await import('../../apps/api/src/modules/tree-asset-registry/domain/tree.entity')).Tree({
+        id: 'TREE-NO-POL-1',
+        version: 0,
+        name: 'Tree',
+        species: 'Species',
+        lat: 10.7,
+        lng: 106.7,
+        address: 'Addr',
+        qrCode: 'QR-NOPOL-1',
+        healthStatus: 'Khỏe mạnh',
+        ageYears: 5,
+      });
+      await treeRepo.save(tree);
+
+      const ttNoPol = new (
+        await import('../../apps/api/src/modules/policy-template-governance/domain/task-type.entity')
+      ).TaskType({
+        id: 'TT-NO-POLICY-1',
+        version: 0,
+        name: 'Task Type With No Policy',
+        defaultProofProfile: 'SERVICE_PROOF',
+        isActive: true,
+      });
+      await taskTypeRepo.save(ttNoPol);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks',
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          title: 'Task With No Policy',
+          description: 'Testing W4-C04',
+          taskTypeId: ttNoPol.id,
+          treeId: tree.id,
+          assignedStaffId: staff1Id,
+          deadline: '2026-11-01T00:00:00Z',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION_FAILED');
+      expect(res.json().error.message).toContain('does not have an approved published ProofPolicy');
+    });
+
+    it('proves CreateTask rejects CHANGE_PROOF / SERVICE_PROOF when ChecklistTemplate is missing (W4-C04: no hardcoded fallback)', async () => {
+      await scopeRepo.addScope(managerId, 'GLOBAL');
+
+      const tree = new (await import('../../apps/api/src/modules/tree-asset-registry/domain/tree.entity')).Tree({
+        id: 'TREE-NO-CHK-1',
+        version: 0,
+        name: 'Tree',
+        species: 'Species',
+        lat: 10.7,
+        lng: 106.7,
+        address: 'Addr',
+        qrCode: 'QR-NOCHK-1',
+        healthStatus: 'Khỏe mạnh',
+        ageYears: 5,
+      });
+      await treeRepo.save(tree);
+
+      const ttNoChk = new (
+        await import('../../apps/api/src/modules/policy-template-governance/domain/task-type.entity')
+      ).TaskType({
+        id: 'TT-NO-CHK-1',
+        version: 0,
+        name: 'Task Type With Policy But No Checklist',
+        defaultProofProfile: 'SERVICE_PROOF',
+        isActive: true,
+      });
+      await taskTypeRepo.save(ttNoChk);
+
+      await policyRepo.saveProofPolicyVersion(
+        new (
+          await import('../../apps/api/src/modules/policy-template-governance/domain/policy-version.entity')
+        ).ProofPolicyVersion({
+          id: 'POL-SERVICE-NOCHK-1',
+          taskTypeId: ttNoChk.id,
+          versionNumber: 1,
+          proofProfile: 'SERVICE_PROOF',
+        }),
+      );
+      // Notice: NO ChecklistTemplateVersion published!
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks',
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          title: 'Task With Policy But No Checklist',
+          description: 'Testing W4-C04',
+          taskTypeId: ttNoChk.id,
+          treeId: tree.id,
+          assignedStaffId: staff1Id,
+          deadline: '2026-11-01T00:00:00Z',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION_FAILED');
+      expect(res.json().error.message).toContain('requires an approved published ChecklistTemplateVersion');
+    });
+
+    it('proves HTTP presigned URL is strictly rejected as durable evidence identity (W4-C03, Section 14)', async () => {
+      const tree = new (await import('../../apps/api/src/modules/tree-asset-registry/domain/tree.entity')).Tree({
+        id: 'TREE-URL-1',
+        version: 0,
+        name: 'Tree URL',
+        species: 'Swietenia macrophylla',
+        lat: 10.78,
+        lng: 106.7,
+        address: 'Address 1',
+        qrCode: 'QR-TREE-001',
+        healthStatus: 'Khỏe mạnh',
+        ageYears: 5,
+      });
+      await treeRepo.save(tree);
+
+      const task = new (await import('../../apps/api/src/modules/work-management/domain/task.entity')).Task({
+        id: 'TASK-URL-TEST-1',
+        version: 1,
+        title: 'URL Rejection Task',
+        description: 'Testing URL rejection',
+        taskTypeId: 'TT-1',
+        taskTypeName: 'Maintenance',
+        proofProfile: 'SERVICE_PROOF',
+        treeId: tree.id,
+        treeName: 'Tree 1',
+        treeAddress: 'Address 1',
+        assignedStaffId: staff1Id,
+        assignedStaffName: 'Staff 1',
+        deadline: '2026-11-01T00:00:00Z',
+        status: 'IN_PROGRESS',
+      });
+      await taskRepo.save(task);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${task.id}/evidence`,
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: task.id,
+          expectedVersion: 1,
+          siteVerification: {
+            gpsCheck: { lat: 10.78, lng: 106.7, distance: 3.0, verified: true, timestamp: new Date().toISOString() },
+            qrCheck: { scannedCode: 'QR-TREE-001', verified: true, timestamp: new Date().toISOString() },
+          },
+          proof: {
+            proofProfile: 'SERVICE_PROOF',
+            completionPhotoUri: 'https://minio.cloud.com:9000/bucket/tasks/completion.jpg?X-Amz-Signature=123',
+            checklist: [{ id: '1', text: 'Clear root perimeter', done: true }],
+          },
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION_FAILED');
+      expect(res.json().error.message).toContain(
+        'Temporary presigned HTTP/HTTPS URLs are rejected as durable evidence identity',
+      );
+    });
+
+    it('proves evidence object ownership verification: cross-task and cross-staff adoption rejected (W4-C03, Section 13, 16)', async () => {
+      const tree = new (await import('../../apps/api/src/modules/tree-asset-registry/domain/tree.entity')).Tree({
+        id: 'TREE-OWN-1',
+        version: 0,
+        name: 'Tree Own',
+        species: 'Swietenia macrophylla',
+        lat: 10.78,
+        lng: 106.7,
+        address: 'Address 1',
+        qrCode: 'QR-TREE-001',
+        healthStatus: 'Khỏe mạnh',
+        ageYears: 5,
+      });
+      await treeRepo.save(tree);
+
+      const taskA = new (await import('../../apps/api/src/modules/work-management/domain/task.entity')).Task({
+        id: 'TASK-OWN-A',
+        version: 1,
+        title: 'Task A',
+        description: 'Ownership test A',
+        taskTypeId: 'TT-1',
+        taskTypeName: 'Maintenance',
+        proofProfile: 'SERVICE_PROOF',
+        treeId: tree.id,
+        treeName: 'Tree 1',
+        treeAddress: 'Address 1',
+        assignedStaffId: staff1Id,
+        assignedStaffName: 'Staff 1',
+        deadline: '2026-11-01T00:00:00Z',
+        status: 'IN_PROGRESS',
+      });
+      await taskRepo.save(taskA);
+
+      // Object issued for Task B
+      const objectKeyForTaskB = 'tasks/TASK-OWN-B/evidence/proof.jpg';
+      await storagePort.putObjectDirect({
+        objectKey: objectKeyForTaskB,
+        data: Buffer.from('data-b'),
+        contentType: 'image/jpeg',
+        metadata: {
+          taskId: 'TASK-OWN-B',
+          uploadedBy: staff1Id,
+        },
+      });
+
+      // Staff 1 tries to submit object issued for Task B to Task A
+      const resCrossTask = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${taskA.id}/evidence`,
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: taskA.id,
+          expectedVersion: 1,
+          siteVerification: {
+            gpsCheck: { lat: 10.78, lng: 106.7, distance: 3.0, verified: true, timestamp: new Date().toISOString() },
+            qrCheck: { scannedCode: 'QR-TREE-001', verified: true, timestamp: new Date().toISOString() },
+          },
+          proof: {
+            proofProfile: 'SERVICE_PROOF',
+            completionPhotoUri: objectKeyForTaskB,
+            checklist: [{ id: '1', text: 'Clear root perimeter', done: true }],
+          },
+        },
+      });
+
+      expect(resCrossTask.statusCode).toBe(403);
+      expect(resCrossTask.json().error.code).toBe('FORBIDDEN');
+      expect(resCrossTask.json().error.message).toContain('cannot be submitted for task');
+
+      // Object issued for Task A but uploaded by Staff 2
+      const objectKeyForStaff2 = 'tasks/TASK-OWN-A/evidence/staff2-proof.jpg';
+      await storagePort.putObjectDirect({
+        objectKey: objectKeyForStaff2,
+        data: Buffer.from('data-staff2'),
+        contentType: 'image/jpeg',
+        metadata: {
+          taskId: taskA.id,
+          uploadedBy: staff2Id,
+        },
+      });
+
+      // Staff 1 tries to claim evidence uploaded by Staff 2
+      const resCrossStaff = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${taskA.id}/evidence`,
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: taskA.id,
+          expectedVersion: 1,
+          siteVerification: {
+            gpsCheck: { lat: 10.78, lng: 106.7, distance: 3.0, verified: true, timestamp: new Date().toISOString() },
+            qrCheck: { scannedCode: 'QR-TREE-001', verified: true, timestamp: new Date().toISOString() },
+          },
+          proof: {
+            proofProfile: 'SERVICE_PROOF',
+            completionPhotoUri: objectKeyForStaff2,
+            checklist: [{ id: '1', text: 'Clear root perimeter', done: true }],
+          },
+        },
+      });
+
+      expect(resCrossStaff.statusCode).toBe(403);
+      expect(resCrossStaff.json().error.code).toBe('FORBIDDEN');
+      expect(resCrossStaff.json().error.message).toContain('uploaded by another user');
+    });
+
+    it('proves checksum mismatch rejects evidence submission (W4-C03, Section 15)', async () => {
+      const tree = new (await import('../../apps/api/src/modules/tree-asset-registry/domain/tree.entity')).Tree({
+        id: 'TREE-CSUM-1',
+        version: 0,
+        name: 'Tree Csum',
+        species: 'Swietenia macrophylla',
+        lat: 10.78,
+        lng: 106.7,
+        address: 'Address 1',
+        qrCode: 'QR-TREE-001',
+        healthStatus: 'Khỏe mạnh',
+        ageYears: 5,
+      });
+      await treeRepo.save(tree);
+
+      const task = new (await import('../../apps/api/src/modules/work-management/domain/task.entity')).Task({
+        id: 'TASK-CSUM-1',
+        version: 1,
+        title: 'Checksum Test Task',
+        description: 'Testing checksum integrity',
+        taskTypeId: 'TT-1',
+        taskTypeName: 'Maintenance',
+        proofProfile: 'SERVICE_PROOF',
+        treeId: tree.id,
+        treeName: 'Tree 1',
+        treeAddress: 'Address 1',
+        assignedStaffId: staff1Id,
+        assignedStaffName: 'Staff 1',
+        deadline: '2026-11-01T00:00:00Z',
+        status: 'IN_PROGRESS',
+      });
+      await taskRepo.save(task);
+
+      const objectKey = `tasks/${task.id}/evidence/csum-proof.jpg`;
+      await storagePort.putObjectDirect({
+        objectKey,
+        data: Buffer.from('actual-data-bytes'),
+        contentType: 'image/jpeg',
+        metadata: {
+          taskId: task.id,
+          uploadedBy: staff1Id,
+        },
+      });
+
+      // Save upload reservation with an expected checksum
+      await evidenceRepo.saveReservation({
+        id: randomUUID(),
+        taskId: task.id,
+        actorId: staff1Id,
+        objectKey,
+        storageRef: `s3://mock-bucket/${objectKey}`,
+        expectedContentType: 'image/jpeg',
+        expectedSizeBytes: 100,
+        expectedContentHash: 'expected-sha256-that-does-not-match',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 900000),
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${task.id}/evidence`,
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: task.id,
+          expectedVersion: 1,
+          siteVerification: {
+            gpsCheck: { lat: 10.78, lng: 106.7, distance: 3.0, verified: true, timestamp: new Date().toISOString() },
+            qrCheck: { scannedCode: 'QR-TREE-001', verified: true, timestamp: new Date().toISOString() },
+          },
+          proof: {
+            proofProfile: 'SERVICE_PROOF',
+            completionPhotoUri: objectKey,
+            checklist: [{ id: '1', text: 'Clear root perimeter', done: true }],
+          },
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION_FAILED');
+      expect(res.json().error.message).toContain('Checksum mismatch');
+
+      // Task remains IN_PROGRESS
+      const taskAfter = await taskRepo.findById(task.id);
+      expect(taskAfter?.status).toBe('IN_PROGRESS');
+    });
+
+    it('proves Review endpoint uses contract-first ReviewTaskBodySchema (W4-C06)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks/TASK-1/review',
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          expectedVersion: 1,
+          decision: 'INVALID_NON_EXISTENT_DECISION',
+        },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION_FAILED');
     });
   });
 });

@@ -13,7 +13,7 @@ import {
   TaskListResponseSchema,
   ListTasksQuerySchema,
   PresignedUploadResponseSchema,
-  ReviewDecisionSchema,
+  ReviewTaskBodySchema,
   type CanonicalCreateTaskRequest,
   type StartTaskRequest,
   type ReportFieldIssueRequest,
@@ -25,8 +25,8 @@ import {
   type PresignedUploadRequest,
   type ListTasksQuery,
   type CanonicalTaskDto,
+  type ReviewTaskBody,
 } from '@novyx/contracts';
-import { z } from 'zod';
 import type { CreateTaskUseCase } from '../../../modules/work-management/application/use-cases/create-task.use-case';
 import type { StartTaskUseCase } from '../../../modules/work-management/application/use-cases/start-task.use-case';
 import type { ReportFieldIssueUseCase } from '../../../modules/work-management/application/use-cases/report-field-issue.use-case';
@@ -42,6 +42,7 @@ import type { ListTasksUseCase } from '../../../modules/work-management/applicat
 import type { IIdempotencyRepository } from '../../../modules/work-management/application/ports/idempotency-repository.port';
 import { executeWithIdempotency } from '../middleware/idempotency';
 import type { Task } from '../../../modules/work-management/domain/task.entity';
+import { ValidationError } from '../../../core/errors';
 
 export interface TaskRouteOptions {
   createTaskUseCase: CreateTaskUseCase;
@@ -85,17 +86,6 @@ function toTaskDto(task: Task): CanonicalTaskDto {
     updatedAt: task.updatedAt.toISOString(),
   };
 }
-
-const ReviewTaskBodySchema = z.object({
-  expectedVersion: z.number().int().nonnegative(),
-  decision: ReviewDecisionSchema,
-  notes: z.string().optional(),
-  exceptionReason: z.string().optional(),
-  targetedArea: z.string().optional(),
-  reworkReason: z.string().optional(),
-});
-
-type ReviewTaskBody = z.infer<typeof ReviewTaskBodySchema>;
 
 export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
   fastify: FastifyInstance,
@@ -177,6 +167,11 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, staffOnly],
     },
     async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.startTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
@@ -199,6 +194,11 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, staffOnly],
     },
     async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.reportFieldIssueUseCase.execute(
@@ -224,6 +224,11 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, managerOnly],
     },
     async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.resumeBlockedTaskUseCase.execute(
@@ -249,6 +254,11 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, managerOnly],
     },
     async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.reassignTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
@@ -271,6 +281,11 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, managerOnly],
     },
     async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.cancelTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
@@ -317,6 +332,11 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, staffOnly],
     },
     async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.submitEvidenceUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
@@ -339,6 +359,11 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, staffOnly],
     },
     async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.resubmitReworkUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
@@ -361,6 +386,14 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
       preHandler: [authHandler, managerOnly],
     },
     async (request, reply) => {
+      if (
+        (request.body as { taskId?: string }).taskId &&
+        (request.body as { taskId?: string }).taskId !== request.params.id
+      ) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${(request.body as { taskId?: string }).taskId})`,
+        );
+      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
         const task = await options.reviewTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);

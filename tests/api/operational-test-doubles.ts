@@ -18,12 +18,17 @@ import type {
   EvidenceAttemptRecord,
   FieldIssueRecord,
   TaskReviewRecord,
+  EvidenceReservationRecord,
 } from '../../apps/api/src/modules/work-management/application/ports/evidence-repository.port';
 import type {
   IIdempotencyRepository,
   IdempotencyRecord,
 } from '../../apps/api/src/modules/work-management/application/ports/idempotency-repository.port';
 import type { IOperationalScopeRepository } from '../../apps/api/src/modules/work-management/application/ports/operational-scope-repository.port';
+import type {
+  IOperationalUnitOfWork,
+  IOperationalTransactionContext,
+} from '../../apps/api/src/modules/work-management/application/ports/operational-unit-of-work.port';
 import type {
   IObjectStoragePort,
   PresignedUploadResult,
@@ -249,6 +254,7 @@ export class InMemoryEvidenceRepository implements IEvidenceRepository {
   public attempts: EvidenceAttemptRecord[] = [];
   public issues: FieldIssueRecord[] = [];
   public reviews: TaskReviewRecord[] = [];
+  public reservations = new Map<string, EvidenceReservationRecord>();
 
   constructor(private readonly taskRepo?: InMemoryTaskRepository) {}
 
@@ -286,6 +292,14 @@ export class InMemoryEvidenceRepository implements IEvidenceRepository {
   async getTaskReviews(taskId: string): Promise<TaskReviewRecord[]> {
     return this.reviews.filter((r) => r.taskId === taskId);
   }
+
+  async saveReservation(reservation: EvidenceReservationRecord): Promise<void> {
+    this.reservations.set(reservation.objectKey, reservation);
+  }
+
+  async findReservationByKey(objectKey: string): Promise<EvidenceReservationRecord | null> {
+    return this.reservations.get(objectKey) ?? null;
+  }
 }
 
 export class InMemoryIdempotencyRepository implements IIdempotencyRepository {
@@ -299,8 +313,61 @@ export class InMemoryIdempotencyRepository implements IIdempotencyRepository {
     return this.records.get(this.key(actorId, idempotencyKey)) ?? null;
   }
 
+  async claim(record: {
+    id: string;
+    idempotencyKey: string;
+    actorId: string;
+    requestRoute: string;
+    requestHash: string;
+  }): Promise<boolean> {
+    const k = this.key(record.actorId, record.idempotencyKey);
+    if (this.records.has(k)) {
+      return false;
+    }
+    this.records.set(k, {
+      id: record.id,
+      idempotencyKey: record.idempotencyKey,
+      actorId: record.actorId,
+      requestRoute: record.requestRoute,
+      requestHash: record.requestHash,
+      status: 'PROCESSING',
+      createdAt: new Date(),
+    });
+    return true;
+  }
+
+  async complete(params: {
+    actorId: string;
+    idempotencyKey: string;
+    responseStatus: number;
+    responseBody: string;
+  }): Promise<void> {
+    const k = this.key(params.actorId, params.idempotencyKey);
+    const existing = this.records.get(k);
+    if (existing) {
+      existing.status = 'COMPLETED';
+      existing.responseStatus = params.responseStatus;
+      existing.responseBody = params.responseBody;
+    }
+  }
+
+  async delete(actorId: string, idempotencyKey: string): Promise<void> {
+    this.records.delete(this.key(actorId, idempotencyKey));
+  }
+
   async save(record: IdempotencyRecord): Promise<void> {
-    this.records.set(this.key(record.actorId, record.idempotencyKey), record);
+    this.records.set(this.key(record.actorId, record.idempotencyKey), {
+      ...record,
+      status: record.status ?? 'COMPLETED',
+    });
+  }
+}
+
+export class InMemoryOperationalUnitOfWork implements IOperationalUnitOfWork {
+  constructor(private readonly context: IOperationalTransactionContext) {}
+
+  async execute<T>(work: (tx: IOperationalTransactionContext) => Promise<T>): Promise<T> {
+    return await work(this.context);
   }
 }
 
@@ -328,6 +395,7 @@ export class InMemoryOperationalScopeRepository implements IOperationalScopeRepo
 
 export class InMemoryObjectStorageAdapter implements IObjectStoragePort {
   public storedObjects = new Map<string, { data: Buffer; contentType: string; metadata: ObjectMetadata }>();
+  public presignedMetadata = new Map<string, { taskId: string; actorId: string }>();
 
   async generatePresignedUploadUrl(params: {
     taskId: string;
@@ -338,6 +406,7 @@ export class InMemoryObjectStorageAdapter implements IObjectStoragePort {
   }): Promise<PresignedUploadResult> {
     const uniqueId = randomUUID();
     const objectKey = `tasks/${params.taskId}/evidence/${uniqueId}_${params.fileName}`;
+    this.presignedMetadata.set(objectKey, { taskId: params.taskId, actorId: params.actorId });
     return {
       objectKey,
       storageRef: `s3://mock-bucket/${objectKey}`,
@@ -357,13 +426,23 @@ export class InMemoryObjectStorageAdapter implements IObjectStoragePort {
 
   async deleteObject(objectKey: string): Promise<void> {
     this.storedObjects.delete(objectKey);
+    this.presignedMetadata.delete(objectKey);
   }
 
   async putObjectDirect(params: {
     objectKey: string;
     data: Buffer;
     contentType: string;
+    metadata?:
+      | {
+          taskId?: string | undefined;
+          uploadedBy?: string | undefined;
+        }
+      | undefined;
   }): Promise<{ contentHash?: string; etag?: string }> {
+    const presigned = this.presignedMetadata.get(params.objectKey);
+    const taskId = params.metadata?.taskId ?? presigned?.taskId;
+    const uploadedBy = params.metadata?.uploadedBy ?? presigned?.actorId;
     const etag = 'mock-md5-hash-123';
     this.storedObjects.set(params.objectKey, {
       data: params.data,
@@ -373,6 +452,8 @@ export class InMemoryObjectStorageAdapter implements IObjectStoragePort {
         contentType: params.contentType,
         etag,
         contentHash: etag,
+        taskId,
+        uploadedBy,
       },
     });
     return { etag, contentHash: etag };

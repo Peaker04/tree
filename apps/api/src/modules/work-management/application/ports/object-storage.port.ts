@@ -14,6 +14,8 @@ export interface ObjectMetadata {
   contentType: string;
   contentHash?: string | undefined;
   etag?: string | undefined;
+  taskId?: string | undefined;
+  uploadedBy?: string | undefined;
 }
 
 export interface IObjectStoragePort {
@@ -35,5 +37,11 @@ export interface IObjectStoragePort {
     objectKey: string;
     data: Buffer;
     contentType: string;
+    metadata?:
+      | {
+          taskId?: string | undefined;
+          uploadedBy?: string | undefined;
+        }
+      | undefined;
   }): Promise<{ contentHash?: string; etag?: string }>;
 }

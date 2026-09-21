@@ -1,5 +1,6 @@
 import type { ITaskRepository } from '../ports/task-repository.port';
 import type { IEvidenceRepository } from '../ports/evidence-repository.port';
+import type { IOperationalUnitOfWork } from '../ports/operational-unit-of-work.port';
 import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../../../core/errors';
 import type { ResubmitReworkRequest } from '@novyx/contracts';
@@ -11,6 +12,7 @@ export class ResubmitReworkUseCase {
     private readonly taskRepo: ITaskRepository,
     private readonly evidenceRepo: IEvidenceRepository,
     private readonly auditService: AuditService,
+    private readonly uow?: IOperationalUnitOfWork,
   ) {}
 
   async execute(
@@ -21,79 +23,93 @@ export class ResubmitReworkUseCase {
       throw new ForbiddenError('Only Field Staff may resubmit rework');
     }
 
-    const task = await this.taskRepo.findById(request.taskId);
-    if (!task) {
-      throw new NotFoundError(`Task with ID ${request.taskId} not found`);
-    }
+    const run = async (repos: {
+      taskRepo: ITaskRepository;
+      evidenceRepo: IEvidenceRepository;
+      auditService: AuditService;
+    }): Promise<Task> => {
+      const task = await repos.taskRepo.findById(request.taskId);
+      if (!task) {
+        throw new NotFoundError(`Task with ID ${request.taskId} not found`);
+      }
 
-    if (task.assignedStaffId !== context.actorId) {
-      throw new ForbiddenError('Cannot resubmit rework on a task assigned to another staff member');
-    }
+      if (task.assignedStaffId !== context.actorId) {
+        throw new ForbiddenError('Cannot resubmit rework on a task assigned to another staff member');
+      }
 
-    if (task.version !== request.expectedVersion) {
-      throw new ConflictError('Task version conflict', {
-        subtype: 'STALE_VERSION',
-        currentVersion: task.version,
-        expectedVersion: request.expectedVersion,
-      });
-    }
+      if (task.version !== request.expectedVersion) {
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: task.version,
+          expectedVersion: request.expectedVersion,
+        });
+      }
 
-    if (task.status !== 'REWORK_REQUIRED') {
-      throw new ValidationError(
-        `Cannot resubmit rework in status ${task.status}. Resubmissions are only valid from REWORK_REQUIRED.`,
-      );
-    }
+      if (task.status !== 'REWORK_REQUIRED') {
+        throw new ValidationError(
+          `Cannot resubmit rework in status ${task.status}. Resubmissions are only valid from REWORK_REQUIRED.`,
+        );
+      }
 
-    if (request.reworkedProof.proofProfile !== task.proofProfile) {
-      throw new ValidationError(
-        `Proof profile mismatch: Task requires ${task.proofProfile}, but resubmission provided ${request.reworkedProof.proofProfile}`,
-      );
-    }
+      if (request.reworkedProof.proofProfile !== task.proofProfile) {
+        throw new ValidationError(
+          `Proof profile mismatch: Task requires ${task.proofProfile}, but resubmission provided ${request.reworkedProof.proofProfile}`,
+        );
+      }
 
-    // 1. Save new EvidenceAttempt preserving historical attempts (Section 22, 49)
-    const existingAttempts = await this.evidenceRepo.getEvidenceAttempts(task.id);
-    const attemptNumber = existingAttempts.length + 1;
-    const attemptId = `ATT-${randomUUID().slice(0, 8)}`;
+      // 1. Save new EvidenceAttempt preserving historical attempts (Section 22, 49)
+      const existingAttempts = await repos.evidenceRepo.getEvidenceAttempts(task.id);
+      const attemptNumber = existingAttempts.length + 1;
+      const attemptId = `ATT-${randomUUID().slice(0, 8)}`;
 
-    await this.evidenceRepo.saveEvidenceAttempt({
-      id: attemptId,
-      taskId: task.id,
-      attemptNumber,
-      submittedByUserId: context.actorId, // Historical authorship preserved!
-      proofProfile: request.reworkedProof.proofProfile,
-      proofData: request.reworkedProof as unknown as Record<string, unknown>,
-      notes: request.reworkNotes,
-      submittedAt: new Date(),
-    });
-
-    // 2. Transition REWORK_REQUIRED -> WAITING_REVIEW
-    task.resubmitRework(context.actorId);
-
-    const updated = await this.taskRepo.update(task, request.expectedVersion);
-    if (!updated) {
-      const current = await this.taskRepo.findById(request.taskId);
-      throw new ConflictError('Task version conflict', {
-        subtype: 'STALE_VERSION',
-        currentVersion: current ? current.version : task.version,
-        expectedVersion: request.expectedVersion,
-      });
-    }
-
-    await this.auditService.logEvent({
-      actorId: context.actorId,
-      actorRole: context.actorRole,
-      action: 'ResubmitRework',
-      targetResourceType: 'Task',
-      targetResourceId: task.id,
-      outcome: 'SUCCESS',
-      reason: request.reworkNotes,
-      details: {
+      await repos.evidenceRepo.saveEvidenceAttempt({
+        id: attemptId,
+        taskId: task.id,
         attemptNumber,
-        newStatus: task.status,
-        updatedVersion: task.version,
-      },
-    });
+        submittedByUserId: context.actorId, // Historical authorship preserved!
+        proofProfile: request.reworkedProof.proofProfile,
+        proofData: request.reworkedProof as unknown as Record<string, unknown>,
+        notes: request.reworkNotes,
+        submittedAt: new Date(),
+      });
 
-    return task;
+      // 2. Transition REWORK_REQUIRED -> WAITING_REVIEW
+      task.resubmitRework(context.actorId);
+
+      const updated = await repos.taskRepo.update(task, request.expectedVersion);
+      if (!updated) {
+        const current = await repos.taskRepo.findById(request.taskId);
+        throw new ConflictError('Task version conflict', {
+          subtype: 'STALE_VERSION',
+          currentVersion: current ? current.version : task.version,
+          expectedVersion: request.expectedVersion,
+        });
+      }
+
+      await repos.auditService.logEvent({
+        actorId: context.actorId,
+        actorRole: context.actorRole,
+        action: 'ResubmitRework',
+        targetResourceType: 'Task',
+        targetResourceId: task.id,
+        outcome: 'SUCCESS',
+        reason: request.reworkNotes,
+        details: {
+          attemptNumber,
+          newStatus: task.status,
+          updatedVersion: task.version,
+        },
+      });
+
+      return task;
+    };
+
+    if (this.uow) {
+      return await this.uow.execute(async (tx) => {
+        return run({ taskRepo: tx.taskRepo, evidenceRepo: tx.evidenceRepo, auditService: tx.auditService });
+      });
+    }
+
+    return run({ taskRepo: this.taskRepo, evidenceRepo: this.evidenceRepo, auditService: this.auditService });
   }
 }

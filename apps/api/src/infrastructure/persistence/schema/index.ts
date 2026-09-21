@@ -11,3 +11,4 @@ export * from './tasks';
 export * from './evidence';
 export * from './care-histories';
 export * from './idempotency';
+export * from './evidence-reservations';

@@ -3,6 +3,7 @@ import type { ITaskRepository } from '../ports/task-repository.port';
 import type { ITreeRepository } from '../../../tree-asset-registry/application/ports/tree-repository.port';
 import type { IUserRepository } from '../../../iam/application/ports/user-repository.port';
 import type { IOperationalScopeRepository } from '../ports/operational-scope-repository.port';
+import type { IOperationalUnitOfWork } from '../ports/operational-unit-of-work.port';
 import type { ResolveTaskTypePolicyUseCase } from '../../../policy-template-governance/application/use-cases/resolve-task-type-policy.use-case';
 import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import { NotFoundError, ValidationError, ForbiddenError } from '../../../../core/errors';
@@ -17,6 +18,7 @@ export class CreateTaskUseCase {
     private readonly scopeRepo: IOperationalScopeRepository,
     private readonly resolvePolicy: ResolveTaskTypePolicyUseCase,
     private readonly auditService: AuditService,
+    private readonly uow?: IOperationalUnitOfWork,
   ) {}
 
   async execute(
@@ -28,7 +30,16 @@ export class CreateTaskUseCase {
       throw new ForbiddenError('Only Operations Managers may create operational tasks');
     }
 
-    // 2. Operational scope enforcement
+    // 2. Future deadline validation (W4-C05)
+    const deadlineDate = new Date(request.deadline);
+    if (isNaN(deadlineDate.getTime())) {
+      throw new ValidationError('Task deadline must be a valid ISO-8601 timestamp');
+    }
+    if (deadlineDate.getTime() <= Date.now()) {
+      throw new ValidationError('Task deadline must be in the future at creation time');
+    }
+
+    // 3. Operational scope enforcement
     const hasScope = await this.scopeRepo.hasScope(context.actorId, request.treeId);
     if (!hasScope) {
       throw new ForbiddenError(
@@ -36,7 +47,7 @@ export class CreateTaskUseCase {
       );
     }
 
-    // 3. Tree validation
+    // 4. Tree validation
     const tree = await this.treeRepo.findById(request.treeId);
     if (!tree) {
       throw new NotFoundError(`Tree with ID ${request.treeId} not found`);
@@ -45,7 +56,7 @@ export class CreateTaskUseCase {
       throw new ValidationError(`Cannot create task on retired tree ${tree.id}`);
     }
 
-    // 4. Assigned staff validation
+    // 5. Assigned staff validation
     const staffUser = await this.userRepo.findById(request.assignedStaffId);
     if (!staffUser) {
       throw new NotFoundError(`Assigned user with ID ${request.assignedStaffId} not found`);
@@ -57,7 +68,7 @@ export class CreateTaskUseCase {
       throw new ValidationError(`User ${request.assignedStaffId} is not ACTIVE (status: ${staffUser.accountStatus})`);
     }
 
-    // 5. TaskType & Policy deterministic resolution (DR-MVP-02 / Section 16)
+    // 6. TaskType & Policy deterministic resolution (DR-MVP-02 / Section 16 / W4-C04)
     const policy = await this.resolvePolicy.execute(request.taskTypeId);
 
     const taskId = `TSK-${randomUUID().slice(0, 8)}`;
@@ -81,22 +92,32 @@ export class CreateTaskUseCase {
       checklistSnapshot: policy.checklistSnapshot,
     });
 
-    await this.taskRepo.save(task);
+    const persistTask = async (taskRepo: ITaskRepository, auditService: AuditService) => {
+      await taskRepo.save(task);
 
-    await this.auditService.logEvent({
-      actorId: context.actorId,
-      actorRole: context.actorRole,
-      action: 'CreateTask',
-      targetResourceType: 'Task',
-      targetResourceId: task.id,
-      outcome: 'SUCCESS',
-      details: {
-        treeId: task.treeId,
-        taskTypeId: task.taskTypeId,
-        proofProfile: task.proofProfile,
-        assignedStaffId: task.assignedStaffId,
-      },
-    });
+      await auditService.logEvent({
+        actorId: context.actorId,
+        actorRole: context.actorRole,
+        action: 'CreateTask',
+        targetResourceType: 'Task',
+        targetResourceId: task.id,
+        outcome: 'SUCCESS',
+        details: {
+          treeId: task.treeId,
+          taskTypeId: task.taskTypeId,
+          proofProfile: task.proofProfile,
+          assignedStaffId: task.assignedStaffId,
+        },
+      });
+    };
+
+    if (this.uow) {
+      await this.uow.execute(async (tx) => {
+        await persistTask(tx.taskRepo, tx.auditService);
+      });
+    } else {
+      await persistTask(this.taskRepo, this.auditService);
+    }
 
     return task;
   }
