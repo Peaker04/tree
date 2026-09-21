@@ -1,9 +1,9 @@
 # Báo Cáo Sẵn Sàng Thực Thi & Đóng Băng Giai Đoạn 12B (Phase 12B Execution Readiness & Final Freeze)
 
 **Dự án:** NOVYX GreenOps
-**Giai đoạn:** Phase 12B — Final Freeze & Execution Readiness
+**Giai đoạn:** Phase 12B — Final Freeze & Execution Readiness (Canonical Correction)
 **Ngày lập:** 21/09/2026
-**Commit Baseline:** `c0390e08feaca7e7622ebf257ff703c8288ea697`
+**Commit Baseline:** `58111dd764f45c9dbccc81a57316782b124e9aa2`
 **Nhánh:** `base-setup`
 **Tài liệu Nguồn Thẩm Quyền:**
 - [`docs/PRODUCT.md`](PRODUCT.md), [`docs/DOMAIN.md`](DOMAIN.md), [`docs/ACCESS-CONTROL.md`](ACCESS-CONTROL.md)
@@ -19,7 +19,7 @@
 
 ## 1. Mục Đích (Purpose)
 
-Báo cáo này xác lập mốc đóng băng chính thức cuối cùng của **Phase 12B (Final Planning Freeze)** và công bố trạng thái **Sẵn Sàng Thực Thi (Execution Readiness)** của Dự án NOVYX GreenOps.
+Báo cáo này xác lập mốc đóng băng chính thức cuối cùng của **Phase 12B (Final Planning Freeze)** và công bố trạng thái **Sẵn Sàng Thực Thi (Execution Readiness)** của Dự án NOVYX GreenOps sau khi đã hiệu chỉnh triệt để mọi sai lệch ngữ nghĩa chuẩn tắc (canonical drift).
 
 Sau khi hoàn tất 3 đợt phê duyệt của Chủ quản (Batches 1–3):
 1. **8 quyết định cấp triển khai cốt lõi** đã được Chủ quản phê duyệt chính thức (`OWNER_APPROVED`). Toàn bộ các quyết định chặn việc khởi động kỹ thuật cho các Đợt triển khai Waves 0–6 đã được giải tỏa triệt để.
@@ -33,14 +33,17 @@ Sau khi hoàn tất 3 đợt phê duyệt của Chủ quản (Batches 1–3):
 ## 2. Đường Cơ Sở Git Đóng Băng (Frozen Git Baseline)
 
 - **Nhánh thực hiện:** `base-setup`
-- **Commit Baseline Đầu Vào Phase 12B Final Freeze:** `c0390e08feaca7e7622ebf257ff703c8288ea697`
+- **Commit Baseline Đầu Vào Phase 12B Final Freeze:** `58111dd764f45c9dbccc81a57316782b124e9aa2`
 - **Trạng thái Working Tree:** Sạch (`clean`), không có thay đổi chưa commit trong mã nguồn hoặc tệp chưa theo dõi.
-- **Dòng Lịch Sử Commit Chuẩn Tắc Của Tiến Trình Phase 12:**
-  - `9df1b29` — `docs(adr): freeze Phase 11 architecture authority baselines` (Đóng băng Phase 11 Architecture Baselines)
-  - `8735332` — `docs(implementation): record Phase 12A implementation baseline and decision register` (Đóng băng Phase 12A)
-  - `0fcc5e1` — `docs(implementation): record Phase 12B Owner decision batch 1` (Phê duyệt Batch 1: IDB-01, IDB-02, IDB-03)
-  - `7cb1b76` — `docs(implementation): record Phase 12B Owner decision batch 2` (Phê duyệt Batch 2: IDB-04, IDB-05, IDB-11)
-  - `c0390e0` — `docs(implementation): record Phase 12B Owner decision batch 3` (Phê duyệt Batch 3: IDB-07, IDB-06, COST-01)
+- **Dòng Lịch Sử Commit Chuẩn Tắc (Trích xuất từ Git Log Thực Tế):**
+  - `8735332` — `docs(architecture): close phase 11C derived-view drift`
+  - `6b0ba31` — `docs(implementation): prepare post-ADR implementation master plan`
+  - `ff4e11f` — `docs(implementation): close phase 12A planning gaps`
+  - `9df1b29` — `docs(implementation): finalize phase 12A owner review plan`
+  - `0fcc5e1` — `docs(implementation): record owner decisions batch 1`
+  - `7cb1b76` — `docs(implementation): record owner decisions batch 2`
+  - `c0390e0` — `docs(implementation): record owner decisions batch 3`
+  - `58111dd` — `docs(implementation): freeze phase 12B execution readiness`
 
 ---
 
@@ -48,41 +51,59 @@ Sau khi hoàn tất 3 đợt phê duyệt của Chủ quản (Batches 1–3):
 
 Toàn bộ các tài liệu đặc tả nghiệp vụ từ Phase 1 đến Phase 7 được giữ nguyên vẹn 100%, không bị sửa đổi hay tha hóa:
 - **Tài liệu thẩm quyền nghiệp vụ:** [`docs/PRODUCT.md`](PRODUCT.md), [`docs/DOMAIN.md`](DOMAIN.md), [`docs/ACCESS-CONTROL.md`](ACCESS-CONTROL.md), [`docs/WORKFLOWS.md`](WORKFLOWS.md), [`docs/REQUIREMENTS-TRACEABILITY.md`](REQUIREMENTS-TRACEABILITY.md), [`docs/NFR.md`](NFR.md), và toàn bộ thư mục [`docs/business-reconciliation/`](business-reconciliation/).
-- **48 Lệnh Nghiệp Vụ Chuẩn Tắc & 49 Truy Vấn:** Được phân bổ trong 14 Thực thể Miền Nghiệp vụ, ánh xạ chuẩn xác sang các In-Process Module Interfaces của kiến trúc Modular Monolith.
-- **7 Trạng Thái Vòng Đời Tác Vụ Chuẩn Tắc (`TaskStatus`):** `DRAFT`, `ASSIGNED`, `IN_PROGRESS`, `SUBMITTED`, `REWORK_REQUIRED`, `COMPLETED`, `BLOCKED`. Cấm mọi trạng thái ngoại lai.
-- **4 Kết Luận Duyệt Tác Vụ Chuẩn Tắc (`ReviewDecision`):** `APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`. Cấm rút gọn thành nhị phân Approve/Reject.
-- **3 Hồ Sơ Bằng Chứng Ngữ Nghĩa (`ProofProfile`):** `CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`.
+- **7 Trạng Thái Vòng Đời Tác Vụ Chuẩn Tắc (`TaskStatus`):**
+  Đúng 7 trạng thái tất định theo [`docs/ARCHITECTURE.md`](ARCHITECTURE.md#L310), [`docs/adr/0008-offline-durable-storage-outbox.md`](adr/0008-offline-durable-storage-outbox.md#L48), và [`docs/business-reconciliation/05-DOMAIN-OWNERSHIP-MATRIX.md`](business-reconciliation/05-DOMAIN-OWNERSHIP-MATRIX.md#L71):
+  $$\mathbf{PENDING,\ IN\_PROGRESS,\ BLOCKED,\ WAITING\_REVIEW,\ REWORK\_REQUIRED,\ COMPLETED,\ CANCELLED}$$
+  *(Lưu ý chuẩn tắc: Các từ khóa `DRAFT`, `ASSIGNED`, `SUBMITTED` tuyệt đối KHÔNG PHẢI là trạng thái thuộc `TaskStatus` chuẩn tắc; không sử dụng bí danh tự tạo).*
+- **4 Kết Luận Duyệt Tác Vụ Chuẩn Tắc (`ReviewDecision`):**
+  Đúng 4 kết luận thẩm định theo [`docs/ACCESS-CONTROL.md`](ACCESS-CONTROL.md), [`docs/BUSINESS-PROCESS-REVIEW.md`](BUSINESS-PROCESS-REVIEW.md#L256), và [`docs/adr/0010-contracts-runtime-validation-governance-api.md`](adr/0010-contracts-runtime-validation-governance-api.md):
+  $$\mathbf{APPROVE,\ APPROVE\_WITH\_EXCEPTION,\ REQUEST\_REWORK,\ CANCEL}$$
+  *(Cấm rút gọn thành nhị phân Approve/Reject thô sơ).*
+- **3 Hồ Sơ Bằng Chứng Ngữ Nghĩa (`ProofProfile`):**
+  Đúng 3 hồ sơ chuẩn tắc theo [`docs/DOMAIN.md`](DOMAIN.md) và [`docs/adr/0010-contracts-runtime-validation-governance-api.md`](adr/0010-contracts-runtime-validation-governance-api.md):
+  $$\mathbf{CHANGE\_PROOF,\ SERVICE\_PROOF,\ INSPECTION\_PROOF}$$
+- **Danh Mục Lệnh Nghiệp Vụ Chuẩn Tắc (Canonical Business Commands):**
+  Các lệnh vận hành hiện trường (`CMD-OP-*`) và lệnh quản trị nền tảng (`CMD-ADM-*` / `GV-*`) đã được phê chuẩn trong các tài liệu thẩm quyền nghiệp vụ, ánh xạ chuẩn xác sang các In-Process Module Interfaces của kiến trúc Modular Monolith theo nguyên tắc ADR 0010:
+  $$\text{Business Command} \neq \text{HTTP Route} \neq \text{DTO} \neq \text{Transport Header}$$
+  *(Loại bỏ hoàn toàn các con số suy diễn không có thẩm quyền như "49 truy vấn" hay "14 thực thể").*
 - **Nguyên Tắc Phân Quyền & Tách Biệt Nhiệm Vụ (SoD):**
   - Quản trị viên (`Admin`) tuyệt đối không can thiệp, không bắt đầu, không nộp, không duyệt các tác vụ vận hành hiện trường (`PLAN-SOD-ADMIN`, `BR-ACT-01`, `P4-09`).
-  - Người thẩm định không bao giờ được tự duyệt bằng chứng do chính mình chụp (`DR-HARD-02`).
-  - Kiểm tra độ tươi phiên và thu hồi quyền tức thì ở Cổng An ninh Tier 2 (`PLAN-AUTH-FRESHNESS`).
+  - Người thẩm định không bao giờ được tự duyệt bằng chứng do chính mình nộp trong lịch sử (`DR-HARD-02`, `SoD-02`: $\text{reviewerId} \notin \text{task.getHistoricalSubmissionAuthorIds()}$).
+  - Kiểm tra độ tươi tài khoản và thu hồi quyền tức thì ở Cổng An ninh Tier 2 (`PLAN-AUTH-FRESHNESS`, `accountStatus === 'ACTIVE'`).
   - Nhật ký kiểm toán bất biến, chỉ ghi thêm (append-only), phân tách quyền hạn ở tầng cơ sở dữ liệu (`PLAN-AUDIT-IMMUTABILITY`).
 
 ---
 
 ## 4. Đường Cơ Sở Kiến Trúc Đóng Băng (Frozen Architecture Baseline)
 
-- **Kiến trúc Máy chủ Duy nhất:** Modular Monolith (ADR 0003, [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)), triển khai mã nguồn tại `apps/api`. Không giả định chia tách microservices.
-- **5 Module Nội bộ Tách Biệt Nghiêm Ngặt:**
-  1. `IAM & Access Control`
-  2. `Work Management & Execution`
-  3. `Tree & Asset Registry`
-  4. `Policy & Governance`
-  5. `Audit Logging`
-- **Bộ 13 Quyết Định Kiến Trúc Đã Chấp Thuận (ADR 0001..0013):** Đã đóng băng thẩm quyền, không được mở lại hay sửa đổi trong quá trình thực thi:
-  - `ADR 0001`: Chiến lược Monorepo pnpm & TypeScript.
-  - `ADR 0002`: Nền tảng Di động Expo React Native.
-  - `ADR 0003`: Mô hình Máy chủ Backend Modular Monolith.
-  - `ADR 0004`: Hệ thống Thiết kế Giao diện Di động & Quy chuẩn Trải nghiệm Ngoài trời.
-  - `ADR 0005`: Tách biệt Giao diện Quản trị Nền tảng (Dedicated Web Portal) & Cấm Admin can thiệp tác vụ hiện trường.
-  - `ADR 0006`: Mô hình Quản lý Danh tính & Phiên Máy chủ Tự chủ (Authoritative Auth).
-  - `ADR 0007`: Kiến trúc Ủy thác & Kiểm soát Quyền hạn Hai Lớp (Tier 1 RBAC + Tier 2 Contextual Gate).
-  - `ADR 0008`: Kiến trúc Ngoại tuyến Cục bộ Mobile Draft & Hàng Đợi Bền vững (Durable Outbox).
-  - `ADR 0009`: Cơ chế Giao dịch Phân tán & Giao thức Nộp Bằng chứng Hai Giai đoạn.
-  - `ADR 0010`: Chiến lược API Bề mặt & Ánh xạ Lệnh Nghiệp vụ Sang REST/RPC.
-  - `ADR 0011`: Thiết kế Kho Lưu trữ Kiểm toán Bất biến & Phân tách Đặc quyền DB.
-  - `ADR 0012`: Quản lý Trạng thái & Máy Trạng thái Tác vụ Chuẩn tắc.
-  - `ADR 0013`: Chiến lược Di chuyển & Chuyển đổi Mã nguồn Hiện hữu (Strangler Fig Pattern).
+### 4.1. Thẩm Quyền Kiến Trúc Cốt Lõi
+- **Mô hình Máy chủ Modular Monolith & Tô-pô Lưu trữ Quan hệ:** Thẩm quyền bắt nguồn trực tiếp từ **ADR 0013** ([`docs/adr/0013-backend-runtime-persistence-topology.md`](adr/0013-backend-runtime-persistence-topology.md)) kết hợp cùng **[`docs/ARCHITECTURE.md`](ARCHITECTURE.md)** (triển khai mã nguồn máy chủ tại `apps/api`, duy nhất một deployable boundary, cấm phân tách microservices sớm).
+- **Chiến lược REST API Định hướng Hợp đồng (Contract-first REST API):** Thẩm quyền bắt nguồn trực tiếp từ **ADR 0003** ([`docs/adr/0003-contract-first-rest-api.md`](adr/0003-contract-first-rest-api.md)).
+- **Kiến trúc Phân tầng Clean Architecture & Phân Rã Facade Chuyển Tiếp:** Thẩm quyền bắt nguồn trực tiếp từ **ADR 0012** ([`docs/adr/0012-clean-architecture-transitional-facade-decomposition.md`](adr/0012-clean-architecture-transitional-facade-decomposition.md)).
+
+### 4.2. Danh Mục 5 Module Logic Chuẩn Tắc (Exact Five Canonical Modules)
+Theo [`docs/DOMAIN.md`](DOMAIN.md) và [`docs/ARCHITECTURE.md`](ARCHITECTURE.md#L130-L140), hệ thống gồm đúng 5 Bounded Contexts / Modules logic sau:
+1. **`Work Management`** (Core Bounded Context)
+2. **`Tree Asset Registry`** (Supporting Bounded Context)
+3. **`Policy & Template Governance`** (Supporting Bounded Context)
+4. **`Audit & Compliance`** (Supporting Bounded Context)
+5. **`Identity & Access Management (IAM)`** (Generic Bounded Context)
+
+### 4.3. Kiểm Kê Danh Mục 13 Quyết Định Kiến Trúc Đã Chấp Thuận (ADR 0001..0013 Inventory)
+Được trích xuất chuẩn xác từ các tệp tin thẩm quyền dưới thư mục [`docs/adr/`](adr/):
+- **`ADR 0001` ([`docs/adr/0001-monorepo-foundation.md`](adr/0001-monorepo-foundation.md)):** *Monorepo Foundation* — Cấu trúc monorepo quản lý `apps/*`, `packages/*`, `external/*`; hiện trạng công cụ điều phối kho mã nguồn là npm workspaces và npm scripts.
+- **`ADR 0002` ([`docs/adr/0002-hermes-agent-submodule.md`](adr/0002-hermes-agent-submodule.md)):** *Hermes Agent As External Submodule* — Quản lý `external/hermes-agent` dưới dạng git submodule độc lập; cấm chỉnh sửa trực tiếp phục vụ sản phẩm.
+- **`ADR 0003` ([`docs/adr/0003-contract-first-rest-api.md`](adr/0003-contract-first-rest-api.md)):** *Contract-first REST API* — REST API theo tiếp cận contract-first với hợp đồng TypeScript dùng chung qua `@novyx/contracts` trước khi cài đặt backend.
+- **`ADR 0004` ([`docs/adr/0004-shared-ui-tokens.md`](adr/0004-shared-ui-tokens.md)):** *Shared UI Tokens* — Một nguồn chân lý duy nhất cho design tokens (`colors`, `spacing`, `typography`, `radius`) tại `@novyx/ui`.
+- **`ADR 0005` ([`docs/adr/0005-admin-client-topology.md`](adr/0005-admin-client-topology.md)):** *Platform Administrator Client Delivery Topology* — Ứng dụng Web quản trị độc lập (`apps/admin-web`), phạm vi giới hạn nghiêm ngặt ở Platform Governance (`CAP-ADM-01..09`, `GV-01..19`) và `OP-22 ViewCareHistory` chỉ đọc; cấm can thiệp tác vụ vận hành hiện trường.
+- **`ADR 0006` ([`docs/adr/0006-iam-session-lifecycle.md`](adr/0006-iam-session-lifecycle.md)):** *Identity & Access Management, Session Lifecycle & Role Administration* — Quản lý danh tính, 4 trạng thái tài khoản (`INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`), quản lý phiên máy chủ tự chủ, thu hồi phiên và xoay vòng refresh credentials.
+- **`ADR 0007` ([`docs/adr/0007-authorization-enforcement-architecture.md`](adr/0007-authorization-enforcement-architecture.md)):** *Multi-Tier Authorization & Action Eligibility Enforcement Architecture* — Kiến trúc phòng vệ 3 tầng (Tier 1 Client Advisory $\to$ Tier 2 Server Request Gate $\to$ Tier 3 Domain Core Authoritative); công thức Action Eligibility; phân tách trách nhiệm `SoD-02`.
+- **`ADR 0008` ([`docs/adr/0008-offline-durable-storage-outbox.md`](adr/0008-offline-durable-storage-outbox.md)):** *Mobile Offline Durable Storage Engine & Outbox Synchronization Architecture* — Lưu trữ ngoại tuyến cục bộ bằng `expo-sqlite`, vùng lưu ảnh sandbox trên đĩa, hàng đợi Outbox bền vững, metadata vận chuyển `Idempotency-Key`; trạng thái cục bộ chỉ mang tính chất đệm ngoại tuyến/advisory.
+- **`ADR 0009` ([`docs/adr/0009-concurrency-idempotency-strategy.md`](adr/0009-concurrency-idempotency-strategy.md)):** *Optimistic Concurrency Control & Command Idempotency Strategy* — Kiểm soát đồng thời lạc quan (OCC) qua `expectedVersion: number`, ánh xạ xung đột `409 CONFLICT` (`CONFLICT: STALE_VERSION`), idempotency qua header `Idempotency-Key: <UUIDv4>`; bảo toàn 100% dữ liệu nháp khi có xung đột.
+- **`ADR 0010` ([`docs/adr/0010-contracts-runtime-validation-governance-api.md`](adr/0010-contracts-runtime-validation-governance-api.md)):** *Contract Evolution, Runtime Schema Validation & Governance API Extension* — `@novyx/contracts` là biểu diễn kỹ thuật dẫn xuất; Zod kiểm thực runtime payload; phân định Business Command $\neq$ HTTP Route $\neq$ DTO $\neq$ Transport Header.
+- **`ADR 0011` ([`docs/adr/0011-audit-trail-persistence-integrity.md`](adr/0011-audit-trail-persistence-integrity.md)):** *Audit Trail Persistence & Tamper-Evident Integrity Architecture* — `AuditEvent` lưu tập trung trên máy chủ, append-only ở cấp database engine; runtime database user chỉ có quyền `INSERT` và `SELECT`, cấm `UPDATE`, `DELETE`, `TRUNCATE`.
+- **`ADR 0012` ([`docs/adr/0012-clean-architecture-transitional-facade-decomposition.md`](adr/0012-clean-architecture-transitional-facade-decomposition.md)):** *Clean Architecture Layering & Transitional Facade (`greenOpsService`) Decomposition* — Phân tầng Clean Architecture (Ports & Adapters); phân rã facade `greenOpsService.ts` và `MobileApp.tsx` thành các adapters đơn trách nhiệm; máy chủ giữ thẩm quyền tối cao.
+- **`ADR 0013` ([`docs/adr/0013-backend-runtime-persistence-topology.md`](adr/0013-backend-runtime-persistence-topology.md)):** *Backend Runtime & Relational Persistence Topology* — Máy chủ sản xuất có thẩm quyền tại `apps/api`, kiến trúc Modular Monolith gồm 5 Bounded Contexts, cơ sở dữ liệu quan hệ, giao dịch ACID, cấm đột biến SQL chéo context.
 
 ---
 
@@ -269,16 +290,23 @@ Thiết lập **Nền Tảng Kiểm Thử, Chất Lượng & Quản Trị Thực
 
 ## 15. Rủi Ro Đường Cơ Sở Mã Nguồn Hiện Hữu (Source Baseline Risks)
 
-Báo cáo sẵn sàng thực thi tái khẳng định việc nhận diện đầy đủ các khiếm khuyết cốt tử trong mã nguồn hiện trạng (`AS-IS`) đã được xác minh trong Phase 12A:
-1. **Ép vai trò Quản trị viên sai lệch trên mobile (`IMP-GAP-001`):** Mã nguồn hiện tại ép `admin` thành `manager` (`role === 'admin' ? 'manager' : role`), vi phạm nghiêm trọng nguyên tắc SoD `PLAN-SOD-ADMIN`.
-2. **Điều hướng nhị phân hai nhánh (`IMP-GAP-002`):** Mobile chia nhánh thô sơ `isStaff ? 'StaffApp' : 'ManagerApp'`, hoàn toàn thiếu cổng quản trị độc lập và phạm vi vai trò chuẩn tắc.
-3. **Hợp đồng trạng thái tác vụ thiếu sót (`IMP-GAP-003`):** Mock data chỉ có 5 trạng thái thô sơ, thiếu các trạng thái chuẩn tắc `REWORK_REQUIRED` và `BLOCKED`.
-4. **Thiếu vắng hợp đồng `ReviewDecision` và `ProofProfile` (`IMP-GAP-004`):** Thẩm định chỉ có Approve/Reject đơn giản; không có cơ chế lưu vết ảnh hợp lệ khi rework; không có cấu trúc cho 3 hồ sơ bằng chứng ngữ nghĩa.
-5. **Chưa có máy chủ `apps/api` có thẩm quyền (`IMP-GAP-006`):** Toàn bộ dữ liệu đang lưu trong bộ nhớ RAM tạm thời của script mock `greenops-dev-api.cjs` hoặc state client, mất sạch khi tắt app.
-6. **Thiếu cơ chế hàng đợi Outbox bền vững trên di động (`IMP-GAP-007`, `IMP-GAP-008`):** Chưa có SQLite lưu trữ ngoại tuyến cục bộ, nguy cơ mất trắng dữ liệu khi mất mạng hoặc bị hệ điều hành tắt ngầm (`QAS-OFFLINE-01`, `QAS-OFFLINE-02`).
-7. **Chưa có kiểm soát đồng thời lạc quan (OCC) & Idempotency (`IMP-GAP-009`, `IMP-GAP-014`):** Chưa hỗ trợ các trường `version`, `expectedVersion`, và header `Idempotency-Key` để bảo vệ đột biến.
-8. **Chưa có kho lưu trữ kiểm toán bất biến phân tách quyền (`IMP-GAP-011`):** Chưa có bảng kiểm toán quan hệ với quyền phân tách ở tầng DB (chỉ `INSERT`/`SELECT`, cấm `UPDATE`/`DELETE`).
-9. **Rò rỉ logic nghiệp vụ sang phía client (`IMP-GAP-015`):** Các tính toán xác thực đang bị phân tán trên giao diện thay vì tập trung tại máy chủ.
+Báo cáo sẵn sàng thực thi tái khẳng định việc nhận diện đầy đủ 15 khoảng cách kỹ thuật cốt tử trong mã nguồn hiện trạng (`AS-IS`) đã được xác minh thực nghiệm tại [`docs/PHASE12-CURRENT-SOURCE-EVIDENCE.md`](PHASE12-CURRENT-SOURCE-EVIDENCE.md):
+
+1. **`IMP-GAP-001` (Ép vai trò Quản trị viên sai lệch trên mobile):** `apps/mobile/src/screens/MobileApp.tsx:398`, `LoginScreen.tsx:41, 117` ép chuỗi `admin` thành `'Manager'`; type `Role` chỉ có `'Staff' | 'Manager'`, vi phạm nguyên tắc SoD `PLAN-SOD-ADMIN`.
+2. **`IMP-GAP-002` (Điều hướng nhị phân hai nhánh):** `apps/mobile/src/screens/MobileApp.tsx:274, 276` phân nhánh dựa trên cờ nhị phân `isStaff = role === 'Staff'`, tài khoản khác mặc định bị đưa vào không gian Manager.
+3. **`IMP-GAP-003` (Hợp đồng TaskStatus thiếu trạng thái chuẩn tắc):** `packages/contracts/src/index.ts:54-62` hiện chỉ định nghĩa 5 trạng thái PascalCase (`Pending`, `In_Progress`, `Waiting_Review`, `Completed`, `Rework_Required`); thiếu hoàn toàn 2 trạng thái chuẩn tắc đã đóng băng: `BLOCKED` và `CANCELLED`.
+4. **`IMP-GAP-004` (Thiếu vắng / sai lệch hợp đồng ProofProfile và ReviewDecision):** `packages/contracts/src/index.ts:71` hoàn toàn không có `ProofProfile` (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`); `ReviewDecision` chỉ có 2 giá trị `'approve' | 'request_rework'`, thiếu `APPROVE_WITH_EXCEPTION` và `CANCEL`, chưa chuẩn hóa sang SCREAMING_SNAKE_CASE.
+5. **`IMP-GAP-005` (Tạo task thiếu rào chắn thẩm quyền vai trò/tài nguyên):** `scripts/greenops-dev-api.cjs:407-430`, `greenOpsService.ts:418, 806` không kiểm tra vai trò Manager, tự động fallback tree/staff.
+6. **`IMP-GAP-006` (Bảo vệ danh sách task chỉ tồn tại ở client UI):** `scripts/greenops-dev-api.cjs:397-404` endpoint `GET /v1/tasks` công khai, không kiểm tra actor token.
+7. **`IMP-GAP-007` (Rủi ro mất dữ liệu do lưu snapshot trong RAM tiến trình):** `apps/mobile/src/services/greenOpsService.ts:354`, `greenops-dev-api.cjs:234` lưu dữ liệu trong biến RAM tiến trình (`let snapshot`, `let tasks`), mất trắng khi OS kill app hoặc khởi động lại.
+8. **`IMP-GAP-008` (Hoàn toàn chưa có hàng đợi Outbox bền vững trên mobile):** Toàn bộ mã nguồn `apps/mobile/src/` chưa có bảng lưu trữ outbox trên SQLite; không có hàng đợi thử lại nền an toàn (`QAS-OFFLINE-01`, `QAS-OFFLINE-02`).
+9. **`IMP-GAP-009` (Chưa có máy chủ mục tiêu apps/api sản xuất có thẩm quyền):** Cấu trúc thư mục root hiện chỉ có `apps/mobile`; chưa có thư mục mã nguồn backend Modular Monolith chuẩn Node.js / TypeScript theo ADR 0013.
+10. **`IMP-GAP-010` (Chưa có Cổng Quản trị Web độc lập apps/admin-web):** Cấu trúc thư mục root chưa có workspace Web quản trị độc lập cho Platform Administrator theo ADR 0005.
+11. **`IMP-GAP-011` (Chưa có kho lưu trữ kiểm toán bất biến phân tách quyền):** Toàn bộ repo chưa có bảng lưu trữ `AuditEvent`, chưa có phân tách đặc quyền DB runtime (`INSERT`/`SELECT` only) theo ADR 0011.
+12. **`IMP-GAP-012` (Thiếu khóa kiểm soát đồng thời lạc quan OCC):** `packages/contracts/src/index.ts:128-151`, `greenops-dev-api.cjs` DTOs và mutations không có trường `version` / `expectedVersion`; không có mã lỗi `409 STALE_VERSION` theo ADR 0009.
+13. **`IMP-GAP-013` (Thiếu hỗ trợ Header Idempotency-Key vận chuyển):** `packages/contracts`, `apps/mobile/src/services/greenOpsService.ts` chưa hỗ trợ Header `Idempotency-Key` trên client và chưa có bảng lưu vết idempotency ở server theo ADR 0009.
+14. **`IMP-GAP-014` (greenOpsService ôm đồm quá nhiều trách nhiệm / Khoảng cách Clean Architecture):** `apps/mobile/src/services/greenOpsService.ts:1-856` 856 dòng đảm nhận 10 trách nhiệm khác nhau, cần phân rã theo ADR 0012.
+15. **`IMP-GAP-015` (Rò rỉ logic chuyển đổi trạng thái / quy trình nghiệp vụ vào UI):** `mobileWorkflow.ts:146-153`, `MobileApp.tsx`, `StaffProofFlow.tsx` mã hóa cứng quy trình 5 bước cũ trong UI, tự tính toán bước kế tiếp thay vì dùng Domain Engine.
 
 *Ghi chú định hướng:* Những khoảng cách trên là **lý do căn bản để tiến hành thực thi kế hoạch theo từng đợt**, tuyệt đối **không phải lý do để mở lại hay tranh cãi về mặt kiến trúc**.
 
@@ -286,58 +314,75 @@ Báo cáo sẵn sàng thực thi tái khẳng định việc nhận diện đầ
 
 ## 16. Chiến Lược Kiểm Chứng (Verification Strategy)
 
-Quá trình thực thi các Wave sẽ được bảo vệ bởi chiến lược kiểm chứng đa tầng:
+Quá trình thực thi các Wave sẽ được bảo vệ bởi chiến lược kiểm chứng đa tầng, bảo đảm tính xác thực thực nghiệm:
 1. **Kiểm tra kiểu tĩnh & Linting:**
-   - `npm run typecheck` trên toàn bộ các workspace.
-   - `npm run lint` và `npm run format:check` đảm bảo không có vi phạm định dạng.
+   - `npm run typecheck` trên toàn bộ các workspace trong monorepo.
+   - `npm run lint` và `npm run format:check` đảm bảo không có vi phạm định dạng mã nguồn.
    - Tuyệt đối cấm hạ thấp độ nghiêm ngặt của TypeScript (`strict: true`) hoặc tắt cảnh báo linter để làm biến mất lỗi.
-2. **Kiểm thử hợp đồng (Contract Tests):**
-   - Sử dụng Zod schema trong `@novyx/contracts` để xác thực toàn bộ payload vào/ra, header idempotency, và phân trang.
-3. **Kiểm thử máy trạng thái & quy tắc miền (Domain Unit Tests):**
-   - Kiểm tra toàn bộ ma trận chuyển đổi 7 trạng thái tác vụ, 4 kết luận duyệt, và điều kiện tiên quyết của 48 lệnh nghiệp vụ.
-4. **Kiểm thử ranh giới kiến trúc (Architecture Boundary Tests):**
-   - Tự động phát hiện và chặn các vi phạm import trái phép giữa các module và workspace.
-5. **Kiểm thử tích hợp & Ngoại tuyến (Integration & Offline Tests):**
-   - Kiểm thử hành vi Outbox của ứng dụng di động dưới điều kiện mất mạng hoàn toàn và khôi phục khi có sóng trở lại.
-6. **Bằng chứng thực nghiệm (Empirical Evidence):**
-   - Không chấp nhận tuyên bố hoàn thành mà không có log chạy kiểm thử thực tế và mã thoát (exit code) 0.
+2. **Kiểm thử hợp đồng & lược đồ (Contract / Schema Tests):**
+   - Sử dụng Zod schema trong `@novyx/contracts` để xác thực toàn bộ payload vào/ra, header idempotency, và cấu trúc DTOs.
+3. **Kiểm thử vòng đời tác vụ chuẩn tắc (Canonical Lifecycle Tests):**
+   - Kiểm thử tự động chuyển trạng thái máy trạng thái hữu hạn qua 7 trạng thái chuẩn tắc và 4 kết luận thẩm định.
+4. **Kiểm thử phân quyền & điều kiện hành động (Authorization Tests):**
+   - Kiểm tra rào chắn phân quyền 3 tầng, quy tắc SoD-02, và chặn vai trò Admin can thiệp tác vụ hiện trường.
+5. **Kiểm thử ranh giới kiến trúc (Architecture-Boundary Tests):**
+   - Tự động phát hiện và chặn các vi phạm import trái phép giữa các module và workspace (ví dụ: cấm module đột biến SQL chéo Bounded Context).
+6. **Kiểm thử ngoại tuyến & hàng đợi bền vững (Offline / Outbox Tests):**
+   - Kiểm thử hành vi Outbox của ứng dụng di động dưới điều kiện mất mạng hoàn toàn, OS kill tiến trình ngầm, và khôi phục khi có mạng trở lại.
+7. **Bằng chứng thực nghiệm NFR (NFR Empirical Evidence):**
+   - Thu thập bằng chứng đo lường thực tế (benchmark phần cứng cho Argon2id, FPS hiển thị danh sách, thời gian khôi phục state) có log chạy thực tế và exit code 0.
 
 ---
 
-## 17. Các Khẳng Định Phủ Định (Negative Assertions — All Must Be FALSE)
+## 17. Các Khẳng Định Phủ Định & Khẳng Định Khẳng Định (Negative & Positive Assertions)
 
-Toàn bộ 15 khẳng định phủ định dưới đây đã được kiểm tra và đánh giá chính thức là **FALSE**:
+### 17.1. Các Khẳng Định Phủ Định Nhắm Mục Tiêu (Targeted Negative Assertions — All Must Be FALSE)
+Toàn bộ 15 khẳng định dưới đây đã được đối soát và đánh giá chính thức là **FALSE**:
+- **P12BFC-N01:** `DRAFT` là một trạng thái thuộc `TaskStatus` chuẩn tắc. $\rightarrow$ **FALSE** (Chỉ là khái niệm lưu nháp cục bộ, không thuộc enum TaskStatus).
+- **P12BFC-N02:** `ASSIGNED` là một trạng thái thuộc `TaskStatus` chuẩn tắc. $\rightarrow$ **FALSE** (Task khởi tạo ở trạng thái `PENDING`).
+- **P12BFC-N03:** `SUBMITTED` là một trạng thái thuộc `TaskStatus` chuẩn tắc. $\rightarrow$ **FALSE** (Task nộp bằng chứng chuyển sang `WAITING_REVIEW`).
+- **P12BFC-N04:** `WAITING_REVIEW` vắng mặt trong `TaskStatus` chuẩn tắc. $\rightarrow$ **FALSE** (`WAITING_REVIEW` là trạng thái chuẩn tắc cốt lõi).
+- **P12BFC-N05:** ADR 0003 là quyết định về Modular Monolith. $\rightarrow$ **FALSE** (ADR 0003 là `Contract-first REST API`; Modular Monolith thuộc ADR 0013).
+- **P12BFC-N06:** ADR 0012 là quyết định về Task State Machine. $\rightarrow$ **FALSE** (ADR 0012 là `Clean Architecture Transitional Facade Decomposition`).
+- **P12BFC-N07:** ADR 0013 đơn thuần chỉ là quyết định về chuyển đổi Strangler Fig. $\rightarrow$ **FALSE** (ADR 0013 là `Backend Runtime & Relational Persistence Topology` xác lập Modular Monolith và CSDL quan hệ).
+- **P12BFC-N08:** Commit `8735332` là commit đóng băng đường cơ sở triển khai Phase 12A. $\rightarrow$ **FALSE** (`8735332` là `docs(architecture): close phase 11C derived-view drift`).
+- **P12BFC-N09:** Commit `9df1b29` là commit đóng băng kiến trúc Phase 11. $\rightarrow$ **FALSE** (`9df1b29` là `docs(implementation): finalize phase 12A owner review plan`).
+- **P12BFC-N10:** 49 truy vấn chuẩn tắc được đóng băng bởi văn bản thẩm quyền. $\rightarrow$ **FALSE** (Không có tài liệu thẩm quyền nào đóng băng số lượng 49 truy vấn).
+- **P12BFC-N11:** 14 thực thể miền nghiệp vụ được đóng băng bởi văn bản thẩm quyền. $\rightarrow$ **FALSE** (Không có tài liệu thẩm quyền nào áp đặt số lượng 14 thực thể).
+- **P12BFC-N12:** `IMP-GAP-009` là khoảng cách về kiểm soát đồng thời OCC. $\rightarrow$ **FALSE** (`IMP-GAP-009` là khoảng cách thiếu vắng backend `apps/api`; OCC là `IMP-GAP-012`).
+- **P12BFC-N13:** `IMP-GAP-014` là khoảng cách về cơ chế Idempotency. $\rightarrow$ **FALSE** (`IMP-GAP-014` là khoảng cách ôm đồm trách nhiệm của `greenOpsService`; Idempotency là `IMP-GAP-013`).
+- **P12BFC-N14:** Hợp đồng mã nguồn hiện trạng được xác nhận là thiếu `REWORK_REQUIRED`. $\rightarrow$ **FALSE** (`REWORK_REQUIRED` đã có trong contracts; 2 trạng thái thiếu là `BLOCKED` và `CANCELLED`).
+- **P12BFC-N15:** Wave 0 đã được triển khai mã nguồn trong giai đoạn này. $\rightarrow$ **FALSE** (Tuyệt đối chưa triển khai mã nguồn nào; Wave 0 chỉ được kích hoạt trong Phase 13).
 
-- **P12BF-N01:** Quyết định IDB-08 đã được Chủ quản phê duyệt chính thức (`OWNER_APPROVED`).
-  $\rightarrow$ **FALSE** (IDB-08 đang giữ trạng thái `DEFERRED_WITH_BOUNDARY`).
-- **P12BF-N02:** Quyết định IDB-09 đã được Chủ quản phê duyệt chính thức (`OWNER_APPROVED`).
-  $\rightarrow$ **FALSE** (IDB-09 đang giữ trạng thái `DEFERRED_WITH_BOUNDARY`).
-- **P12BF-N03:** Quyết định IDB-10 đã được Chủ quản phê duyệt chính thức (`OWNER_APPROVED`).
-  $\rightarrow$ **FALSE** (IDB-10 đang giữ trạng thái `DEFERRED_WITH_BOUNDARY`).
-- **P12BF-N04:** Quyết định IDB-08 vẫn đang ở trạng thái mở không kiểm soát (`OPEN`).
-  $\rightarrow$ **FALSE** (Đã chuyển sang `DEFERRED_WITH_BOUNDARY` với ranh giới và cổng kiểm soát rõ ràng).
-- **P12BF-N05:** Giá trị 72 giờ là hằng số bất biến đóng băng của nghiệp vụ đối với thời gian lưu vết idempotency.
-  $\rightarrow$ **FALSE** (72h chỉ là Cơ Sở Ứng Viên `CANDIDATE_BASELINE`, bắt buộc cấu hình qua biến môi trường).
-- **P12BF-N06:** Giá trị 14 ngày hoặc 300 MB là chính sách dọn dẹp file di động đóng băng vĩnh viễn.
-  $\rightarrow$ **FALSE** (Chỉ là `CANDIDATE_BASELINE`, cần đo đạc thực tế tại Wave 5).
-- **P12BF-N07:** Render là thẩm quyền kiến trúc bắt buộc của hệ thống.
-  $\rightarrow$ **FALSE** (Render chỉ là ứng viên triển khai theo hướng dẫn phi ràng buộc; hệ thống trung lập nhà cung cấp).
-- **P12BF-N08:** Cloudflare R2 là thẩm quyền kiến trúc bắt buộc của hệ thống.
-  $\rightarrow$ **FALSE** (Hệ thống chỉ phụ thuộc vào chuẩn `ObjectStoragePort` tương thích S3).
-- **P12BF-N09:** Railway là thẩm quyền kiến trúc bắt buộc của hệ thống.
-  $\rightarrow$ **FALSE** (Railway chỉ là ứng viên triển khai).
-- **P12BF-N10:** Các con số hạn ngạch miễn phí của nhà cung cấp là bất biến vĩnh viễn của kiến trúc.
-  $\rightarrow$ **FALSE** (Được dán nhãn là thông tin nhà cung cấp có tính thời điểm).
-- **P12BF-N11:** Việc đóng băng Phase 12B đồng nghĩa với việc toàn bộ các Wave 0 đến 8 đều được phép bắt đầu đồng loạt.
-  $\rightarrow$ **FALSE** (Quá trình thực thi được phân chia nghiêm ngặt theo cổng, từng wave một).
-- **P12BF-N12:** Wave 1 có thể bắt đầu trước khi Wave 0 hoàn tất và được nghiệm thu độc lập.
-  $\rightarrow$ **FALSE** (Wave 1 phụ thuộc nghiêm ngặt vào việc vượt qua cổng nghiệm thu của Wave 0).
-- **P12BF-N13:** Các quyết định hoãn được phép vi phạm các ranh giới đã được đóng băng trong ADR và NFR.
-  $\rightarrow$ **FALSE** (Các ranh giới bảo vệ được áp đặt tuyệt đối trong suốt thời gian hoãn).
-- **P12BF-N14:** Bằng chứng cục bộ trên di động có thể bị xóa trong khi vẫn đang chờ trong Outbox hoặc cần để gửi lại.
-  $\rightarrow$ **FALSE** (Sàn an toàn nghiêm cấm tuyệt đối việc xóa bằng chứng chưa được máy chủ xác nhận).
-- **P12BF-N15:** Có bất kỳ sửa đổi mã nguồn ứng dụng nào đã diễn ra trong Phase 12B.
-  $\rightarrow$ **FALSE** (0 tệp mã nguồn trong `apps/`, `packages/`, `scripts/`, `external/` bị thay đổi; 0 gói mới được cài đặt).
+### 17.2. Các Khẳng Định Khẳng Định (Targeted Positive Assertions — All Must Be TRUE)
+Toàn bộ 10 khẳng định dưới đây đã được xác nhận là **TRUE**:
+- **P12BFC-P01:** `TaskStatus` chính xác là 7 trạng thái: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`. $\rightarrow$ **TRUE**.
+- **P12BFC-P02:** `ReviewDecision` chính xác là 4 kết luận: `APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`. $\rightarrow$ **TRUE**.
+- **P12BFC-P03:** `ProofProfile` chính xác là 3 hồ sơ: `CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`. $\rightarrow$ **TRUE**.
+- **P12BFC-P04:** ADR 0003 là `Contract-first REST API`. $\rightarrow$ **TRUE**.
+- **P12BFC-P05:** ADR 0012 là `Clean Architecture Layering & Transitional Facade (greenOpsService) Decomposition`. $\rightarrow$ **TRUE**.
+- **P12BFC-P06:** ADR 0013 là `Backend Runtime & Relational Persistence Topology` định hướng Modular Monolith. $\rightarrow$ **TRUE**.
+- **P12BFC-P07:** `IMP-GAP-012` là khoảng cách thiếu OCC / version / expectedVersion. $\rightarrow$ **TRUE**.
+- **P12BFC-P08:** `IMP-GAP-013` là khoảng cách thiếu Header Idempotency-Key. $\rightarrow$ **TRUE**.
+- **P12BFC-P09:** Trạng thái các quyết định Chủ quản giữ nguyên vẹn đúng 8/3/0/0. $\rightarrow$ **TRUE**.
+- **P12BFC-P10:** Duy nhất Wave 0 đủ điều kiện kích hoạt tiếp theo. $\rightarrow$ **TRUE**.
+
+### 17.3. Các Khẳng Định Phủ Định Giai Đoạn 12B (Phase 12B Final Freeze Negative Assertions — All Must Be FALSE)
+- **P12BF-N01:** IDB-08 đã được Chủ quản phê duyệt chính thức (`OWNER_APPROVED`). $\rightarrow$ **FALSE** (`DEFERRED_WITH_BOUNDARY`).
+- **P12BF-N02:** IDB-09 đã được Chủ quản phê duyệt chính thức (`OWNER_APPROVED`). $\rightarrow$ **FALSE** (`DEFERRED_WITH_BOUNDARY`).
+- **P12BF-N03:** IDB-10 đã được Chủ quản phê duyệt chính thức (`OWNER_APPROVED`). $\rightarrow$ **FALSE** (`DEFERRED_WITH_BOUNDARY`).
+- **P12BF-N04:** IDB-08 vẫn đang ở trạng thái mở không kiểm soát (`OPEN`). $\rightarrow$ **FALSE** (`DEFERRED_WITH_BOUNDARY`).
+- **P12BF-N05:** Giá trị 72 giờ là hằng số bất biến đóng băng của nghiệp vụ đối với thời gian lưu vết idempotency. $\rightarrow$ **FALSE** (`CANDIDATE_BASELINE`).
+- **P12BF-N06:** Giá trị 14 ngày hoặc 300 MB là chính sách dọn dẹp file di động đóng băng vĩnh viễn. $\rightarrow$ **FALSE** (`CANDIDATE_BASELINE`).
+- **P12BF-N07:** Render là thẩm quyền kiến trúc bắt buộc của hệ thống. $\rightarrow$ **FALSE** (Ứng viên triển khai phi ràng buộc).
+- **P12BF-N08:** Cloudflare R2 là thẩm quyền kiến trúc bắt buộc của hệ thống. $\rightarrow$ **FALSE** (Chỉ phụ thuộc vào chuẩn S3 Port).
+- **P12BF-N09:** Railway là thẩm quyền kiến trúc bắt buộc của hệ thống. $\rightarrow$ **FALSE** (Ứng viên triển khai phi ràng buộc).
+- **P12BF-N10:** Các con số hạn ngạch miễn phí của nhà cung cấp là bất biến vĩnh viễn của kiến trúc. $\rightarrow$ **FALSE** (Thông tin có tính thời điểm).
+- **P12BF-N11:** Việc đóng băng Phase 12B đồng nghĩa với việc toàn bộ các Wave 0 đến 8 đều được phép bắt đầu đồng loạt. $\rightarrow$ **FALSE** (Wave-gated execution).
+- **P12BF-N12:** Wave 1 có thể bắt đầu trước khi Wave 0 hoàn tất và được nghiệm thu độc lập. $\rightarrow$ **FALSE** (Wave 1 phụ thuộc nghiệm thu Wave 0).
+- **P12BF-N13:** Các quyết định hoãn được phép vi phạm các ranh giới đã được đóng băng trong ADR và NFR. $\rightarrow$ **FALSE** (Bảo toàn ranh giới ADR/NFR).
+- **P12BF-N14:** Bằng chứng cục bộ trên di động có thể bị xóa trong khi vẫn đang chờ trong Outbox hoặc cần để gửi lại. $\rightarrow$ **FALSE** (Sàn an toàn cấm xóa).
+- **P12BF-N15:** Có bất kỳ sửa đổi mã nguồn ứng dụng nào đã diễn ra trong Phase 12B. $\rightarrow$ **FALSE** (0 tệp mã nguồn thay đổi).
 
 ---
 
@@ -366,16 +411,17 @@ Toàn bộ 12 Cổng Kiểm soát Sẵn sàng Thực thi Phase 12B đều đạt
 
 ```text
 PHASE 12B COMPLETE — EXECUTION READY & FROZEN
+— CANONICAL BUSINESS BASELINE RECONCILED
+— ADR INVENTORY RECONCILED
+— GIT HISTORY RECONCILED
+— FIVE MODULE NAMES RECONCILED
+— SOURCE GAP IDS RECONCILED
+— UNSUPPORTED COUNTS REMOVED
 — 8 OWNER_APPROVED
 — 3 DEFERRED_WITH_BOUNDARY
 — 0 OPEN
 — 0 REJECTED
-— COST-01 FREE-FIRST CONSTRAINT PRESERVED
-— PROVIDER NEUTRALITY PRESERVED
-— IMPLEMENTATION MASTER PLAN FROZEN
-— BUSINESS / ARCHITECTURE BASELINES UNCHANGED
 — NO SOURCE IMPLEMENTATION
-— IMPLEMENTATION REMAINS WAVE-GATED
 — ONLY WAVE 0 IS ELIGIBLE NEXT
-— READY FOR PHASE 13 / IMPLEMENTATION WAVE 0
+— READY FOR INDEPENDENT VERIFICATION
 ```
