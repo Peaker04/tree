@@ -57,6 +57,18 @@ export async function runMigrations(migrationUrl?: string, runtimeUrl?: string):
         await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE sessions TO ${safeRole}`);
         await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE spent_refresh_tokens TO ${safeRole}`);
         await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE credential_setup_tokens TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE trees TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE task_types TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE proof_policy_versions TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE checklist_template_versions TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE manager_operational_scopes TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE tasks TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE evidence_objects TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE evidence_attempts TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE field_issues TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE task_reviews TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE care_histories TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE idempotency_records TO ${safeRole}`);
         await client.query(`GRANT SELECT, INSERT ON TABLE audit_events TO ${safeRole}`);
         await client.query(`REVOKE UPDATE, DELETE, TRUNCATE ON TABLE audit_events FROM ${safeRole}`);
         console.log(`[migrate] Role privileges applied successfully for ${runtimeUser}.`);

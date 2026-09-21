@@ -21,3 +21,17 @@ export const CareHistoryDtoSchema = z.object({
 });
 
 export type CanonicalCareHistoryDto = z.infer<typeof CareHistoryDtoSchema>;
+
+export const CareHistoryResponseSchema = z.object({
+  data: CareHistoryDtoSchema,
+});
+export type CareHistoryResponse = z.infer<typeof CareHistoryResponseSchema>;
+
+export const CareHistoryListResponseSchema = z.object({
+  data: z.array(CareHistoryDtoSchema),
+  meta: z.object({
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  }),
+});
+export type CareHistoryListResponse = z.infer<typeof CareHistoryListResponseSchema>;

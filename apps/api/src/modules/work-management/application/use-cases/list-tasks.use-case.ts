@@ -1,0 +1,16 @@
+import type { ITaskRepository, ListTasksParams, ListTasksResult } from '../ports/task-repository.port';
+
+export class ListTasksUseCase {
+  constructor(private readonly taskRepo: ITaskRepository) {}
+
+  async execute(
+    params: ListTasksParams,
+    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+  ): Promise<ListTasksResult> {
+    // If staff member, force staffId filter to their own ID so they cannot view arbitrary tasks
+    const effectiveParams: ListTasksParams =
+      context.actorRole === 'staff' ? { ...params, staffId: context.actorId } : params;
+
+    return this.taskRepo.list(effectiveParams);
+  }
+}

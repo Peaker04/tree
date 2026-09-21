@@ -159,6 +159,20 @@ export const TaskDtoSchema = z.object({
 
 export type CanonicalTaskDto = z.infer<typeof TaskDtoSchema>;
 
+export const TaskResponseSchema = z.object({
+  data: TaskDtoSchema,
+});
+export type TaskResponse = z.infer<typeof TaskResponseSchema>;
+
+export const TaskListResponseSchema = z.object({
+  data: z.array(TaskDtoSchema),
+  meta: z.object({
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  }),
+});
+export type TaskListResponse = z.infer<typeof TaskListResponseSchema>;
+
 /**
  * Query schema for listing tasks
  */

@@ -94,9 +94,28 @@ export const TreeDtoSchema = z.object({
   healthStatus: TreeHealthStatusSchema,
   ageYears: z.number(),
   riskStatus: TreeRiskStatusSchema.optional(),
+  isRetired: z.boolean().optional(),
+  retiredAt: z.string().optional(),
 });
 
 export type CanonicalTreeDto = z.infer<typeof TreeDtoSchema>;
+
+/**
+ * Response schemas for single and list tree queries
+ */
+export const TreeResponseSchema = z.object({
+  data: TreeDtoSchema,
+});
+export type TreeResponse = z.infer<typeof TreeResponseSchema>;
+
+export const TreeListResponseSchema = z.object({
+  data: z.array(TreeDtoSchema),
+  meta: z.object({
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  }),
+});
+export type TreeListResponse = z.infer<typeof TreeListResponseSchema>;
 
 /**
  * Query schema for listing trees

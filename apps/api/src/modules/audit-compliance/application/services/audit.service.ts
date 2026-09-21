@@ -54,4 +54,29 @@ export class AuditService {
       afterState: safeAfter,
     });
   }
+
+  async logEvent(params: {
+    actorId: string;
+    actorRole: 'staff' | 'manager' | 'admin';
+    action: string;
+    targetResourceType: string;
+    targetResourceId: string;
+    outcome: 'SUCCESS' | 'FAILURE';
+    details?: Record<string, unknown> | undefined;
+    reason?: string | undefined;
+  }): Promise<void> {
+    await this.record({
+      actorId: params.actorId,
+      actorRole: params.actorRole,
+      actionType: params.action,
+      resourceType: params.targetResourceType,
+      resourceId: params.targetResourceId,
+      outcome: params.outcome,
+      afterState: params.details
+        ? { ...params.details, ...(params.reason ? { reason: params.reason } : {}) }
+        : params.reason
+          ? { reason: params.reason }
+          : null,
+    });
+  }
 }

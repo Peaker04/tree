@@ -37,6 +37,12 @@ jobs:
     env:
       DATABASE_MIGRATION_URL: postgresql://novyx_admin:novyx_ci_admin_password@localhost:5432/novyx_test
       DATABASE_RUNTIME_URL: postgresql://app_runtime:novyx_ci_runtime_password@localhost:5432/novyx_test
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: novyx-evidence
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadminpassword
+      S3_FORCE_PATH_STYLE: 'true'
 
     steps:
       - name: Checkout repository
@@ -63,11 +69,27 @@ jobs:
       - name: Build API workspace
         run: npm run build --workspace @novyx/api
 
+      - name: Start disposable MinIO container
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadminpassword \
+            minio/minio server /data
+
+      - name: Setup test S3 bucket
+        run: |
+          until curl -s http://localhost:9000/minio/health/live; do
+            echo "Waiting for MinIO..."
+            sleep 1
+          done
+          node scripts/setup-s3-test.cjs
+
       - name: Run PostgreSQL migrations and role bootstrap
         run: npm run db:migrate --workspace @novyx/api
 
       - name: Verify PostgreSQL schema and roles
         run: npm run db:verify --workspace @novyx/api
 
-      - name: Run automated test suite (including DB integration)
+      - name: Run automated test suite (including DB and S3 integration)
         run: npm test

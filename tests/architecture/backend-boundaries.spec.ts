@@ -129,13 +129,45 @@ describe('Phase 13 Wave 2: Backend Architecture Boundaries (Clean Architecture &
     }
   });
 
-  it('verifies RevokeSession is NOT a business command (P13W3-N14)', () => {
-    const contractsGovernanceDir = path.resolve(__dirname, '../../packages/contracts/src/governance');
-    const govFiles = getAllTsFiles(contractsGovernanceDir);
+  it('verifies core/ and modules/ do NOT import AWS S3 SDK (P13W4-N15)', () => {
+    const domainFiles = [...getAllTsFiles(coreDir), ...getAllTsFiles(modulesDir)];
 
-    for (const filePath of govFiles) {
+    for (const filePath of domainFiles) {
       const content = fs.readFileSync(filePath, 'utf8');
-      expect(content).not.toMatch(/RevokeSession/);
+      expect(content).not.toMatch(/from\s+['"]@aws-sdk/);
     }
+  });
+
+  it('verifies packages/contracts does NOT import apps/api', () => {
+    const contractsSrcDir = path.resolve(__dirname, '../../packages/contracts/src');
+    const contractsFiles = getAllTsFiles(contractsSrcDir);
+
+    for (const filePath of contractsFiles) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      expect(content).not.toMatch(/from\s+['"]@novyx\/api/);
+      expect(content).not.toMatch(/apps\/api/);
+    }
+  });
+
+  it('verifies apps/api does NOT import apps/mobile', () => {
+    const allApiFiles = getAllTsFiles(apiSrcDir);
+
+    for (const filePath of allApiFiles) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      expect(content).not.toMatch(/from\s+['"]@novyx\/mobile/);
+      expect(content).not.toMatch(/apps\/mobile/);
+    }
+  });
+
+  it('verifies no informal 6th bounded contexts were introduced (P13W4-N01)', () => {
+    const actualDirs = fs
+      .readdirSync(modulesDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+
+    expect(actualDirs).not.toContain('tree-asset');
+    expect(actualDirs).not.toContain('policy-governance');
+    expect(actualDirs).not.toContain('operational-domain');
+    expect(actualDirs).not.toContain('evidence-service');
   });
 });

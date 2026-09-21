@@ -113,3 +113,43 @@ export const SubmitEvidenceRequestSchema = z
   });
 
 export type SubmitEvidenceRequest = z.infer<typeof SubmitEvidenceRequestSchema>;
+
+/**
+ * Presigned Upload Request & Response Schemas
+ */
+export const PresignedUploadRequestSchema = z.object({
+  fileName: z.string().min(1),
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().positive().optional(),
+  contentHash: z.string().optional(),
+});
+export type PresignedUploadRequest = z.infer<typeof PresignedUploadRequestSchema>;
+
+export const PresignedUploadDtoSchema = z.object({
+  objectKey: z.string().min(1),
+  storageRef: z.string().min(1),
+  uploadUrl: z.string().min(1),
+  expiresAt: z.string(),
+});
+export type PresignedUploadDto = z.infer<typeof PresignedUploadDtoSchema>;
+
+export const PresignedUploadResponseSchema = z.object({
+  data: PresignedUploadDtoSchema,
+});
+export type PresignedUploadResponse = z.infer<typeof PresignedUploadResponseSchema>;
+
+/**
+ * Durable Evidence Object Metadata DTO Schema
+ */
+export const EvidenceObjectDtoSchema = z.object({
+  id: z.string().min(1),
+  taskId: z.string().min(1),
+  objectKey: z.string().min(1),
+  storageRef: z.string().min(1),
+  contentHash: z.string().min(1),
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+  uploadedByUserId: z.string().min(1),
+  createdAt: z.string(),
+});
+export type EvidenceObjectDto = z.infer<typeof EvidenceObjectDtoSchema>;
