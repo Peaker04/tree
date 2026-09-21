@@ -18,6 +18,7 @@
     "api:dev": "node scripts/greenops-dev-api.cjs",
     "qr:demo": "node scripts/generate-qr-demo.cjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
@@ -34,7 +35,8 @@
     "prettier": "^3.7.4",
     "qrcode": "^1.5.4",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.50.0"
+    "typescript-eslint": "^8.50.0",
+    "vitest": "^5.0.1"
   },
   "engines": {
     "node": ">=22.13.0"
