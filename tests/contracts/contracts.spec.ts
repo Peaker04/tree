@@ -61,8 +61,6 @@ import {
   TaskDtoSchema,
   ListTasksQuerySchema,
   CareHistoryDtoSchema,
-
-  // Governance Schemas
   ProvisionUserRequestSchema,
   AssignRoleRequestSchema,
   ActivateAccountRequestSchema,
@@ -70,6 +68,8 @@ import {
   DisableAccountRequestSchema,
   UnlockAccountRequestSchema,
   ResetCredentialSetupRequestSchema,
+  GovernanceUserDtoSchema,
+  GovernanceUserResponseSchema,
   TreeHealthStatusSchema,
   TreeRiskStatusSchema,
   CreateTreeRequestSchema,
@@ -794,6 +794,29 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
       };
       expect(ProvisionUserRequestSchema.safeParse(request).success).toBe(true);
       expect(ProvisionUserRequestSchema.shape).not.toHaveProperty('expectedVersion');
+    });
+
+    it('validates GovernanceUserDtoSchema and GovernanceUserResponseSchema excluding internal security fields', () => {
+      const userDto = {
+        id: 'usr-123',
+        version: 2,
+        email: 'admin@novyx.vn',
+        phone: '0901234567',
+        role: 'admin',
+        accountStatus: 'ACTIVE',
+      };
+      expect(GovernanceUserDtoSchema.safeParse(userDto).success).toBe(true);
+
+      const response = {
+        data: userDto,
+      };
+      expect(GovernanceUserResponseSchema.safeParse(response).success).toBe(true);
+
+      // Verify internal security fields are not in schema
+      expect(GovernanceUserDtoSchema.shape).not.toHaveProperty('passwordHash');
+      expect(GovernanceUserDtoSchema.shape).not.toHaveProperty('authVersion');
+      expect(GovernanceUserDtoSchema.shape).not.toHaveProperty('failedLoginAttempts');
+      expect(GovernanceUserDtoSchema.shape).not.toHaveProperty('lockedUntil');
     });
 
     it('validates CreateTreeRequest without expectedVersion', () => {

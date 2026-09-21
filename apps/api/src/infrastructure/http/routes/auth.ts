@@ -68,7 +68,7 @@ export const authRoutes: FastifyPluginAsync<AuthRouteOptions> = async (
         const token = authHeader.slice(7).trim();
         await options.logoutUseCase.execute(token);
       }
-      return reply.status(200).send({ data: { success: true } });
+      return reply.status(204).send();
     },
   );
 };

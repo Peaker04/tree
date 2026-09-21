@@ -11,6 +11,10 @@ import type {
   SpentRefreshToken,
   CredentialSetupToken,
 } from '../../apps/api/src/modules/iam/domain/entities/session';
+import type {
+  IIamUnitOfWork,
+  IIamTransactionContext,
+} from '../../apps/api/src/modules/iam/application/ports/iam-unit-of-work.port';
 import { NotFoundError, ConflictError } from '../../apps/api/src/core/errors';
 
 export class InMemoryUserRepository implements IUserRepository {
@@ -311,5 +315,41 @@ export class InMemoryAuditWriter implements IAuditWriter {
 
   clear(): void {
     this.events.length = 0;
+  }
+}
+
+export class InMemoryIamUnitOfWork implements IIamUnitOfWork {
+  constructor(
+    private readonly userRepo: InMemoryUserRepository,
+    private readonly sessionRepo: InMemorySessionRepository,
+    private readonly auditWriter: InMemoryAuditWriter,
+  ) {}
+
+  async execute<T>(work: (tx: IIamTransactionContext) => Promise<T>): Promise<T> {
+    // Snapshot state for atomic rollback simulation
+    const userSnapshot = new Map(Array.from(this.userRepo.users.entries()).map(([k, v]) => [k, { ...v }]));
+    const sessionSnapshot = new Map(Array.from(this.sessionRepo.sessions.entries()).map(([k, v]) => [k, { ...v }]));
+    const spentSnapshot = new Map(
+      Array.from(this.sessionRepo.spentRefreshTokens.entries()).map(([k, v]) => [k, { ...v }]),
+    );
+    const setupSnapshot = new Map(Array.from(this.sessionRepo.setupTokens.entries()).map(([k, v]) => [k, { ...v }]));
+    const auditSnapshot = [...this.auditWriter.events];
+
+    try {
+      return await work({
+        userRepository: this.userRepo,
+        sessionRepository: this.sessionRepo,
+        auditWriter: this.auditWriter,
+      });
+    } catch (err) {
+      // Rollback on failure
+      this.userRepo.users = userSnapshot;
+      this.sessionRepo.sessions = sessionSnapshot;
+      this.sessionRepo.spentRefreshTokens = spentSnapshot;
+      this.sessionRepo.setupTokens = setupSnapshot;
+      this.auditWriter.events.length = 0;
+      this.auditWriter.events.push(...auditSnapshot);
+      throw err;
+    }
   }
 }

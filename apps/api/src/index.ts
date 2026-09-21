@@ -1,9 +1,10 @@
 import { buildApp } from './app';
-import { loadEnv } from './config/env';
+import { loadEnv, getSecurityConfig } from './config/env';
 import { createDatabaseConnection } from './infrastructure/persistence/db';
 
 export async function startServer(): Promise<void> {
   const env = loadEnv();
+  const securityConfig = getSecurityConfig(env);
 
   if (!env.DATABASE_RUNTIME_URL) {
     throw new Error('DATABASE_RUNTIME_URL is required to start the API server');
@@ -14,6 +15,7 @@ export async function startServer(): Promise<void> {
   const app = buildApp({
     logger: env.NODE_ENV !== 'test',
     pool: dbConn.pool,
+    securityConfig,
   });
 
   const closeGracefully = async (signal: string) => {

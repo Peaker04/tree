@@ -305,9 +305,84 @@ describe('Phase 13 Wave 3: Auth Routes (Login, Refresh Rotation, Reuse Detection
       url: '/v1/auth/logout',
       headers: { authorization: `Bearer ${accessToken}` },
     });
-    expect(logoutRes.statusCode).toBe(200);
+    expect(logoutRes.statusCode).toBe(204);
 
     const session = await sessionRepo.findSessionByAccessTokenHash(tokenService.hashToken(accessToken));
     expect(session?.revokedAt).not.toBeNull();
+  });
+
+  it('proves injected SecurityConfig configures access/refresh TTL and lock threshold (W3-C02, Section 8, 9)', async () => {
+    const customUserRepo = new InMemoryUserRepository();
+    const customSessionRepo = new InMemorySessionRepository();
+    const customAuditWriter = new InMemoryAuditWriter();
+
+    const customApp = buildApp({
+      userRepository: customUserRepo,
+      sessionRepository: customSessionRepo,
+      auditWriter: customAuditWriter,
+      passwordHasher: hasher,
+      tokenService,
+      securityConfig: {
+        accessTokenTtlSeconds: 120, // 2 minutes
+        refreshTokenTtlSeconds: 600, // 10 minutes
+        failedLoginLockThreshold: 2, // Locks after 2 failed attempts
+        lockDurationSeconds: 180,
+        setupTokenTtlSeconds: 3600,
+        argon2: { memoryCost: 4096, timeCost: 1, parallelism: 1 },
+      },
+    });
+    await customApp.ready();
+
+    const passwordHash = await hasher.hash('ConfigSecret123!');
+    const user = await customUserRepo.create({
+      id: 'custom-config-user',
+      version: 0,
+      email: 'config-user@example.com',
+      phone: '+84901234567',
+      initialRole: 'staff',
+      role: 'staff',
+      accountStatus: 'ACTIVE',
+      passwordHash,
+      authVersion: 1,
+    });
+
+    const beforeLogin = Date.now();
+    const loginRes = await customApp.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { identifier: 'config-user@example.com', password: 'ConfigSecret123!' },
+    });
+    expect(loginRes.statusCode).toBe(200);
+
+    const { accessToken } = loginRes.json().session;
+    const session = await customSessionRepo.findSessionByAccessTokenHash(tokenService.hashToken(accessToken));
+    expect(session).not.toBeNull();
+
+    // Verify accessExpiresAt is ~120 seconds in future
+    const accessTtlActual = Math.round((session!.accessExpiresAt.getTime() - beforeLogin) / 1000);
+    expect(accessTtlActual).toBeGreaterThanOrEqual(118);
+    expect(accessTtlActual).toBeLessThanOrEqual(122);
+
+    // Verify refreshExpiresAt is ~600 seconds in future
+    const refreshTtlActual = Math.round((session!.refreshExpiresAt.getTime() - beforeLogin) / 1000);
+    expect(refreshTtlActual).toBeGreaterThanOrEqual(598);
+    expect(refreshTtlActual).toBeLessThanOrEqual(602);
+
+    // Verify custom lock threshold (locks after 2 failed attempts)
+    await customApp.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { identifier: 'config-user@example.com', password: 'WrongPassword' },
+    });
+    const lockAttempt = await customApp.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { identifier: 'config-user@example.com', password: 'WrongPassword' },
+    });
+    expect(lockAttempt.statusCode).toBe(401);
+
+    const lockedUser = await customUserRepo.findById(user.id);
+    expect(lockedUser?.failedLoginAttempts).toBe(2);
+    expect(lockedUser?.lockedUntil).not.toBeNull();
   });
 });

@@ -1,5 +1,25 @@
 import { z } from 'zod';
 import { HumanRoleSchema } from '../auth/roles';
+import { AccountStatusSchema } from '../auth/account-status';
+import { createApiSuccessSchema } from '../common/envelopes';
+
+/**
+ * Canonical governance user network representation.
+ * Excludes internal security/session state (passwordHash, authVersion, failedLoginAttempts, lockedUntil).
+ */
+export const GovernanceUserDtoSchema = z.object({
+  id: z.string().min(1),
+  version: z.number().int().nonnegative(),
+  email: z.string().email(),
+  phone: z.string().nullable(),
+  role: HumanRoleSchema,
+  accountStatus: AccountStatusSchema,
+});
+
+export type GovernanceUserDto = z.infer<typeof GovernanceUserDtoSchema>;
+
+export const GovernanceUserResponseSchema = createApiSuccessSchema(GovernanceUserDtoSchema);
+export type GovernanceUserResponse = z.infer<typeof GovernanceUserResponseSchema>;
 
 /**
  * GV-01: ProvisionUserRequest — User aggregate creation.

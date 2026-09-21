@@ -3,7 +3,12 @@ import { buildApp } from '../../apps/api/src/app';
 import { Argon2PasswordHasher } from '../../apps/api/src/infrastructure/security/argon2-password-hasher';
 import { CryptoTokenService } from '../../apps/api/src/infrastructure/security/crypto-token-service';
 import { InMemoryCredentialSetupDelivery } from '../../apps/api/src/infrastructure/security/in-memory-credential-setup-delivery';
-import { InMemoryUserRepository, InMemorySessionRepository, InMemoryAuditWriter } from './test-doubles';
+import {
+  InMemoryUserRepository,
+  InMemorySessionRepository,
+  InMemoryAuditWriter,
+  InMemoryIamUnitOfWork,
+} from './test-doubles';
 import { CANONICAL_ACCOUNT_STATUSES } from '@novyx/contracts';
 
 describe('Phase 13 Wave 3: IAM Governance Commands (GV-01 to GV-07) & Audit Trail', () => {
@@ -23,11 +28,13 @@ describe('Phase 13 Wave 3: IAM Governance Commands (GV-01 to GV-07) & Audit Trai
     tokenService = new CryptoTokenService();
     deliveryPort = new InMemoryCredentialSetupDelivery();
     const hasher = new Argon2PasswordHasher({ memoryCost: 4096, timeCost: 1, parallelism: 1 });
+    const unitOfWork = new InMemoryIamUnitOfWork(userRepo, sessionRepo, auditWriter);
 
     app = buildApp({
       userRepository: userRepo,
       sessionRepository: sessionRepo,
       auditWriter,
+      unitOfWork,
       passwordHasher: hasher,
       tokenService,
       deliveryPort,
@@ -410,5 +417,128 @@ describe('Phase 13 Wave 3: IAM Governance Commands (GV-01 to GV-07) & Audit Trai
     const auditStr = JSON.stringify(auditEvent);
     expect(auditStr).not.toContain(delivered.token);
     expect(auditStr).not.toContain(hash);
+  });
+
+  it('rejects path and body userId mismatch with 400 and canonical error envelope (W3-C04 / Section 17)', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/governance/users/path-user-id/role',
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: {
+        userId: 'different-body-user-id',
+        newRole: 'manager',
+        expectedVersion: 0,
+        reason: 'Promotion',
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = res.json();
+    expect(body.error).toBeDefined();
+    expect(body.error.code).toBe('VALIDATION_FAILED');
+    expect(body.error.message).toContain(
+      "':id' (path-user-id) does not match body parameter 'userId' (different-body-user-id)",
+    );
+    expect(body.error.requestId).toBeTypeOf('string');
+    expect(body.error.requestId.length).toBeGreaterThan(0);
+  });
+
+  it('proves ResetCredentialSetup fails closed with 503 when delivery adapter is absent (W3-C03 / Section 11, 12)', async () => {
+    // App configured WITHOUT deliveryPort (production default)
+    const prodApp = buildApp({
+      userRepository: userRepo,
+      sessionRepository: sessionRepo,
+      auditWriter,
+      unitOfWork: new InMemoryIamUnitOfWork(userRepo, sessionRepo, auditWriter),
+      tokenService,
+      // deliveryPort is deliberately undefined
+    });
+    await prodApp.ready();
+
+    const targetUser = await userRepo.create({
+      id: 'target-no-delivery',
+      version: 0,
+      email: 'nodelivery@example.com',
+      initialRole: 'staff',
+      role: 'staff',
+      accountStatus: 'ACTIVE',
+      authVersion: 1,
+    });
+
+    const res = await prodApp.inject({
+      method: 'POST',
+      url: `/v1/governance/users/${targetUser.id}/reset-credential`,
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: {
+        userId: targetUser.id,
+        expectedVersion: 0,
+      },
+    });
+
+    expect(res.statusCode).toBe(503);
+    const body = res.json();
+    expect(body.error).toBeDefined();
+    expect(body.error.code).toBe('INTERNAL');
+    expect(body.error.message).toContain('unavailable');
+    expect(body.error.requestId).toBeTypeOf('string');
+
+    // Verify user state is unchanged (version is still 0, failedLoginAttempts is 0)
+    const checkUser = await userRepo.findById(targetUser.id);
+    expect(checkUser?.version).toBe(0);
+    expect(sessionRepo.setupTokens.size).toBe(0);
+  });
+
+  it('proves injected SecurityConfig configures setup token TTL (W3-C02)', async () => {
+    const customTtlSeconds = 3600; // 1 hour instead of default 86400 (24h)
+    const customConfigApp = buildApp({
+      userRepository: userRepo,
+      sessionRepository: sessionRepo,
+      auditWriter,
+      unitOfWork: new InMemoryIamUnitOfWork(userRepo, sessionRepo, auditWriter),
+      tokenService,
+      deliveryPort,
+      securityConfig: {
+        accessTokenTtlSeconds: 600,
+        refreshTokenTtlSeconds: 1200,
+        failedLoginLockThreshold: 3,
+        lockDurationSeconds: 300,
+        setupTokenTtlSeconds: customTtlSeconds,
+        argon2: { memoryCost: 4096, timeCost: 1, parallelism: 1 },
+      },
+    });
+    await customConfigApp.ready();
+
+    const targetUser = await userRepo.create({
+      id: 'target-custom-ttl',
+      version: 0,
+      email: 'customttl@example.com',
+      initialRole: 'staff',
+      role: 'staff',
+      accountStatus: 'ACTIVE',
+      authVersion: 1,
+    });
+
+    const before = Date.now();
+    const res = await customConfigApp.inject({
+      method: 'POST',
+      url: `/v1/governance/users/${targetUser.id}/reset-credential`,
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: {
+        userId: targetUser.id,
+        expectedVersion: 0,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const deliveredToken = deliveryPort.delivered.find((d) => d.recipient.email === 'customttl@example.com');
+    expect(deliveredToken).toBeDefined();
+    const hash = tokenService.hashToken(deliveredToken!.token);
+    const setupToken = await sessionRepo.findSetupTokenByHash(hash);
+    expect(setupToken).not.toBeNull();
+
+    const expectedExpiryMin = before + (customTtlSeconds - 5) * 1000;
+    const expectedExpiryMax = Date.now() + (customTtlSeconds + 5) * 1000;
+    expect(setupToken!.expiresAt.getTime()).toBeGreaterThanOrEqual(expectedExpiryMin);
+    expect(setupToken!.expiresAt.getTime()).toBeLessThanOrEqual(expectedExpiryMax);
   });
 });

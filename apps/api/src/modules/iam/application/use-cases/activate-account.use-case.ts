@@ -1,6 +1,7 @@
 import type { ActivateAccountRequest } from '@novyx/contracts';
 import type { IUserRepository } from '../ports/user-repository.port';
-import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
+import type { IIamUnitOfWork } from '../ports/iam-unit-of-work.port';
+import { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import type { UserAccount } from '../../domain/entities/user';
 import type { ActorContext } from './provision-user.use-case';
 import { NotFoundError, ConflictError } from '../../../../core/errors';
@@ -8,6 +9,7 @@ import { NotFoundError, ConflictError } from '../../../../core/errors';
 export class ActivateAccountUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
+    private readonly unitOfWork: IIamUnitOfWork,
     private readonly auditService: AuditService,
   ) {}
 
@@ -52,33 +54,37 @@ export class ActivateAccountUseCase {
     }
 
     try {
-      const updatedUser = await this.userRepository.updateWithOcc(user.id, request.expectedVersion, {
-        accountStatus: 'ACTIVE',
-        authVersion: user.authVersion + 1,
-      });
+      return await this.unitOfWork.execute(async (tx) => {
+        const txAuditService = new AuditService(tx.auditWriter);
 
-      await this.auditService.record({
-        actorId: actor.id,
-        actorRole: actor.role,
-        actionType: 'GV-03:ActivateAccount',
-        resourceType: 'USER',
-        resourceId: user.id,
-        outcome: 'SUCCESS',
-        clientIp: actor.clientIp,
-        userAgent: actor.userAgent,
-        correlationId: actor.correlationId,
-        beforeState: {
-          accountStatus: user.accountStatus,
-          version: user.version,
-        },
-        afterState: {
-          accountStatus: updatedUser.accountStatus,
-          version: updatedUser.version,
-          reason: request.reason ?? null,
-        },
-      });
+        const updatedUser = await tx.userRepository.updateWithOcc(user.id, request.expectedVersion, {
+          accountStatus: 'ACTIVE',
+          authVersion: user.authVersion + 1,
+        });
 
-      return updatedUser;
+        await txAuditService.record({
+          actorId: actor.id,
+          actorRole: actor.role,
+          actionType: 'GV-03:ActivateAccount',
+          resourceType: 'USER',
+          resourceId: user.id,
+          outcome: 'SUCCESS',
+          clientIp: actor.clientIp,
+          userAgent: actor.userAgent,
+          correlationId: actor.correlationId,
+          beforeState: {
+            accountStatus: user.accountStatus,
+            version: user.version,
+          },
+          afterState: {
+            accountStatus: updatedUser.accountStatus,
+            version: updatedUser.version,
+            reason: request.reason ?? null,
+          },
+        });
+
+        return updatedUser;
+      });
     } catch (err) {
       await this.auditService.record({
         actorId: actor.id,
