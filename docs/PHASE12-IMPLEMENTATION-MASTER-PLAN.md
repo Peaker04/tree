@@ -1,7 +1,7 @@
 # Kế Hoạch Triển Khai Kỹ Thuật Tổng Thể (Phase 12 Implementation Master Plan)
 
 **Dự án:** NOVYX GreenOps
-**Giai đoạn:** Phase 12B — Owner Implementation Decision Review (Batch 1 Reconciled)
+**Giai đoạn:** Phase 12B — Owner Implementation Decision Review (Batch 2 Reconciled)
 **Trạng thái Kế hoạch:** ĐANG ĐỐI SOÁT QUYẾT ĐỊNH CHỦ QUẢN (OWNER IMPLEMENTATION DECISION REVIEW IN PROGRESS)
 **Ngày lập:** 21/09/2026
 **Commit Baseline (Phase 12A Frozen):** `9df1b290dd2853afcb9fdcaacb299d02c28c1f8a`
@@ -9,7 +9,7 @@
 > ⚠️ **NGUYÊN TẮC CỐT TỬ (CORE RULE):**
 > **PHASE 12 LÀ GIAI ĐOẠN LẬP KẾ HOẠCH & ĐỐI SOÁT QUYẾT ĐỊNH THUẦN TÚY (PLANNING & DECISION REVIEW ONLY).**
 > **TUYỆT ĐỐI KHÔNG TRIỂN KHAI MÃ NGUỒN CỦA KIẾN TRÚC MỤC TIÊU.**
-> Không tạo `apps/api`, không tạo `apps/admin-web`, không cài đặt thư viện (`zod`, `expo-sqlite`, `fastify`, `drizzle-orm`), không tạo file migration CSDL, không sửa đổi mã nguồn di động hay hợp đồng tại pha này.
+> Không tạo `apps/api`, không tạo `apps/admin-web`, không cài đặt thư viện (`zod`, `expo-sqlite`, `fastify`, `drizzle-orm`, argon2, auth), không tạo file migration CSDL, không sửa đổi mã nguồn di động hay hợp đồng tại pha này.
 
 ---
 
@@ -92,18 +92,18 @@ Toàn bộ 15 khoảng cách kỹ thuật đã được kiểm chứng thực t�
 ## 6. Sổ Bộ Quyết Định Cấp Triển Khai (Implementation Decision Register Summary)
 
 Chi tiết đầy đủ 11 quyết định được quản lý tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md) và biên bản phê duyệt tại [`docs/PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md`](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md).
-**Hiện tại: 3 quyết định đã được Chủ quản phê duyệt (`OWNER_APPROVED`), 8 quyết định tiếp tục giữ trạng thái `OPEN`:**
+**Hiện tại: 6 quyết định đã được Chủ quản phê duyệt (`OWNER_APPROVED`), 5 quyết định tiếp tục giữ trạng thái `OPEN`:**
 - **IDB-01 (CSDL Quan hệ):** **PostgreSQL** (Baseline khởi đầu: 18.x; Môi trường sản xuất: Supported Stable Major + Minor) — `OWNER_APPROVED`.
 - **IDB-02 (Web Framework):** **Fastify 5.x** (Node.js runtime, Zod/@novyx/contracts là Contract Authority) — `OWNER_APPROVED`.
 - **IDB-03 (ORM / Query Builder):** **Drizzle ORM + drizzle-kit** (Kèm Raw SQL escape hatch cho DB privileges/indexes) — `OWNER_APPROVED`.
-- **IDB-04 (Định dạng Token):** Khuyến nghị **Signed JWT** (thời gian cơ sở ứng viên: 15m) + RTR (thời gian cơ sở ứng viên: 30d) HOẶC **Opaque Token** (`OPEN` — Chặn Wave 3).
-- **IDB-05 (Băm Mật khẩu):** Khuyến nghị **Argon2id** (yêu cầu benchmark trên phần cứng máy chủ đích, `OPEN` — Chặn Wave 3).
+- **IDB-04 (Cấu trúc Token Xác thực):** **Opaque Bearer Access Credential + Rotating Opaque Refresh Credential** (Lưu bản băm máy chủ, CSPRNG, kiểm tra tính tươi tài khoản, phát hiện tái sử dụng, TTL không đóng băng cố định) — `OWNER_APPROVED`.
+- **IDB-05 (Băm Mật khẩu):** **Argon2id** (Muối ngẫu nhiên duy nhất, benchmark tham số sản xuất trên phần cứng đích, hỗ trợ rehash khi đổi chính sách) — `OWNER_APPROVED`.
 - **IDB-06 (Nền tảng Admin Web):** Khuyến nghị **Vite + React 19 SPA** (`OPEN` — Chặn Wave 6).
 - **IDB-07 (Lưu trữ Bằng chứng Ảnh):** Khuyến nghị **S3-Compatible Port (MinIO cho dev, S3/R2 cho prod)** (`OPEN` — Chặn Wave 4).
 - **IDB-08 (Chiến lược Đóng gói & Hosting):** Khuyến nghị **Docker Compose trên Linux VM cho MVP** (`OPEN` — Hoãn Wave 8).
 - **IDB-09 (Thời gian Lưu Idempotency):** Khuyến nghị **Biến môi trường** (giá trị cơ sở ứng viên: 72h, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`, `OPEN`).
 - **IDB-10 (Dọn Dẹp Ảnh Mobile GC):** Khuyến nghị **Giữ ảnh sau COMPLETED ACK** (giá trị cơ sở ứng viên: 14 ngày, ngưỡng dọn dẹp cơ sở: 300 MB, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`, `OPEN`).
-- **IDB-11 (Quản Lý Phiên Máy Chủ):** Khuyến nghị **Bảng `sessions` trong CSDL quan hệ cho MVP** (phân loại: `NEEDS_BENCHMARK` tải thực tế, `OPEN` — Chặn Wave 3).
+- **IDB-11 (Quản Lý Phiên Máy Chủ):** **PostgreSQL-backed Session Repository cho MVP** (Lưu phiên trong CSDL qua Clean Architecture Port, không đòi hỏi Redis, thu hồi nguyên tử) — `OWNER_APPROVED`.
 
 ---
 
@@ -212,14 +212,33 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 
 ## 12. Wave 3: IAM, Session Freshness, Auth Gate & Audit Trail (Wave 3)
 
-- **Mục tiêu:** Hiện thực hóa module IAM, bảo vệ an ninh tầng máy chủ và lưu trữ nhật ký kiểm toán trung tâm.
-- **Phạm vi & Tệp tin:**
-  - `apps/api/src/modules/iam/`: Đăng nhập, cấp credential xác thực theo giải pháp được Chủ quản phê duyệt (IDB-04) kết hợp ngữ nghĩa thu hồi phiên xoay vòng, hàm băm mật khẩu được chọn (IDB-05), thu hồi phiên (`authVersion`). Quản lý phiên theo giải pháp được phê duyệt (IDB-11).
-  - `apps/api/src/infrastructure/security/`: Middleware Tier 2 Security Gate kiểm tra token, kiểm tra tươi tài khoản `AccountStatus == ACTIVE` tức thì theo `WF-12`.
-  - `apps/api/src/modules/audit/`: Dịch vụ ghi nhận `AuditEvent` append-only tức thời trong giao dịch.
-  - Các endpoint quản trị tài khoản MVP: `ProvisionUser`, `AssignRole`, `SuspendAccount`, `ActivateAccount`, `DisableAccount`, `UnlockAccount`, `ResetCredentialSetup`.
-- **Ràng buộc:** Khóa tài khoản (`SUSPENDED`) phải từ chối truy cập tức thì trên 100% request có bảo vệ; thay đổi role phải vô hiệu hóa phiên cũ.
-- **Tiêu chuẩn Nghiệm thu (Exit Gate):** Kiểm thử tự động chứng minh tài khoản bị suspend bị chặn ngay lập tức; audit log ghi nhận đầy đủ mọi biến cố an ninh.
+- **Mục tiêu:** Hiện thực hóa module IAM, hạ tầng quản lý phiên trên PostgreSQL (IDB-11 OWNER_APPROVED), cơ chế xác thực Opaque Credentials (IDB-04 OWNER_APPROVED), băm mật khẩu Argon2id (IDB-05 OWNER_APPROVED), middleware bảo vệ an ninh tầng máy chủ (Tier 2 Gate) và lưu trữ nhật ký kiểm toán trung tâm append-only.
+- **Phạm vi & Nhiệm Vụ Triển Khai:**
+  - `apps/api/src/modules/iam/`:
+    - Quản lý người dùng và tài khoản bền vững (User/Account persistence).
+    - Vòng đời băm mật khẩu Argon2id: muối ngẫu nhiên duy nhất cho từng mật khẩu, tham số chi phí sản xuất đo đạc thực nghiệm trên phần cứng máy chủ đích (`NEEDS_BENCHMARK`), hỗ trợ tự động băm lại khi đăng nhập thành công (`rehash-on-successful-login`).
+    - Quy trình xác thực đăng nhập và khởi tạo phiên làm việc.
+    - Cấp phát thông tin xác thực: sinh Opaque Bearer Access Credential và Rotating Opaque Refresh Credential bằng CSPRNG với đủ entropy mã hóa; máy chủ **TUYỆT ĐỐI KHÔNG lưu bản rõ (plaintext)** của access token mà chỉ lưu bản băm an toàn phục vụ tra cứu (`hash(token)`).
+    - Cơ chế xoay vòng Refresh Credential khi làm mới phiên và cơ chế phát hiện tái sử dụng (reuse detection) để vô hiệu hóa phiên / họ token (token family) bị ảnh hưởng với bán kính ảnh hưởng xác định.
+    - Cơ chế đăng xuất và thu hồi phiên giao dịch (transactional revocation).
+  - `apps/api/src/infrastructure/security/`:
+    - Middleware Tier 2 Security Gate: phân giải token hash, tra cứu phiên, kiểm tra tính tươi tài khoản tức thì (`AccountStatus == ACTIVE`) và kiểm tra `authVersion` / `sessionVersion` theo `WF-12`.
+    - Phân quyền mức thô theo endpoint (coarse route authorization: identity, role, active status, session freshness).
+  - `apps/api/src/infrastructure/persistence/`:
+    - Cổng trừu tượng `SessionRepository Port` và adapter `PostgreSQLSessionRepository` triển khai qua Drizzle ORM. Không đòi hỏi Redis cho MVP.
+  - `apps/api/src/modules/audit/`:
+    - Dịch vụ ghi nhận `AuditEvent` append-only tức thời trong giao dịch cho các sự kiện quản trị định danh: `ProvisionUser`, `AssignRole`, `SuspendAccount`, `ActivateAccount`, `DisableAccount`, `UnlockAccount`, `ResetCredentialSetup`.
+- **Luồng Xử Lý Thông Tin Xác Thực (Auth Credential Flow):**
+  - **ĐĂNG NHẬP (LOGIN):** Xác minh mật khẩu Argon2id $\rightarrow$ Xác minh `AccountStatus == ACTIVE` $\rightarrow$ Khởi tạo phiên CSDL $\rightarrow$ Cấp Opaque Access Credential $\rightarrow$ Cấp Rotating Opaque Refresh Credential.
+  - **REQUEST CÓ BẢO VỆ (PROTECTED REQUEST):** Phân giải Opaque Access Credential (qua token hash) $\rightarrow$ Tải trạng thái phiên / IAM hiện hành $\rightarrow$ Xác minh `AccountStatus == ACTIVE` $\rightarrow$ Xác minh `authVersion` / `sessionVersion` khớp $\rightarrow$ Phân quyền thô ở Tier 2 Gate $\rightarrow$ Kiểm tra điều kiện nghiệp vụ chi tiết tại Application/Domain.
+  - **LÀM MỚI PHIÊN (REFRESH):** Xác thực Refresh Credential hiện hành $\rightarrow$ Xác minh tính tươi tài khoản & phiên $\rightarrow$ Xoay vòng credential (vô hiệu hóa refresh credential cũ, cấp credential thay thế mới).
+- **Ràng Buộc Kiến Trúc & Ranh Giới:**
+  - **Bảo toàn Clean Architecture:** Logic IAM và Use Cases chỉ phụ thuộc `SessionRepository Port`; `PostgreSQLSessionRepository` là adapter tại tầng Infrastructure. Tuyệt đối CẤM tầng Domain/Application phụ thuộc trực tiếp vào Drizzle hay PostgreSQL (`Domain -> Drizzle` và `Domain -> PostgreSQL` bị CẤM).
+  - **Ranh giới Phân quyền Nghiệp vụ:** Middleware Fastify chỉ thực hiện xác thực định danh và phân quyền thô (coarse route authorization). Thẩm quyền nghiệp vụ chi tiết (Fine-grained business eligibility: Actor Role $\wedge$ Resource Scope $\wedge$ Domain State $\wedge$ Business Preconditions) nằm trọn vẹn trong tầng Application/Domain; tuyệt đối không chuyển toàn bộ thẩm quyền nghiệp vụ vào middleware Fastify.
+  - **Bảo toàn Bất biến Nghiệp vụ:** Việc khóa tài khoản hoặc thay đổi role trong IAM **tuyệt đối KHÔNG trực tiếp làm đột biến `TaskStatus`** của các tác vụ hiện trường.
+  - **Không Tạo Lệnh Nghiệp Vụ Tự Tạo:** Tuyệt đối không tạo lệnh nghiệp vụ mang tên `RevokeSession` (thu hồi phiên thuần túy là hệ quả kỹ thuật của đăng xuất hoặc đổi quyền).
+  - **Không Khóa Cứng Hằng Số / Công Nghệ Chưa Duyệt:** Mốc TTL (15 phút, 30 ngày) và tham số Argon2id là chính sách cấu hình / đo đạc, không phải hằng số kiến trúc. Không khóa cứng thư viện `@node-rs/argon2` làm bất biến bắt buộc của Chủ quản. Không dùng JWT, JWKS trong luồng chính.
+- **Tiêu chuẩn Nghiệm thu (Exit Gate):** Kiểm thử tự động chứng minh tài khoản bị suspend/disable bị chặn ngay lập tức ở request tiếp theo; refresh credential cũ bị từ chối và kích hoạt cảnh báo tái sử dụng; mật khẩu xác thực đúng qua Argon2id; hỗ trợ rehash khi cấu hình nâng cao; nhật ký kiểm toán ghi nhận đầy đủ mọi biến cố an ninh IAM.
 
 ---
 
@@ -391,27 +410,22 @@ Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, c�
 | **IDB-02** | Web Framework Máy chủ | **Fastify 5.x** (Runtime Infrastructure, Zod/@novyx/contracts là Contract Authority) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#22-idb-02--web-framework-máy-chủ-fastify-5x-owner_approved) |
 | **IDB-03** | ORM / Truy cập DB | **Drizzle ORM + drizzle-kit** (Kèm Raw SQL escape hatch cho DB privileges/indexes) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#23-idb-03--công-cụ-truy-cập-dữ-liệu--orm-drizzle-orm--drizzle-kit-owner_approved) |
 
-### 25.2. ĐỢT DUYỆT TIẾP THEO — ĐỢT 2: AN NINH & IAM WAVE 3 (NEXT OWNER BATCH — BATCH 2)
+### 25.2. ĐÃ PHÊ DUYỆT — ĐỢT 2: AN NINH & IAM WAVE 3 (DECIDED — BATCH 2)
 
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
-| :---: | :--- | :--- | :---: | :---: |
-| **IDB-04** | Cấu trúc Token Xác thực | **Signed JWT HOẶC Opaque Token** | `MEDIUM` | **Chặn Wave 3** |
-| **IDB-05** | Băm Mật khẩu | **Argon2id (Cần Benchmark)** | `HIGH` | **Chặn Wave 3** |
-| **IDB-11** | Quản lý Phiên Máy chủ | **Bảng `sessions` DB (Cần Benchmark)** | `HIGH` | **Chặn Wave 3** |
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Chấp Thuận | Mức Độ Tin Cậy | Trạng Thái | Biên Bản Phê Duyệt |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| **IDB-04** | Cấu trúc Token Xác thực | **Opaque Bearer Access Credential + Rotating Opaque Refresh Credential** | `HIGH` | `OWNER_APPROVED` | [Batch 2 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#41-idb-04--cấu-trúc--định-dạng-thông-tin-xác-thực-opaque-tokens-owner_approved) |
+| **IDB-05** | Băm Mật khẩu | **Argon2id** (Benchmark trên phần cứng đích, hỗ trợ rehash) | `HIGH` | `OWNER_APPROVED` | [Batch 2 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#42-idb-05--thuật-toán-băm-mật-khẩu-argon2id-owner_approved) |
+| **IDB-11** | Quản lý Phiên Máy chủ | **PostgreSQL-backed Session Repository cho MVP** (Clean Architecture port) | `HIGH` | `OWNER_APPROVED` | [Batch 2 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#43-idb-11--hạ-tầng-quản-lý-phiên-postgresql-session-repository-cho-mvp-owner_approved) |
 
-### 25.3. Quyết Định Bắt Buộc Cần Chốt Trước Wave 4 (DECIDE BEFORE WAVE 4)
+### 25.3. ĐỢT DUYỆT TIẾP THEO — ĐỢT 3: TÁC NGHIỆP & WEB QUẢN TRỊ (NEXT OWNER BATCH — BATCH 3 — WAVE 4 / WAVE 6)
 
 | Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
 | :---: | :--- | :--- | :---: | :---: |
 | **IDB-07** | Lưu trữ File Bằng chứng | **S3-Compatible Port (MinIO/S3)** | `HIGH` | **Chặn Wave 4** |
-
-### 25.4. Quyết Định Bắt Buộc Cần Chốt Trước Wave 6 (DECIDE BEFORE WAVE 6)
-
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
-| :---: | :--- | :--- | :---: | :---: |
 | **IDB-06** | Web Quản trị Admin | **Vite + React 19 SPA** | `HIGH` | **Chặn Wave 6** |
 
-### 25.5. Quyết Định An Toàn Để Hoãn (SAFE TO DEFER — Triển Khai / Đo Đạc)
+### 25.4. AN TOÀN ĐỂ HOÃN — TRIỂN KHAI / ĐO ĐẠC THỰC ĐỊA (SAFE TO DEFER)
 
 | Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Giai Đoạn Đóng Băng Phù Hợp |
 | :---: | :--- | :--- | :---: | :---: |
@@ -454,7 +468,7 @@ Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái
 - [x] **P12-G01:** Mọi tác vụ triển khai đều truy vết trực tiếp về yêu cầu chuẩn tắc (`CAP-01..05`, `CAP-ADM-01..09`, `OP-22`, `WF-*`, `DR-*`, `AC-*`, `QAS-*`)/ADR/khoảng cách đã xác minh; không sử dụng định danh tự tạo (`CAP-OPS-*`).
 - [x] **P12-G02:** Không tái thiết kế hay thay đổi bất kỳ ngữ nghĩa nghiệp vụ đóng băng nào; bảo toàn 4 kết luận duyệt chuẩn tắc (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`).
 - [x] **P12-G03:** Không tái thiết kế hay sửa đổi bất kỳ quyết định kiến trúc đã chấp thuận nào.
-- [x] **P12-G04:** 3 quyết định nền tảng Wave 2 (IDB-01, IDB-02, IDB-03) đã được Chủ quản phê duyệt chính thức (OWNER_APPROVED); toàn bộ 8 quyết định còn lại (IDB-04..11) tiếp tục giữ trạng thái OPEN có điều kiện, không khóa cứng công nghệ khi chưa có phê duyệt tương ứng.
+- [x] **P12-G04:** 6 quyết định nền tảng Wave 2 và Wave 3 (IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-11) đã được Chủ quản phê duyệt chính thức (OWNER_APPROVED); toàn bộ 5 quyết định còn lại (IDB-06..10) tiếp tục giữ trạng thái OPEN có điều kiện, không khóa cứng công nghệ khi chưa có phê duyệt tương ứng.
 - [x] **P12-G05:** Mô hình máy chủ là Modular Monolith duy nhất, không giả định tách microservices.
 - [x] **P12-G06:** Mô hình chuyển đổi là Strangler Pattern từng bước, cấm đập đi xây lại toàn bộ (No Big-Bang).
 - [x] **P12-G07:** Không đánh đồng 48 lệnh nghiệp vụ thành 48 endpoints công khai (tuân thủ ADR 0010).
@@ -466,16 +480,20 @@ Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái
 
 **KẾT LUẬN CHÍNH THỨC:**
 ```text
-PHASE 12B OWNER DECISION BATCH 1 RECORDED
-— IDB-01 POSTGRESQL OWNER_APPROVED
-— IDB-02 FASTIFY 5 OWNER_APPROVED
-— IDB-03 DRIZZLE OWNER_APPROVED
-— 3 OWNER_APPROVED / 8 OPEN / 0 REJECTED
-— WAVE 2 TECHNOLOGY FOUNDATION RESOLVED
-— TRACEABILITY ERRATA RECONCILED
+PHASE 12B OWNER DECISION BATCH 2 RECORDED
+— IDB-04 OPAQUE CREDENTIALS OWNER_APPROVED
+— IDB-05 ARGON2ID OWNER_APPROVED
+— IDB-11 POSTGRESQL SESSION STORE OWNER_APPROVED
+— 6 OWNER_APPROVED / 5 OPEN / 0 REJECTED
+— WAVE 3 IAM TECHNOLOGY FOUNDATION RESOLVED
+— AUTHORITATIVE FRESHNESS MODEL PRESERVED
+— REFRESH ROTATION / REUSE DETECTION BOUNDED
+— PASSWORD HASHING BENCHMARK BOUNDARY PRESERVED
+— NO JWT/JWKS LOCK-IN
+— NO REDIS REQUIREMENT
 — NO BUSINESS REDESIGN
 — NO ARCHITECTURE REDESIGN
 — NO SOURCE IMPLEMENTATION
 — PHASE 12B OWNER REVIEW STILL IN PROGRESS
-— READY FOR OWNER REVIEW OF IDB-04 / IDB-05 / IDB-11
+— READY FOR OWNER REVIEW OF IDB-07 / IDB-06
 ```

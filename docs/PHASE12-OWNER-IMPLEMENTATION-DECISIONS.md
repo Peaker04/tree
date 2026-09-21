@@ -62,29 +62,107 @@ Chủ quản đã xem xét và đưa ra quyết định ràng buộc cấp tri�
 
 ---
 
-## 3. Tổng Hợp Trạng Thái Toàn Bộ Quyết Định Triển Khai (Phase 12B Status Summary)
+---
+
+## 3. Bảng Quyết Định Đợt 2 — Nền Tảng IAM & An Ninh Wave 3 (Decision Batch 2 — IAM & Security Foundation)
+
+Chủ quản đã xem xét và đưa ra quyết định ràng buộc cấp triển khai cho 3 quyết định kỹ thuật cốt lõi chặn đợt Wave 3 (`apps/api` IAM, Auth Gate & Session Freshness):
+
+| ID | Quyết Định Chủ Quản (Owner Decision) | Phương Án Chấp Thuận (Accepted Direction) | Trạng Thái (Status) |
+| :---: | :---: | :--- | :---: |
+| **IDB-04** | **APPROVE** | **Opaque Bearer Access Credential + Rotating Opaque Refresh Credential**; Cả Access Credential và Refresh Credential đều là chuỗi ngẫu nhiên mờ đục (Opaque tokens) sinh bởi CSPRNG. Máy chủ tuyệt đối không lưu trữ bản rõ (plaintext) của access token; chỉ lưu bản băm an toàn phục vụ tra cứu. Mọi request có bảo vệ bắt buộc kiểm tra tính tươi tài khoản (`AccountStatus == ACTIVE`, `authVersion`). Xoay vòng refresh token khi sử dụng và phát hiện tái sử dụng (reuse detection) để vô hiệu hóa phiên/token family bị ảnh hưởng. Yêu cầu TLS cho toàn bộ luồng truyền tải. | `OWNER_APPROVED` |
+| **IDB-05** | **APPROVE** | **Argon2id**; Thuật toán băm mật khẩu chính thức là Argon2id với thư viện được bảo trì trên Node.js runtime, sử dụng muối ngẫu nhiên duy nhất cho từng mật khẩu. Tham số chi phí sản xuất (production work factors) bắt buộc phải được đo đạc (benchmark) trên phần cứng máy chủ đích, không bị đóng băng vĩnh viễn thành hằng số kiến trúc. Hỗ trợ cơ chế băm lại khi đăng nhập thành công (`rehash-on-successful-login`). | `OWNER_APPROVED` |
+| **IDB-11** | **APPROVE** | **PostgreSQL-backed Session Repository cho MVP**; Trạng thái phiên và cờ thu hồi được lưu trữ bền vững trong CSDL PostgreSQL qua cổng trừu tượng `SessionRepository Port` theo Clean Architecture. Không đòi hỏi Redis cho MVP; việc chuyển đổi hoặc bổ sung cache chỉ được xem xét khi có bằng chứng đo đạc thực nghiệm. Hỗ trợ thu hồi phiên nguyên tử trong giao dịch (transactional revocation). | `OWNER_APPROVED` |
+
+---
+
+## 4. Chi Tiết Phạm Vi Chấp Thuận Đợt 2 (Accepted Scopes — Batch 2)
+
+### 4.1. IDB-04 — Cấu Trúc & Định Dạng Thông Tin Xác Thực: Opaque Tokens (`OWNER_APPROVED`)
+
+- **Định dạng Thông tin Xác thực (Accepted Credential Representation):**
+  - Access Credential là **Opaque Bearer Access Credential**.
+  - Refresh Credential là **Rotating Opaque Refresh Credential**.
+  - Toàn bộ thông tin xác thực được sinh bằng bộ sinh số ngẫu nhiên an toàn mật mã học (Cryptographically Secure Pseudo-Random Number Generator - CSPRNG) với độ dài entropy bảo mật cao.
+- **Ranh giới Lưu trữ Phía Máy Chủ (Server-Side Storage Boundary):**
+  - Máy chủ **TUYỆT ĐỐI KHÔNG lưu trữ bản rõ (plaintext)** của bearer access credential.
+  - Phía máy chủ chỉ lưu trữ bản băm an toàn hoặc định danh dẫn xuất an toàn (`hash(token)` / secure token lookup hash) phục vụ cho việc tra cứu phiên và xác thực thu hồi.
+  - Hàm băm dùng cho chuỗi token ngẫu nhiên là chi tiết triển khai tầng Infrastructure của Wave 3, bảo đảm **không đồng nhất token ngẫu nhiên với mật khẩu người dùng** (tuyệt đối không áp đặt chi phí tính toán của Argon2id lên việc băm chuỗi token ngẫu nhiên).
+- **Thời Gian Hiệu Lực Không Bị Đóng Băng Cố Định (Unfrozen TTL Baseline):**
+  - Access Credential có thời gian sống ngắn (short-lived); Refresh Credential có thời gian sống dài hơn.
+  - Các mốc thời gian (như Access TTL 15 phút, Refresh TTL 30 ngày) chỉ đóng vai trò mốc cơ sở ứng viên (`CANDIDATE_BASELINE`) hoặc cấu hình triển khai (`DEPLOYMENT_CONFIGURATION`), **tuyệt đối không bị đóng băng thành hằng số kiến trúc bất biến** tại quyết định này; thời hạn chính thức sẽ được căn chỉnh thông qua thẩm định an ninh và kiểm thử runtime.
+- **Thẩm Quyền Tối Cao Của Máy Chủ & Kiểm Tra Tính Tươi (Server Authority & Freshness):**
+  - Quyết định sử dụng Opaque token hoàn toàn nhất quán với ADR 0006: Mọi request có bảo vệ (Read, Mutate, Decide, Administer) đều bắt buộc phải xác lập phiên hợp lệ và kiểm tra tính tươi tài khoản trước khi xử lý nghiệp vụ:
+    - `AccountStatus != ACTIVE` $\rightarrow$ **TỪ CHỐI (DENY)** tức thì.
+    - `authVersion` hoặc `sessionVersion` bị lệch/cũ $\rightarrow$ **TỪ CHỐI (DENY)** tức thì.
+    - Thay đổi vai trò (role change) có hiệu lực lập tức vô hiệu hóa các phiên mang thẩm quyền cũ.
+- **Xoay Vòng Refresh Token & Phát Hiện Tái Sử Dụng (Rotation & Reuse Detection):**
+  - Mỗi lần làm mới phiên thành công (successful refresh), credential làm mới cũ sẽ bị vô hiệu hóa ngay lập tức và một cặp credential thay thế mới được cấp phát.
+  - Máy chủ duy trì đủ metadata để phát hiện hành vi tái sử dụng (replay / reuse) của refresh credential đã xoay vòng.
+  - Khi phát hiện hành vi tái sử dụng, hệ thống lập tức vô hiệu hóa phiên làm việc hoặc họ token (token family) bị ảnh hưởng theo chính sách IAM (phân định rõ bán kính ảnh hưởng - blast radius, không tự ý tuyên bố thu hồi toàn bộ phiên toàn cầu nếu không có yêu cầu an ninh riêng).
+- **An Ninh Kênh Truyền:** Yêu cầu bắt buộc giao thức mã hóa TLS trên toàn bộ các kênh truyền thông tin xác thực.
+- **Loại Bỏ Hoàn Toàn Ngôn Ngữ Khóa Công Nghệ Kế Hoạch:** Kế hoạch triển khai chính thức loại bỏ hoàn toàn các phương án JWT, JWS, JWE, JWKS, RS256, ES256, HS256 khỏi định hướng chấp thuận.
+
+### 4.2. IDB-05 — Thuật Toán Băm Mật Khẩu: Argon2id (`OWNER_APPROVED`)
+
+- **Thuật toán Băm Mật khẩu:** Argon2id là thuật toán băm mật khẩu chính thức của hệ thống.
+- **Thư viện Triển khai:** Sử dụng một thư viện triển khai được duy trì bảo trì và tối ưu cho môi trường Node.js runtime. Việc chọn thư viện cụ thể (như `@node-rs/argon2` hoặc tương đương) là chi tiết triển khai thuộc phạm vi Wave 3, không bị khóa cứng thành bất biến của Chủ quản.
+- **Muối Ngẫu Nhiên (Unique Salt):** Mỗi mật khẩu bắt buộc phải sử dụng một muối ngẫu nhiên duy nhất với độ dài bảo mật tiêu chuẩn.
+- **Tham Số Chi Phí Bắt Buộc Đo Đạc Thực Nghiệm (Benchmarked Production Work Factors):**
+  - Tham số chi phí cho môi trường sản xuất bắt buộc phải được đo đạc (benchmark) trên môi trường phần cứng máy chủ đích (`NEEDS_BENCHMARK`).
+  - Các tham số sản xuất cụ thể là chính sách cấu hình an ninh (`SECURITY_CONFIGURATION`), **không bị đóng băng vĩnh viễn thành hằng số kiến trúc bất biến**.
+  - Bảo lưu phân biệt chuẩn xác giữa hai tài liệu tham chiếu gốc:
+    - *OWASP Password Storage Cheat Sheet (Mức tối thiểu thực tế):* $m = 19\text{ MiB}$, $t = 2$, $p = 1$.
+    - *RFC 9106 (Khuyến nghị thứ hai cho môi trường giới hạn bộ nhớ):* $m = 64\text{ MiB}$, $t = 3$, $p = 4$.
+    - Tuyệt đối không tự ý gộp lẫn tham số thành $m = 64\text{ MiB}, t = 3, p = 1$.
+- **Chính Sách Tự Động Băm Lại (Rehash-on-Successful-Login):**
+  - Hỗ trợ cơ chế kiểm tra tham số băm của mật khẩu đã lưu khi người dùng đăng nhập thành công.
+  - Nếu tham số lưu trữ yếu hơn chính sách cấu hình hiện hành, hệ thống thực hiện băm lại mật khẩu với chính sách mới và cập nhật bản băm an toàn vào CSDL ngay trong luồng đăng nhập (chỉ thực hiện khi có mật khẩu bản rõ hợp lệ trong phiên đăng nhập).
+
+### 4.3. IDB-11 — Hạ Tầng Quản Lý Phiên: PostgreSQL Session Repository Cho MVP (`OWNER_APPROVED`)
+
+- **Lưu Trữ Phiên Bền Vững Trong CSDL Quan Hệ:** Trạng thái phiên và cờ thu hồi tức thời được lưu trữ trực tiếp trong CSDL PostgreSQL cho giai đoạn MVP, tận dụng cơ chế giao dịch ACID và chỉ mục B-tree.
+- **Không Đòi Hỏi Redis Trong MVP:** Redis không phải là yêu cầu bắt buộc của MVP; việc đưa cache in-memory vào hệ thống chỉ được xem xét khi có số liệu đo đạc tải thực tế chứng minh sự cần thiết.
+- **Tuân Thủ Ranh Giới Clean Architecture:**
+  - Logic nghiệp vụ IAM và tầng ứng dụng (Application Use Cases) chỉ giao tiếp với cổng trừu tượng `SessionRepository Port`.
+  - Tầng hạ tầng (Infrastructure) triển khai `PostgreSQLSessionRepository` adapter thông qua Drizzle ORM.
+  - Tuyệt đối cấm tầng Domain/Application phụ thuộc trực tiếp vào Drizzle hay PostgreSQL (`Domain -> Drizzle` và `Domain -> PostgreSQL` bị CẤM).
+- **Mô Hình Dữ Liệu Khái Niệm (Conceptual Session State):**
+  - Dữ liệu phiên ở mức khái niệm có thể bao gồm: `sessionId`, `tokenFamilyId`, `userId`, dữ liệu tra cứu access token băm, refresh token băm, `authVersion`/`sessionVersion` tại thời điểm cấp, `expiresAt`, `revokedAt`, metadata xoay vòng/thay thế, `createdAt`, và `lastUsedAt` khi có lý do kỹ thuật.
+  - Tên cột, kiểu dữ liệu SQL, chỉ mục và ràng buộc khóa ngoại cụ thể không bị đóng băng tại quyết định này, mà thuộc phạm vi thiết kế chi tiết của Wave 3.
+- **Thu Hồi Nguyên Tử Trong Giao Dịch (Transactional Revocation):**
+  - Các thao tác thay đổi trạng thái tài khoản (`SuspendAccount`, `DisableAccount`, `AssignRole`) cập nhật trạng thái định danh và vô hiệu hóa các phiên/token liên quan trong cùng một database transaction.
+  - **Bảo toàn tính bất biến nghiệp vụ:** Việc thay đổi trạng thái tài khoản hoặc vai trò trong IAM **tuyệt đối KHÔNG trực tiếp làm đột biến `TaskStatus`** của các tác vụ hiện trường.
+  - **Không phát sinh lệnh nghiệp vụ tự tạo:** Tuyệt đối không tạo ra lệnh nghiệp vụ con người mang tên `RevokeSession`; việc vô hiệu hóa phiên làm việc thuần túy là hệ quả kỹ thuật của việc đăng xuất hoặc quản trị tài khoản.
+
+---
+
+## 5. Tổng Hợp Trạng Thái Toàn Bộ Quyết Định Triển Khai (Phase 12B Status Summary)
 
 | Trạng Thái | Số Lượng | Danh Sách Mã Quyết Định | Ghi Chú |
 | :--- | :---: | :--- | :--- |
-| **`OWNER_APPROVED`** | **3** | **IDB-01, IDB-02, IDB-03** | Đã được Chủ quản phê duyệt chính thức tại Đợt 1 (Wave 2 Foundation). |
-| **`OPEN`** | **8** | **IDB-04, IDB-05, IDB-06, IDB-07, IDB-08, IDB-09, IDB-10, IDB-11** | Tiếp tục giữ trạng thái mở, chờ xem xét theo từng đợt tương ứng. |
+| **`OWNER_APPROVED`** | **6** | **IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-11** | Đã được Chủ quản phê duyệt chính thức tại Đợt 1 (Wave 2) và Đợt 2 (Wave 3 IAM/Security). |
+| **`OPEN`** | **5** | **IDB-06, IDB-07, IDB-08, IDB-09, IDB-10** | Tiếp tục giữ trạng thái mở, chờ xem xét theo từng đợt tương ứng. |
 | **`REJECTED`** | **0** | *(Không có)* | |
 
 ---
 
-## 4. Tuyên Bố Giới Hạn Thẩm Quyền Triển Khai (Execution Boundary Statement)
+## 6. Tuyên Bố Giới Hạn Thẩm Quyền Triển Khai (Execution Boundary Statement)
 
 > [!IMPORTANT]
 > **Tuyên bố Ranh giới Tuyệt đối:**
-> **Không có bất kỳ mã nguồn ứng dụng nào (`apps/**`), gói dùng chung (`packages/**`), kịch bản (`scripts/**`), hoặc phụ thuộc runtime (`package.json`) nào được phép khởi tạo, cài đặt hay thay đổi trong phạm vi của đợt phê duyệt này.**
-> Đợt phê duyệt này chỉ ghi nhận quyết định cấp kiến trúc triển khai để cập nhật kế hoạch tổng thể và ma trận truy vết.
-> Các đợt Wave 0, Wave 1, Wave 2 **CHƯA ĐƯỢC PHÉP THỰC THI** cho đến khi có chỉ thị thực thi chính thức.
+> **Không có bất kỳ mã nguồn ứng dụng nào (`apps/**`), gói dùng chung (`packages/**`), kịch bản (`scripts/**`), hoặc phụ thuộc runtime (`package.json`) nào được phép khởi tạo, cài đặt hay thay đổi trong phạm vi của đợt phê duyệt Đợt 1 và Đợt 2 này.**
+> Quyết định này chỉ ghi nhận các lựa chọn công nghệ cấp kiến trúc triển khai để cập nhật kế hoạch tổng thể và ma trận truy vết.
+> Toàn bộ các đợt thực thi mã nguồn (Wave 0, Wave 1, Wave 2, Wave 3) **CHƯA ĐƯỢC PHÉP THỰC THI** cho đến khi có chỉ thị chính thức.
 
 ---
 
-## 5. Kế Hoạch Trình Duyệt Đợt Tiếp Theo (Next Review Batch)
+## 7. Kế Hoạch Trình Duyệt Đợt Tiếp Theo (Next Review Batch)
 
-- **Đợt 2 (Batch 2 — Quyết định Chặn Wave 3 IAM & An Ninh):**
-  - **IDB-04:** Định dạng & Cấu trúc Thông tin Xác thực (`Signed JWT` vs `Opaque Bearer Token`).
-  - **IDB-05:** Thuật toán Băm Mật khẩu Tài khoản (`Argon2id` kèm đo đạc thực nghiệm trên phần cứng đích).
-  - **IDB-11:** Hạ tầng Quản lý Phiên & Trạng thái Thu hồi Máy chủ (`Bảng sessions CSDL` vs `Redis cache`).
+- **Đợt 3 (Batch 3 — Quyết định Chặn Wave 4 & Wave 6):**
+  - **IDB-07:** Hạ tầng Lưu trữ Bằng chứng Tệp Nhị phân (`S3-Compatible Port: MinIO / AWS S3 / Cloudflare R2` — Chặn Wave 4).
+  - **IDB-06:** Nền tảng & Bộ Công cụ Web Quản trị Admin (`Vite + React 19 SPA` — Chặn Wave 6).
+- **An Toàn Để Hoãn (Safe to Defer — Triển khai / Đo đạc thực địa):**
+  - **IDB-08:** Chiến lược Đóng gói & Triển khai Hạ tầng (Docker Compose trên Linux VM — Hoãn Wave 8).
+  - **IDB-09:** Cấu hình TTL Idempotency (Biến môi trường, đo đạc tại Wave 5).
+  - **IDB-10:** Dọn dẹp Ảnh Bằng chứng Mobile GC (Đo đạc thực địa tại Wave 5).
