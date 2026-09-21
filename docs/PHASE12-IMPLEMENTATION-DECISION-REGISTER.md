@@ -1,17 +1,17 @@
 # Sổ Bộ Quyết Định Cấp Triển Khai (Phase 12 Implementation Decision Register)
 
 **Dự án:** NOVYX GreenOps
-**Giai đoạn:** Phase 12A — Implementation-Level Decision Review
-**Trạng thái Toàn bộ Sổ bộ:** `OPEN` (Chờ Chủ quản phê duyệt — Không tự ý khóa quyết định)
-**Tài liệu Nguồn:** [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/PHASE11-OWNER-ADR-DECISIONS.md`](PHASE11-OWNER-ADR-DECISIONS.md)
-**Ngày lập:** 21/09/2026
+**Giai đoạn:** Phase 12B — Owner Implementation Decision Review
+**Trạng thái Toàn bộ Sổ bộ:** 3 OWNER_APPROVED / 8 OPEN / 0 REJECTED (Batch 1 Approved: IDB-01, IDB-02, IDB-03; Các quyết định còn lại đang trong quá trình review)
+**Tài liệu Nguồn:** [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/PHASE11-OWNER-ADR-DECISIONS.md`](PHASE11-OWNER-ADR-DECISIONS.md), [`docs/PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md`](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md)
+**Ngày cập nhật:** 21/09/2026
 
 ---
 
 ## 1. Nguyên Tắc Quản Trị Quyết Định Cấp Triển Khai (Governance Rules)
 
 1. **Không Tự Ý Khóa Quyết Định Tác Động Lớn:**
-   Antigravity đề xuất phương án kỹ thuật tối ưu kèm mức độ tin cậy và phân tích đa chiều (sự phù hợp repo, kiến trúc, an ninh, độ tin cậy, độ phức tạp vận hành, chi phí chuyển đổi). Tuy nhiên, **toàn bộ 11 quyết định (IDB-01..11) bắt buộc phải giữ trạng thái `OPEN`** để Chủ quản (Owner) xem xét và phê duyệt chính thức tại Phase 12B.
+   Antigravity đề xuất phương án kỹ thuật tối ưu kèm mức độ tin cậy và phân tích đa chiều (sự phù hợp repo, kiến trúc, an ninh, độ tin cậy, độ phức tạp vận hành, chi phí chuyển đổi). Tuy nhiên, **toàn bộ 11 quyết định (IDB-01..11) bắt buộc phải giữ trạng thái `OPEN`** cho đến khi Chủ quản (Owner) xem xét và phê duyệt chính thức theo từng đợt tại Phase 12B.
 2. **Phân Định Tính Khẩn Cấp (Decision Urgency):**
    Mỗi quyết định được phân loại rõ ràng theo mức độ chặn các đợt triển khai (Waves):
    - `BLOCKS_BACKEND`: Chặn trực tiếp việc khởi tạo mã nguồn máy chủ `apps/api` (Wave 2, Wave 3, Wave 4).
@@ -19,7 +19,7 @@
    - `BLOCKS_ADMIN_WEB`: Chặn việc khởi tạo dự án web quản trị `apps/admin-web` (Wave 6).
    - `CAN_DEFER_TO_DEPLOYMENT`: Có thể hoãn lại đến thời điểm đóng gói và phát hành hạ tầng production (Wave 8).
    - `CAN_DEFER_TO_FIELD_MEASUREMENT`: Có thể hoãn lại để căn chỉnh dựa trên số liệu đo đạc thực tế.
-3. **Thao tác Chủ quản Cho phép:** `APPROVE` (Phê duyệt), `REJECT` (Bác bỏ), `REQUEST_REVISION` (Yêu cầu chỉnh sửa). Cột Quyết định Chủ quản được để trống trong Phase 12A.
+3. **Thao tác Chủ quản Cho phép:** `APPROVE` (Phê duyệt), `REJECT` (Bác bỏ), `REQUEST_REVISION` (Yêu cầu chỉnh sửa). Tại Đợt 1, Chủ quản đã chính thức `APPROVE` IDB-01, IDB-02, IDB-03.
 4. **Kỷ Luật Bằng Chứng Kỹ Thuật (Evidence Discipline):**
    Loại bỏ toàn bộ các tuyên bố tiếp thị tuyệt đối ("tốt nhất", "hoàn hảo 100%", "loại bỏ hoàn toàn SQLi", "luôn < 1ms"). Mọi đánh giá phải dựa trên bằng chứng kỹ thuật khách quan từ tài liệu gốc (Primary Sources).
 
@@ -29,9 +29,9 @@
 
 | Mã IDB | Tên Quyết Định Cấp Triển Khai | Đợt Triển Khai Chặn (Blocked Wave) | Phân Loại Tính Khẩn Cấp | Trạng Thái Hiện Tại |
 | :---: | :--- | :---: | :---: | :---: |
-| **IDB-01** | Hệ quản trị Cơ sở Dữ liệu Quan hệ (RDBMS Engine) | Wave 2 (Backend Foundation) | `BLOCKS_BACKEND` | `OPEN` |
-| **IDB-02** | Web Framework Máy chủ API (Backend HTTP Framework) | Wave 2 (Backend Foundation) | `BLOCKS_BACKEND` | `OPEN` |
-| **IDB-03** | Công cụ Truy cập DB / ORM / Query Builder | Wave 2 (Backend Foundation) | `BLOCKS_BACKEND` | `OPEN` |
+| **IDB-01** | Hệ quản trị Cơ sở Dữ liệu Quan hệ (RDBMS Engine) | Wave 2 (Backend Foundation) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
+| **IDB-02** | Web Framework Máy chủ API (Backend HTTP Framework) | Wave 2 (Backend Foundation) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
+| **IDB-03** | Công cụ Truy cập DB / ORM / Query Builder | Wave 2 (Backend Foundation) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
 | **IDB-04** | Định dạng & Cấu trúc Thông tin Xác thực (Token Format) | Wave 3 (IAM & Authorization) | `BLOCKS_BACKEND` | `OPEN` |
 | **IDB-05** | Thuật toán Băm Mật khẩu Tài khoản (Password Hashing) | Wave 3 (IAM & Authorization) | `BLOCKS_BACKEND` | `OPEN` |
 | **IDB-06** | Nền tảng & Công cụ Web Quản trị (Admin Web Tooling) | Wave 6 (Dedicated Admin Web) | `BLOCKS_ADMIN_WEB` | `OPEN` |
@@ -51,20 +51,26 @@
 
 - **Câu hỏi Quyết định:** Lựa chọn hệ quản trị cơ sở dữ liệu quan hệ cụ thể nào làm engine lưu trữ tác nghiệp và nhật ký kiểm toán cho `apps/api` trong phạm vi Relational Database Family đã được chấp thuận tại ADR 0013?
 - **Các Phương án Ứng viên:**
-  1. **Phương án A — PostgreSQL 16+ (Khuyến nghị):** Hệ RDBMS mã nguồn mở phổ biến, hỗ trợ kiểu dữ liệu JSONB mạnh mẽ cho metadata bằng chứng linh hoạt, hỗ trợ partial indexes, row-level locking phục vụ kiểm soát đồng thời (OCC), và phân tách đặc quyền chuẩn SQL (`GRANT/REVOKE`) chi tiết ở cấp bảng/cột cho bảng Audit.
+  1. **Phương án A — PostgreSQL (Khuyến nghị):** Hệ RDBMS mã nguồn mở phổ biến, hỗ trợ kiểu dữ liệu JSONB mạnh mẽ cho metadata bằng chứng linh hoạt, hỗ trợ partial indexes, row-level locking phục vụ kiểm soát đồng thời (OCC), và phân tách đặc quyền chuẩn SQL (`GRANT/REVOKE`) chi tiết ở cấp bảng/cột cho bảng Audit.
   2. **Phương án B — MySQL 8.0+:** Phổ biến, hiệu năng ghi tốt, nhưng hỗ trợ biểu thức indexing và tính năng JSON hạn chế hơn PostgreSQL trong các kịch bản kiểm toán và lưu trữ cấu trúc động.
   3. **Phương án C — SQLite Nhúng (better-sqlite3) trên máy chủ:** Rất đơn giản, không cần dịch vụ ngoài, nhưng hạn chế về xử lý đa kết nối đồng thời và cơ chế phân tách quyền người dùng DB, không phù hợp làm máy chủ tác nghiệp trung tâm.
 - **Sự phù hợp Kho mã nguồn:** Nhánh `base-setup` dùng Node.js 22; các thư viện kết nối PostgreSQL như `pg` hoặc `postgres.js` tích hợp chuẩn xác với TypeScript.
 - **Sự phù hợp Kiến trúc:** Khớp với ADR 0011 (Privilege Separation) và ADR 0013 (Relational Modular Monolith).
-- **Tác động An ninh:** PostgreSQL cho phép cấu hình phân quyền người dùng DB chi tiết (`REVOKE UPDATE, DELETE ON audit_events FROM novyx_api_user`).
+- **Tác động An ninh:** PostgreSQL cho phép cấu hình phân quyền người dùng DB chi tiết (`REVOKE UPDATE, DELETE, TRUNCATE ON audit_events FROM novyx_api_user`).
 - **Tác động Độ tin cậy:** Hỗ trợ đầy đủ giao dịch ACID theo chuẩn SQL, bảo vệ dữ liệu khỏi trạng thái bất nhất khi xảy ra sự cố máy chủ.
 - **Độ phức tạp Vận hành:** Trung bình (cần 1 container Docker hoặc dịch vụ Managed DB).
 - **Chi phí Chuyển đổi:** Thấp do chưa có dữ liệu sản xuất (dự án chưa triển khai database backend).
-- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (PostgreSQL 16+)**.
+- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (PostgreSQL)**.
 - **Mức độ Tin cậy:** `HIGH`.
-- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Cần quyết định trước Wave 2 để viết migration DDL).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Đã được giải tỏa cho Wave 2).
+- **Trạng thái:** `OWNER_APPROVED`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] APPROVE — PostgreSQL  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Phạm vi Chấp thuận Cụ thể (Accepted Scope):**
+  - PostgreSQL là hệ quản trị CSDL quan hệ chính thức của hệ thống.
+  - Mốc triển khai ban đầu (Initial implementation baseline): **PostgreSQL 18.x**. Môi trường sản xuất (Production) bắt buộc sử dụng một bản phát hành major ổn định được hỗ trợ (supported stable major) kết hợp bản vá minor hiện hành. "PostgreSQL 18.x" là mốc kỹ thuật ban đầu, **không phải bất biến kiến trúc vĩnh cửu**; các đợt nâng cấp major trong tương lai không cấu thành thay đổi kiến trúc.
+  - Cho phép sử dụng các cơ chế và cú pháp SQL chuyên biệt của PostgreSQL (như `GRANT`, `REVOKE`, database roles, table privileges, partial indexes, row-locking `FOR UPDATE` cho OCC) trong tài liệu triển khai và mã nguồn hạ tầng khi có cơ sở kỹ thuật rõ ràng.
+  - Không khóa cứng nhà cung cấp đám mây (Cloud Vendor), dịch vụ CSDL được quản lý (Managed DB Provider), image container cụ thể hay cấu trúc topology máy chủ.
+  - Tính di động giữa các hệ quản trị CSDL (Database portability) không phải là yêu cầu của giai đoạn MVP.
 
 ---
 
@@ -83,9 +89,14 @@
 - **Chi phí Chuyển đổi:** Thấp (chưa có mã nguồn API trước đó).
 - **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Fastify 5.x)**.
 - **Mức độ Tin cậy:** `HIGH`.
-- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Cần quyết định trước Wave 2 để dựng skeleton máy chủ).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Đã được giải tỏa cho Wave 2).
+- **Trạng thái:** `OWNER_APPROVED`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] APPROVE — Fastify 5.x  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Phạm vi Chấp thuận Cụ thể (Accepted Scope):**
+  - HTTP runtime framework cho `apps/api` là Fastify 5.x, chạy trên Node.js runtime được kho mã nguồn hỗ trợ.
+  - Fastify đóng vai trò hạ tầng vận hành HTTP/Runtime (routing, request lifecycle, transport middleware, HTTP error mapping, transport adapters), **tuyệt đối không phải thẩm quyền hợp đồng nghiệp vụ**.
+  - Gói `@novyx/contracts` và các Zod schemas duy trì vị thế ranh giới hợp đồng mạng duy nhất và tối cao tại runtime. Không sử dụng Fastify JSON Schema để thay thế hoặc làm nguồn chân lý hợp đồng nghiệp vụ.
+  - Đảm bảo tính độc lập của Clean Architecture: Logic nghiệp vụ miền (Domain Core) và tầng ứng dụng (Application Use Cases) tuyệt đối không phụ thuộc trực tiếp vào Fastify hay các đối tượng `FastifyRequest`, `FastifyReply`.
 
 ---
 
@@ -104,9 +115,15 @@
 - **Chi phí Chuyển đổi:** Thấp.
 - **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Drizzle ORM + drizzle-kit)**.
 - **Mức độ Tin cậy:** `HIGH`.
-- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Cần quyết định trước Wave 2 để viết schema persistence).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Đã được giải tỏa cho Wave 2).
+- **Trạng thái:** `OWNER_APPROVED`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] APPROVE — Drizzle ORM + drizzle-kit  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Phạm vi Chấp thuận Cụ thể (Accepted Scope):**
+  - Drizzle ORM đảm nhận biểu diễn lưu trữ quan hệ và truy xuất dữ liệu định kiểu (typed data access); `drizzle-kit` đảm nhận công cụ migration khi phù hợp.
+  - Schema bảng Drizzle chỉ là mô hình lưu trữ hạ tầng, **tuyệt đối không thay thế** `@novyx/contracts`, không thay thế Domain Aggregate Models, và không thay thế Business Commands.
+  - Tầng Domain và Application tuyệt đối không phụ thuộc vào Drizzle (`Domain -> Drizzle` bị cấm). Chỉ các Repository Adapters tại tầng Infrastructure mới được import Drizzle.
+  - Cho phép cơ chế thoát SQL thuần (raw SQL escape hatch) cho các yêu cầu hạ tầng CSDL chuyên biệt: phân tách đặc quyền PostgreSQL (`REVOKE UPDATE, DELETE, TRUNCATE ON audit_events`), partial indexes, GIN index JSONB, hoặc các tính năng không thể biểu diễn tối ưu qua ORM API.
+  - Mọi migration đều phải có Chiến lược Khôi phục / Phục hồi (Rollback / Recovery Strategy) được tài liệu hóa rõ ràng, không ép buộc `down.sql` hình thức nếu gây phá hủy dữ liệu.
 
 ---
 
@@ -274,17 +291,17 @@
 
 ## 4. Gói Trình Duyệt Quyết Định của Chủ Quản (Owner Decision Packet)
 
-Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, các quyết định được phân tách theo đúng tiến trình đợt triển khai, tách biệt rõ giữa các quyết định kỹ thuật bắt buộc và các tham số vận hành có thể hoãn/đo đạc:
+Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, các quyết định được phân tách theo đúng tiến trình đợt triển khai, tách biệt rõ giữa các quyết định kỹ thuật đã phê duyệt, các quyết định cần duyệt ở đợt tiếp theo, và các tham số vận hành có thể hoãn/đo đạc:
 
-### 4.1. Quyết Định Bắt Buộc Cần Chốt Trước Wave 2 (DECIDE BEFORE WAVE 2)
+### 4.1. ĐÃ PHÊ DUYỆT — ĐỢT 1: NỀN TẢNG WAVE 2 (DECIDED — BATCH 1)
 
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Rủi Ro Kỹ Thuật Nếu Trì Hoãn | Quyết Định Của Chủ Quản |
-| :---: | :--- | :--- | :---: | :--- | :---: |
-| **IDB-01** | CSDL Quan hệ Máy chủ | **PostgreSQL 16+** | `HIGH` | Phải viết lại cú pháp migration DDL nếu đổi engine | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
-| **IDB-02** | Web Framework Máy chủ | **Fastify 5.x** | `HIGH` | Chậm trễ tiến độ toàn bộ đợt Wave 2 (Skeleton & Router) | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
-| **IDB-03** | ORM / Truy cập DB | **Drizzle ORM** | `HIGH` | Phải chuyển đổi toàn bộ repository models và schema | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Chấp Thuận | Mức Độ Tin Cậy | Trạng Thái | Biên Bản Phê Duyệt |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| **IDB-01** | CSDL Quan hệ Máy chủ | **PostgreSQL** (Baseline: 18.x; Prod: Supported Stable Major + Minor) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#21-idb-01--hệ-quản-trị-cơ-sở-dữ-liệu-quan-hệ-postgresql-owner_approved) |
+| **IDB-02** | Web Framework Máy chủ | **Fastify 5.x** (Runtime Infrastructure, Zod/@novyx/contracts là Contract Authority) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#22-idb-02--web-framework-máy-chủ-fastify-5x-owner_approved) |
+| **IDB-03** | ORM / Truy cập DB | **Drizzle ORM + drizzle-kit** (Kèm Raw SQL escape hatch cho DB privileges/indexes) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#23-idb-03--công-cụ-truy-cập-dữ-liệu--orm-drizzle-orm--drizzle-kit-owner_approved) |
 
-### 4.2. Quyết Định Bắt Buộc Cần Chốt Trước Wave 3 (DECIDE BEFORE WAVE 3)
+### 4.2. ĐỢT DUYỆT TIẾP THEO — ĐỢT 2: AN NINH & IAM WAVE 3 (NEXT OWNER BATCH — BATCH 2)
 
 | Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Rủi Ro Kỹ Thuật Nếu Trì Hoãn | Quyết Định Của Chủ Quản |
 | :---: | :--- | :--- | :---: | :--- | :---: |
@@ -292,19 +309,14 @@ Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, c�
 | **IDB-05** | Băm Mật khẩu | **Argon2id (Cần Benchmark)** | `HIGH` | Không thể lưu trữ và xác thực an toàn tài khoản | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
 | **IDB-11** | Quản lý Phiên Máy chủ | **Bảng `sessions` DB (Cần Benchmark)** | `HIGH` | Nguy cơ đưa Redis vào quá sớm làm tăng độ phức tạp | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
 
-### 4.3. Quyết Định Bắt Buộc Cần Chốt Trước Wave 4 (DECIDE BEFORE WAVE 4)
+### 4.3. ĐỢT DUYỆT SAU — ĐỢT 3: TÁC NGHIỆP & WEB QUẢN TRỊ (LATER — BATCH 3 — WAVE 4 / WAVE 6)
 
 | Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Rủi Ro Kỹ Thuật Nếu Trì Hoãn | Quyết Định Của Chủ Quản |
 | :---: | :--- | :--- | :---: | :--- | :---: |
 | **IDB-07** | Lưu trữ File Bằng chứng | **S3-Compatible Port (MinIO/S3)** | `HIGH` | Luồng upload bằng chứng ảnh bị nghẽn ở Wave 4 | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
-
-### 4.4. Quyết Định Bắt Buộc Cần Chốt Trước Wave 6 (DECIDE BEFORE WAVE 6)
-
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Rủi Ro Kỹ Thuật Nếu Trì Hoãn | Quyết Định Của Chủ Quản |
-| :---: | :--- | :--- | :---: | :--- | :---: |
 | **IDB-06** | Web Quản trị Admin | **Vite + React 19 SPA** | `HIGH` | Chặn khởi tạo workspace `apps/admin-web` ở Wave 6 | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
 
-### 4.5. Quyết Định An Toàn Để Hoãn (SAFE TO DEFER — Triển Khai / Đo Đạc)
+### 4.4. AN TOÀN ĐỂ HOÃN — TRIỂN KHAI / ĐO ĐẠC THỰC ĐỊA (SAFE TO DEFER)
 
 | Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Giai Đoạn Đóng Băng Phù Hợp | Trạng Thái |
 | :---: | :--- | :--- | :---: | :--- | :---: |

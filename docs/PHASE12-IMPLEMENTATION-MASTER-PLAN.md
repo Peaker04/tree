@@ -1,15 +1,15 @@
 # Kế Hoạch Triển Khai Kỹ Thuật Tổng Thể (Phase 12 Implementation Master Plan)
 
 **Dự án:** NOVYX GreenOps
-**Giai đoạn:** Phase 12A — Post-ADR Implementation Planning & Implementation-Level Decision Review
-**Trạng thái Kế hoạch:** HOÀN THIỆN — CHỜ CHỦ QUẢN PHÊ DUYỆT (PLANNING COMPLETE — AWAITING OWNER REVIEW)
+**Giai đoạn:** Phase 12B — Owner Implementation Decision Review (Batch 1 Reconciled)
+**Trạng thái Kế hoạch:** ĐANG ĐỐI SOÁT QUYẾT ĐỊNH CHỦ QUẢN (OWNER IMPLEMENTATION DECISION REVIEW IN PROGRESS)
 **Ngày lập:** 21/09/2026
-**Commit Baseline (Phase 11C Frozen):** `873533248ca62d7eb08b84f2245ce1f4dec74150`
+**Commit Baseline (Phase 12A Frozen):** `9df1b290dd2853afcb9fdcaacb299d02c28c1f8a`
 
 > ⚠️ **NGUYÊN TẮC CỐT TỬ (CORE RULE):**
-> **PHASE 12A LÀ GIAI ĐOẠN LẬP KẾ HOẠCH THUẦN TÚY (PLANNING ONLY).**
+> **PHASE 12 LÀ GIAI ĐOẠN LẬP KẾ HOẠCH & ĐỐI SOÁT QUYẾT ĐỊNH THUẦN TÚY (PLANNING & DECISION REVIEW ONLY).**
 > **TUYỆT ĐỐI KHÔNG TRIỂN KHAI MÃ NGUỒN CỦA KIẾN TRÚC MỤC TIÊU.**
-> Không tạo `apps/api`, không tạo `apps/admin-web`, không cài đặt thư viện (`zod`, `expo-sqlite`), không tạo file migration CSDL, không sửa đổi mã nguồn di động hay hợp đồng tại pha này.
+> Không tạo `apps/api`, không tạo `apps/admin-web`, không cài đặt thư viện (`zod`, `expo-sqlite`, `fastify`, `drizzle-orm`), không tạo file migration CSDL, không sửa đổi mã nguồn di động hay hợp đồng tại pha này.
 
 ---
 
@@ -79,10 +79,10 @@ Toàn bộ 15 khoảng cách kỹ thuật đã được kiểm chứng thực t�
 | **IMP-GAP-006** | `scripts/greenops-dev-api.cjs:397-404` (Task list bảo vệ ở UI) | `AC-01..04` | ADR 0007 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 3, Wave 4**| Security test: Staff chỉ nhận danh sách task gán cho chính mình |
 | **IMP-GAP-007** | `greenOpsService.ts:354`, `greenops-dev-api.cjs:234` (RAM snapshot) | `NFR-OFFLINE` | ADR 0008, 0013 | `QAS-OFFLINE-01, 02` | `apps/mobile`, `apps/api` | **CRITICAL** | **Wave 2, Wave 5**| Kill app & restart máy: dữ liệu tồn lưu nguyên vẹn từ SQLite |
 | **IMP-GAP-008** | Toàn bộ `apps/mobile/src/` (0 kết quả outbox) | `CAP-01, CAP-02` | ADR 0008 | `QAS-OFFLINE-01`| `apps/mobile` | **CRITICAL** | **Wave 5** | Airplane mode test: đóng gói outbox và retry tự động thành công |
-| **IMP-GAP-009** | Cấu trúc thư mục root (Chưa có `apps/api`) | Kiến trúc Mục tiêu | ADR 0013 | Toàn bộ NFR | `apps/api` | **BLOCKER** | **Wave 2, 3, 4** | Khởi tạo thành công service Node.js Modular Monolith theo HTTP framework được Chủ quản phê duyệt (IDB-02) |
+| **IMP-GAP-009** | Cấu trúc thư mục root (Chưa có `apps/api`) | Kiến trúc Mục tiêu | ADR 0013 | Toàn bộ NFR | `apps/api` | **BLOCKER** | **Wave 2, 3, 4** | Khởi tạo thành công service Node.js Modular Monolith theo HTTP framework Fastify 5.x được Chủ quản phê duyệt (IDB-02) |
 | **IMP-GAP-010** | Cấu trúc thư mục root (Chưa có `apps/admin-web`) | `CAP-ADM-01..09` | ADR 0005 | `QAS-A11Y-01` | `apps/admin-web` | **HIGH** | **Wave 6** | E2E test các chức năng quản trị trên giao diện Web chuyên biệt |
-| **IMP-GAP-011** | Toàn bộ repo (Chưa có bảng AuditEvent & DB privilege) | `CAP-ADM-05` | ADR 0011 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 2, Wave 3**| Chạy lệnh SQL UPDATE/DELETE trên bảng Audit bị DB từ chối |
-| **IMP-GAP-012** | `contracts/src/index.ts` (Thiếu version / expectedVersion) | `DR-HARD-05`, `WF-01..08` | ADR 0009 | `QAS-FAULT-01` | `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 4, 5** | Concurrency test: Gửi expectedVersion cũ nhận mã lỗi 409 CONFLICT |
+| **IMP-GAP-011** | Toàn bộ repo (Chưa có bảng AuditEvent & DB privilege) | `CAP-ADM-05` | ADR 0011 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 2, Wave 3**| Chạy lệnh SQL UPDATE/DELETE/TRUNCATE trên bảng Audit bị PostgreSQL từ chối |
+| **IMP-GAP-012** | `contracts/src/index.ts` (Thiếu version / expectedVersion) | `WF-01..08`, `QAS-FAULT-01` | ADR 0009 | `QAS-FAULT-01` | `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 4, 5** | Concurrency test: Gửi expectedVersion cũ nhận mã lỗi 409 CONFLICT |
 | **IMP-GAP-013** | `greenOpsService.ts`, `contracts` (Thiếu Idempotency-Key) | Toàn vẹn Outbox | ADR 0009 | `QAS-OFFLINE-01`| `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 2, 5** | Retry test: Gửi cùng Idempotency-Key nhận response cached, không trùng task |
 | **IMP-GAP-014** | `greenOpsService.ts:1-856` (Service ôm đồm 10 trách nhiệm) | Clean Architecture | ADR 0012 | `QAS-FAULT-01` | `apps/mobile` | **MEDIUM** | **Wave 5, Wave 7**| Phân rã thành Ports, Use Cases, Adapters độc lập theo Wave |
 | **IMP-GAP-015** | `mobileWorkflow.ts:146-153`, `StaffProofFlow.tsx` (Logic ở UI) | Domain Engine | ADR 0012 | `QAS-A11Y-01` | `apps/mobile` | **MEDIUM** | **Wave 5** | Giao diện chỉ hiển thị (Advisory), gọi State Machine điều phối |
@@ -91,19 +91,19 @@ Toàn bộ 15 khoảng cách kỹ thuật đã được kiểm chứng thực t�
 
 ## 6. Sổ Bộ Quyết Định Cấp Triển Khai (Implementation Decision Register Summary)
 
-Chi tiết đầy đủ 11 quyết định mở được quản lý tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md).
-**Toàn bộ đều ở trạng thái `OPEN` có điều kiện, chờ Chủ quản xem xét và phê duyệt tại Phase 12B trước khi thực thi mã nguồn:**
-- **IDB-01 (CSDL Quan hệ):** Khuyến nghị **PostgreSQL 16+** (`BLOCKS_BACKEND`).
-- **IDB-02 (Web Framework):** Khuyến nghị **Fastify 5.x** (`BLOCKS_BACKEND`).
-- **IDB-03 (ORM / Query Builder):** Khuyến nghị **Drizzle ORM** (`BLOCKS_BACKEND`).
-- **IDB-04 (Định dạng Token):** Khuyến nghị **Signed JWT** (thời gian cơ sở ứng viên: 15m) + RTR (thời gian cơ sở ứng viên: 30d) HOẶC **Opaque Token** (`BLOCKS_BACKEND`).
-- **IDB-05 (Băm Mật khẩu):** Khuyến nghị **Argon2id** (yêu cầu benchmark trên phần cứng máy chủ đích, `BLOCKS_BACKEND`).
-- **IDB-06 (Nền tảng Admin Web):** Khuyến nghị **Vite + React 19 SPA** (`BLOCKS_ADMIN_WEB`).
-- **IDB-07 (Lưu trữ Bằng chứng Ảnh):** Khuyến nghị **S3-Compatible Port (MinIO cho dev, S3/R2 cho prod)** (`BLOCKS_BACKEND`).
-- **IDB-08 (Chiến lược Đóng gói & Hosting):** Khuyến nghị **Docker Compose trên Linux VM cho MVP** (`CAN_DEFER_TO_DEPLOYMENT`).
-- **IDB-09 (Thời gian Lưu Idempotency):** Khuyến nghị **Biến môi trường** (giá trị cơ sở ứng viên: 72h, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`).
-- **IDB-10 (Dọn Dẹp Ảnh Mobile GC):** Khuyến nghị **Giữ ảnh sau COMPLETED ACK** (giá trị cơ sở ứng viên: 14 ngày, ngưỡng dọn dẹp cơ sở: 300 MB, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`).
-- **IDB-11 (Quản Lý Phiên Máy Chủ):** Khuyến nghị **Bảng `sessions` trong CSDL quan hệ cho MVP** (phân loại: `NEEDS_BENCHMARK` tải thực tế, `BLOCKS_BACKEND`).
+Chi tiết đầy đủ 11 quyết định được quản lý tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md) và biên bản phê duyệt tại [`docs/PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md`](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md).
+**Hiện tại: 3 quyết định đã được Chủ quản phê duyệt (`OWNER_APPROVED`), 8 quyết định tiếp tục giữ trạng thái `OPEN`:**
+- **IDB-01 (CSDL Quan hệ):** **PostgreSQL** (Baseline khởi đầu: 18.x; Môi trường sản xuất: Supported Stable Major + Minor) — `OWNER_APPROVED`.
+- **IDB-02 (Web Framework):** **Fastify 5.x** (Node.js runtime, Zod/@novyx/contracts là Contract Authority) — `OWNER_APPROVED`.
+- **IDB-03 (ORM / Query Builder):** **Drizzle ORM + drizzle-kit** (Kèm Raw SQL escape hatch cho DB privileges/indexes) — `OWNER_APPROVED`.
+- **IDB-04 (Định dạng Token):** Khuyến nghị **Signed JWT** (thời gian cơ sở ứng viên: 15m) + RTR (thời gian cơ sở ứng viên: 30d) HOẶC **Opaque Token** (`OPEN` — Chặn Wave 3).
+- **IDB-05 (Băm Mật khẩu):** Khuyến nghị **Argon2id** (yêu cầu benchmark trên phần cứng máy chủ đích, `OPEN` — Chặn Wave 3).
+- **IDB-06 (Nền tảng Admin Web):** Khuyến nghị **Vite + React 19 SPA** (`OPEN` — Chặn Wave 6).
+- **IDB-07 (Lưu trữ Bằng chứng Ảnh):** Khuyến nghị **S3-Compatible Port (MinIO cho dev, S3/R2 cho prod)** (`OPEN` — Chặn Wave 4).
+- **IDB-08 (Chiến lược Đóng gói & Hosting):** Khuyến nghị **Docker Compose trên Linux VM cho MVP** (`OPEN` — Hoãn Wave 8).
+- **IDB-09 (Thời gian Lưu Idempotency):** Khuyến nghị **Biến môi trường** (giá trị cơ sở ứng viên: 72h, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`, `OPEN`).
+- **IDB-10 (Dọn Dẹp Ảnh Mobile GC):** Khuyến nghị **Giữ ảnh sau COMPLETED ACK** (giá trị cơ sở ứng viên: 14 ngày, ngưỡng dọn dẹp cơ sở: 300 MB, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`, `OPEN`).
+- **IDB-11 (Quản Lý Phiên Máy Chủ):** Khuyến nghị **Bảng `sessions` trong CSDL quan hệ cho MVP** (phân loại: `NEEDS_BENCHMARK` tải thực tế, `OPEN` — Chặn Wave 3).
 
 ---
 
@@ -115,7 +115,7 @@ Mô hình triển khai được tổ chức thành đồ thị có hướng khô
 flowchart TD
     W0["WAVE 0: Thiết lập Nền tảng Kiểm thử & Quản trị (Vitest, Lint, CI)"] --> W1
     W1["WAVE 1: Hợp đồng Dùng chung & Runtime Validation (@novyx/contracts)"] --> W2
-    W2["WAVE 2: Nền tảng Máy chủ & CSDL Quan hệ (apps/api, persistence được chọn, DB Roles)"] --> W3
+    W2["WAVE 2: Nền tảng Máy chủ & CSDL Quan hệ (apps/api, Fastify 5.x, PostgreSQL, Drizzle ORM, DB Roles)"] --> W3
     W3["WAVE 3: Định danh (IAM), Session Freshness, Auth Gate & Audit Trail"] --> W4
     W4["WAVE 4: Nghiệp vụ Tác nghiệp Máy chủ (Work Mgmt, Tree Asset, Policy)"] --> W5
     W4 --> W6
@@ -194,14 +194,19 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 
 ## 11. Wave 2: Nền Tảng Máy Chủ & CSDL Quan Hệ (Wave 2)
 
-- **Mục tiêu:** Khởi tạo workspace `apps/api`, thiết lập kết nối CSDL quan hệ theo quyết định của Chủ quản (IDB-01), công cụ persistence / data-access được chọn (IDB-03), framework HTTP máy chủ được chọn (IDB-02) và phân tách đặc quyền DB.
+- **Mục tiêu:** Khởi tạo workspace `apps/api`, thiết lập kết nối CSDL quan hệ PostgreSQL (IDB-01 OWNER_APPROVED), công cụ persistence Drizzle ORM + drizzle-kit (IDB-03 OWNER_APPROVED), HTTP web framework Fastify 5.x (IDB-02 OWNER_APPROVED) và cơ chế phân tách đặc quyền DB.
 - **Phạm vi & Tệp tin:**
-  - Khởi tạo thư mục `apps/api/` với cấu trúc Clean Architecture: `src/core/`, `src/infrastructure/`, `src/modules/`.
-  - Cấu hình file di trú CSDL theo công cụ persistence được phê duyệt (IDB-03).
+  - Khởi tạo thư mục `apps/api/` với cấu trúc Clean Architecture: `src/core/` (Use Cases, Ports), `src/infrastructure/` (Fastify routing, Drizzle repositories, PostgreSQL adapters), `src/modules/`.
+  - Cấu hình file di trú CSDL qua `drizzle-kit` kết hợp các script migration SQL chuyên biệt khi cần.
   - Khởi tạo migration DDL tạo bảng người dùng, bảng phiên, bảng kiểm toán `audit_events`.
-  - Tạo script SQL phân tách đặc quyền người dùng runtime DB: Cấp quyền `INSERT, SELECT` trên `audit_events`, thu hồi `UPDATE, DELETE, TRUNCATE`.
-- **Ràng buộc:** Cấm import `packages/ui`. Bounded Contexts là module logic nội bộ của `apps/api`, không tách thành npm packages riêng.
-- **Tiêu chuẩn Nghiệm thu (Exit Gate):** Chạy migration CSDL thành công; script kiểm thử quyền DB xác nhận runtime user không thể `UPDATE` hay `DELETE` trên bảng `audit_events`.
+  - Thiết lập script SQL phân tách đặc quyền người dùng runtime DB PostgreSQL: Cấp quyền `INSERT, SELECT` trên `audit_events`, thu hồi `UPDATE, DELETE, TRUNCATE` đối với runtime application DB role.
+  - Mốc triển khai ban đầu: PostgreSQL 18.x; môi trường vận hành sản xuất yêu cầu một bản major ổn định được hỗ trợ và bản minor hiện hành.
+- **Ràng buộc Kiến trúc & Ranh giới:**
+  - **Bảo toàn Clean Architecture:** HTTP/Fastify và Drizzle/PostgreSQL là các chi tiết hạ tầng (Infrastructure) triển khai các Ports. Tầng Domain Core và Application Use Cases tuyệt đối KHÔNG phụ thuộc vào Drizzle (`Domain -> Drizzle` bị cấm) và KHÔNG phụ thuộc vào Fastify (`Domain -> Fastify` và `Application -> Fastify request objects` bị cấm).
+  - **Thẩm quyền Hợp đồng:** `@novyx/contracts` và Zod schemas là thẩm quyền hợp đồng duy nhất tại runtime boundary; Fastify JSON Schema không thay thế Zod.
+  - **Chính sách Di trú An toàn Dữ liệu:** Mọi migration đều bắt buộc phải có Chiến lược Khôi phục / Phục hồi (Rollback / Recovery Strategy) được lập tài liệu rõ ràng; không ép buộc `down.sql` hình thức nếu có nguy cơ phá hủy dữ liệu.
+  - Cấm import `packages/ui`. Bounded Contexts là module logic nội bộ của `apps/api`, không tách thành npm packages riêng.
+- **Tiêu chuẩn Nghiệm thu (Exit Gate):** Chạy migration CSDL thành công; script kiểm thử quyền DB xác nhận runtime user bị từ chối khi thực hiện `UPDATE`, `DELETE`, `TRUNCATE` trên bảng `audit_events`; máy chủ Fastify 5.x khởi động và phản hồi health check sạch sẽ.
 
 ---
 
@@ -378,15 +383,15 @@ Việc xóa bỏ mã nguồn cũ chỉ được phép diễn ra tại **Wave 7**
 
 Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, các quyết định cấp triển khai tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md) được phân tách theo tiến trình các đợt thực thi:
 
-### 25.1. Quyết Định Bắt Buộc Cần Chốt Trước Wave 2 (DECIDE BEFORE WAVE 2)
+### 25.1. ĐÃ PHÊ DUYỆT — ĐỢT 1: NỀN TẢNG WAVE 2 (DECIDED — BATCH 1)
 
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
-| :---: | :--- | :--- | :---: | :---: |
-| **IDB-01** | RDBMS Engine | **PostgreSQL 16+** | `HIGH` | **Chặn Wave 2** |
-| **IDB-02** | Web Framework Máy chủ | **Fastify 5.x** | `HIGH` | **Chặn Wave 2** |
-| **IDB-03** | ORM / Query Builder | **Drizzle ORM** | `HIGH` | **Chặn Wave 2** |
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Chấp Thuận | Mức Độ Tin Cậy | Trạng Thái | Biên Bản Phê Duyệt |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| **IDB-01** | CSDL Quan hệ Máy chủ | **PostgreSQL** (Baseline: 18.x; Prod: Supported Stable Major + Minor) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#21-idb-01--hệ-quản-trị-cơ-sở-dữ-liệu-quan-hệ-postgresql-owner_approved) |
+| **IDB-02** | Web Framework Máy chủ | **Fastify 5.x** (Runtime Infrastructure, Zod/@novyx/contracts là Contract Authority) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#22-idb-02--web-framework-máy-chủ-fastify-5x-owner_approved) |
+| **IDB-03** | ORM / Truy cập DB | **Drizzle ORM + drizzle-kit** (Kèm Raw SQL escape hatch cho DB privileges/indexes) | `HIGH` | `OWNER_APPROVED` | [Batch 1 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#23-idb-03--công-cụ-truy-cập-dữ-liệu--orm-drizzle-orm--drizzle-kit-owner_approved) |
 
-### 25.2. Quyết Định Bắt Buộc Cần Chốt Trước Wave 3 (DECIDE BEFORE WAVE 3)
+### 25.2. ĐỢT DUYỆT TIẾP THEO — ĐỢT 2: AN NINH & IAM WAVE 3 (NEXT OWNER BATCH — BATCH 2)
 
 | Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
 | :---: | :--- | :--- | :---: | :---: |
@@ -449,7 +454,7 @@ Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái
 - [x] **P12-G01:** Mọi tác vụ triển khai đều truy vết trực tiếp về yêu cầu chuẩn tắc (`CAP-01..05`, `CAP-ADM-01..09`, `OP-22`, `WF-*`, `DR-*`, `AC-*`, `QAS-*`)/ADR/khoảng cách đã xác minh; không sử dụng định danh tự tạo (`CAP-OPS-*`).
 - [x] **P12-G02:** Không tái thiết kế hay thay đổi bất kỳ ngữ nghĩa nghiệp vụ đóng băng nào; bảo toàn 4 kết luận duyệt chuẩn tắc (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`).
 - [x] **P12-G03:** Không tái thiết kế hay sửa đổi bất kỳ quyết định kiến trúc đã chấp thuận nào.
-- [x] **P12-G04:** Toàn bộ 11 quyết định cấp triển khai đều giữ trạng thái `OPEN` có điều kiện, không khóa cứng công nghệ khi chưa có phê duyệt của Chủ quản.
+- [x] **P12-G04:** 3 quyết định nền tảng Wave 2 (IDB-01, IDB-02, IDB-03) đã được Chủ quản phê duyệt chính thức (OWNER_APPROVED); toàn bộ 8 quyết định còn lại (IDB-04..11) tiếp tục giữ trạng thái OPEN có điều kiện, không khóa cứng công nghệ khi chưa có phê duyệt tương ứng.
 - [x] **P12-G05:** Mô hình máy chủ là Modular Monolith duy nhất, không giả định tách microservices.
 - [x] **P12-G06:** Mô hình chuyển đổi là Strangler Pattern từng bước, cấm đập đi xây lại toàn bộ (No Big-Bang).
 - [x] **P12-G07:** Không đánh đồng 48 lệnh nghiệp vụ thành 48 endpoints công khai (tuân thủ ADR 0010).
@@ -461,14 +466,16 @@ Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái
 
 **KẾT LUẬN CHÍNH THỨC:**
 ```text
-PHASE 12A COMPLETE — IMPLEMENTATION PLAN READY
-— CURRENT SOURCE GAPS EVIDENCED
-— IMPLEMENTATION DECISIONS IDENTIFIED
-— DEPENDENCY WAVES DEFINED
-— MIGRATION STRATEGY DEFINED
-— TEST / NFR EVIDENCE STRATEGY DEFINED
+PHASE 12B OWNER DECISION BATCH 1 RECORDED
+— IDB-01 POSTGRESQL OWNER_APPROVED
+— IDB-02 FASTIFY 5 OWNER_APPROVED
+— IDB-03 DRIZZLE OWNER_APPROVED
+— 3 OWNER_APPROVED / 8 OPEN / 0 REJECTED
+— WAVE 2 TECHNOLOGY FOUNDATION RESOLVED
+— TRACEABILITY ERRATA RECONCILED
 — NO BUSINESS REDESIGN
 — NO ARCHITECTURE REDESIGN
 — NO SOURCE IMPLEMENTATION
-— READY FOR OWNER IMPLEMENTATION-DECISION REVIEW
+— PHASE 12B OWNER REVIEW STILL IN PROGRESS
+— READY FOR OWNER REVIEW OF IDB-04 / IDB-05 / IDB-11
 ```
