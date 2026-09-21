@@ -1,0 +1,231 @@
+import type { CanonicalTaskStatus } from '../operational/task-status';
+import type { CanonicalReviewDecision } from '../operational/review-decision';
+import type { GpsCheckDto, QrCheckDto } from '../operational/verification';
+import type { ChecklistItemDto } from '../operational/evidence';
+import type { TaskType } from '../operational/operational-tasks';
+import type { TreeHealthStatus, TreeRiskStatus } from '../governance/trees';
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy PascalCase task status constants used by current apps/mobile.
+ * Use CanonicalTaskStatus / TaskStatusSchema for new canonical backend work.
+ */
+export const LegacyTaskStatus = {
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In_Progress',
+  WAITING_REVIEW: 'Waiting_Review',
+  COMPLETED: 'Completed',
+  REWORK_REQUIRED: 'Rework_Required',
+} as const;
+
+export type LegacyTaskStatus = (typeof LegacyTaskStatus)[keyof typeof LegacyTaskStatus];
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Preserved for apps/mobile runtime and source compatibility.
+ * Canonical runtime validation is provided by TaskStatusSchema.
+ */
+export const TaskStatus = LegacyTaskStatus;
+export type TaskStatus = CanonicalTaskStatus | LegacyTaskStatus;
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy PascalCase role used by apps/mobile.
+ * Canonical roles are in HumanRoleSchema ('staff' | 'manager' | 'admin').
+ */
+export type Role = 'Staff' | 'Manager';
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy lowercase review decisions used by apps/mobile.
+ * Canonical review decisions are in ReviewDecisionSchema ('APPROVE' | 'APPROVE_WITH_EXCEPTION' | 'REQUEST_REWORK' | 'CANCEL').
+ */
+export type LegacyReviewDecision = 'approve' | 'request_rework';
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Union supporting canonical and legacy values for backward compatibility.
+ */
+export type ReviewDecision = CanonicalReviewDecision | LegacyReviewDecision;
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy evidence stage enum used by apps/mobile.
+ * Canonical evidence models use ProofProfile-adaptive payloads.
+ */
+export type EvidenceStage = 'before' | 'after';
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy staff DTO shape used by apps/mobile.
+ */
+export interface StaffDto {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  workload: number;
+  role: 'Staff';
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy task evidence DTO shape used by apps/mobile.
+ */
+export interface TaskEvidenceDto {
+  id: string;
+  taskId: string;
+  treeId: string;
+  stage: EvidenceStage;
+  uri: string;
+  capturedAt: string;
+  capturedByUserId: string;
+  gpsCheck?: GpsCheckDto;
+}
+
+export type NotificationType = 'info' | 'success' | 'warning' | 'danger';
+
+export interface NotificationDto {
+  id: string;
+  title: string;
+  body: string;
+  timestamp: string;
+  read: boolean;
+  type: NotificationType;
+  taskId?: string;
+}
+
+export interface CreateNotificationRequest {
+  title: string;
+  body: string;
+  type: NotificationType;
+  taskId?: string;
+  timestamp?: string;
+  read?: boolean;
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Transitional TaskDto preserving compatibility with apps/mobile mock data and UI.
+ * Canonical backend uses CanonicalTaskDto (inferred from TaskDtoSchema with required version: number).
+ */
+export interface TaskDto {
+  id: string;
+  title: string;
+  taskType: TaskType;
+  description: string;
+  treeId: string;
+  treeName: string;
+  treeAddress: string;
+  assignedStaffId: string;
+  assignedStaffName: string;
+  deadline: string;
+  status: TaskStatus;
+  version?: number;
+  gpsCheck?: GpsCheckDto;
+  qrCheck?: QrCheckDto;
+  beforePhoto?: string;
+  afterPhoto?: string;
+  evidence?: TaskEvidenceDto[];
+  checklist: ChecklistItemDto[];
+  notes?: string;
+  rejectReason?: string;
+  rejectChips?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Transitional TreeDto preserving compatibility with apps/mobile mock data.
+ * Canonical backend uses CanonicalTreeDto (inferred from TreeDtoSchema with required version: number).
+ */
+export interface TreeDto {
+  id: string;
+  name: string;
+  species: string;
+  lat: number;
+  lng: number;
+  address: string;
+  qrCode: string;
+  healthStatus: TreeHealthStatus;
+  ageYears: number;
+  version?: number;
+  riskStatus?: TreeRiskStatus;
+}
+
+export interface AppDataDto {
+  trees: TreeDto[];
+  staff: StaffDto[];
+  tasks: TaskDto[];
+  notifications: NotificationDto[];
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Transitional CareHistoryDto preserving compatibility with apps/mobile.
+ */
+export interface CareHistoryDto {
+  id: string;
+  treeId: string;
+  taskId: string;
+  taskTitle: string;
+  staffId: string;
+  staffName: string;
+  completedAt: string;
+  status: TaskStatus;
+  gpsCheck?: GpsCheckDto;
+  qrCheck?: QrCheckDto;
+  beforePhoto?: string;
+  afterPhoto?: string;
+  notes?: string;
+  hasException?: boolean;
+  exceptionReason?: string;
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy task progress request for apps/mobile.
+ */
+export interface UpdateTaskProgressRequest {
+  taskId: string;
+  expectedVersion?: number;
+  status?: TaskStatus;
+  gpsCheck?: GpsCheckDto;
+  qrCheck?: QrCheckDto;
+  beforePhoto?: string;
+  afterPhoto?: string;
+  evidence?: TaskEvidenceDto[];
+  checklist?: ChecklistItemDto[];
+  notes?: string;
+  rejectReason?: string;
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy evidence submission request for apps/mobile.
+ */
+export interface SubmitTaskEvidenceRequest {
+  taskId: string;
+  expectedVersion?: number;
+  gpsCheck: GpsCheckDto;
+  qrCheck: QrCheckDto;
+  evidence: TaskEvidenceDto[];
+  checklist: ChecklistItemDto[];
+  notes?: string;
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy review decision request for apps/mobile.
+ */
+export interface ReviewDecisionRequest {
+  taskId: string;
+  decision: ReviewDecision;
+  reviewerId: string;
+  expectedVersion?: number;
+  reason?: string;
+  rejectReason?: string;
+  reasonChips?: string[];
+}
