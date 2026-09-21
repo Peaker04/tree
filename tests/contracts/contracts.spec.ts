@@ -87,6 +87,7 @@ import {
 
   // Audit Schemas
   AuditEventDtoSchema,
+  AuditOutcomeSchema,
   ListAuditLogsQuerySchema,
 
   // Legacy Transitional Exports
@@ -561,8 +562,10 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
         targetResourceType: 'Tree',
         targetResourceId: 'TRE-001',
         timestamp: '2026-09-21T08:00:00Z',
+        outcome: 'SUCCESS',
       });
       expect(auditEvent.actorRole).toBe('admin');
+      expect(auditEvent.outcome).toBe('SUCCESS');
 
       const auditQuery = ListAuditLogsQuerySchema.parse({ actorId: 'ADM-01', limit: '25' });
       expect(auditQuery.limit).toBe(25);
@@ -1465,6 +1468,92 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
         expect(LocationExceptionSchema.safeParse({ ...validLocExc, recordedLat: 95 }).success).toBe(false);
         expect(LocationExceptionSchema.safeParse({ ...validLocExc, recordedLng: -185 }).success).toBe(false);
       });
+    });
+  });
+
+  // ============================================================================
+  // Audit Event Contract: Required Canonical Outcome (ADR 0011)
+  // ============================================================================
+  describe('Audit Event Contract: Required Canonical Outcome (ADR 0011)', () => {
+    it('parses canonical SUCCESS and FAILURE outcomes', () => {
+      expect(AuditOutcomeSchema.parse('SUCCESS')).toBe('SUCCESS');
+      expect(AuditOutcomeSchema.parse('FAILURE')).toBe('FAILURE');
+    });
+
+    it('rejects non-canonical outcome values (ERROR, DENIED, lowercase success)', () => {
+      expect(AuditOutcomeSchema.safeParse('ERROR').success).toBe(false);
+      expect(AuditOutcomeSchema.safeParse('DENIED').success).toBe(false);
+      expect(AuditOutcomeSchema.safeParse('success').success).toBe(false);
+      expect(AuditOutcomeSchema.safeParse('failure').success).toBe(false);
+    });
+
+    it('validates AuditEventDto with outcome: "SUCCESS" -> PASS', () => {
+      const dto = {
+        id: 'aud-01',
+        actorId: 'usr-01',
+        actorRole: 'admin' as const,
+        action: 'UPDATE_TREE',
+        targetResourceType: 'tree',
+        targetResourceId: 'tre-01',
+        timestamp: '2026-09-21T10:00:00Z',
+        outcome: 'SUCCESS' as const,
+      };
+      expect(AuditEventDtoSchema.safeParse(dto).success).toBe(true);
+    });
+
+    it('validates AuditEventDto with outcome: "FAILURE" -> PASS', () => {
+      const dto = {
+        id: 'aud-02',
+        actorId: 'usr-02',
+        actorRole: 'staff' as const,
+        action: 'LOGIN',
+        targetResourceType: 'session',
+        targetResourceId: 'ses-01',
+        timestamp: '2026-09-21T10:00:00Z',
+        outcome: 'FAILURE' as const,
+      };
+      expect(AuditEventDtoSchema.safeParse(dto).success).toBe(true);
+    });
+
+    it('strictly rejects AuditEventDto missing outcome -> FAIL', () => {
+      const dto = {
+        id: 'aud-03',
+        actorId: 'usr-01',
+        actorRole: 'manager' as const,
+        action: 'APPROVE_TASK',
+        targetResourceType: 'task',
+        targetResourceId: 'tsk-01',
+        timestamp: '2026-09-21T10:00:00Z',
+      };
+      expect(AuditEventDtoSchema.safeParse(dto).success).toBe(false);
+    });
+
+    it('strictly rejects AuditEventDto with outcome: "ERROR" -> FAIL', () => {
+      const dto = {
+        id: 'aud-04',
+        actorId: 'usr-01',
+        actorRole: 'admin' as const,
+        action: 'DELETE_USER',
+        targetResourceType: 'user',
+        targetResourceId: 'usr-99',
+        timestamp: '2026-09-21T10:00:00Z',
+        outcome: 'ERROR',
+      };
+      expect(AuditEventDtoSchema.safeParse(dto).success).toBe(false);
+    });
+
+    it('strictly rejects AuditEventDto with outcome: "DENIED" -> FAIL', () => {
+      const dto = {
+        id: 'aud-05',
+        actorId: 'usr-01',
+        actorRole: 'admin' as const,
+        action: 'DELETE_USER',
+        targetResourceType: 'user',
+        targetResourceId: 'usr-99',
+        timestamp: '2026-09-21T10:00:00Z',
+        outcome: 'DENIED',
+      };
+      expect(AuditEventDtoSchema.safeParse(dto).success).toBe(false);
     });
   });
 });
