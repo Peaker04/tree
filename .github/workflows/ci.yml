@@ -24,19 +24,19 @@ jobs:
         image: postgres:18-alpine
         env:
           POSTGRES_USER: novyx_admin
-          POSTGRES_PASSWORD: novyx_test_password
+          POSTGRES_PASSWORD: novyx_ci_admin_password
           POSTGRES_DB: novyx_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U novyx_admin"
+          --health-cmd "pg_isready -U novyx_admin -d novyx_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     env:
-      DATABASE_MIGRATION_URL: postgresql://novyx_admin:novyx_test_password@localhost:5432/novyx_test
-      DATABASE_RUNTIME_URL: postgresql://app_runtime:app_runtime_password@localhost:5432/novyx_test
+      DATABASE_MIGRATION_URL: postgresql://novyx_admin:novyx_ci_admin_password@localhost:5432/novyx_test
+      DATABASE_RUNTIME_URL: postgresql://app_runtime:novyx_ci_runtime_password@localhost:5432/novyx_test
 
     steps:
       - name: Checkout repository

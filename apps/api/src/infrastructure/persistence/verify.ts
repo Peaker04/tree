@@ -6,6 +6,7 @@ const { Pool } = pg;
 export interface DbVerificationResult {
   connected: boolean;
   tablesFound: string[];
+  runtimeOwnsAuditEvents: boolean;
   auditSelectAllowed: boolean;
   auditInsertAllowed: boolean;
   auditUpdateDenied: boolean;
@@ -23,6 +24,7 @@ export async function verifyDatabase(runtimeUrl?: string): Promise<DbVerificatio
   const result: DbVerificationResult = {
     connected: false,
     tablesFound: [],
+    runtimeOwnsAuditEvents: false,
     auditSelectAllowed: false,
     auditInsertAllowed: false,
     auditUpdateDenied: false,
@@ -43,7 +45,16 @@ export async function verifyDatabase(runtimeUrl?: string): Promise<DbVerificatio
       );
       result.tablesFound = tablesRes.rows.map((r) => r.table_name);
 
-      // 3. Verify audit_events SELECT
+      // 3. Verify audit_events table ownership (runtime role must NOT own audit_events)
+      const ownerRes = await client.query<{ tableowner: string }>(
+        `SELECT tableowner FROM pg_tables WHERE schemaname = 'public' AND tablename = 'audit_events'`,
+      );
+      const currentUserRes = await client.query<{ current_user: string }>(`SELECT current_user`);
+      const tableOwner = ownerRes.rows[0]?.tableowner;
+      const currentUser = currentUserRes.rows[0]?.current_user;
+      result.runtimeOwnsAuditEvents = Boolean(tableOwner && currentUser && tableOwner === currentUser);
+
+      // 4. Verify audit_events SELECT
       await client.query('SELECT count(*) FROM audit_events');
       result.auditSelectAllowed = true;
 
@@ -113,6 +124,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const allPassed =
         res.connected &&
         res.tablesFound.length === 3 &&
+        !res.runtimeOwnsAuditEvents &&
         res.auditSelectAllowed &&
         res.auditInsertAllowed &&
         res.auditUpdateDenied &&

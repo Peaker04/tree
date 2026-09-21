@@ -18,8 +18,8 @@ export const healthRoutes: FastifyPluginAsync<HealthRouteOptions> = async (
   // Operational Readiness check (GET /ready)
   fastify.get('/ready', async (_request, reply) => {
     if (!options.pool) {
-      return reply.status(200).send({
-        status: 'ok',
+      return reply.status(503).send({
+        status: 'unavailable',
         database: 'not_configured',
       });
     }

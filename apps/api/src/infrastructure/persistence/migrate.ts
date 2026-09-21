@@ -10,13 +10,15 @@ const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function runMigrations(migrationUrl?: string): Promise<void> {
-  const url = migrationUrl ?? process.env['DATABASE_MIGRATION_URL'];
-  if (!url) {
+export async function runMigrations(migrationUrl?: string, runtimeUrl?: string): Promise<void> {
+  const mUrl = migrationUrl ?? process.env['DATABASE_MIGRATION_URL'];
+  if (!mUrl) {
     throw new Error('DATABASE_MIGRATION_URL is required to run migrations');
   }
 
-  const pool = new Pool({ connectionString: url });
+  const rUrl = runtimeUrl ?? process.env['DATABASE_RUNTIME_URL'];
+
+  const pool = new Pool({ connectionString: mUrl });
   const db = drizzle(pool);
 
   try {
@@ -25,17 +27,56 @@ export async function runMigrations(migrationUrl?: string): Promise<void> {
     await migrate(db, { migrationsFolder });
     console.log('[migrate] Migrations completed successfully.');
 
-    // Apply role privilege separation script
-    const rolesScriptPath = path.resolve(__dirname, 'scripts', 'bootstrap-roles.sql');
-    if (fs.existsSync(rolesScriptPath)) {
-      console.log(`[migrate] Applying role bootstrap script: ${rolesScriptPath}...`);
-      const sql = fs.readFileSync(rolesScriptPath, 'utf8');
+    // Dynamic role provisioning and privilege separation
+    if (rUrl) {
+      const parsedRuntime = new URL(rUrl);
+      const runtimeUser = decodeURIComponent(parsedRuntime.username);
+      const runtimePass = decodeURIComponent(parsedRuntime.password);
+
+      if (!/^[a-zA-Z0-9_]{1,63}$/.test(runtimeUser)) {
+        throw new Error(`Invalid PostgreSQL role name in DATABASE_RUNTIME_URL: ${runtimeUser}`);
+      }
+
+      console.log(`[migrate] Provisioning runtime role: ${runtimeUser}...`);
       const client = await pool.connect();
       try {
-        await client.query(sql);
-        console.log('[migrate] Role bootstrap & privilege separation applied successfully.');
+        const roleRes = await client.query('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1', [runtimeUser]);
+        const escapedPassword = runtimePass.replace(/'/g, "''");
+        const safeRole = `"${runtimeUser}"`;
+
+        if (roleRes.rows.length === 0) {
+          await client.query(`CREATE ROLE ${safeRole} WITH LOGIN PASSWORD '${escapedPassword}'`);
+          console.log(`[migrate] Role ${runtimeUser} created.`);
+        } else if (runtimePass) {
+          await client.query(`ALTER ROLE ${safeRole} WITH PASSWORD '${escapedPassword}'`);
+        }
+
+        // Apply privileges
+        await client.query(`GRANT USAGE ON SCHEMA public TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE sessions TO ${safeRole}`);
+        await client.query(`GRANT SELECT, INSERT ON TABLE audit_events TO ${safeRole}`);
+        await client.query(`REVOKE UPDATE, DELETE, TRUNCATE ON TABLE audit_events FROM ${safeRole}`);
+        console.log(`[migrate] Role privileges applied successfully for ${runtimeUser}.`);
       } finally {
         client.release();
+      }
+    } else {
+      // If DATABASE_RUNTIME_URL is not provided, apply credential-free bootstrap-roles.sql if app_runtime exists
+      const rolesScriptPath = path.resolve(__dirname, 'scripts', 'bootstrap-roles.sql');
+      if (fs.existsSync(rolesScriptPath)) {
+        const client = await pool.connect();
+        try {
+          const roleRes = await client.query("SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'app_runtime'");
+          if (roleRes.rows.length > 0) {
+            console.log(`[migrate] Applying credential-free role privileges from ${rolesScriptPath}...`);
+            const sql = fs.readFileSync(rolesScriptPath, 'utf8');
+            await client.query(sql);
+            console.log('[migrate] Role privileges applied successfully.');
+          }
+        } finally {
+          client.release();
+        }
       }
     }
   } finally {

@@ -1,14 +1,7 @@
 -- PostgreSQL Role Privilege Separation (ADR 0011 / Phase 13 Wave 2)
 -- Executed by postgres superuser / migration owner
 
--- Ensure runtime application user exists
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'app_runtime') THEN
-    CREATE ROLE app_runtime WITH LOGIN PASSWORD 'app_runtime_password';
-  END IF;
-END
-$$;
+-- Assumes runtime role (app_runtime) is provisioned dynamically via environment credentials
 
 -- Grant schema usage
 GRANT USAGE ON SCHEMA public TO app_runtime;

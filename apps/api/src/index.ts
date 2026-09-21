@@ -5,22 +5,21 @@ import { createDatabaseConnection } from './infrastructure/persistence/db';
 export async function startServer(): Promise<void> {
   const env = loadEnv();
 
-  let dbConn: ReturnType<typeof createDatabaseConnection> | undefined;
-  if (env.DATABASE_RUNTIME_URL) {
-    dbConn = createDatabaseConnection(env.DATABASE_RUNTIME_URL);
+  if (!env.DATABASE_RUNTIME_URL) {
+    throw new Error('DATABASE_RUNTIME_URL is required to start the API server');
   }
+
+  const dbConn = createDatabaseConnection(env.DATABASE_RUNTIME_URL);
 
   const app = buildApp({
     logger: env.NODE_ENV !== 'test',
-    pool: dbConn?.pool,
+    pool: dbConn.pool,
   });
 
   const closeGracefully = async (signal: string) => {
     app.log.info(`Received ${signal}, closing server gracefully...`);
     await app.close();
-    if (dbConn) {
-      await dbConn.close();
-    }
+    await dbConn.close();
     process.exit(0);
   };
 
