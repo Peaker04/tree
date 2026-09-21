@@ -93,4 +93,49 @@ describe('Phase 13 Wave 2: Backend Architecture Boundaries (Clean Architecture &
       expect(content).not.toMatch(/hermes-agent/);
     }
   });
+
+  it('verifies JWT/JWKS/JWS libraries are NOT imported into apps/api (P13W3-N01)', () => {
+    const allApiFiles = getAllTsFiles(apiSrcDir);
+
+    for (const filePath of allApiFiles) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      expect(content).not.toMatch(/from\s+['"]jsonwebtoken['"]/);
+      expect(content).not.toMatch(/from\s+['"]jose['"]/);
+      expect(content).not.toMatch(/from\s+['"]jwks-rsa['"]/);
+    }
+  });
+
+  it('verifies persistence schema stores token hashes, not plaintext tokens (P13W3-N02, P13W3-N03, P13W3-P05)', () => {
+    const schemaDir = path.resolve(apiSrcDir, 'infrastructure/persistence/schema');
+    const schemaFiles = getAllTsFiles(schemaDir);
+
+    for (const filePath of schemaFiles) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      // Prohibit columns like varchar('access_token') or varchar('refresh_token') without _hash
+      expect(content).not.toMatch(/varchar\(['"]access_token['"]\)/);
+      expect(content).not.toMatch(/varchar\(['"]refresh_token['"]\)/);
+      expect(content).not.toMatch(/varchar\(['"]plaintext_token['"]\)/);
+    }
+  });
+
+  it('verifies IAM code does NOT mutate or reference TaskStatus (P13W3-N13)', () => {
+    const iamDir = path.resolve(modulesDir, 'iam');
+    const iamFiles = getAllTsFiles(iamDir);
+
+    for (const filePath of iamFiles) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      expect(content).not.toMatch(/TaskStatus/);
+      expect(content).not.toMatch(/task_status/);
+    }
+  });
+
+  it('verifies RevokeSession is NOT a business command (P13W3-N14)', () => {
+    const contractsGovernanceDir = path.resolve(__dirname, '../../packages/contracts/src/governance');
+    const govFiles = getAllTsFiles(contractsGovernanceDir);
+
+    for (const filePath of govFiles) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      expect(content).not.toMatch(/RevokeSession/);
+    }
+  });
 });

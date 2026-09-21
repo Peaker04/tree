@@ -9,6 +9,8 @@ GRANT USAGE ON SCHEMA public TO app_runtime;
 -- Grant standard CRUD on standard business tables
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO app_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE sessions TO app_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE spent_refresh_tokens TO app_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE credential_setup_tokens TO app_runtime;
 
 -- STRICT APPEND-ONLY PRIVILEGE CONTROL ON audit_events:
 -- ALLOW: SELECT, INSERT

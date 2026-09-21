@@ -39,9 +39,9 @@ export async function verifyDatabase(runtimeUrl?: string): Promise<DbVerificatio
       await client.query('SELECT 1');
       result.connected = true;
 
-      // 2. Check table existence
+      // 2. Check table existence (all 5 persistence tables)
       const tablesRes = await client.query<{ table_name: string }>(
-        `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('users', 'sessions', 'audit_events')`,
+        `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('users', 'sessions', 'audit_events', 'spent_refresh_tokens', 'credential_setup_tokens')`,
       );
       result.tablesFound = tablesRes.rows.map((r) => r.table_name);
 
@@ -123,7 +123,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       console.log('[verify] Result:', JSON.stringify(res, null, 2));
       const allPassed =
         res.connected &&
-        res.tablesFound.length === 3 &&
+        res.tablesFound.length === 5 &&
         !res.runtimeOwnsAuditEvents &&
         res.auditSelectAllowed &&
         res.auditInsertAllowed &&

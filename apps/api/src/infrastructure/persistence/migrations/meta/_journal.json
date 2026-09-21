@@ -8,6 +8,13 @@
       "when": 1789977849079,
       "tag": "0000_simple_epoch",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789981316278,
+      "tag": "0001_iam_security_foundation",
+      "breakpoints": true
     }
   ]
 }
