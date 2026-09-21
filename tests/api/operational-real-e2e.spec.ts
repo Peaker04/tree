@@ -511,16 +511,12 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
         payload: {
           taskId: task.id,
           expectedVersion: reworkTask.version,
-          siteVerification: {
-            gpsCheck: { lat: 10.776, lng: 106.701, distance: 1.0, verified: true, timestamp: new Date().toISOString() },
-            qrCheck: { scannedCode: qrCode, verified: true, timestamp: new Date().toISOString() },
-          },
-          proof: {
+          reworkedProof: {
             proofProfile: 'SERVICE_PROOF',
             completionPhotoUri: photo2.objectKey,
             checklist: [{ id: 'chk-1', text: 'Apply fertilizer', done: true }],
           },
-          notes: 'Respread fertilizer evenly',
+          reworkNotes: 'Respread fertilizer evenly',
         },
       });
       expect(resubmitRes.statusCode).toBe(200);
