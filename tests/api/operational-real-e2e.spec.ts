@@ -327,7 +327,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
           taskId: task.id,
           expectedVersion: submittedTask.version,
           decision: 'APPROVE',
-          reviewNotes: 'Work verified and approved on real infrastructure.',
+          notes: 'Work verified and approved on real infrastructure.',
         },
       });
       expect(reviewRes.statusCode).toBe(200);
@@ -341,7 +341,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
         .where(eq(schema.careHistories.taskId, task.id));
       expect(careHistoryRows.length).toBe(1);
       expect(careHistoryRows[0]?.treeId).toBe(treeId);
-      expect(careHistoryRows[0]?.performedByUserId).toBe(staff.userId);
+      expect(careHistoryRows[0]?.staffId).toBe(staff.userId);
     },
   );
 
@@ -477,8 +477,9 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
           taskId: task.id,
           expectedVersion: submittedTask.version,
           decision: 'REQUEST_REWORK',
-          reviewNotes: 'Fertilizer distribution uneven',
-          reworkItems: [{ itemId: 'chk-1', comment: 'Re-spread fertilizer around drip line' }],
+          targetedArea: 'chk-1',
+          reworkReason: 'Fertilizer distribution uneven, re-spread around drip line',
+          notes: 'Recheck fertilizer coverage',
         },
       });
       expect(reworkReqRes.statusCode).toBe(200);
@@ -535,7 +536,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
           taskId: task.id,
           expectedVersion: resubmittedTask.version,
           decision: 'APPROVE',
-          reviewNotes: 'Rework accepted.',
+          notes: 'Rework accepted.',
         },
       });
       expect(finalReviewRes.statusCode).toBe(200);
@@ -630,13 +631,13 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       // Staff 1 reports field issue -> BLOCKED
       const issueRes = await app.inject({
         method: 'POST',
-        url: `/v1/tasks/${task.id}/issues`,
+        url: `/v1/tasks/${task.id}/field-issue`,
         headers: { authorization: `Bearer ${staff1.token}`, 'idempotency-key': randomUUID() },
         payload: {
           taskId: task.id,
           expectedVersion: startedTask.version,
-          reason: 'ACCESS_BLOCKED',
-          description: 'High voltage electrical wires tangled in upper canopy',
+          issueDescription: 'High voltage electrical wires tangled in upper canopy',
+          issuePhotoUri: 'tasks/wires.jpg',
         },
       });
       expect(issueRes.statusCode).toBe(200);
