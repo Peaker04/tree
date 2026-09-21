@@ -246,8 +246,18 @@ Toàn bộ 15 khẳng định phủ định dưới đây đã được xác min
 
 ## 16. Remote CI Status (Trạng Thái CI Từ Xa)
 
-- **Trạng thái ghi nhận:** `NOT_RUN` (Sẽ chuyển sang trạng thái theo dõi thực tế sau khi đẩy commit lên GitHub).
-- **Nguyên tắc báo cáo:** Không suy diễn trạng thái CI từ xa khi chưa có kết quả thực thi thực tế từ GitHub Actions.
+- **Trạng thái ghi nhận:** `PASS`
+- **Chứng cứ thực nghiệm GitHub Actions:**
+  - **Workflow Run ID:** `35570827482`
+  - **Job ID:** `106241918489` (`Code Quality & Test Verification`)
+  - **Nhánh:** `base-setup`
+  - **Commit:** `9c205a3` (`test(infra): establish wave 0 quality foundation`)
+  - **Thời gian thực thi:** 46 giây trên môi trường Linux runner (`ubuntu-latest`)
+  - **Kết quả các bước kiểm tra từ xa:**
+    - `npm run format:check` $\rightarrow$ **PASS**
+    - `npm run lint` $\rightarrow$ **PASS**
+    - `npm run typecheck` $\rightarrow$ **PASS**
+    - `npm test` $\rightarrow$ **PASS** (13/13 tests passed trong 262ms)
 
 ---
 
