@@ -164,7 +164,7 @@ Chủ quản xác lập ràng buộc điều hành ràng buộc về chi phí tr
   - `apps/api`: Web Service gói miễn phí / dùng thử (ví dụ: Render Free / Web Service Trial).
   - PostgreSQL: CSDL PostgreSQL miễn phí / dùng thử (ví dụ: Render PostgreSQL Free / Trial).
   - `apps/admin-web`: Dịch vụ lưu trữ web tĩnh miễn phí (ví dụ: Render Static Site Free Tier).
-  - Lưu trữ Bằng chứng: Object Storage gói miễn phí (ví dụ: Cloudflare R2 Free Tier: 10GB lưu trữ miễn phí, không tính phí egress).
+  - Lưu trữ Bằng chứng: Object Storage gói miễn phí (ví dụ: Cloudflare R2 Free Tier; [THÔNG TIN NHÀ CUNG CẤP CÓ TÍNH THỜI ĐIỂM — KIỂM TRA LẠI TRƯỚC KHI TRIỂN KHAI / TIME-SENSITIVE PROVIDER INFORMATION — CHECK AGAIN BEFORE DEPLOYMENT, Checked: 21/09/2026]).
   - Hạ tầng dự phòng tạm thời: Gói dùng thử Railway khi có credit trải nghiệm.
   - *Lưu ý quan trọng:* Gợi ý trên là định hướng phân phối thực tế phi ràng buộc, **tuyệt đối KHÔNG giải quyết hay khóa cứng quyết định hạ tầng tổng thể IDB-08**.
 
@@ -240,8 +240,9 @@ Chủ quản xác lập ràng buộc điều hành ràng buộc về chi phí tr
 
 | Trạng Thái | Số Lượng | Danh Sách Mã Quyết Định | Ghi Chú |
 | :--- | :---: | :--- | :--- |
-| **`OWNER_APPROVED`** | **8** | **IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-06, IDB-07, IDB-11** | Đã được Chủ quản phê duyệt chính thức qua 3 đợt (Wave 2, Wave 3, Wave 4, Wave 6). Giải tỏa toàn bộ các quyết định chặn đợt 1 đến 6. |
-| **`OPEN`** | **3** | **IDB-08, IDB-09, IDB-10** | Tiếp tục giữ trạng thái mở, an toàn để hoãn đến giai đoạn đóng gói triển khai (Wave 8) hoặc đo đạc thực tế tại hiện trường (Wave 5). |
+| **`OWNER_APPROVED`** | **8** | **IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-06, IDB-07, IDB-11** | Đã được Chủ quản phê duyệt chính thức qua 3 đợt. Toàn bộ các quyết định chặn đợt 1 đến 6 đã được giải tỏa dứt điểm. |
+| **`DEFERRED_WITH_BOUNDARY`** | **3** | **IDB-08, IDB-09, IDB-10** | Chủ quản chủ động hoãn có ranh giới bảo vệ chặt chẽ; không chặn kiến trúc mã nguồn hay việc khởi động Waves 0–6. |
+| **`OPEN`** | **0** | *(Không còn quyết định nào chưa định đoạt)* | Toàn bộ 11 quyết định đã được phân loại dứt điểm. |
 | **`REJECTED`** | **0** | *(Không có)* | |
 
 ---
@@ -249,16 +250,70 @@ Chủ quản xác lập ràng buộc điều hành ràng buộc về chi phí tr
 ## 9. Tuyên Bố Giới Hạn Thẩm Quyền Triển Khai (Execution Boundary Statement)
 
 > [!IMPORTANT]
-> **Tuyên bố Ranh giới Tuyệt đối:**
-> **Không có bất kỳ mã nguồn ứng dụng nào (`apps/**`), gói dùng chung (`packages/**`), kịch bản (`scripts/**`), hoặc phụ thuộc runtime (`package.json`) nào được phép khởi tạo, cài đặt hay thay đổi trong phạm vi của đợt phê duyệt Đợt 1, Đợt 2 và Đợt 3 này.**
-> Đợt phê duyệt này chỉ ghi nhận các quyết định công nghệ cấp kiến trúc triển khai để hoàn thiện kế hoạch tổng thể và ma trận truy vết.
-> Toàn bộ các đợt thực thi mã nguồn (Wave 0 đến Wave 6) **CHƯA ĐƯỢC PHÉP THỰC THI** cho đến khi có chỉ thị chính thức.
+> **Tuyên bố Ranh giới Đóng băng & Ủy quyền Thực thi:**
+> 1. **Phase 12B chính thức ĐÓNG BĂNG HOÀN TOÀN (FULLY FROZEN).** Không còn bất kỳ quyết định mở (`OPEN`) nào chưa được phân loại.
+> 2. **Ủy Quyền Từng Bước (Wave-Gated Execution):** Việc đóng băng Phase 12B và xác nhận "Sẵn sàng Thực thi" (Execution Ready) **TUYỆT ĐỐI KHÔNG ĐỒNG NGHĨA VỚI VIỆC CHO PHÉP TRIỂN KHAI ĐỒNG THỜI TOÀN BỘ CÁC WAVES**.
+> 3. **Chỉ Duy Nhất Wave 0 Đủ Điều Kiện Kích Hoạt Tiếp Theo:** Sau khi Phase 12B đóng băng, chỉ duy nhất **Phase 13 / Implementation Wave 0 (Thiết lập Nền tảng Kiểm thử & Quản trị Thực thi)** trở nên đủ điều kiện để kích hoạt theo lời nhắc chuyên biệt tiếp theo.
+> 4. **Wave 1 Bắt Buộc Chờ Wave 0:** Wave 1 (`@novyx/contracts`) chỉ được phép bắt đầu sau khi Wave 0 vượt qua cổng kiểm soát đầu ra (Exit Gate) một cách độc lập và có chứng cứ thực nghiệm.
+> 5. **Cấm Tuyệt Đối Triển Khai Mã Nguồn Trong Phase 12B:** Không có bất kỳ mã nguồn ứng dụng nào (`apps/**`), gói dùng chung (`packages/**`), kịch bản (`scripts/**`), hoặc phụ thuộc runtime (`package.json`) nào được phép khởi tạo, cài đặt hay thay đổi trong phạm vi đóng băng Phase 12B này.
 
 ---
 
-## 10. Kế Hoạch Các Quyết Định An Toàn Để Hoãn (Safe to Defer Decisions)
+## 10. Ý Đồ Chủ Quản Về Việc Hoãn Quyết Định (Owner Intent on Deferrals)
 
-Ba quyết định còn lại không chặn việc thiết kế hay triển khai mã nguồn ban đầu của các Waves 1–6 và tiếp tục duy trì trạng thái `OPEN`:
-- **IDB-08:** Chiến lược Đóng gói & Triển khai Hạ tầng Sản xuất (`Docker Compose trên Linux VM` vs `PaaS` — Hoãn đến Wave 8 Hardening).
-- **IDB-09:** Cấu hình Thời gian Lưu vết Idempotency (`Biến môi trường`, mốc cơ sở ứng viên 72h — Căn chỉnh dựa trên đo đạc thực địa tại Wave 5).
-- **IDB-10:** Chiến lược Dọn dẹp Ảnh Bằng chứng Mobile GC (`Xóa sau COMPLETED`, mốc cơ sở ứng viên 14 ngày / 300MB — Căn chỉnh dựa trên đo đạc thực địa tại Wave 5).
+Chủ quản xác nhận việc hoãn 3 quyết định (`IDB-08`, `IDB-09`, `IDB-10`) là **chủ động và có tính toán kỹ thuật (intentional deferral)**:
+- Cả 3 quyết định này hoàn toàn **KHÔNG CHẶN** kiến trúc mã nguồn của hệ thống và **KHÔNG CHẶN** việc khởi động các đợt triển khai từ Wave 0 đến Wave 6.
+- Việc phân loại chuyển từ `OPEN` sang `DEFERRED_WITH_BOUNDARY` xác lập rõ ràng rằng: không còn khoảng trống nhận thức nào cản trở việc triển khai mã nguồn; các quyết định này được bảo vệ bằng ranh giới kỹ thuật nghiêm ngặt và chỉ cần giải tỏa dứt điểm trước mốc nghiệm thu sản xuất tương ứng.
+
+---
+
+## 11. Các Quyết Định Hoãn Chính Thức Có Ranh Giới — Sẵn Sàng Thực Thi (Final Deferral Decisions — Execution Readiness)
+
+| ID | Quyết Định Chủ Quản | Hạng Mục Quyết Định | Ranh Giới Kỹ Thuật Đóng Băng & Điều Kiện Giải Tỏa Cuối Cùng | Trạng Thái (Status) |
+| :---: | :---: | :--- | :--- | :---: |
+| **IDB-08** | **DEFER** | Chiến lược Đóng gói & Triển khai Hạ tầng (Deployment / Hosting) | Bắt buộc giải tỏa trước khi đóng gói sản xuất / Wave 8 Production Release; tuân thủ COST-01, nhà cung cấp có thể thay thế, topology 4 thành phần chuẩn tắc, HTTPS/TLS, biến môi trường ngoài, backend có thẩm quyền duy nhất, quy trình backup/di chuyển an toàn. | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-09** | **DEFER** | Giá trị Định lượng Thời gian Lưu vết Idempotency (Retention Window) | Bắt buộc giải tỏa trước khi nghiệm thu sản xuất hành vi thử lại ngoại tuyến; bất biến đóng băng: `Server Idempotency Retention >= Maximum Legitimate Offline Retry Horizon`; cơ chế cấu hình linh hoạt qua biến môi trường; mốc 72h chỉ là `CANDIDATE_BASELINE`. | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-10** | **DEFER** | Chính sách Định lượng Dọn dẹp Ảnh Bằng chứng Mobile GC | Bắt buộc giải tỏa trước khi nghiệm thu thực địa sản xuất / Wave 5 Final Acceptance; sàn an toàn tối thượng: tuyệt đối cấm xóa ảnh khi còn outbox pending, cần cho retry, chưa nhận ACK nghiệp vụ bền vững, hoặc có nguy cơ vi phạm QAS-OFFLINE-01/02; các mốc 14 ngày/300MB/100 items chỉ là `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`. | `DEFERRED_WITH_BOUNDARY` |
+
+### 11.1. Ranh Giới Chấp Thuận Cho IDB-08 (Deployment / Hosting)
+
+- **Lý Do Hoãn:** Không ảnh hưởng đến kiến trúc Clean Architecture, Domain model, hay mã nguồn ứng dụng trong các Waves 0–6.
+- **Thời Điểm Bắt Buộc Giải Tỏa:** Trước khi đóng gói hạ tầng sản xuất và phát hành chính thức tại Wave 8.
+- **Ranh Giới Bắt Buộc Khi Đang Hoãn:**
+  1. **Ràng buộc COST-01:** Ưu tiên hạ tầng chi phí $0, gói miễn phí (Free Tier) hoặc chương trình dùng thử (~1 tháng / Free Credits) khi còn khả thi về mặt kỹ thuật.
+  2. **Khả Năng Thay Thế Nhà Cung Cấp (Provider Neutrality):** Giữ cho các nhà cung cấp luôn có thể thay thế lẫn nhau (`keep providers replaceable`). Tuyệt đối không để nhà cung cấp miễn phí tạm thời trở thành thẩm quyền kiến trúc vĩnh cửu.
+  3. **Tô-pô Hệ Thống Chuẩn Tắc:** Hạ tầng lưu trữ bắt buộc phải hỗ trợ đầy đủ 4 thành phần đã được phê duyệt: `apps/api` (Node.js runtime Fastify), `PostgreSQL` (CSDL quan hệ), `apps/admin-web` (Static Web SPA), và `S3-compatible Object Storage` (Lưu trữ nhị phân bằng chứng qua Port).
+  4. **An Ninh Vận Chuyển & Cấu Hình:** Bắt buộc hỗ trợ HTTPS/TLS trên mọi endpoint công khai; toàn bộ thông tin xác thực, secrets, và chuỗi kết nối phải được cấu hình qua biến môi trường bên ngoài, không ghi cứng trong mã nguồn.
+  5. **Bảo Toàn Thẩm Quyền Máy Chủ:** Máy chủ backend luôn là nguồn thẩm quyền tối cao và duy nhất cho mọi đột biến nghiệp vụ; không tạo ra nguồn chân lý kép (dual business truth).
+  6. **An Toàn Dữ Liệu Khi Hết Hạn Dùng Thử:** Bắt buộc có quy trình sao lưu/xuất dữ liệu, xoay vòng credentials, và phương án di chuyển nhà cung cấp trước khi phụ thuộc vào dịch vụ miễn phí/dùng thử có thời hạn. Việc hết hạn dùng thử tuyệt đối không được gây mất mát dữ liệu nghiệp vụ, kiểm toán hay bằng chứng.
+  7. **Không Khóa Cứng Nhà Cung Cấp:** Render, Railway, Docker Compose, Linux VM, Cloudflare, AWS **tuyệt đối KHÔNG phải là kiến trúc được Chủ quản phê duyệt** trong pha này; chúng thuần túy là các ứng viên triển khai (deployment candidates).
+
+### 11.2. Ranh Giới Chấp Thuận Cho IDB-09 (Idempotency Retention Numeric Value)
+
+- **Lý Do Hoãn:** Giá trị số học chính xác về thời gian lưu vết (TTL) phụ thuộc vào chu kỳ thử lại ngoại tuyến thực tế và điều kiện kết nối mạng ngoài hiện trường.
+- **Thời Điểm Bắt Buộc Giải Tỏa:** Trước khi nghiệm thu sản xuất hành vi ngoại tuyến / idempotency tại Wave 5 & Wave 8.
+- **Bất Biến Đóng Băng Trong Thời Gian Hoãn:**
+  $$\text{SERVER IDEMPOTENCY RETENTION} \ge \text{MAXIMUM LEGITIMATE OFFLINE RETRY HORIZON SUPPORTED BY THE PRODUCT}$$
+- **Ranh Giới Triển Khai Mã Nguồn:**
+  1. Tầng triển khai được phép xây dựng cơ chế lưu vết idempotency có thể cấu hình linh hoạt (`configurable`), có thể giám sát (`observable`), và có thể kiểm thử tự động (`testable`) mà không cần đóng băng giá trị số học sản xuất cuối cùng.
+  2. Mốc **72 giờ** chỉ mang tính chất **Giá trị Cơ sở Ứng viên (`CANDIDATE_BASELINE`)**, tuyệt đối KHÔNG được mã hóa cứng thành hằng số nghiệp vụ trong domain.
+  3. Kiểm thử tự động phải xác nhận:
+     - Các request mang cùng `Idempotency-Key` trong khoảng thời gian lưu vết không làm nhân bản đột biến tác vụ.
+     - Tác vụ định kỳ dọn dẹp bản ghi idempotency hết hạn không vi phạm chân trời thử lại đã được cấu hình.
+     - Giá trị thời gian lưu vết có thể thay đổi linh hoạt qua biến môi trường cấu hình triển khai (`IDEMPOTENCY_RETENTION_HOURS`) mà không làm thay đổi hợp đồng DTO hay logic nghiệp vụ.
+
+### 11.3. Ranh Giới Chấp Thuận Cho IDB-10 (Mobile Evidence File Garbage Collection)
+
+- **Lý Do Hoãn:** Ngưỡng dung lượng bộ nhớ trống và khoảng thời gian lưu đệm tệp ảnh gốc trên thiết bị Android cần được đo đạc thực tế dựa trên kích thước ảnh nén và cấu hình phần cứng phổ thông ngoài thực địa.
+- **Thời Điểm Bắt Buộc Giải Tỏa:** Trước khi phát hành thực địa phiên bản sản xuất / nghiệm thu cuối cùng của Wave 5.
+- **Sàn An Toàn Bắt Buộc Không Thể Thương Lượng (Non-Negotiable Safety Floor):**
+  Một tệp ảnh bằng chứng cục bộ trên máy di động **TUYỆT ĐỐI KHÔNG ĐƯỢC PHÉP XÓA** khi:
+  1. Tệp đang được tham chiếu bởi một phần tử hàng đợi Outbox đang chờ gửi (`pending Outbox item`).
+  2. Tệp đang cần thiết cho các chu kỳ thử lại ngoại tuyến (`required for retry`).
+  3. Việc nộp bằng chứng chưa được máy chủ xác nhận bền vững ở cấp nghiệp vụ (`upload/business acceptance has not been durably acknowledged`).
+  4. Quá trình đồng bộ gặp lỗi hoặc xung đột phiên bản (`409 Conflict`) vẫn đòi hỏi bảo toàn tệp ảnh gốc trên máy để nhân viên đối soát.
+  5. Thao tác xóa có nguy cơ vi phạm các chỉ số độ tin cậy ngoại tuyến `QAS-OFFLINE-01` hoặc `QAS-OFFLINE-02`.
+- **Phân Loại Tham Số & Trạng Thái COMPLETED:**
+  - Các mốc **14 ngày**, **300 MB**, **100 outbox items** chỉ mang tính chất **Giá trị Cơ sở Ứng viên (`CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`)**, tuyệt đối KHÔNG bị khóa cứng thành bất biến sản phẩm.
+  - Việc chính sách triển khai chọn giữ ảnh cho đến khi tác vụ đạt `TaskStatus = COMPLETED` là giải pháp thuận tiện vận hành, nhưng không được biến thành bất biến nghiệp vụ đóng băng.
+  - Bất biến an toàn cốt tử duy nhất là: **TUYỆT ĐỐI KHÔNG LÀM MẤT BẰNG CHỨNG CẦN THIẾT CHO VIỆC NỘP BỀN VỮNG, THỬ LẠI NGOẠI TUYẾN VÀ HÒA GIẢI XUNG ĐỘT (NO LOSS OF EVIDENCE REQUIRED FOR DURABLE SUBMISSION / RETRY / RECONCILIATION).**

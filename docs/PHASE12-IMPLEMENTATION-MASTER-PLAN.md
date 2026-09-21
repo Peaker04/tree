@@ -1,14 +1,16 @@
 # Kế Hoạch Triển Khai Kỹ Thuật Tổng Thể (Phase 12 Implementation Master Plan)
 
 **Dự án:** NOVYX GreenOps
-**Giai đoạn:** Phase 12B — Owner Implementation Decision Review (Batch 3 Reconciled)
-**Trạng thái Kế hoạch:** ĐANG ĐỐI SOÁT QUYẾT ĐỊNH CHỦ QUẢN (OWNER IMPLEMENTATION DECISION REVIEW IN PROGRESS — BATCH 3 RECONCILED)
+**Giai đoạn:** Phase 12B — Final Freeze & Execution Readiness
+**Trạng thái Kế hoạch:** HOÀN TẤT & ĐÓNG BĂNG — SẴN SÀNG THỰC THI (COMPLETE / FROZEN — EXECUTION READY)
 **Ngày lập:** 21/09/2026
 **Commit Baseline (Phase 12A Frozen):** `9df1b290dd2853afcb9fdcaacb299d02c28c1f8a`
 
 > ⚠️ **NGUYÊN TẮC CỐT TỬ (CORE RULE):**
-> **PHASE 12 LÀ GIAI ĐOẠN LẬP KẾ HOẠCH & ĐỐI SOÁT QUYẾT ĐỊNH THUẦN TÚY (PLANNING & DECISION REVIEW ONLY).**
-> **TUYỆT ĐỐI KHÔNG TRIỂN KHAI MÃ NGUỒN CỦA KIẾN TRÚC MỤC TIÊU.**
+> **PHASE 12B ĐÃ ĐÓNG BĂNG HOÀN TOÀN — KẾ HOẠCH SẴN SÀNG THỰC THI (EXECUTION READY).**
+> Tuy nhiên, "sẵn sàng thực thi" **TUYỆT ĐỐI KHÔNG ĐỒNG NGHĨA VỚI VIỆC CHO PHÉP THỰC THI ĐỒNG THỜI TOÀN BỘ CÁC WAVES**.
+> Tiến trình thực thi bắt buộc tuân thủ thứ tự cổng từng đợt (Wave-gated execution): **DUY NHẤT Wave 0 là đủ điều kiện tiếp theo**. Wave 1 chỉ được phép bắt đầu sau khi Wave 0 vượt qua cổng nghiệm thu độc lập.
+> **TUYỆT ĐỐI KHÔNG TRIỂN KHAI MÃ NGUỒN CỦA KIẾN TRÚC MỤC TIÊU TRONG PHA NÀY.**
 > Không tạo `apps/api`, không tạo `apps/admin-web`, không cài đặt thư viện (`zod`, `expo-sqlite`, `fastify`, `drizzle-orm`, argon2, auth), không tạo file migration CSDL, không sửa đổi mã nguồn di động hay hợp đồng tại pha này.
 
 ---
@@ -35,7 +37,7 @@ Khi đọc và diễn giải các tài liệu kỹ thuật để lập kế ho�
 ```text
 [1] Phạm vi Chấp thuận Chính thức (Acceptance Scope trong từng ADR)
      ↓
-[2] Sổ bộ Quyết định Cuối cùng của Chủ quản (Owner Decision Ledger / Batch 1, 2 & 3)
+[2] Sổ bộ Quyết định Cuối cùng của Chủ quản (Owner Decision Ledger / Batch 1, 2 & 3 / Final Deferrals)
      ↓
 [3] Các điều khoản quyết định đã được duyệt nhất quán với [1] & [2]
      ↓
@@ -92,7 +94,7 @@ Toàn bộ 15 khoảng cách kỹ thuật đã được kiểm chứng thực t�
 ## 6. Sổ Bộ Quyết Định Cấp Triển Khai (Implementation Decision Register Summary)
 
 Chi tiết đầy đủ 11 quyết định được quản lý tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md) và biên bản phê duyệt tại [`docs/PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md`](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md).
-**Hiện tại: 8 quyết định đã được Chủ quản phê duyệt (`OWNER_APPROVED`), 3 quyết định tiếp tục giữ trạng thái `OPEN` (an toàn để hoãn):**
+**Hiện tại: 8 quyết định đã được Chủ quản phê duyệt (`OWNER_APPROVED`), 3 quyết định được hoãn chính thức có ranh giới (`DEFERRED_WITH_BOUNDARY`), 0 quyết định mở (`OPEN`), 0 quyết định bác bỏ (`REJECTED`):**
 - **IDB-01 (CSDL Quan hệ):** **PostgreSQL** (Baseline khởi đầu: 18.x; Môi trường sản xuất: Supported Stable Major + Minor) — `OWNER_APPROVED`.
 - **IDB-02 (Web Framework):** **Fastify 5.x** (Node.js runtime, Zod/@novyx/contracts là Contract Authority) — `OWNER_APPROVED`.
 - **IDB-03 (ORM / Query Builder):** **Drizzle ORM + drizzle-kit** (Kèm Raw SQL escape hatch cho DB privileges/indexes) — `OWNER_APPROVED`.
@@ -100,9 +102,9 @@ Chi tiết đầy đủ 11 quyết định được quản lý tại [`docs/PHAS
 - **IDB-05 (Băm Mật khẩu):** **Argon2id** (Muối ngẫu nhiên duy nhất, benchmark tham số sản xuất trên phần cứng đích, hỗ trợ rehash khi đổi chính sách) — `OWNER_APPROVED`.
 - **IDB-06 (Nền tảng Admin Web):** **React 19 SPA + Vite** (Workspace `apps/admin-web`, TypeScript, quyền Platform Admin `CAP-ADM-01..09` và read-only `OP-22`, không có quyền task hiện trường, SPA không phải ranh giới an ninh, Render Static Site là ưu tiên demo không khóa cứng kiến trúc) — `OWNER_APPROVED`.
 - **IDB-07 (Lưu trữ Bằng chứng Ảnh):** **S3-Compatible Object Storage Port** (Định nghĩa `IObjectStoragePort`, Infrastructure Adapter tương thích S3, Cloudflare R2 Free Tier là ưu tiên demo số 1, MinIO dev, tính trung lập nhà cung cấp, upload thành công $\ne$ nghiệm thu nghiệp vụ) — `OWNER_APPROVED`.
-- **IDB-08 (Chiến lược Đóng gói & Hosting):** Khuyến nghị **Docker Compose trên Linux VM cho MVP** (`OPEN` — Hoãn Wave 8; định hướng demo chi phí $0 là hướng dẫn phi ràng buộc, không giải quyết IDB-08).
-- **IDB-09 (Thời gian Lưu Idempotency):** Khuyến nghị **Biến môi trường** (giá trị cơ sở ứng viên: 72h, bất biến: thời gian lưu $\ge$ chu kỳ retry ngoại tuyến tối đa, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`, `OPEN` — Hoãn Wave 5).
-- **IDB-10 (Dọn Dẹp Ảnh Mobile GC):** Khuyến nghị **Giữ ảnh sau COMPLETED ACK** (giá trị cơ sở ứng viên: 14 ngày, ngưỡng dọn dẹp cơ sở: 300 MB, ngưỡng outbox cảnh báo cơ sở: 100 tác vụ, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`, `OPEN` — Hoãn Wave 5).
+- **IDB-08 (Chiến lược Đóng gói & Hosting):** **Docker Compose / PaaS** (`DEFERRED_WITH_BOUNDARY` — Hoãn đến Wave 8 Production Release; áp dụng COST-01, không khóa vendor, hỗ trợ topology 4 thành phần).
+- **IDB-09 (Thời gian Lưu Idempotency):** **Biến môi trường** (`DEFERRED_WITH_BOUNDARY` — Hoãn đến Wave 5 & 8; bất biến: thời gian lưu $\ge$ chu kỳ retry ngoại tuyến tối đa, giá trị cơ sở ứng viên: 72h).
+- **IDB-10 (Dọn Dẹp Ảnh Mobile GC):** **Sàn an toàn tối thượng** (`DEFERRED_WITH_BOUNDARY` — Hoãn đến Wave 5 Final Acceptance; cấm xóa ảnh khi pending/retry; mốc 14 ngày / 300 MB / 100 tác vụ chỉ là cơ sở đo đạc).
 - **IDB-11 (Quản Lý Phiên Máy Chủ):** **PostgreSQL-backed Session Repository cho MVP** (Lưu phiên trong CSDL qua Clean Architecture Port, không đòi hỏi Redis, thu hồi nguyên tử) — `OWNER_APPROVED`.
 
 ---
@@ -424,12 +426,12 @@ Việc xóa bỏ mã nguồn cũ chỉ được phép diễn ra tại **Wave 7**
 
 - **Mục tiêu & Ưu tiên Chủ quản:** Trong giai đoạn phát triển MVP và thử nghiệm thực địa, ưu tiên hàng đầu là tối thiểu hóa chi phí hạ tầng vận hành ($0 hoặc các gói dùng thử miễn phí ~1 tháng / free credits). Tuyệt đối không đòi hỏi dịch vụ trả phí chỉ vì sự tiện lợi khi đã có giải pháp thay thế miễn phí khả thi về mặt kỹ thuật.
 - **Tô-pô Triển Khai Ứng Viên Khuyến Nghị (Non-Binding Candidate Demo Topology):**
-  - `apps/api`: Dịch vụ Node.js miễn phí / dùng thử (ví dụ: Render Free Web Service hoặc Railway Trial).
-  - `PostgreSQL`: Dịch vụ CSDL quan hệ miễn phí / dùng thử (ví dụ: Render PostgreSQL Free Tier hoặc Railway PostgreSQL Trial).
-  - `apps/admin-web`: Dịch vụ lưu trữ web tĩnh miễn phí (ví dụ: Render Static Site Free Tier).
-  - `Evidence Object Storage`: Dịch vụ lưu trữ đối tượng tương thích S3 miễn phí (ví dụ: Cloudflare R2 Free Tier — 10 GB lưu trữ miễn phí, không tính phí băng thông tải về / egress bandwidth; hoặc Railway Bucket trong thời gian dùng thử).
+  - `apps/api`: Dịch vụ Node.js miễn phí / dùng thử (ví dụ: Render Free Web Service hoặc Railway Trial) [TIME-SENSITIVE PROVIDER INFORMATION — CHECK AGAIN BEFORE DEPLOYMENT, Checked: 21/09/2026].
+  - `PostgreSQL`: Dịch vụ CSDL quan hệ miễn phí / dùng thử (ví dụ: Render PostgreSQL Free Tier hoặc Railway PostgreSQL Trial) [TIME-SENSITIVE PROVIDER INFORMATION — CHECK AGAIN BEFORE DEPLOYMENT, Checked: 21/09/2026].
+  - `apps/admin-web`: Dịch vụ lưu trữ web tĩnh miễn phí (ví dụ: Render Static Site Free Tier) [TIME-SENSITIVE PROVIDER INFORMATION — CHECK AGAIN BEFORE DEPLOYMENT, Checked: 21/09/2026].
+  - `Evidence Object Storage`: Dịch vụ lưu trữ đối tượng tương thích S3 (ví dụ: Cloudflare R2 Free Tier — không tính phí băng thông tải về / egress bandwidth; hoặc Railway Bucket trong thời gian dùng thử) [TIME-SENSITIVE PROVIDER INFORMATION — CHECK AGAIN BEFORE DEPLOYMENT, Checked: 21/09/2026].
 - **Ranh Giới Kiến Trúc Cốt Tử & Chống Khóa Chặt Nhà Cung Cấp:**
-  - Định hướng triển khai demo chi phí $0 là **hướng dẫn phi ràng buộc (Non-binding Deployment Guidance)**, **tuyệt đối KHÔNG giải quyết hoặc đóng bằng sớm quyết định hạ tầng IDB-08** (IDB-08 tiếp tục giữ trạng thái `OPEN` an toàn để hoãn đến Wave 8).
+  - Định hướng triển khai demo chi phí $0 là **hướng dẫn phi ràng buộc (Non-binding Deployment Guidance)**, **tuyệt đối KHÔNG giải quyết hoặc đóng bằng sớm quyết định hạ tầng IDB-08** (IDB-08 được hoãn chính thức có ranh giới `DEFERRED_WITH_BOUNDARY` đến trước triển khai sản xuất / Wave 8).
   - Các nhà cung cấp (Render, Cloudflare, Railway, AWS, MinIO) **tuyệt đối KHÔNG phải là thẩm quyền kiến trúc hay bất biến bị khóa cứng**. Giữ vững nguyên tắc thay thế nhà cung cấp dễ dàng (`keep providers replaceable`).
   - **Giới hạn của gói miễn phí tuyệt đối KHÔNG được làm tha hóa kiến trúc:**
     - Cấm lưu ngược ảnh nhị phân vào PostgreSQL chỉ vì hết hạn ngạch object storage miễn phí.
@@ -467,13 +469,13 @@ Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, c�
 | **IDB-07** | Lưu trữ File Bằng chứng | **S3-Compatible Object Storage Port** (Free-First Delivery: Cloudflare R2 / MinIO dev; Provider-neutral) | `HIGH` | `OWNER_APPROVED` | [Batch 3 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#5-decision-batch-3--object-storage--admin-web) |
 | **IDB-06** | Web Quản trị Admin | **React 19 SPA + Vite** (apps/admin-web, Platform Admin scope, Server authority) | `HIGH` | `OWNER_APPROVED` | [Batch 3 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#5-decision-batch-3--object-storage--admin-web) |
 
-### 26.4. AN TOÀN ĐỂ HOÃN — TRIỂN KHAI / ĐO ĐẠC THỰC ĐỊA (SAFE TO DEFER)
+### 26.4. HOÃN CÓ RANH GIỚI — TRIỂN KHAI / ĐO ĐẠC THỰC ĐỊA (DEFERRED_WITH_BOUNDARY)
 
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Giai Đoạn Đóng Băng Phù Hợp | Trạng Thái |
-| :---: | :--- | :--- | :---: | :---: | :---: |
-| **IDB-08** | Đóng gói & Triển khai Hạ tầng | **Docker Compose trên Linux VM** | `HIGH` | Wave 8 (Đóng gói sản xuất) | `OPEN` |
-| **IDB-09** | Cấu hình TTL Idempotency | **Biến môi trường (Mặc định 72h)** | `HIGH` | Đo đạc thực tế tại Wave 5 | `OPEN` |
-| **IDB-10** | Dọn dẹp Ảnh Bằng chứng Mobile | **Xóa sau COMPLETED (14d/300MB)** | `MEDIUM` | Đo đạc thực địa tại Wave 5 | `OPEN` |
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị (Cơ Sở Ứng Viên) | Mức Độ Tin Cậy | Ranh Giới & Cổng Chốt Muộn Nhất | Trạng Thái |
+| :---: | :--- | :--- | :---: | :--- | :---: |
+| **IDB-08** | Đóng gói & Triển khai Hạ tầng | **Docker Compose trên Linux VM** (Hoặc PaaS miễn phí/dùng thử tuân thủ COST-01) | `HIGH` | Phải chốt trước triển khai sản xuất / Wave 8 release. Giữ nguyên provider replaceable, topology 4 thành phần, HTTPS, backup an toàn. | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-09** | Cấu hình TTL Idempotency | **Biến môi trường (Baseline: 72h)** | `HIGH` | Phải chốt trước nghiệm thu sản xuất cơ chế offline retry. Bắt buộc: Server retention $\ge$ Max Legitimate Offline Retry Horizon. Cấu hình được qua env. | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-10** | Dọn dẹp Ảnh Bằng chứng Mobile | **Chính sách dọn dẹp sau hoàn thành (Baseline: 14d/300MB)** | `MEDIUM` | Phải chốt trước rollout thực địa sản xuất / Wave 5 final. Safety floor: Cấm xóa bằng chứng đang chờ Outbox/retry/chưa server ack/đang đối soát xung đột. | `DEFERRED_WITH_BOUNDARY` |
 
 ---
 
@@ -510,7 +512,7 @@ Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái
 - [x] **P12-G01:** Mọi tác vụ triển khai đều truy vết trực tiếp về yêu cầu chuẩn tắc (`CAP-01..05`, `CAP-ADM-01..09`, `OP-22`, `WF-*`, `DR-*`, `AC-*`, `QAS-*`)/ADR/khoảng cách đã xác minh; không sử dụng định danh tự tạo (`CAP-OPS-*`).
 - [x] **P12-G02:** Không tái thiết kế hay thay đổi bất kỳ ngữ nghĩa nghiệp vụ đóng băng nào; bảo toàn 4 kết luận duyệt chuẩn tắc (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`).
 - [x] **P12-G03:** Không tái thiết kế hay sửa đổi bất kỳ quyết định kiến trúc đã chấp thuận nào.
-- [x] **P12-G04:** 8 quyết định nền tảng (IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-06, IDB-07, IDB-11) đã được Chủ quản phê duyệt chính thức (OWNER_APPROVED); toàn bộ 3 quyết định còn lại (IDB-08, IDB-09, IDB-10) tiếp tục giữ trạng thái OPEN an toàn để hoãn, không khóa cứng công nghệ khi chưa có phê duyệt tương ứng. Toàn bộ các quyết định chặn Waves 1–6 đã được giải tỏa dứt điểm.
+- [x] **P12-G04:** 8 quyết định nền tảng (IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-06, IDB-07, IDB-11) đã được Chủ quản phê duyệt chính thức (OWNER_APPROVED); toàn bộ 3 quyết định còn lại (IDB-08, IDB-09, IDB-10) được hoãn chính thức có ranh giới kiểm soát (DEFERRED_WITH_BOUNDARY), không khóa cứng công nghệ khi chưa có phê duyệt tương ứng. Toàn bộ các quyết định chặn Waves 1–6 đã được giải tỏa dứt điểm. Kế hoạch triển khai chính thức đóng băng và sẵn sàng thực thi (Wave-gated execution, duy nhất Wave 0 được phép kích hoạt tiếp theo).
 - [x] **P12-G05:** Mô hình máy chủ là Modular Monolith duy nhất, không giả định tách microservices.
 - [x] **P12-G06:** Mô hình chuyển đổi là Strangler Pattern từng bước, cấm đập đi xây lại toàn bộ (No Big-Bang).
 - [x] **P12-G07:** Không đánh đồng 48 lệnh nghiệp vụ thành 48 endpoints công khai (tuân thủ ADR 0010).
@@ -522,16 +524,17 @@ Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái
 
 **KẾT LUẬN CHÍNH THỨC:**
 ```text
-PHASE 12B OWNER DECISION BATCH 3 RECORDED
-— IDB-07 S3-COMPATIBLE OBJECT STORAGE OWNER_APPROVED
-— IDB-06 REACT 19 + VITE ADMIN WEB OWNER_APPROVED
-— ZERO-COST / FREE-TIER-FIRST OWNER CONSTRAINT RECORDED
-— PROVIDER-NEUTRAL ARCHITECTURE PRESERVED
-— 8 OWNER_APPROVED / 3 OPEN / 0 REJECTED
-— ALL IMPLEMENTATION DECISIONS BLOCKING WAVES 1–6 RESOLVED
-— IDB-08 / IDB-09 / IDB-10 REMAIN OPEN
-— NO BUSINESS REDESIGN
-— NO ARCHITECTURE REDESIGN
+PHASE 12B COMPLETE — EXECUTION READY & FROZEN
+— 8 OWNER_APPROVED
+— 3 DEFERRED_WITH_BOUNDARY
+— 0 OPEN
+— 0 REJECTED
+— COST-01 FREE-FIRST CONSTRAINT PRESERVED
+— PROVIDER NEUTRALITY PRESERVED
+— IMPLEMENTATION MASTER PLAN FROZEN
+— BUSINESS / ARCHITECTURE BASELINES UNCHANGED
 — NO SOURCE IMPLEMENTATION
-— READY FOR PHASE 12B FINAL FREEZE / EXECUTION READINESS
+— IMPLEMENTATION REMAINS WAVE-GATED
+— ONLY WAVE 0 IS ELIGIBLE NEXT
+— READY FOR PHASE 13 / IMPLEMENTATION WAVE 0
 ```

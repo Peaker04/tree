@@ -1,8 +1,8 @@
 # Sổ Bộ Quyết Định Cấp Triển Khai (Phase 12 Implementation Decision Register)
 
 **Dự án:** NOVYX GreenOps
-**Giai đoạn:** Phase 12B — Owner Implementation Decision Review
-**Trạng thái Toàn bộ Sổ bộ:** 8 OWNER_APPROVED / 3 OPEN / 0 REJECTED (Batch 1 Approved: IDB-01, IDB-02, IDB-03; Batch 2 Approved: IDB-04, IDB-05, IDB-11; Batch 3 Approved: IDB-06, IDB-07; Còn lại: IDB-08, IDB-09, IDB-10 đang mở)
+**Giai đoạn:** Phase 12B — Final Freeze & Execution Readiness
+**Trạng thái Toàn bộ Sổ bộ:** 8 OWNER_APPROVED / 3 DEFERRED_WITH_BOUNDARY / 0 OPEN / 0 REJECTED (Batch 1 Approved: IDB-01, IDB-02, IDB-03; Batch 2 Approved: IDB-04, IDB-05, IDB-11; Batch 3 Approved: IDB-06, IDB-07; Hoãn có ranh giới: IDB-08, IDB-09, IDB-10)
 **Tài liệu Nguồn:** [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/PHASE11-OWNER-ADR-DECISIONS.md`](PHASE11-OWNER-ADR-DECISIONS.md), [`docs/PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md`](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md)
 **Ngày cập nhật:** 21/09/2026
 
@@ -10,18 +10,14 @@
 
 ## 1. Nguyên Tắc Quản Trị Quyết Định Cấp Triển Khai (Governance Rules)
 
-1. **Không Tự Ý Khóa Quyết Định Tác Động Lớn:**
-   Antigravity đề xuất phương án kỹ thuật tối ưu kèm mức độ tin cậy và phân tích đa chiều (sự phù hợp repo, kiến trúc, an ninh, độ tin cậy, độ phức tạp vận hành, chi phí chuyển đổi). Tuy nhiên, **toàn bộ các quyết định chưa được phê duyệt bắt buộc phải giữ trạng thái `OPEN`** cho đến khi Chủ quản (Owner) xem xét và phê duyệt chính thức theo từng đợt tại Phase 12B.
-2. **Phân Định Tính Khẩn Cấp (Decision Urgency):**
-   Mỗi quyết định được phân loại rõ ràng theo mức độ chặn các đợt triển khai (Waves):
-   - `BLOCKS_BACKEND`: Chặn trực tiếp việc khởi tạo mã nguồn máy chủ `apps/api` (Wave 2, Wave 3, Wave 4).
-   - `BLOCKS_MOBILE`: Chặn trực tiếp các thành phần tích hợp sâu trên client di động `apps/mobile` (Wave 5).
-   - `BLOCKS_ADMIN_WEB`: Chặn việc khởi tạo dự án web quản trị `apps/admin-web` (Wave 6).
-   - `CAN_DEFER_TO_DEPLOYMENT`: Có thể hoãn lại đến thời điểm đóng gói và phát hành hạ tầng production (Wave 8).
-   - `CAN_DEFER_TO_FIELD_MEASUREMENT`: Có thể hoãn lại để căn chỉnh dựa trên số liệu đo đạc thực tế.
-3. **Thao tác Chủ quản Cho phép:** `APPROVE` (Phê duyệt), `REJECT` (Bác bỏ), `REQUEST_REVISION` (Yêu cầu chỉnh sửa). Tại Đợt 1, Đợt 2 và Đợt 3, Chủ quản đã chính thức `APPROVE` IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-06, IDB-07, IDB-11.
+1. **Phân Định Dứt Điểm Quyết Định Triển Khai:**
+   Toàn bộ 11 quyết định cấp triển khai tại Phase 12B đã được Chủ quản phân loại dứt điểm thành `OWNER_APPROVED` (8 quyết định) hoặc `DEFERRED_WITH_BOUNDARY` (3 quyết định). **Không còn bất kỳ quyết định nào ở trạng thái để ngỏ không giới hạn (`OPEN`)**.
+2. **Phân Định Giữa Chặn Triển Khai Mã Nguồn và Nghiệm Thu Sản Xuất:**
+   - Các quyết định chặn trực tiếp việc khởi tạo mã nguồn máy chủ `apps/api` (Wave 2, 3, 4), di động `apps/mobile` (Wave 5) và web quản trị `apps/admin-web` (Wave 6) **đều đã được phê duyệt 100% (OWNER_APPROVED)**.
+   - Ba quyết định còn lại (`IDB-08`, `IDB-09`, `IDB-10`) được Chủ quản chủ động hoãn có ranh giới (`DEFERRED_WITH_BOUNDARY`); chúng hoàn toàn **không chặn việc khởi động Waves 0–6**, mà chỉ cần giải tỏa trước mốc nghiệm thu sản xuất tương ứng (`Wave 5` hoặc `Wave 8`).
+3. **Thao tác Chủ quản Cho phép:** `APPROVE` (Phê duyệt), `DEFER` (Hoãn có ranh giới bảo vệ), `REJECT` (Bác bỏ), `REQUEST_REVISION` (Yêu cầu chỉnh sửa).
 4. **Kỷ Luật Bằng Chứng Kỹ Thuật (Evidence Discipline):**
-   Loại bỏ toàn bộ các tuyên bố tiếp thị tuyệt đối ("tốt nhất", "hoàn hảo 100%", "loại bỏ hoàn toàn SQLi", "luôn < 1ms"). Mọi đánh giá phải dựa trên bằng chứng kỹ thuật khách quan từ tài liệu gốc (Primary Sources).
+   Mọi đánh giá kỹ thuật và tham số triển khai phải dựa trên bằng chứng khách quan từ tài liệu gốc (Primary Sources) hoặc đo đạc thực nghiệm trên phần cứng/hiện trường thực tế.
 
 ---
 
@@ -36,9 +32,9 @@
 | **IDB-05** | Thuật toán Băm Mật khẩu Tài khoản (Password Hashing) | Wave 3 (IAM & Authorization) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
 | **IDB-06** | Nền tảng & Công cụ Web Quản trị (Admin Web Tooling) | Wave 6 (Dedicated Admin Web) | `BLOCKS_ADMIN_WEB` | `OWNER_APPROVED` |
 | **IDB-07** | Hạ tầng Lưu trữ Bằng chứng Tệp Nhị phân (Object Storage)| Wave 4 (Operational Domain) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
-| **IDB-08** | Chiến lược Đóng gói & Triển khai Hạ tầng (Hosting) | Wave 8 (Hardening & Prod) | `CAN_DEFER_TO_DEPLOYMENT` | `OPEN` |
-| **IDB-09** | Chiến lược Cấu hình Thời gian Lưu vết Idempotency | Wave 2 / Wave 5 (OCC & Outbox) | `CAN_DEFER_TO_FIELD_MEASUREMENT` | `OPEN` |
-| **IDB-10** | Chiến lược Dọn dẹp Ảnh Bằng chứng Rác trên Mobile (GC) | Wave 5 (Mobile Local Storage) | `CAN_DEFER_TO_FIELD_MEASUREMENT` | `OPEN` |
+| **IDB-08** | Chiến lược Đóng gói & Triển khai Hạ tầng (Hosting) | Wave 8 (Hardening & Prod) | `CAN_DEFER_TO_DEPLOYMENT` | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-09** | Chiến lược Cấu hình Thời gian Lưu vết Idempotency | Wave 2 / Wave 5 (OCC & Outbox) | `CAN_DEFER_TO_FIELD_MEASUREMENT` | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-10** | Chiến lược Dọn dẹp Ảnh Bằng chứng Rác trên Mobile (GC) | Wave 5 (Mobile Local Storage) | `CAN_DEFER_TO_FIELD_MEASUREMENT` | `DEFERRED_WITH_BOUNDARY` |
 | **IDB-11** | Hạ tầng Quản lý Phiên & Trạng thái Thu hồi Máy chủ | Wave 3 (IAM & Freshness) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
 
 ---
@@ -267,11 +263,21 @@
 - **Sự phù hợp Kiến trúc:** Phù hợp với quyết định Modular Monolith triển khai đơn khối duy nhất (ADR 0013).
 - **Tác động An ninh:** Mạng Docker nội bộ (bridge network) cô lập cơ sở dữ liệu và object storage khỏi internet công cộng; chỉ phơi bày cổng API và Web qua Reverse Proxy SSL.
 - **Độ phức tạp Vận hành:** Thấp cho giai đoạn MVP, dễ dàng sao lưu bằng snapshot ổ đĩa.
-- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Docker Compose trên Linux VM cho MVP)**.
+- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Docker Compose trên Linux VM cho MVP)**; hoãn có ranh giới đến Wave 8.
 - **Mức độ Tin cậy:** `HIGH`.
-- **Tính Khẩn cấp:** `CAN_DEFER_TO_DEPLOYMENT` (Không ảnh hưởng đến mã nguồn domain, có thể chốt tại Wave 8).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `CAN_DEFER_TO_DEPLOYMENT` (Không ảnh hưởng đến mã nguồn domain, không chặn Waves 0–6).
+- **Trạng thái:** `DEFERRED_WITH_BOUNDARY`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] DEFER — Hoãn có Ranh giới (Deferred with Boundary đến Wave 8)  [ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Ranh Giới Bắt Buộc Khi Hoãn (Accepted Boundary while Deferred):**
+  - Việc hoãn là chủ động và có tính toán kỹ thuật: không ảnh hưởng đến Clean Architecture hay việc phát triển mã nguồn trong Waves 0–6; bắt buộc giải tỏa trước khi đóng gói hạ tầng sản xuất và phát hành chính thức tại Wave 8.
+  - Tuân thủ nghiêm ngặt ràng buộc COST-01: Ưu tiên hạ tầng chi phí $0, gói miễn phí (Free Tier) hoặc chương trình dùng thử (~1 tháng / Free Credits) khi còn khả thi về mặt kỹ thuật.
+  - Khả năng thay thế nhà cung cấp (Provider Neutrality): Giữ cho các nhà cung cấp luôn có thể thay thế lẫn nhau (`keep providers replaceable`). Không biến nhà cung cấp miễn phí tạm thời thành thẩm quyền kiến trúc.
+  - Tô-pô hệ thống chuẩn tắc: Bắt buộc hỗ trợ đầy đủ 4 thành phần đã được duyệt: `apps/api` (Node.js runtime Fastify), `PostgreSQL` (CSDL quan hệ), `apps/admin-web` (Static Web SPA), và `S3-compatible Object Storage` (Lưu trữ nhị phân bằng chứng qua Port).
+  - An ninh vận chuyển & Cấu hình: Bắt buộc hỗ trợ HTTPS/TLS trên mọi endpoint công khai; toàn bộ thông tin xác thực, secrets, chuỗi kết nối cấu hình qua biến môi trường bên ngoài.
+  - Bảo toàn thẩm quyền máy chủ: Máy chủ backend luôn là nguồn thẩm quyền tối cao và duy nhất cho mọi đột biến nghiệp vụ; không tạo ra nguồn chân lý kép (dual business truth).
+  - An toàn dữ liệu khi hết hạn dùng thử: Bắt buộc có quy trình sao lưu/xuất dữ liệu, xoay vòng credentials, và phương án di chuyển nhà cung cấp trước khi phụ thuộc vào dịch vụ miễn phí/dùng thử có thời hạn; việc hết hạn dùng thử tuyệt đối không được gây mất mát dữ liệu nghiệp vụ, kiểm toán hay bằng chứng.
+  - Render, Railway, Docker Compose, Linux VM, Cloudflare, AWS **tuyệt đối KHÔNG phải là kiến trúc được Chủ quản phê duyệt** trong pha này; chúng thuần túy là các ứng viên triển khai (deployment candidates).
+  - [THÔNG TIN NHÀ CUNG CẤP CÓ TÍNH THỜI ĐIỂM — KIỂM TRA LẠI TRƯỚC KHI TRIỂN KHAI / TIME-SENSITIVE PROVIDER INFORMATION — CHECK AGAIN BEFORE DEPLOYMENT, Checked: 21/09/2026].
 
 ---
 
@@ -285,11 +291,19 @@
 - **Sự phù hợp Kiến trúc:** Tuân thủ triệt để bất biến ADR 0009: *Thời gian lưu vết idempotency tại máy chủ bắt buộc $\ge$ Chân trời thử lại ngoại tuyến tối đa của thiết bị di động*.
 - **Tác động An ninh:** Đảm bảo không cho phép gửi trùng lặp tác vụ khi thiết bị thử lại sau thời gian mất kết nối.
 - **Độ phức tạp Vận hành:** Thấp.
-- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Biến môi trường `IDEMPOTENCY_RETENTION_HOURS`, giá trị cơ sở ứng viên 72h, dọn dẹp định kỳ)**.
+- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Biến môi trường `IDEMPOTENCY_RETENTION_HOURS`, giá trị cơ sở ứng viên 72h, dọn dẹp định kỳ)**; hoãn có ranh giới đến Wave 5/8.
 - **Mức độ Tin cậy:** `HIGH`.
-- **Tính Khẩn cấp:** `CAN_DEFER_TO_FIELD_MEASUREMENT` (Cần cấu hình trước Wave 5, giá trị tối ưu đo đạc thực tế).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `CAN_DEFER_TO_FIELD_MEASUREMENT` (Không chặn Waves 0–6, cần căn chỉnh giá trị tối ưu qua đo đạc thực tế).
+- **Trạng thái:** `DEFERRED_WITH_BOUNDARY`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] DEFER — Hoãn có Ranh giới (Deferred with Boundary đến Wave 5 & 8)  [ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Ranh Giới Bắt Buộc Khi Hoãn (Accepted Boundary while Deferred):**
+  - Giá trị số học chính xác về thời gian lưu vết (TTL) phụ thuộc vào chu kỳ thử lại ngoại tuyến thực tế và điều kiện kết nối mạng ngoài hiện trường; bắt buộc giải tỏa trước khi nghiệm thu sản xuất hành vi ngoại tuyến / idempotency tại Wave 5 & Wave 8.
+  - Bất biến đóng băng trong thời gian hoãn:
+    $$\text{SERVER IDEMPOTENCY RETENTION} \ge \text{MAXIMUM LEGITIMATE OFFLINE RETRY HORIZON SUPPORTED BY THE PRODUCT}$$
+  - Ranh giới triển khai mã nguồn:
+    1. Tầng triển khai được phép xây dựng cơ chế lưu vết idempotency có thể cấu hình linh hoạt (`configurable`), có thể giám sát (`observable`), và có thể kiểm thử tự động (`testable`) mà không cần đóng băng giá trị số học sản xuất cuối cùng.
+    2. Mốc **72 giờ** chỉ mang tính chất **Giá trị Cơ sở Ứng viên (`CANDIDATE_BASELINE`)**, tuyệt đối KHÔNG được mã hóa cứng thành hằng số nghiệp vụ trong domain.
+    3. Kiểm thử tự động phải xác nhận: các request mang cùng `Idempotency-Key` trong khoảng thời gian lưu vết không làm nhân bản đột biến tác vụ; tác vụ định kỳ dọn dẹp bản ghi idempotency hết hạn không vi phạm chân trời thử lại đã được cấu hình; giá trị thời gian lưu vết có thể thay đổi linh hoạt qua biến môi trường cấu hình triển khai (`IDEMPOTENCY_RETENTION_HOURS`) mà không làm thay đổi hợp đồng DTO hay logic nghiệp vụ.
 
 ---
 
@@ -303,11 +317,23 @@
 - **Sự phù hợp Kho mã nguồn:** Sử dụng API `expo-file-system` để kiểm tra dung lượng và xóa tệp.
 - **Sự phù hợp Kiến trúc:** Phù hợp với ADR 0008 (bảo tồn bằng chứng tối đa, không để mất dữ liệu trước khi nghiệm thu).
 - **Tác động Độ tin cậy:** Bảo vệ thiết bị khỏi tình trạng hết dung lượng ổ đĩa gây lỗi ứng dụng.
-- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Giữ ảnh sau COMPLETED ACK với giá trị cơ sở ứng viên 14 ngày và ngưỡng dọn dẹp cơ sở ứng viên 300 MB, tối ưu dựa trên đo đạc thực địa)**.
+- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Giữ ảnh sau COMPLETED ACK với giá trị cơ sở ứng viên 14 ngày và ngưỡng dọn dẹp cơ sở ứng viên 300 MB, tối ưu dựa trên đo đạc thực địa)**; hoãn có ranh giới đến Wave 5.
 - **Mức độ Tin cậy:** `MEDIUM` (Cần đo đạc dung lượng ảnh thực tế ngoài hiện trường).
-- **Tính Khẩn cấp:** `CAN_DEFER_TO_FIELD_MEASUREMENT` (Áp dụng trong Wave 5).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `CAN_DEFER_TO_FIELD_MEASUREMENT` (Không chặn Waves 0–6, áp dụng căn chỉnh trong Wave 5).
+- **Trạng thái:** `DEFERRED_WITH_BOUNDARY`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] DEFER — Hoãn có Ranh giới (Deferred with Boundary đến Wave 5 Final Acceptance)  [ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Ranh Giới Bắt Buộc Khi Hoãn (Accepted Boundary while Deferred):**
+  - Ngưỡng dung lượng bộ nhớ trống và khoảng thời gian lưu đệm tệp ảnh gốc trên thiết bị Android cần được đo đạc thực tế dựa trên kích thước ảnh nén và cấu hình phần cứng phổ thông ngoài thực địa; bắt buộc giải tỏa trước khi phát hành thực địa phiên bản sản xuất / nghiệm thu cuối cùng của Wave 5.
+  - Sàn an toàn bắt buộc không thể thương lượng (Non-negotiable safety floor): Một tệp ảnh bằng chứng cục bộ trên máy di động **TUYỆT ĐỐI KHÔNG ĐƯỢC PHÉP XÓA** khi:
+    1. Tệp đang được tham chiếu bởi một phần tử hàng đợi Outbox đang chờ gửi (`pending Outbox item`).
+    2. Tệp đang cần thiết cho các chu kỳ thử lại ngoại tuyến (`required for retry`).
+    3. Việc nộp bằng chứng chưa được máy chủ xác nhận bền vững ở cấp nghiệp vụ (`upload/business acceptance has not been durably acknowledged`).
+    4. Quá trình đồng bộ gặp lỗi hoặc xung đột phiên bản (`409 Conflict`) vẫn đòi hỏi bảo toàn tệp ảnh gốc trên máy để nhân viên đối soát.
+    5. Thao tác xóa có nguy cơ vi phạm các chỉ số độ tin cậy ngoại tuyến `QAS-OFFLINE-01` hoặc `QAS-OFFLINE-02`.
+  - Phân loại tham số & Trạng thái COMPLETED:
+    - Các mốc **14 ngày**, **300 MB**, **100 outbox items** chỉ mang tính chất **Giá trị Cơ sở Ứng viên (`CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`)**, tuyệt đối KHÔNG bị khóa cứng thành bất biến sản phẩm.
+    - Việc chính sách triển khai chọn giữ ảnh cho đến khi tác vụ đạt `TaskStatus = COMPLETED` là giải pháp thuận tiện vận hành, nhưng không được biến thành bất biến nghiệp vụ đóng băng.
+    - Bất biến an toàn cốt tử duy nhất là: **TUYỆT ĐỐI KHÔNG LÀM MẤT BẰNG CHỨNG CẦN THIẾT CHO VIỆC NỘP BỀN VỮNG, THỬ LẠI NGOẠI TUYẾN VÀ HÒA GIẢI XUNG ĐỘT (NO LOSS OF EVIDENCE REQUIRED FOR DURABLE SUBMISSION / RETRY / RECONCILIATION).**
 
 ---
 
@@ -366,17 +392,20 @@ Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, c�
 | **IDB-07** | Lưu trữ File Bằng chứng | **S3-Compatible Object Storage Port** (Free-First Delivery: Cloudflare R2 / MinIO dev; Provider-neutral) | `HIGH` | `OWNER_APPROVED` | [Batch 3 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#5-decision-batch-3--object-storage--admin-web) |
 | **IDB-06** | Web Quản trị Admin | **React 19 SPA + Vite** (apps/admin-web, Platform Admin scope, Server authority) | `HIGH` | `OWNER_APPROVED` | [Batch 3 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#5-decision-batch-3--object-storage--admin-web) |
 
-### 4.4. AN TOÀN ĐỂ HOÃN — TRIỂN KHAI / ĐO ĐẠC THỰC ĐỊA (SAFE TO DEFER)
+### 4.4. HOÃN CÓ RANH GIỚI BẢO VỆ — TRIỂN KHAI / ĐO ĐẠC THỰC ĐỊA (DEFERRED WITH BOUNDARY)
 
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Giai Đoạn Đóng Băng Phù Hợp | Trạng Thái |
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị & Ranh Giới Đóng Băng | Mức Độ Tin Cậy | Mốc Bắt Buộc Giải Tỏa | Trạng Thái |
 | :---: | :--- | :--- | :---: | :--- | :---: |
-| **IDB-08** | Đóng gói & Triển khai Hạ tầng | **Docker Compose trên Linux VM** | `HIGH` | Wave 8 (Đóng gói sản xuất) | `OPEN` |
-| **IDB-09** | Cấu hình TTL Idempotency | **Biến môi trường (Mặc định 72h)** | `HIGH` | Căn chỉnh theo đo đạc thực tế tại Wave 5 | `OPEN` |
-| **IDB-10** | Dọn dẹp Ảnh Bằng chứng Mobile | **Xóa sau COMPLETED (14d/300MB)** | `MEDIUM` | Căn chỉnh theo đo đạc thực địa tại Wave 5 | `OPEN` |
+| **IDB-08** | Đóng gói & Triển khai Hạ tầng | **Docker Compose / PaaS** (Áp dụng COST-01, topology 4 thành phần, nhà cung cấp thay thế được, không khóa cứng vendor) | `HIGH` | Trước khi đóng gói sản xuất (Wave 8) | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-09** | Cấu hình TTL Idempotency | **Biến môi trường** (Bất biến: Retention $\ge$ Max offline retry horizon; mốc 72h chỉ là cơ sở ứng viên) | `HIGH` | Trước khi nghiệm thu ngoại tuyến (Wave 5 & Wave 8) | `DEFERRED_WITH_BOUNDARY` |
+| **IDB-10** | Dọn dẹp Ảnh Bằng chứng Mobile | **Sàn an toàn tối thượng** (Cấm xóa khi pending/retry; 14d/300MB/100 items chỉ là cơ sở đo đạc) | `MEDIUM` | Trước khi phát hành thực địa (Wave 5 Final Acceptance) | `DEFERRED_WITH_BOUNDARY` |
 
 ---
 
 ## 5. Bảng Phân Loại Tham Số Chưa Đóng Băng (Unfrozen Parameter Classification)
+
+> [!NOTE]
+> **Thông tin Nhà cung cấp có Tính Thời điểm (Time-Sensitive Provider Information):** Các thông số về giá cả, dung lượng miễn phí, hạn mức băng thông hay thời gian dùng thử của các nhà cung cấp bên thứ ba (như Render, Cloudflare, Railway) là các dữ kiện có tính thời điểm [TIME-SENSITIVE PROVIDER INFORMATION — CHECK AGAIN BEFORE DEPLOYMENT, Checked: 21/09/2026], tuyệt đối KHÔNG cấu thành bất biến kiến trúc hay cam kết vĩnh cửu của Chủ quản. Đội ngũ triển khai bắt buộc phải kiểm tra lại hạn mức thực tế trước thời điểm phát hành. Ràng buộc COST-01 duy trì hiệu lực độc lập với mọi chương trình khuyến mãi của nhà cung cấp cụ thể.
 
 Các tham số định lượng dưới đây là các giá trị ứng viên cơ sở, tuyệt đối **KHÔNG được coi là bất biến chấp thuận mặc định** và không được đưa vào tiêu chí nghiệm thu nếu chưa được phê duyệt hoặc đo đạc chính thức:
 
