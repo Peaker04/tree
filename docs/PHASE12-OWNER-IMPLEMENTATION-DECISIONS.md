@@ -137,32 +137,128 @@ Chủ quản đã xem xét và đưa ra quyết định ràng buộc cấp tri�
 
 ---
 
-## 5. Tổng Hợp Trạng Thái Toàn Bộ Quyết Định Triển Khai (Phase 12B Status Summary)
+---
+
+## 5. Bảng Quyết Định Đợt 3 — Lưu Trữ Bằng Chứng & Web Quản Trị Admin (Decision Batch 3 — Object Storage & Admin Web)
+
+Chủ quản đã xem xét và đưa ra quyết định ràng buộc cấp triển khai cho 2 quyết định kỹ thuật cốt lõi chặn đợt Wave 4 (Lưu trữ ảnh bằng chứng tác nghiệp) và Wave 6 (Cổng web quản trị Admin):
+
+| ID | Quyết Định Chủ Quản (Owner Decision) | Phương Án Chấp Thuận (Accepted Direction) | Trạng Thái (Status) |
+| :---: | :---: | :--- | :---: |
+| **IDB-07** | **APPROVE** | **S3-Compatible Object Storage Port** với phương thức phân phối ưu tiên miễn phí (Free-first / Zero-cost demo delivery). Ảnh bằng chứng nhị phân được lưu trữ bên ngoài PostgreSQL thông qua cổng trừu tượng `IObjectStoragePort`. Bucket mặc định private; máy chủ phân quyền truy cập và cấp presigned URLs tạm thời. Cơ sở dữ liệu chỉ lưu trữ định danh bền vững (object key / storage reference), mã băm nội dung (checksum) và metadata. Ứng viên phân phối demo ưu tiên hiện tại là Cloudflare R2 Free Tier (kèm phương án dự phòng Railway Bucket hoặc MinIO cục bộ), nhưng không khóa cứng nhà cung cấp vào kiến trúc. | `OWNER_APPROVED` |
+| **IDB-06** | **APPROVE** | **React 19 SPA + Vite** cho workspace `apps/admin-web`; Kiến trúc Single Page Application thuần túy tiêu thụ `@novyx/contracts` và `@novyx/ui` (phần tương thích web). Dành riêng cho Platform Administrator thực thi các năng lực quản trị (CAP-ADM-01..09) và tra cứu lịch sử (OP-22), tuyệt đối không can thiệp tác vụ vận hành hiện trường. Giao diện SPA mang tính định hướng (advisory), máy chủ là thẩm quyền an ninh tối cao. Ứng viên phân phối demo ưu tiên là Render Static Site nhưng không khóa cứng hạ tầng. | `OWNER_APPROVED` |
+
+---
+
+## 6. Ràng Buộc Phân Phối Chi Phí Bằng Không / Ưu Tiên Gói Miễn Phí (Owner Constraint COST-01 — Zero-Cost / Free-Tier-First Delivery)
+
+Chủ quản xác lập ràng buộc điều hành ràng buộc về chi phí trong giai đoạn MVP / Demo:
+
+- **Nguyên tắc cốt lõi (COST-01):** Ngân sách hạ tầng hiện tại là **$0 hoặc xấp xỉ $0**. Do đó, lộ trình triển khai phải ưu tiên tối đa các gói miễn phí (Free Tier) hoặc các chương trình dùng thử miễn phí (Free Trial ~1 tháng) có sẵn của các nhà cung cấp dịch vụ đám mây uy tín; tránh bắt buộc sử dụng hạ tầng trả phí khi đã có phương án thay thế miễn phí khả thi về mặt kỹ thuật.
+- **Tính độc lập với Kiến trúc (Architecture Neutrality):** Ràng buộc chi phí chỉ định hướng việc lựa chọn nhà cung cấp dịch vụ hạ tầng trong giai đoạn thử nghiệm/demo, **tuyệt đối KHÔNG làm thay đổi thẩm quyền kiến trúc hoặc ngữ nghĩa nghiệp vụ chuẩn tắc**:
+  - Không vì giới hạn dung lượng của gói object storage miễn phí mà đưa ảnh nhị phân quay trở lại lưu trữ trong PostgreSQL.
+  - Không vì backend miễn phí có thời gian khởi động nguội (cold start / sleep) mà cắt bỏ các bước xác thực tính tươi tài khoản hoặc hạ tầng backend có thẩm quyền.
+  - Không vì tài khoản dùng thử hết hạn mà tạo ra nguồn chân lý nghiệp vụ kép (dual business truth).
+- **Quy trình An toàn Khi Hết Hạn Dùng Thử (Trial Expiration Safety):** Kế hoạch triển khai hạ tầng phải dự phòng các quy trình an toàn: quy trình sao lưu/xuất dữ liệu (export/backup), quy trình xoay vòng thông tin xác thực (credential rotation), quy trình chuyển đổi nhà cung cấp (provider migration), và phân tách cấu hình qua biến môi trường. Việc hết hạn gói dùng thử không được phép làm mất mát dữ liệu nghiệp vụ, nhật ký kiểm toán, liên kết bằng chứng hoặc tài khoản người dùng.
+- **Gợi Ý Cấu Hình Phân Phối Demo Phi Ràng Buộc (Non-Binding Zero-Cost Demo Guidance):**
+  - `apps/api`: Web Service gói miễn phí / dùng thử (ví dụ: Render Free / Web Service Trial).
+  - PostgreSQL: CSDL PostgreSQL miễn phí / dùng thử (ví dụ: Render PostgreSQL Free / Trial).
+  - `apps/admin-web`: Dịch vụ lưu trữ web tĩnh miễn phí (ví dụ: Render Static Site Free Tier).
+  - Lưu trữ Bằng chứng: Object Storage gói miễn phí (ví dụ: Cloudflare R2 Free Tier: 10GB lưu trữ miễn phí, không tính phí egress).
+  - Hạ tầng dự phòng tạm thời: Gói dùng thử Railway khi có credit trải nghiệm.
+  - *Lưu ý quan trọng:* Gợi ý trên là định hướng phân phối thực tế phi ràng buộc, **tuyệt đối KHÔNG giải quyết hay khóa cứng quyết định hạ tầng tổng thể IDB-08**.
+
+---
+
+## 7. Chi Tiết Phạm Vi Chấp Thuận Đợt 3 (Accepted Scopes — Batch 3)
+
+### 7.1. IDB-07 — Hạ Tầng Lưu Trữ Bằng Chứng Tệp Nhị Phân: S3-Compatible Port (`OWNER_APPROVED`)
+
+- **Kiến trúc Lưu trữ Phân tách:** Tệp ảnh bằng chứng nhị phân (Binary Proof Photos) được lưu trữ hoàn toàn bên ngoài cơ sở dữ liệu quan hệ PostgreSQL thông qua cổng giao tiếp trừu tượng `IObjectStoragePort` tại tầng Infrastructure.
+- **Thao tác Chuẩn S3 (S3-Compatible Operations):** Adapter hạ tầng sử dụng các thao tác tương thích chuẩn S3 API (PutObject, GetObject, DeleteObject, HeadObject, CreatePresignedUrl). Tầng Domain và Application hoàn toàn trung lập với nhà cung cấp (provider-neutral).
+- **Quy Tắc Truy Cập Đối Tượng (Object Access Rules):**
+  1. Toàn bộ bucket / container lưu trữ đều được cấu hình ở chế độ **riêng tư mặc định (private by default)**.
+  2. Máy chủ backend kiểm soát hoàn toàn việc sinh khóa đối tượng (object-key generation) theo cấu trúc định danh chuẩn hóa.
+  3. Client không nhận được URL công khai vĩnh viễn (public URLs) làm định danh bằng chứng chuẩn tắc.
+  4. Presigned URLs chỉ là hiện vật vận chuyển / truy cập tạm thời (temporary transport/access artifacts) có thời hạn sống hữu hạn do máy chủ ký cấp phát sau khi đã thẩm định quyền truy cập.
+  5. Cơ sở dữ liệu quan hệ chỉ lưu trữ biểu diễn bằng chứng bền vững ở mức khái niệm gồm:
+     - `storageRef` / `objectKey` (khóa lưu trữ định danh bền vững)
+     - `contentHash` / `checksum` (mã băm toàn vẹn nội dung)
+     - `contentType` (kiểu MIME, ví dụ `image/jpeg`)
+     - `size` (kích thước tệp tính bằng bytes)
+     - `evidence ownership` / `provenance` (người chụp, tọa độ GPS, thời điểm ghi nhận)
+     - Các metadata bằng chứng khác theo ngữ nghĩa nghiệp vụ đóng băng.
+  6. Lược đồ bảng SQL cụ thể cho bảng bằng chứng không bị đóng băng tại quyết định này, mà thuộc phạm vi thiết kế chi tiết của Wave 4.
+- **Phân Biệt An Toàn Tiếp Nhận Tải Lên (Upload Acceptance Safety Invariant):**
+  - Kế hoạch triển khai phân biệt rạch ròi giữa **Tải Lên Tệp Thành Công (Object Upload Success)** và **Tiếp Nhận Bằng Chứng Nghiệp Vụ (Business Evidence Acceptance)**.
+  - Việc tải thành công một tệp nhị phân lên object storage **tuyệt đối KHÔNG tự động**:
+    - Làm chuyển đổi trạng thái tác vụ (`TaskStatus`).
+    - Đánh dấu bằng chứng là hợp lệ (`VALID`).
+    - Hoàn tất lệnh nộp bằng chứng (`SubmitEvidence`).
+    - Cho phép bước thẩm định duyệt (`ReviewTask`).
+  - Tầng Máy chủ / Application Use Cases bắt buộc phải thực hiện thẩm định toàn diện: quyền sở hữu tài nguyên, trạng thái tác vụ hiện hành, quy tắc hồ sơ bằng chứng (ProofProfile), mã băm toàn vẹn (checksum) và các tiền điều kiện nghiệp vụ trước khi ghi nhận đột biến nghiệp vụ.
+- **Ranh Giới Mã Nguồn & Nhà Cung Cấp (Provider Boundary):**
+  - Tuyệt đối không đưa tên bucket R2 cụ thể, Account IDs, mô hình domain đặc thù Cloudflare, hay SDK types của nhà cung cấp vào Domain, Application, hoặc `@novyx/contracts`.
+  - Mã nguồn hoặc SDK chuyên biệt của nhà cung cấp (ví dụ `@aws-sdk/client-s3`) chỉ được phép tồn tại duy nhất tại thư mục Adapter thuộc tầng Infrastructure của `apps/api`.
+  - Cloudflare R2, AWS S3, Railway Bucket, MinIO **không phải là bất biến kiến trúc vĩnh cửu**; bất biến duy nhất được phê duyệt là **Cổng lưu trữ tương thích chuẩn S3 (S3-Compatible Object Storage Port)**.
+  - MinIO chỉ là công cụ hỗ trợ môi trường phát triển cục bộ và CI, không bắt buộc vận hành trong môi trường sản xuất.
+
+### 7.2. IDB-06 — Nền Tảng & Bộ Công Cụ Web Quản Trị Admin: React 19 SPA + Vite (`OWNER_APPROVED`)
+
+- **Không Gian Làm Việc Chấp Thuận:** Khởi tạo workspace `apps/admin-web` theo kiến trúc Single Page Application (SPA) bằng **React 19**, **TypeScript**, và công cụ build **Vite**.
+- **Tiêu Thụ Gói Dùng Chung Nội Bộ:**
+  - Tiêu thụ `@novyx/contracts` làm thẩm quyền hợp đồng định kiểu duy nhất.
+  - Tiêu thụ `@novyx/ui` cho các thành phần token màu sắc và typography thực sự tương thích với web (không ép buộc các thành phần đặc thù React Native).
+- **Chính Sách Phiên Bản Linh Hoạt (Version Policy):**
+  - Mốc triển khai ban đầu tuân thủ phiên bản React 19.x và Vite major tương thích với môi trường Node runtime hiện tại của repo.
+  - Không đóng băng vĩnh viễn phiên bản minor/patch cụ thể; các đợt cập nhật bảo trì thông thường không đòi hỏi quyết định kiến trúc mới nếu không làm thay đổi bản chất kiến trúc SPA.
+- **Phạm Vi Thẩm Quyền Quản Trị Chuẩn Tắc (Admin Authority):**
+  - `apps/admin-web` là bề mặt giao diện chuyên biệt dành riêng cho Platform Administrator, chỉ phục vụ 9 năng lực quản trị chuẩn tắc:
+    - `CAP-ADM-01`: Cấp phát người dùng (`ProvisionUser`)
+    - `CAP-ADM-02`: Phân quyền vai trò (`AssignRole`)
+    - `CAP-ADM-03`: Vòng đời tài khoản (`SuspendAccount`, `ActivateAccount`, `DisableAccount`)
+    - `CAP-ADM-04`: Mở khóa & Đặt lại tài khoản (`UnlockAccount`, `ResetCredentialSetup`)
+    - `CAP-ADM-05`: Tra cứu nhật ký kiểm toán bất biến (`ViewAuditLog`)
+    - `CAP-ADM-06`: Quản trị danh mục cây chuẩn (`CreateTree`, `UpdateTree`, `DecommissionTree`)
+    - `CAP-ADM-07`: Quản trị danh mục loại tác vụ (`CreateTaskType`, `UpdateTaskType`)
+    - `CAP-ADM-08`: Quản trị chính sách hồ sơ bằng chứng (`ConfigureProofProfile`)
+    - `CAP-ADM-09`: Quản trị biểu mẫu checklist (`CreateChecklistTemplate`, `UpdateChecklistTemplate`)
+    - Năng lực đọc kiểm toán: `OP-22` Tra cứu lịch sử chăm sóc cây toàn hệ thống (`ViewCareHistory` chỉ đọc).
+  - **Cấm Tuyệt Đối Can Thiệp Tác Vụ Hiện Trường:** `apps/admin-web` tuyệt đối KHÔNG có quyền hạn hay giao diện thực thi các tác vụ vận hành thông thường (`CreateTask`, `AssignTask`, `StartTask`, `SubmitEvidence`, `ApproveTask`, `RequestRework`).
+- **Giao Diện SPA Không Phải Là Ranh Giới An Ninh (SPA is NOT a Security Boundary):**
+  - Việc ẩn nút bấm, bảo vệ route bằng React router guard, hay kiểm tra điều kiện vai trò ở client chỉ mang tính chất định hướng giao diện (advisory).
+  - An ninh bắt buộc tuân thủ nguyên tắc phòng vệ 3 tầng: Client advisory $\rightarrow$ Server request gate (Tier 2 Gate) $\rightarrow$ Application/Domain authoritative eligibility. Mọi hành động nhạy cảm đều phải được máy chủ thẩm định quyền hạn tối cao.
+- **Ranh Giới Thông Tin Xác Thực Trình Duyệt (Browser Credential Boundary):**
+  - Việc chấp thuận Vite + React 19 không đồng nghĩa với việc tự ý quyết định nơi lưu trữ credential trên trình duyệt.
+  - Tuyệt đối không tự ý ngầm chọn `localStorage`, `sessionStorage`, hay `IndexedDB` cho refresh token mà phải tuân thủ nghiêm ngặt ADR 0006, IDB-04 (Opaque Credentials) và IDB-11, được chốt cụ thể trong thiết kế an ninh của Wave 6.
+- **Phân Phối Ưu Tiên Miễn Phí (Free-First Static Delivery):**
+  - Do `apps/admin-web` là Static SPA (chỉ gồm HTML/JS/CSS tĩnh sau khi build), ứng viên phân phối demo tối ưu chi phí là dịch vụ Static Site miễn phí (như Render Static Site, Cloudflare Pages, hoặc tương đương). Tuy nhiên, tên nhà cung cấp không phải là bất biến kiến trúc.
+
+---
+
+## 8. Tổng Hợp Trạng Thái Toàn Bộ Quyết Định Triển Khai (Phase 12B Status Summary)
 
 | Trạng Thái | Số Lượng | Danh Sách Mã Quyết Định | Ghi Chú |
 | :--- | :---: | :--- | :--- |
-| **`OWNER_APPROVED`** | **6** | **IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-11** | Đã được Chủ quản phê duyệt chính thức tại Đợt 1 (Wave 2) và Đợt 2 (Wave 3 IAM/Security). |
-| **`OPEN`** | **5** | **IDB-06, IDB-07, IDB-08, IDB-09, IDB-10** | Tiếp tục giữ trạng thái mở, chờ xem xét theo từng đợt tương ứng. |
+| **`OWNER_APPROVED`** | **8** | **IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-06, IDB-07, IDB-11** | Đã được Chủ quản phê duyệt chính thức qua 3 đợt (Wave 2, Wave 3, Wave 4, Wave 6). Giải tỏa toàn bộ các quyết định chặn đợt 1 đến 6. |
+| **`OPEN`** | **3** | **IDB-08, IDB-09, IDB-10** | Tiếp tục giữ trạng thái mở, an toàn để hoãn đến giai đoạn đóng gói triển khai (Wave 8) hoặc đo đạc thực tế tại hiện trường (Wave 5). |
 | **`REJECTED`** | **0** | *(Không có)* | |
 
 ---
 
-## 6. Tuyên Bố Giới Hạn Thẩm Quyền Triển Khai (Execution Boundary Statement)
+## 9. Tuyên Bố Giới Hạn Thẩm Quyền Triển Khai (Execution Boundary Statement)
 
 > [!IMPORTANT]
 > **Tuyên bố Ranh giới Tuyệt đối:**
-> **Không có bất kỳ mã nguồn ứng dụng nào (`apps/**`), gói dùng chung (`packages/**`), kịch bản (`scripts/**`), hoặc phụ thuộc runtime (`package.json`) nào được phép khởi tạo, cài đặt hay thay đổi trong phạm vi của đợt phê duyệt Đợt 1 và Đợt 2 này.**
-> Quyết định này chỉ ghi nhận các lựa chọn công nghệ cấp kiến trúc triển khai để cập nhật kế hoạch tổng thể và ma trận truy vết.
-> Toàn bộ các đợt thực thi mã nguồn (Wave 0, Wave 1, Wave 2, Wave 3) **CHƯA ĐƯỢC PHÉP THỰC THI** cho đến khi có chỉ thị chính thức.
+> **Không có bất kỳ mã nguồn ứng dụng nào (`apps/**`), gói dùng chung (`packages/**`), kịch bản (`scripts/**`), hoặc phụ thuộc runtime (`package.json`) nào được phép khởi tạo, cài đặt hay thay đổi trong phạm vi của đợt phê duyệt Đợt 1, Đợt 2 và Đợt 3 này.**
+> Đợt phê duyệt này chỉ ghi nhận các quyết định công nghệ cấp kiến trúc triển khai để hoàn thiện kế hoạch tổng thể và ma trận truy vết.
+> Toàn bộ các đợt thực thi mã nguồn (Wave 0 đến Wave 6) **CHƯA ĐƯỢC PHÉP THỰC THI** cho đến khi có chỉ thị chính thức.
 
 ---
 
-## 7. Kế Hoạch Trình Duyệt Đợt Tiếp Theo (Next Review Batch)
+## 10. Kế Hoạch Các Quyết Định An Toàn Để Hoãn (Safe to Defer Decisions)
 
-- **Đợt 3 (Batch 3 — Quyết định Chặn Wave 4 & Wave 6):**
-  - **IDB-07:** Hạ tầng Lưu trữ Bằng chứng Tệp Nhị phân (`S3-Compatible Port: MinIO / AWS S3 / Cloudflare R2` — Chặn Wave 4).
-  - **IDB-06:** Nền tảng & Bộ Công cụ Web Quản trị Admin (`Vite + React 19 SPA` — Chặn Wave 6).
-- **An Toàn Để Hoãn (Safe to Defer — Triển khai / Đo đạc thực địa):**
-  - **IDB-08:** Chiến lược Đóng gói & Triển khai Hạ tầng (Docker Compose trên Linux VM — Hoãn Wave 8).
-  - **IDB-09:** Cấu hình TTL Idempotency (Biến môi trường, đo đạc tại Wave 5).
-  - **IDB-10:** Dọn dẹp Ảnh Bằng chứng Mobile GC (Đo đạc thực địa tại Wave 5).
+Ba quyết định còn lại không chặn việc thiết kế hay triển khai mã nguồn ban đầu của các Waves 1–6 và tiếp tục duy trì trạng thái `OPEN`:
+- **IDB-08:** Chiến lược Đóng gói & Triển khai Hạ tầng Sản xuất (`Docker Compose trên Linux VM` vs `PaaS` — Hoãn đến Wave 8 Hardening).
+- **IDB-09:** Cấu hình Thời gian Lưu vết Idempotency (`Biến môi trường`, mốc cơ sở ứng viên 72h — Căn chỉnh dựa trên đo đạc thực địa tại Wave 5).
+- **IDB-10:** Chiến lược Dọn dẹp Ảnh Bằng chứng Mobile GC (`Xóa sau COMPLETED`, mốc cơ sở ứng viên 14 ngày / 300MB — Căn chỉnh dựa trên đo đạc thực địa tại Wave 5).

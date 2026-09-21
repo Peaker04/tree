@@ -2,7 +2,7 @@
 
 **Dự án:** NOVYX GreenOps
 **Giai đoạn:** Phase 12B — Owner Implementation Decision Review
-**Trạng thái Toàn bộ Sổ bộ:** 6 OWNER_APPROVED / 5 OPEN / 0 REJECTED (Batch 1 Approved: IDB-01, IDB-02, IDB-03; Batch 2 Approved: IDB-04, IDB-05, IDB-11; Các quyết định còn lại đang trong quá trình review)
+**Trạng thái Toàn bộ Sổ bộ:** 8 OWNER_APPROVED / 3 OPEN / 0 REJECTED (Batch 1 Approved: IDB-01, IDB-02, IDB-03; Batch 2 Approved: IDB-04, IDB-05, IDB-11; Batch 3 Approved: IDB-06, IDB-07; Còn lại: IDB-08, IDB-09, IDB-10 đang mở)
 **Tài liệu Nguồn:** [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/PHASE11-OWNER-ADR-DECISIONS.md`](PHASE11-OWNER-ADR-DECISIONS.md), [`docs/PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md`](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md)
 **Ngày cập nhật:** 21/09/2026
 
@@ -19,7 +19,7 @@
    - `BLOCKS_ADMIN_WEB`: Chặn việc khởi tạo dự án web quản trị `apps/admin-web` (Wave 6).
    - `CAN_DEFER_TO_DEPLOYMENT`: Có thể hoãn lại đến thời điểm đóng gói và phát hành hạ tầng production (Wave 8).
    - `CAN_DEFER_TO_FIELD_MEASUREMENT`: Có thể hoãn lại để căn chỉnh dựa trên số liệu đo đạc thực tế.
-3. **Thao tác Chủ quản Cho phép:** `APPROVE` (Phê duyệt), `REJECT` (Bác bỏ), `REQUEST_REVISION` (Yêu cầu chỉnh sửa). Tại Đợt 1 và Đợt 2, Chủ quản đã chính thức `APPROVE` IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-11.
+3. **Thao tác Chủ quản Cho phép:** `APPROVE` (Phê duyệt), `REJECT` (Bác bỏ), `REQUEST_REVISION` (Yêu cầu chỉnh sửa). Tại Đợt 1, Đợt 2 và Đợt 3, Chủ quản đã chính thức `APPROVE` IDB-01, IDB-02, IDB-03, IDB-04, IDB-05, IDB-06, IDB-07, IDB-11.
 4. **Kỷ Luật Bằng Chứng Kỹ Thuật (Evidence Discipline):**
    Loại bỏ toàn bộ các tuyên bố tiếp thị tuyệt đối ("tốt nhất", "hoàn hảo 100%", "loại bỏ hoàn toàn SQLi", "luôn < 1ms"). Mọi đánh giá phải dựa trên bằng chứng kỹ thuật khách quan từ tài liệu gốc (Primary Sources).
 
@@ -34,8 +34,8 @@
 | **IDB-03** | Công cụ Truy cập DB / ORM / Query Builder | Wave 2 (Backend Foundation) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
 | **IDB-04** | Cấu trúc Thông tin Xác thực (Access Credential Architecture) | Wave 3 (IAM & Authorization) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
 | **IDB-05** | Thuật toán Băm Mật khẩu Tài khoản (Password Hashing) | Wave 3 (IAM & Authorization) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
-| **IDB-06** | Nền tảng & Công cụ Web Quản trị (Admin Web Tooling) | Wave 6 (Dedicated Admin Web) | `BLOCKS_ADMIN_WEB` | `OPEN` |
-| **IDB-07** | Hạ tầng Lưu trữ Bằng chứng Tệp Nhị phân (Object Storage)| Wave 4 (Operational Domain) | `BLOCKS_BACKEND` | `OPEN` |
+| **IDB-06** | Nền tảng & Công cụ Web Quản trị (Admin Web Tooling) | Wave 6 (Dedicated Admin Web) | `BLOCKS_ADMIN_WEB` | `OWNER_APPROVED` |
+| **IDB-07** | Hạ tầng Lưu trữ Bằng chứng Tệp Nhị phân (Object Storage)| Wave 4 (Operational Domain) | `BLOCKS_BACKEND` | `OWNER_APPROVED` |
 | **IDB-08** | Chiến lược Đóng gói & Triển khai Hạ tầng (Hosting) | Wave 8 (Hardening & Prod) | `CAN_DEFER_TO_DEPLOYMENT` | `OPEN` |
 | **IDB-09** | Chiến lược Cấu hình Thời gian Lưu vết Idempotency | Wave 2 / Wave 5 (OCC & Outbox) | `CAN_DEFER_TO_FIELD_MEASUREMENT` | `OPEN` |
 | **IDB-10** | Chiến lược Dọn dẹp Ảnh Bằng chứng Rác trên Mobile (GC) | Wave 5 (Mobile Local Storage) | `CAN_DEFER_TO_FIELD_MEASUREMENT` | `OPEN` |
@@ -209,9 +209,18 @@
 - **Chi phí Chuyển đổi:** Thấp.
 - **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (Vite + React 19 SPA)**.
 - **Mức độ Tin cậy:** `HIGH`.
-- **Tính Khẩn cấp:** `BLOCKS_ADMIN_WEB` (Cần quyết định trước Wave 6).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `BLOCKS_ADMIN_WEB` (Đã được giải tỏa cho Wave 6).
+- **Trạng thái:** `OWNER_APPROVED`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] APPROVE — React 19 SPA + Vite  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Phạm vi Chấp thuận Cụ thể (Accepted Scope):**
+  - Workspace chuyên biệt cho web quản trị là `apps/admin-web`, xây dựng theo kiến trúc Single Page Application (SPA) với React 19, TypeScript và Vite.
+  - Mốc triển khai ban đầu (Initial implementation baseline) tuân thủ bản phát hành React 19.x tương thích kho mã nguồn hiện tại và bản phát hành Vite major được hỗ trợ tương thích với Node runtime của repository. **Không đóng băng vĩnh viễn** bản vá minor/patch cụ thể của React hay Vite; các đợt nâng cấp dependency thông thường không cấu thành thay đổi kiến trúc.
+  - Admin Web tiêu thụ trực tiếp gói `@novyx/contracts` và gói `@novyx/ui` (ở những thành phần thực sự tương thích môi trường web).
+  - Phục vụ riêng tư cách Quản trị viên Nền tảng (Platform Administrator) với các thẩm quyền quản trị: `CAP-ADM-01` (User Provisioning), `CAP-ADM-02` (Role Assignment), `CAP-ADM-03` (Account Lifecycle), `CAP-ADM-04` (Account Recovery / Unlock), `CAP-ADM-05` (Audit Log Inspection), `CAP-ADM-06` (Tree Master Data Governance), `CAP-ADM-07` (TaskType Catalog Governance), `CAP-ADM-08` (ProofProfile Policy Governance), `CAP-ADM-09` (Checklist Template Governance), và quyền chỉ đọc `OP-22` (ViewCareHistory).
+  - **Tuyệt đối KHÔNG trao thẩm quyền tác nghiệp thông thường** cho Admin Web: cấm bổ sung các quyền đột biến công việc hiện trường (`CreateTask`, `AssignTask`, `StartTask`, `SubmitEvidence`, `ApproveTask`, `RequestRework`) như quyền quản trị thông thường.
+  - **SPA không phải là ranh giới an ninh (SPA is NOT a security boundary):** Khả năng hiển thị giao diện trên React/Vite (ẩn/hiện nút, route guards, điều kiện vai trò trong component) chỉ mang tính tư vấn/chỉ dẫn trải nghiệm (`ADVISORY`). Toàn bộ quyền truy cập và thực thi bắt buộc phải được thẩm định và thực thi uy quyền tại Máy chủ (Server Request Gate & Domain Authoritative Eligibility).
+  - **Ranh giới lưu trữ thông tin xác thực trình duyệt (Browser Credential Boundary):** Việc lựa chọn Vite + React không tự động quyết định cơ chế lưu trữ credential trong trình duyệt. Tuyệt đối không tự ý chọn ngầm `localStorage`, `sessionStorage` hay `IndexedDB` cho refresh token làm kiến trúc an ninh cuối cùng; cơ chế xác thực Admin Web phải tuân thủ nghiêm ngặt ADR 0006, IDB-04, IDB-11 và được giải quyết trong giai đoạn thiết kế an ninh/triển khai.
+  - **Ưu tiên bàn giao demo chi phí $0:** Render Static Site là phương án ưu tiên bàn giao cho môi trường demo hiện tại (do Admin Web là static SPA thuần túy). Tuy nhiên, Render **KHÔNG phải là kiến trúc bị khóa cứng bởi Chủ quản**; bất kỳ nền tảng lưu trữ tĩnh tương đương nào hỗ trợ định tuyến SPA, HTTPS và kết nối an toàn tới `apps/api` đều có thể được sử dụng thay thế.
 
 ---
 
@@ -227,11 +236,23 @@
 - **Tác động An ninh:** Hỗ trợ cơ chế Pre-signed URLs hoặc private bucket với API gateway xác thực quyền truy cập ảnh.
 - **Tác động Độ tin cậy:** Đảm bảo cơ sở dữ liệu tác nghiệp không bị phình to bởi dữ liệu nhị phân.
 - **Độ phức tạp Vận hành:** Thấp khi dùng Docker Compose MinIO cho dev và Managed Object Storage cho production.
-- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (S3-Compatible Port: MinIO cho Dev, S3/R2 cho Prod)**.
+- **Khuyến nghị của Kỹ sư:** **Chọn Phương án A (S3-Compatible Object Storage Port)** kèm ưu tiên bàn giao demo chi phí $0 (Free-First Delivery Preference).
 - **Mức độ Tin cậy:** `HIGH`.
-- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Cần quyết định trước Wave 4 - Work Management).
-- **Trạng thái:** `OPEN`.
-- **Quyết định của Chủ quản (Owner Decision):** `[ ] APPROVE  [ ] REJECT  [ ] REQUEST_REVISION` *(Chờ phê duyệt)*
+- **Tính Khẩn cấp:** `BLOCKS_BACKEND` (Đã được giải tỏa cho Wave 4).
+- **Trạng thái:** `OWNER_APPROVED`.
+- **Quyết định của Chủ quản (Owner Decision):** `[x] APPROVE — S3-Compatible Object Storage Port (Free-First Delivery Preference)  [ ] REJECT  [ ] REQUEST_REVISION`
+- **Phạm vi Chấp thuận Cụ thể (Accepted Scope):**
+  - Bằng chứng nhị phân (Binary Proof Photos) được lưu trữ bên ngoài cơ sở dữ liệu quan hệ PostgreSQL thông qua cổng trừu tượng `IObjectStoragePort`.
+  - Adapter hạ tầng (Infrastructure Adapter) sử dụng các thao tác tương thích chuẩn S3 API (S3-compatible operations).
+  - Tầng Domain và Application Use Cases duy trì tính trung lập hoàn toàn với nhà cung cấp (provider-neutral); tuyệt đối không phụ thuộc vào SDK hay kiểu dữ liệu riêng biệt của Cloudflare R2, AWS S3, MinIO hay bất kỳ nhà cung cấp cụ thể nào.
+  - Thùng chứa (Buckets/Containers) ở trạng thái riêng tư theo mặc định (`private by default`). Máy chủ kiểm soát việc sinh khóa đối tượng (`objectKey`), ủy quyền truy cập đối tượng thông qua URL có chữ ký tạm thời (`presigned URLs`) có thời hạn sống ngắn.
+  - Client tuyệt đối không nhận URL công khai vĩnh viễn làm định danh bằng chứng. Định danh bằng chứng bền vững trong CSDL PostgreSQL lưu trữ tối thiểu về mặt khái niệm: `storageRef` / `objectKey`, `contentHash` / `checksum`, `contentType`, `size`, nguồn gốc/sở hữu bằng chứng (`evidence ownership/provenance`), dấu thời gian tạo (`createdAt`), và metadata bằng chứng theo nghiệp vụ; **tuyệt đối không lưu URL có chữ ký tạm thời làm định danh bằng chứng bền vững**. Lược đồ bảng SQL cụ thể không bị đóng băng tại quyết định này.
+  - **An toàn nghiệm thu tải lên (Upload Acceptance Safety):** Phân định ranh giới tuyệt đối giữa *Tải tệp thành công lên Object Storage (Object Upload Success)* và *Nghiệm thu bằng chứng nghiệp vụ (Business Evidence Acceptance)*. Việc tệp nhị phân tải lên thành công vào bucket **tuyệt đối KHÔNG tự động**: chuyển đổi `TaskStatus`, đánh dấu bằng chứng hợp lệ, hoàn thành `SubmitEvidence`, hay cho phép chuyển trạng thái sang thẩm định. Máy chủ/tầng Ứng dụng bắt buộc phải kiểm tra quyền sở hữu tài nguyên, trạng thái tác vụ, yêu cầu minh chứng (`ProofProfile`), checksum/tính toàn vẹn và các tiền điều kiện nghiệp vụ trước khi ghi nhận bằng chứng.
+  - **Ưu tiên bàn giao miễn phí (Free-First Delivery Preference):**
+    - Ứng viên ưu tiên số một cho môi trường demo chi phí $0: **Cloudflare R2 Free Tier**.
+    - Các ứng viên dự phòng: Railway Bucket trong thời gian dùng thử (Trial), MinIO/dịch vụ S3-compatible cục bộ cho môi trường phát triển, hoặc nhà cung cấp tương thích S3 khác.
+    - **Bất biến kiến trúc duy nhất được phê duyệt là: S3-COMPATIBLE OBJECT STORAGE PORT**. Cloudflare R2, AWS S3, Railway, MinIO **tuyệt đối KHÔNG phải là bất biến kiến trúc bị khóa vĩnh viễn**. MinIO thuần túy là hạ tầng môi trường phát triển/CI, không phải thẩm quyền kiến trúc production và không bắt buộc chạy MinIO trên production.
+    - Tuyệt đối không lan truyền tên bucket R2, account ID, domain model riêng của Cloudflare hay R2 SDK types vào Domain, Application, hay `@novyx/contracts`.
 
 ---
 
@@ -338,12 +359,12 @@ Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, c�
 | **IDB-05** | Băm Mật khẩu | **Argon2id** (Benchmark trên phần cứng đích, hỗ trợ rehash) | `HIGH` | `OWNER_APPROVED` | [Batch 2 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#42-idb-05--thuật-toán-băm-mật-khẩu-argon2id-owner_approved) |
 | **IDB-11** | Quản lý Phiên Máy chủ | **PostgreSQL-backed Session Repository cho MVP** (Clean Architecture port) | `HIGH` | `OWNER_APPROVED` | [Batch 2 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#43-idb-11--hạ-tầng-quản-lý-phiên-postgresql-session-repository-cho-mvp-owner_approved) |
 
-### 4.3. ĐỢT DUYỆT TIẾP THEO — ĐỢT 3: TÁC NGHIỆP & WEB QUẢN TRỊ (NEXT OWNER BATCH — BATCH 3 — WAVE 4 / WAVE 6)
+### 4.3. ĐÃ PHÊ DUYỆT — ĐỢT 3: TÁC NGHIỆP & WEB QUẢN TRỊ (DECIDED — BATCH 3)
 
-| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Rủi Ro Kỹ Thuật Nếu Trì Hoãn | Quyết Định Của Chủ Quản |
-| :---: | :--- | :--- | :---: | :--- | :---: |
-| **IDB-07** | Lưu trữ File Bằng chứng | **S3-Compatible Port (MinIO/S3)** | `HIGH` | Luồng upload bằng chứng ảnh bị nghẽn ở Wave 4 | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
-| **IDB-06** | Web Quản trị Admin | **Vite + React 19 SPA** | `HIGH` | Chặn khởi tạo workspace `apps/admin-web` ở Wave 6 | `[ ] APPROVE  [ ] REJECT  [ ] REVISE` |
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Chấp Thuận | Mức Độ Tin Cậy | Trạng Thái | Biên Bản Phê Duyệt |
+| :---: | :--- | :--- | :---: | :---: | :---: |
+| **IDB-07** | Lưu trữ File Bằng chứng | **S3-Compatible Object Storage Port** (Free-First Delivery: Cloudflare R2 / MinIO dev; Provider-neutral) | `HIGH` | `OWNER_APPROVED` | [Batch 3 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#5-decision-batch-3--object-storage--admin-web) |
+| **IDB-06** | Web Quản trị Admin | **React 19 SPA + Vite** (apps/admin-web, Platform Admin scope, Server authority) | `HIGH` | `OWNER_APPROVED` | [Batch 3 Ledger](PHASE12-OWNER-IMPLEMENTATION-DECISIONS.md#5-decision-batch-3--object-storage--admin-web) |
 
 ### 4.4. AN TOÀN ĐỂ HOÃN — TRIỂN KHAI / ĐO ĐẠC THỰC ĐỊA (SAFE TO DEFER)
 
