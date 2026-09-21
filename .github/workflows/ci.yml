@@ -75,12 +75,16 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadminpassword \
-            minio/minio server /data
+            quay.io/minio/minio server /data
 
       - name: Setup test S3 bucket
         run: |
-          until curl -s http://localhost:9000/minio/health/live; do
-            echo "Waiting for MinIO..."
+          for i in {1..30}; do
+            if curl -f -s http://localhost:9000/minio/health/live; then
+              echo "MinIO is ready"
+              break
+            fi
+            echo "Waiting for MinIO... ($i/30)"
             sleep 1
           done
           node scripts/setup-s3-test.cjs
