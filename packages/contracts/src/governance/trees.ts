@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LatitudeSchema, LongitudeSchema } from '../common/coordinates';
 
 export const TreeHealthStatusSchema = z.enum(['Khỏe mạnh', 'Cần chăm sóc', 'Sâu bệnh']);
 export type TreeHealthStatus = z.infer<typeof TreeHealthStatusSchema>;
@@ -15,8 +16,8 @@ export const CreateTreeRequestSchema = z.object({
   qrCode: z.string().min(1),
   name: z.string().min(1),
   species: z.string().min(1),
-  lat: z.number(),
-  lng: z.number(),
+  lat: LatitudeSchema,
+  lng: LongitudeSchema,
   address: z.string().min(1),
   healthStatus: TreeHealthStatusSchema,
   ageYears: z.number().int().nonnegative(),
@@ -60,8 +61,8 @@ export type ReplaceTreeQrCodeRequest = z.infer<typeof ReplaceTreeQrCodeRequestSc
 export const UpdateCanonicalCoordinatesRequestSchema = z.object({
   treeId: z.string().min(1),
   expectedVersion: z.number().int().nonnegative(),
-  lat: z.number(),
-  lng: z.number(),
+  lat: LatitudeSchema,
+  lng: LongitudeSchema,
   reason: z.string().min(5),
 });
 
@@ -79,15 +80,15 @@ export const RetireTreeRequestSchema = z.object({
 export type RetireTreeRequest = z.infer<typeof RetireTreeRequestSchema>;
 
 /**
- * Canonical Tree DTO Schema — includes version: number for OCC.
+ * Canonical Tree DTO Schema — includes version: number for OCC and validated coordinates.
  */
 export const TreeDtoSchema = z.object({
   id: z.string().min(1),
   version: z.number().int().nonnegative(),
   name: z.string(),
   species: z.string(),
-  lat: z.number(),
-  lng: z.number(),
+  lat: LatitudeSchema,
+  lng: LongitudeSchema,
   address: z.string(),
   qrCode: z.string(),
   healthStatus: TreeHealthStatusSchema,

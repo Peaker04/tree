@@ -1,34 +1,34 @@
 import { z } from 'zod';
 import { TaskStatusSchema } from './task-status';
+import { ProofProfileSchema } from './proof-profile';
 import { ChecklistItemSchema, ProofPayloadSchema } from './evidence';
 import { GpsCheckSchema, QrCheckSchema } from './verification';
 
-export const TaskTypeSchema = z.enum([
-  'Tưới nước',
-  'Cắt tỉa cành',
-  'Bón phân',
-  'Phun thuốc',
-  'Kiểm tra sâu bệnh',
-  'Trồng mới',
-]);
-
-export type TaskType = z.infer<typeof TaskTypeSchema>;
+/**
+ * Stable catalog identifier for TaskType in operational commands.
+ * Canonical operational contracts reference TaskType catalog resources
+ * rather than hardcoding a finite enum of display names.
+ */
+export const TaskTypeIdSchema = z.string().min(1);
+export type TaskTypeId = z.infer<typeof TaskTypeIdSchema>;
 
 /**
  * OP-03: CreateTaskRequest — Aggregate creation.
- * expectedVersion is NOT required for creation commands where no prior aggregate version exists.
+ * Manager selects tree, taskTypeId, assignedStaffId, deadline, title, description.
+ * System deterministically resolves TaskType -> ProofProfile and policyVersion.
+ * Checklist policy is governed centrally; manager does not provide arbitrary checklist.
+ * expectedVersion is NOT required for creation commands.
  */
 export const CreateTaskRequestSchema = z.object({
   title: z.string().min(3),
-  taskType: TaskTypeSchema,
+  taskTypeId: TaskTypeIdSchema,
   description: z.string(),
   treeId: z.string().min(1),
   assignedStaffId: z.string().min(1),
   deadline: z.string().min(1),
-  checklist: z.array(ChecklistItemSchema),
 });
 
-export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
+export type CanonicalCreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
 
 /**
  * OP-04: AssignTaskRequest — Mutation against existing task. Requires expectedVersion.
@@ -126,13 +126,17 @@ export const ResubmitReworkRequestSchema = z.object({
 export type ResubmitReworkRequest = z.infer<typeof ResubmitReworkRequestSchema>;
 
 /**
- * Canonical Task DTO Schema — includes version: number for OCC.
+ * Canonical Task DTO Schema — includes version: number for OCC,
+ * catalog-based taskTypeId, resolved proofProfile, and policyVersionId.
  */
 export const TaskDtoSchema = z.object({
   id: z.string().min(1),
   version: z.number().int().nonnegative(),
   title: z.string(),
-  taskType: TaskTypeSchema,
+  taskTypeId: TaskTypeIdSchema,
+  taskTypeName: z.string().optional(),
+  proofProfile: ProofProfileSchema,
+  policyVersionId: z.string().optional(),
   description: z.string(),
   treeId: z.string(),
   treeName: z.string(),
@@ -145,7 +149,7 @@ export const TaskDtoSchema = z.object({
   qrCheck: QrCheckSchema.optional(),
   beforePhoto: z.string().optional(),
   afterPhoto: z.string().optional(),
-  checklist: z.array(ChecklistItemSchema),
+  checklist: z.array(ChecklistItemSchema).optional(),
   notes: z.string().optional(),
   rejectReason: z.string().optional(),
   rejectChips: z.array(z.string()).optional(),

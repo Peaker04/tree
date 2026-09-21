@@ -2,16 +2,19 @@
 
 **Dự án:** NOVYX GreenOps  
 **Giai đoạn:** Phase 13 — Implementation Wave 1: Contract-First + Zod Runtime Validation  
-**Thời điểm lập:** 21/09/2026  
-**Nhánh Git:** `base-setup`  
-**Entry Head Commit:** `70eb7a1a215ffbaed4c1512b378e6a115acb9cd5`  
-**Trạng thái Thực thi:** WAVE 1 COMPLETED (Local Exit Gates PASS)
+**Thời điểm lập:** 21/09/2026<br />
+**Nhánh Git:** `base-setup`<br />
+**Entry Head Commit:** `70eb7a1a215ffbaed4c1512b378e6a115acb9cd5`<br />
+**Actual Wave-1 Implementation Commit Baseline:** `ce3a61a038e154df4b6ffa71d0b6c6a3d91e6309`<br />
+*(Loại bỏ và đính chính mã tham chiếu sai sót `ce3a61a7a44f83e20e8354c04ef79bf7329d49df`)<br />
+**Trạng thái Thực thi:** WAVE 1 CANONICAL CORRECTION COMPLETED (Local Exit Gates PASS)
 
 ---
 
 ## 1. Input Baseline
 
 - **Frozen Baseline Entry Commit:** `70eb7a1a215ffbaed4c1512b378e6a115acb9cd5` (`docs(test): record remote CI pass evidence for wave 0`)
+- **Actual Wave-1 Implementation Commit:** `ce3a61a038e154df4b6ffa71d0b6c6a3d91e6309` (`contracts(runtime): implement wave 1 shared zod contracts and test suite`)
 - **Working Tree Trước Khi Thay Đổi:** Hoàn toàn sạch (`clean`), không có tệp untracked hay uncommitted changes.
 - **Môi trường Kỹ thuật:**
   - Node.js: `v24.13.0` (đáp ứng `node >=22.13.0`)
@@ -54,7 +57,7 @@ Trước Wave 1, tệp `packages/contracts/src/index.ts` tồn tại các khoả
 4. **Thiếu DTO Báo Cáo Sự Cố & Ngoại Lệ:** Thiếu `LocationExceptionDto`, `IdentityExceptionDto`, `FieldIssueDto`.
 5. **Không Có Runtime Validation:** Toàn bộ hợp đồng là TypeScript interface thuần túy thời điểm biên dịch, không có bộ xác thực payload tại ranh giới mạng.
 6. **Thiếu Cơ Chế OCC & Idempotency:** Không có trường `version` trong `TaskDto`, `TreeDto`; không có `expectedVersion` trong các request đột biến; không có schema header `Idempotency-Key`.
-7. **Không Có Hợp Đồng Quản Trị & Kiểm Toán:** Không có schema cho 15 lệnh quản trị MVP (`GV-01..19`) và truy vấn nhật ký kiểm toán.
+7. **Không Có Hợp Đồng Quản Trị & Kiểm Toán:** Không có schema cho 19 mã lệnh quản trị (`GV-01..19`) và truy vấn nhật ký kiểm toán (theo đúng phân loại phơi bày mạng tại ADR 0010: GV-01..19 gồm 17 lệnh quản trị Active MVP trên mạng và GV-08, GV-09 qua ListAuditLogsQuery; các mã GV-20..22 là Inactive / Rejected / System-Internal).
 
 ---
 
@@ -176,7 +179,7 @@ Thiết lập các hợp đồng ngoại lệ theo ADR 0010:
 ## 10. Idempotency Header
 
 - Định nghĩa schema chuyển vận:
-  - `StrictUuidv4Schema = z.string().uuid()`
+  - `StrictUuidv4Schema`: Định dạng chuẩn RFC 4122 UUIDv4 (regex kiểm tra version nibble = 4 và variant nibbles `[8, 9, a, b]`; từ chối dứt khoát UUIDv1, UUIDv3, UUIDv5 và các chuỗi malformed).
   - `IdempotencyKeyHeaderSchema`: Hỗ trợ header `idempotency-key` hoặc `Idempotency-Key` với định dạng UUIDv4 nghiêm ngặt.
   - `StrictMutationHeadersSchema = z.object({ 'idempotency-key': StrictUuidv4Schema })`
 - **Tách Biệt Tuyệt Đối:** Toàn bộ các schema payload nghiệp vụ (`CreateTaskRequestSchema`, `SubmitEvidenceRequestSchema`, v.v.) **KHÔNG CHỨA TRƯỜNG `idempotencyKey`**.
@@ -413,7 +416,7 @@ Tất cả 20 mệnh đề phủ định đều đạt kỳ vọng: **FALSE**:
 
 ---
 
-## 22. Final Status
+## 22. Final Status (Initial Wave 1)
 
 ```text
 PHASE 13 / WAVE 1 IMPLEMENTED — LOCAL CONTRACT GATES PASS
@@ -434,5 +437,129 @@ PHASE 13 / WAVE 1 IMPLEMENTED — LOCAL CONTRACT GATES PASS
 — NO ANDROID BUILD REQUIRED
 — NO IOS BUILD REQUIRED
 — WAVE 2 REMAINS LOCKED
+— READY FOR INDEPENDENT WAVE-1 ACCEPTANCE
+```
+
+---
+
+## 23. Canonical Drift Correction (Final Bounded Pass Before Wave 2)
+
+Sau khi đối chiếu độc lập với các chuẩn tắc nghiệp vụ đóng băng (`DOMAIN.md`, `WORKFLOWS.md`, `ACCESS-CONTROL.md`, `REQUIREMENTS-TRACEABILITY.md`, `NFR.md`, `ARCHITECTURE.md`, `docs/adr/0010-*`), 6 điểm trôi lệch chuẩn tắc (W1-C01 .. W1-C06) đã được hiệu chỉnh chính xác:
+
+### 1. W1-C01 — TaskType Catalog Semantics Restored
+- **Trôi lệch trước đó:** `TaskTypeSchema` bị định nghĩa cứng thành `z.enum` gồm đúng 6 chuỗi tiếng Việt demo (`Tưới nước`, `Cắt tỉa cành`, `Bón phân`, `Phun thuốc`, `Kiểm tra sâu bệnh`, `Trồng mới`).
+- **Chuẩn tắc khôi phục:** Hệ thống quản trị có danh mục `TaskTypeCatalog` và Platform Administrator có quyền `CreateTaskType`, `ActivateTaskType`, `DeactivateTaskType` (GV-15..17). Do đó, hợp đồng mạng chuẩn tắc không được giới hạn ở 6 giá trị tĩnh.
+- **Giải pháp:** Sử dụng định danh tài nguyên danh mục `TaskTypeIdSchema = z.string().min(1)` cho các lệnh tác nghiệp (`taskTypeId`). 6 giá trị tiếng Việt demo được cách ly nghiêm ngặt trong `packages/contracts/src/legacy/transitional.ts` dưới `LegacyTaskType` và `LegacyTaskTypeSchema` thuộc ranh giới `@deprecated TRANSITIONAL_COMPAT`.
+
+### 2. W1-C02 — CreateTask Policy Ownership Restored
+- **Trôi lệch trước đó:** `CreateTaskRequestSchema` cho phép Manager truyền vào danh sách `checklist: ChecklistItemDto[]` tùy tiện.
+- **Chuẩn tắc khôi phục:** Theo `WF-01`, Manager chỉ chọn cây (`treeId`), loại tác nghiệp (`taskTypeId`), nhân viên giao việc (`assignedStaffId`), thời hạn (`deadline`), tiêu đề và mô tả. Hệ thống tự động phân giải `TaskType -> ProofProfile` và phiên bản chính sách (`policyVersion`). Mẫu kiểm tra (`ChecklistTemplate`) do hệ thống quản trị trung ương quản lý và được snapshot vào `ChecklistSnapshot` khi `StartTask` (`WF-02`).
+- **Giải pháp:** Loại bỏ hoàn toàn trường `checklist` khỏi `CreateTaskRequestSchema`. Bảo lưu interface cũ `CreateTaskRequest` (chứa `taskType` và `checklist`) duy nhất trong `legacy/transitional.ts` cho `apps/mobile` thời điểm biên dịch; kiểu suy luận chuẩn tắc là `CanonicalCreateTaskRequest`.
+
+### 3. W1-C03 — Real RFC 4122 UUIDv4 Validation
+- **Trôi lệch trước đó:** `StrictUuidv4Schema` chỉ dùng `z.string().uuid()` chung chung, chấp nhận cả UUIDv1, UUIDv3, UUIDv5.
+- **Chuẩn tắc khôi phục:** Hợp đồng chuyển vận yêu cầu bắt buộc `Idempotency-Key: UUIDv4`.
+- **Giải pháp:** Xây dựng biểu thức chính quy chuẩn RFC 4122 `UUIDV4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i` kiểm tra version nibble = 4 và variant nibbles thuộc `[8, 9, a, b]`. Kiểm thử xác nhận từ chối UUIDv1, UUIDv3, UUIDv5 và chuỗi malformed.
+
+### 4. W1-C04 — Submit Evidence Verification Completeness & Completed Checklist Invariant
+- **Trôi lệch trước đó:** `SubmitEvidenceRequestSchema` cho phép payload không có cả xác minh hiện trường lẫn ngoại lệ mà vẫn parse thành công; đồng thời cho phép checklist nộp có `done: false`.
+- **Chuẩn tắc khôi phục:**
+  - Nộp bằng chứng bắt buộc thỏa mãn cả 2 chiều:
+    - **Location Dimension:** GPS xác minh thành công ($\le 10$m) HOẶC có `LocationException` hợp lệ.
+    - **Identity Dimension:** QR xác minh thành công HOẶC có `IdentityException` hợp lệ.
+  - Phủ quyết tính mập mờ: Không cho phép payload vừa có xác minh thành công vừa kèm ngoại lệ trên cùng một chiều.
+  - Hoàn thành 100% checklist: Đối với `CHANGE_PROOF` và `SERVICE_PROOF`, tất cả các mục tiêu chuẩn phải hoàn thành (`done: true`), không chấp nhận mục nào chưa xong khi nộp.
+- **Giải pháp:** Sử dụng `.superRefine` trên `SubmitEvidenceRequestSchema` để thực thi luật bất biến hai chiều và từ chối mập mờ; bổ sung `SubmittedChecklistItemSchema` với `done: z.literal(true)` cho `ChangeProofPayloadSchema` và `ServiceProofPayloadSchema`.
+
+### 5. W1-C05 — Identity Exception Optional Manual Code
+- **Trôi lệch trước đó:** `IdentityExceptionSchema` bắt buộc phải có `embossedCode`.
+- **Chuẩn tắc khôi phục:** Khi tem QR bị hư hỏng/mất/không đọc được, bằng chứng ảnh hiện trường tại cây (`damagedQrPhotoUri`) và lý do (`reason`) là bắt buộc; mã dập nổi thủ công (`embossedCode`) là tùy chọn (optional).
+- **Giải pháp:** Chuyển `embossedCode: z.string().min(1).optional()`.
+
+### 6. W1-C06 — GPS Verification Threshold & Geographic Coordinate Ranges
+- **Trôi lệch trước đó:** `GpsCheckSchema` cho phép `verified: true` với cự ly `distance: 50`m; các trường tọa độ không kiểm tra giới hạn địa lý thực tế.
+- **Chuẩn tắc khôi phục:**
+  - GPS chỉ được coi là `verified: true` khi khoảng cách $\le 10$m (`distance <= 10`). Khi `verified: false`, `distance > 10` đại diện cho phép đo không đạt làm ngữ cảnh cho ngoại lệ.
+  - Tọa độ địa lý hợp lệ: Vĩ độ `Latitude` nằm trong đoạn $[-90, 90]$; Kinh độ `Longitude` nằm trong đoạn $[-180, 180]$.
+- **Giải pháp:** Bổ sung refine trên `GpsCheckSchema` (`!data.verified || data.distance <= 10`); xây dựng `LatitudeSchema` và `LongitudeSchema` tái sử dụng, áp dụng trên `CreateTreeRequestSchema`, `UpdateCanonicalCoordinatesRequestSchema`, `TreeDtoSchema`, `GpsCheckSchema`, và `LocationExceptionSchema`.
+
+---
+
+## 24. Negative Assertions (Wave 1 Correction)
+
+Tất cả 15 mệnh đề phủ định kiểm tra chuẩn tắc đều đạt kết quả: **FALSE**:
+
+| Mã Mệnh Đề Phủ Định | Nội Dung Mệnh Đề | Kết Quả Thực Tế | Đánh Giá |
+| :--- | :--- | :---: | :---: |
+| **W1CF-N01** | Canonical TaskType is limited to the six legacy demo names. | **FALSE** | **PASS** |
+| **W1CF-N02** | Canonical CreateTask lets Manager define arbitrary checklist. | **FALSE** | **PASS** |
+| **W1CF-N03** | StrictUuidv4Schema accepts UUIDv1. | **FALSE** | **PASS** |
+| **W1CF-N04** | StrictUuidv4Schema accepts UUIDv5. | **FALSE** | **PASS** |
+| **W1CF-N05** | SubmitEvidence accepts neither GPS outcome nor location exception. | **FALSE** | **PASS** |
+| **W1CF-N06** | SubmitEvidence accepts neither QR outcome nor identity exception. | **FALSE** | **PASS** |
+| **W1CF-N07** | CHANGE_PROOF submission accepts incomplete checklist items. | **FALSE** | **PASS** |
+| **W1CF-N08** | SERVICE_PROOF submission accepts incomplete checklist items. | **FALSE** | **PASS** |
+| **W1CF-N09** | IdentityException requires embossed/manual code. | **FALSE** | **PASS** |
+| **W1CF-N10** | GPS distance >10m can be marked verified. | **FALSE** | **PASS** |
+| **W1CF-N11** | Latitude 100 is accepted. | **FALSE** | **PASS** |
+| **W1CF-N12** | Longitude 200 is accepted. | **FALSE** | **PASS** |
+| **W1CF-N13** | apps/mobile was modified. | **FALSE** | **PASS** |
+| **W1CF-N14** | Wave 2 backend was started. | **FALSE** | **PASS** |
+| **W1CF-N15** | Wave-1 evidence report retains the incorrect full SHA. | **FALSE** | **PASS** |
+
+---
+
+## 25. Positive Assertions (Wave 1 Correction)
+
+Tất cả 14 mệnh đề khẳng định kiểm tra chuẩn tắc đều đạt kết quả: **TRUE**:
+
+| Mã Mệnh Đề Khẳng Định | Nội Dung Mệnh Đề | Kết Quả Thực Tế | Đánh Giá |
+| :--- | :--- | :---: | :---: |
+| **W1CF-P01** | TaskType operational identity is catalog-compatible. | **TRUE** | **PASS** |
+| **W1CF-P02** | Legacy six-value TaskType compatibility is isolated from canonical network contracts. | **TRUE** | **PASS** |
+| **W1CF-P03** | CreateTask does not receive arbitrary canonical checklist. | **TRUE** | **PASS** |
+| **W1CF-P04** | UUIDv4 validator rejects non-v4 UUID versions. | **TRUE** | **PASS** |
+| **W1CF-P05** | SubmitEvidence requires resolved location outcome. | **TRUE** | **PASS** |
+| **W1CF-P06** | SubmitEvidence requires resolved identity outcome. | **TRUE** | **PASS** |
+| **W1CF-P07** | Submitted CHANGE/SERVICE checklist is complete (100% done: true). | **TRUE** | **PASS** |
+| **W1CF-P08** | Manual embossed code is optional for IDENTITY_EXCEPTION. | **TRUE** | **PASS** |
+| **W1CF-P09** | Verified GPS obeys distance <= 10m. | **TRUE** | **PASS** |
+| **W1CF-P10** | Geographic latitude/longitude ranges [-90, 90] / [-180, 180] are enforced. | **TRUE** | **PASS** |
+| **W1CF-P11** | Mobile source remains unchanged (0 diffs). | **TRUE** | **PASS** |
+| **W1CF-P12** | All original Wave-0 + Wave-1 tests remain green (93/93 tests pass). | **TRUE** | **PASS** |
+| **W1CF-P13** | Correct implementation SHA `ce3a61a038e154df4b6ffa71d0b6c6a3d91e6309` is recorded. | **TRUE** | **PASS** |
+| **W1CF-P14** | Wave 2 remains locked. | **TRUE** | **PASS** |
+
+---
+
+## 26. Updated Regression Test Suite Summary
+
+- **Số file kiểm thử:** 3 files
+  - `tests/governance/frozen-semantics.spec.ts`: 10 tests (Wave 0)
+  - `tests/architecture/workspace-boundaries.spec.ts`: 3 tests (Wave 0)
+  - `tests/contracts/contracts.spec.ts`: 81 tests (Wave 1 + W1-C01..C06 corrections)
+- **Tổng số tests:** **94 tests passed 100% (0 failed, 0 skipped)**
+- **Thời gian thực thi:** ~620ms.
+
+---
+
+## 27. Final Status (Wave 1 Corrected)
+
+```text
+PHASE 13 / WAVE 1 CORRECTED — READY FOR INDEPENDENT ACCEPTANCE
+— TASKTYPE CATALOG SEMANTICS RESTORED
+— CREATE TASK POLICY OWNERSHIP RESTORED
+— UUIDV4 VALIDATION ACTUALLY STRICT
+— SUBMIT EVIDENCE VERIFICATION COMPLETE
+— SUBMITTED CHECKLIST COMPLETENESS ENFORCED
+— IDENTITY EXCEPTION OPTIONAL MANUAL CODE RESTORED
+— GPS <=10M CONTRACT ENFORCED
+— GEO COORDINATE RANGES ENFORCED
+— LEGACY MOBILE COMPATIBILITY PRESERVED
+— APPS/MOBILE UNCHANGED
+— FROZEN BASELINE UNCHANGED
+— LOCAL GATES PASS
+— REMOTE CI PENDING_TRIGGER
+— WAVE 2 NOT STARTED
 — READY FOR INDEPENDENT WAVE-1 ACCEPTANCE
 ```

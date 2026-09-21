@@ -1,9 +1,27 @@
+import { z } from 'zod';
 import type { CanonicalTaskStatus } from '../operational/task-status';
 import type { CanonicalReviewDecision } from '../operational/review-decision';
 import type { GpsCheckDto, QrCheckDto } from '../operational/verification';
 import type { ChecklistItemDto } from '../operational/evidence';
-import type { TaskType } from '../operational/operational-tasks';
 import type { TreeHealthStatus, TreeRiskStatus } from '../governance/trees';
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy Vietnamese demo task types used by apps/mobile.
+ * Canonical operational contracts reference TaskType catalog by identifier (TaskTypeId).
+ */
+export const LegacyTaskTypeSchema = z.enum([
+  'Tưới nước',
+  'Cắt tỉa cành',
+  'Bón phân',
+  'Phun thuốc',
+  'Kiểm tra sâu bệnh',
+  'Trồng mới',
+]);
+
+export type LegacyTaskType = z.infer<typeof LegacyTaskTypeSchema>;
+
+export type TaskType = LegacyTaskType;
 
 /**
  * @deprecated TRANSITIONAL_COMPAT
@@ -228,4 +246,19 @@ export interface ReviewDecisionRequest {
   reason?: string;
   rejectReason?: string;
   reasonChips?: string[];
+}
+
+/**
+ * @deprecated TRANSITIONAL_COMPAT
+ * Legacy CreateTaskRequest shape used by apps/mobile.
+ * Canonical creation uses CanonicalCreateTaskRequest / CreateTaskRequestSchema without client-controlled checklist.
+ */
+export interface CreateTaskRequest {
+  title: string;
+  taskType: TaskType;
+  description: string;
+  treeId: string;
+  assignedStaffId: string;
+  deadline: string;
+  checklist: ChecklistItemDto[];
 }

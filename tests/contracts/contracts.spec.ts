@@ -26,6 +26,8 @@ import {
   createApiListSchema,
   PaginationQuerySchema,
   StrictUuidv4Schema,
+  LatitudeSchema,
+  LongitudeSchema,
   IdempotencyKeyHeaderSchema,
   StrictMutationHeadersSchema,
 
@@ -39,13 +41,14 @@ import {
   ReportFieldIssueRequestSchema,
   ResumeBlockedTaskRequestSchema,
   ChecklistItemSchema,
+  SubmittedChecklistItemSchema,
   StructuredFindingsSchema,
   ChangeProofPayloadSchema,
   ServiceProofPayloadSchema,
   InspectionProofPayloadSchema,
   ProofPayloadSchema,
   SubmitEvidenceRequestSchema,
-  TaskTypeSchema,
+  TaskTypeIdSchema,
   CreateTaskRequestSchema,
   AssignTaskRequestSchema,
   StartTaskRequestSchema,
@@ -88,6 +91,7 @@ import {
 
   // Legacy Transitional Exports
   LegacyTaskStatus,
+  LegacyTaskTypeSchema,
   TaskStatus,
 } from '../../packages/contracts/src';
 
@@ -377,19 +381,18 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
     it('parses valid CreateTaskRequest and rejects invalid', () => {
       const valid = {
         title: 'Tưới nước xà cừ cổ thụ',
-        taskType: 'Tưới nước',
+        taskTypeId: 'tt-watering-01',
         description: 'Tưới 200L nước vào sáng sớm',
         treeId: 'TRE-001',
         assignedStaffId: 'STF-01',
         deadline: '2026-09-25T17:00:00Z',
-        checklist: [{ id: 'chk-1', text: 'Tưới đẫm quanh tán', done: false }],
       };
       expect(CreateTaskRequestSchema.safeParse(valid).success).toBe(true);
 
       const invalidTitle = { ...valid, title: 'ab' }; // min 3 chars
       expect(CreateTaskRequestSchema.safeParse(invalidTitle).success).toBe(false);
 
-      const invalidType = { ...valid, taskType: 'Loại việc lạ' };
+      const invalidType = { ...valid, taskTypeId: '' }; // empty string fails min(1)
       expect(CreateTaskRequestSchema.safeParse(invalidType).success).toBe(false);
     });
 
@@ -398,7 +401,9 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
         id: 'TSK-101',
         version: 3,
         title: 'Tưới nước',
-        taskType: 'Tưới nước',
+        taskTypeId: 'tt-watering-01',
+        taskTypeName: 'Tưới nước',
+        proofProfile: 'SERVICE_PROOF',
         description: 'Tưới nước định kỳ',
         treeId: 'TRE-001',
         treeName: 'Xà Cừ #01',
@@ -517,7 +522,8 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
     });
 
     it('parses CareHistory, TaskType, findings, and queries', () => {
-      expect(TaskTypeSchema.parse('Tưới nước')).toBe('Tưới nước');
+      expect(TaskTypeIdSchema.parse('tt-watering-01')).toBe('tt-watering-01');
+      expect(LegacyTaskTypeSchema.parse('Tưới nước')).toBe('Tưới nước');
       expect(TreeHealthStatusSchema.parse('Khỏe mạnh')).toBe('Khỏe mạnh');
       expect(TreeRiskStatusSchema.parse('healthy')).toBe('healthy');
 
@@ -592,6 +598,22 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
   // ============================================================================
   describe('10. expectedVersion Required on Existing-Resource Mutations', () => {
     it('requires expectedVersion on SubmitEvidenceRequest', () => {
+      const validVerification = {
+        siteVerification: {
+          gpsCheck: {
+            verified: true,
+            distance: 5,
+            lat: 10.7769,
+            lng: 106.6908,
+            timestamp: '2026-09-21T10:00:00Z',
+          },
+          qrCheck: {
+            verified: true,
+            scannedCode: 'NOVYX-QR-TRE-001',
+            timestamp: '2026-09-21T10:00:00Z',
+          },
+        },
+      };
       const payloadWithoutVersion = {
         taskId: 'TSK-101',
         proof: {
@@ -599,6 +621,7 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
           completionPhotoUri: 'file:///photo.jpg',
           checklist: [{ id: 'c1', text: 'Xong việc', done: true }],
         },
+        ...validVerification,
       };
       expect(SubmitEvidenceRequestSchema.safeParse(payloadWithoutVersion).success).toBe(false);
 
@@ -750,12 +773,11 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
     it('validates CreateTaskRequest without expectedVersion', () => {
       const request = {
         title: 'Kiểm tra sâu bệnh',
-        taskType: 'Kiểm tra sâu bệnh',
+        taskTypeId: 'tt-pest-inspection',
         description: 'Khảo sát định kỳ',
         treeId: 'TRE-001',
         assignedStaffId: 'STF-01',
         deadline: '2026-10-01',
-        checklist: [{ id: 'chk-1', text: 'Khám thân cây', done: false }],
       };
       expect(CreateTaskRequestSchema.safeParse(request).success).toBe(true);
       expect(CreateTaskRequestSchema.shape).not.toHaveProperty('expectedVersion');
@@ -805,12 +827,19 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
     it('accepts valid UUIDv4 strings', () => {
       const validUuid = 'c8b417c8-356a-4d2b-bbd7-628d0be4299b';
       expect(StrictUuidv4Schema.safeParse(validUuid).success).toBe(true);
+      expect(StrictUuidv4Schema.safeParse('f47ac10b-58cc-4372-a567-0e02b2c3d479').success).toBe(true);
     });
 
     it('rejects invalid UUID formats', () => {
       expect(StrictUuidv4Schema.safeParse('not-a-uuid').success).toBe(false);
       expect(StrictUuidv4Schema.safeParse('123456789').success).toBe(false);
       expect(StrictUuidv4Schema.safeParse('').success).toBe(false);
+      // UUIDv1 -> FAIL
+      expect(StrictUuidv4Schema.safeParse('6ba7b810-9dad-11d1-80b4-00c04fd430c8').success).toBe(false);
+      // UUIDv3 -> FAIL
+      expect(StrictUuidv4Schema.safeParse('6ba7b811-9dad-31d1-80b4-00c04fd430c8').success).toBe(false);
+      // UUIDv5 -> FAIL
+      expect(StrictUuidv4Schema.safeParse('6ba7b812-9dad-51d1-80b4-00c04fd430c8').success).toBe(false);
     });
 
     it('validates IdempotencyKeyHeaderSchema with lowercase or canonical header name', () => {
@@ -852,9 +881,14 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
       ];
 
       for (const schema of mutatingBodySchemas) {
-        expect(schema.shape).not.toHaveProperty('idempotencyKey');
-        expect(schema.shape).not.toHaveProperty('Idempotency-Key');
-        expect(schema.shape).not.toHaveProperty('idempotency-key');
+        const schemaObj = schema as unknown as {
+          shape?: Record<string, unknown>;
+          _def?: { schema?: { shape?: Record<string, unknown> } };
+        };
+        const shape = schemaObj.shape ?? schemaObj._def?.schema?.shape;
+        expect(shape).not.toHaveProperty('idempotencyKey');
+        expect(shape).not.toHaveProperty('Idempotency-Key');
+        expect(shape).not.toHaveProperty('idempotency-key');
       }
     });
   });
@@ -972,6 +1006,465 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
 
     it('re-exports TaskStatus object identical to LegacyTaskStatus for mobile runtime compatibility', () => {
       expect(TaskStatus).toBe(LegacyTaskStatus);
+    });
+  });
+
+  // ============================================================================
+  // 18. Wave 1 Canonical Drift Corrections (W1-C01 .. W1-C06)
+  // ============================================================================
+  describe('18. Wave 1 Canonical Drift Corrections (W1-C01 .. W1-C06)', () => {
+    // --------------------------------------------------------------------------
+    // W1-C01: Remove Legacy Fixed TaskType from Canonical Contract
+    // --------------------------------------------------------------------------
+    describe('W1-C01: TaskType Catalog Identity & Canonical Decoupling', () => {
+      it('accepts arbitrary catalog-based TaskType identifiers in operational commands', () => {
+        expect(TaskTypeIdSchema.safeParse('tt-custom-deep-root-care').success).toBe(true);
+        expect(TaskTypeIdSchema.safeParse('tt-hazardous-tree-removal').success).toBe(true);
+        expect(TaskTypeIdSchema.safeParse('catalogue-item-999').success).toBe(true);
+        expect(TaskTypeIdSchema.safeParse('').success).toBe(false);
+      });
+
+      it('ensures canonical TaskDto and CreateTaskRequest reference catalog identity, not fixed 6-enum', () => {
+        const customCreate = {
+          title: 'Đốn hạ cây nguy hiểm sau bão',
+          taskTypeId: 'tt-emergency-fell-01',
+          description: 'Cây nghiêng 45 độ sát đường điện',
+          treeId: 'TRE-888',
+          assignedStaffId: 'STF-99',
+          deadline: '2026-10-15T18:00:00Z',
+        };
+        expect(CreateTaskRequestSchema.safeParse(customCreate).success).toBe(true);
+
+        const customTaskDto = {
+          id: 'TSK-999',
+          version: 0,
+          title: 'Đốn hạ cây nguy hiểm sau bão',
+          taskTypeId: 'tt-emergency-fell-01',
+          taskTypeName: 'Đốn hạ khẩn cấp',
+          proofProfile: 'CHANGE_PROOF',
+          description: 'Cây nghiêng 45 độ sát đường điện',
+          treeId: 'TRE-888',
+          treeName: 'Xà cừ ngã',
+          treeAddress: 'Quận 1',
+          assignedStaffId: 'STF-99',
+          assignedStaffName: 'Lê Văn An',
+          deadline: '2026-10-15T18:00:00Z',
+          status: 'PENDING',
+          createdAt: '2026-09-21T10:00:00Z',
+          updatedAt: '2026-09-21T10:00:00Z',
+        };
+        expect(TaskDtoSchema.safeParse(customTaskDto).success).toBe(true);
+      });
+
+      it('allows CreateTaskType to produce catalog items beyond the 6 legacy demo names', () => {
+        const newCatalogType = {
+          name: 'Chăm sóc vi sinh rễ sâu',
+          defaultProofProfile: 'SERVICE_PROOF',
+          description: 'Bổ sung vi sinh vật đối kháng quanh bầu rễ',
+        };
+        expect(CreateTaskTypeRequestSchema.safeParse(newCatalogType).success).toBe(true);
+      });
+
+      it('isolates legacy 6 Vietnamese TaskType strings strictly inside TRANSITIONAL_COMPAT', () => {
+        expect(LegacyTaskTypeSchema.safeParse('Tưới nước').success).toBe(true);
+        expect(LegacyTaskTypeSchema.safeParse('Cắt tỉa cành').success).toBe(true);
+        expect(LegacyTaskTypeSchema.safeParse('Bón phân').success).toBe(true);
+        expect(LegacyTaskTypeSchema.safeParse('Phun thuốc').success).toBe(true);
+        expect(LegacyTaskTypeSchema.safeParse('Kiểm tra sâu bệnh').success).toBe(true);
+        expect(LegacyTaskTypeSchema.safeParse('Trồng mới').success).toBe(true);
+
+        expect(LegacyTaskTypeSchema.safeParse('Chăm sóc vi sinh rễ sâu').success).toBe(false);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // W1-C02: Create Task Must Not Accept Arbitrary Checklist Configuration
+    // --------------------------------------------------------------------------
+    describe('W1-C02: CreateTask Request Policy Ownership', () => {
+      it('does NOT expose checklist in canonical CreateTaskRequestSchema.shape', () => {
+        expect(CreateTaskRequestSchema.shape).not.toHaveProperty('checklist');
+        expect(CreateTaskRequestSchema.shape).not.toHaveProperty('expectedVersion');
+      });
+
+      it('rejects client-owned arbitrary checklist when using strict schema validation', () => {
+        const payloadWithChecklist = {
+          title: 'Tưới nước định kỳ',
+          taskTypeId: 'tt-watering-01',
+          description: 'Tưới cây',
+          treeId: 'TRE-001',
+          assignedStaffId: 'STF-01',
+          deadline: '2026-09-30T17:00:00Z',
+          checklist: [{ id: 'c1', text: 'Tự biên tự diễn', done: false }],
+        };
+        expect(CreateTaskRequestSchema.strict().safeParse(payloadWithChecklist).success).toBe(false);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // W1-C03: UUIDv4 Must Actually Be RFC 4122 UUIDv4
+    // --------------------------------------------------------------------------
+    describe('W1-C03: Real RFC 4122 UUIDv4 Validation', () => {
+      it('accepts valid UUIDv4 strings (lowercase and uppercase)', () => {
+        expect(StrictUuidv4Schema.safeParse('c8b417c8-356a-4d2b-bbd7-628d0be4299b').success).toBe(true);
+        expect(StrictUuidv4Schema.safeParse('F47AC10B-58CC-4372-A567-0E02B2C3D479').success).toBe(true);
+        expect(StrictUuidv4Schema.safeParse('9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d').success).toBe(true);
+      });
+
+      it('rejects malformed UUID strings', () => {
+        expect(StrictUuidv4Schema.safeParse('not-a-uuid').success).toBe(false);
+        expect(StrictUuidv4Schema.safeParse('123456789').success).toBe(false);
+        expect(StrictUuidv4Schema.safeParse('').success).toBe(false);
+        expect(StrictUuidv4Schema.safeParse('c8b417c8-356a-4d2b-bbd7-628d0be4299').success).toBe(false); // too short
+        expect(StrictUuidv4Schema.safeParse('c8b417c8-356a-4d2b-bbd7-628d0be4299bb').success).toBe(false); // too long
+      });
+
+      it('rejects non-v4 UUID versions: UUIDv1, UUIDv3, UUIDv5', () => {
+        // UUIDv1 (version nibble is 1)
+        expect(StrictUuidv4Schema.safeParse('6ba7b810-9dad-11d1-80b4-00c04fd430c8').success).toBe(false);
+        // UUIDv3 (version nibble is 3)
+        expect(StrictUuidv4Schema.safeParse('6ba7b811-9dad-31d1-80b4-00c04fd430c8').success).toBe(false);
+        // UUIDv5 (version nibble is 5)
+        expect(StrictUuidv4Schema.safeParse('6ba7b812-9dad-51d1-80b4-00c04fd430c8').success).toBe(false);
+      });
+
+      it('rejects UUIDs with invalid RFC variant nibbles', () => {
+        // Variant nibble must be 8, 9, a, or b (binary 10xx)
+        expect(StrictUuidv4Schema.safeParse('f47ac10b-58cc-4372-7567-0e02b2c3d479').success).toBe(false);
+        expect(StrictUuidv4Schema.safeParse('f47ac10b-58cc-4372-c567-0e02b2c3d479').success).toBe(false);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // W1-C04: Submit Evidence Verification Completeness & Checklist Invariants
+    // --------------------------------------------------------------------------
+    describe('W1-C04: Submit Evidence Verification Completeness & Completed Checklist', () => {
+      const validGps = {
+        verified: true,
+        distance: 8.5,
+        lat: 10.7769,
+        lng: 106.6908,
+        timestamp: '2026-09-21T10:00:00Z',
+      };
+      const validQr = {
+        verified: true,
+        scannedCode: 'NOVYX-QR-TRE-001',
+        timestamp: '2026-09-21T10:00:00Z',
+      };
+      const validLocExc = {
+        reason: 'GPS bị trôi dưới tán dày',
+        distanceMeters: 15.0,
+        explanationPhotoUri: 'file:///sandbox/gps-drift.jpg',
+        recordedLat: 10.777,
+        recordedLng: 106.691,
+        timestamp: '2026-09-21T10:05:00Z',
+      };
+      const validIdExc = {
+        reason: 'Tem QR bị mất trộm',
+        damagedQrPhotoUri: 'file:///sandbox/tag-missing.jpg',
+        timestamp: '2026-09-21T10:05:00Z',
+      };
+      const baseProof = {
+        proofProfile: 'SERVICE_PROOF' as const,
+        completionPhotoUri: 'file:///sandbox/done.jpg',
+        checklist: [{ id: 'chk-1', text: 'Bón phân hoàn tất', done: true as const }],
+      };
+
+      it('requires both Location and Identity dimensions to have a resolved outcome', () => {
+        // Case 1: GPS verified + QR verified -> PASS
+        expect(
+          SubmitEvidenceRequestSchema.safeParse({
+            taskId: 'TSK-1',
+            expectedVersion: 1,
+            proof: baseProof,
+            siteVerification: { gpsCheck: validGps, qrCheck: validQr },
+          }).success,
+        ).toBe(true);
+
+        // Case 2: LocationException + QR verified -> PASS
+        expect(
+          SubmitEvidenceRequestSchema.safeParse({
+            taskId: 'TSK-1',
+            expectedVersion: 1,
+            proof: baseProof,
+            locationException: validLocExc,
+            siteVerification: { qrCheck: validQr },
+          }).success,
+        ).toBe(true);
+
+        // Case 3: GPS verified + IdentityException -> PASS
+        expect(
+          SubmitEvidenceRequestSchema.safeParse({
+            taskId: 'TSK-1',
+            expectedVersion: 1,
+            proof: baseProof,
+            identityException: validIdExc,
+            siteVerification: { gpsCheck: validGps },
+          }).success,
+        ).toBe(true);
+
+        // Case 4: LocationException + IdentityException -> PASS
+        expect(
+          SubmitEvidenceRequestSchema.safeParse({
+            taskId: 'TSK-1',
+            expectedVersion: 1,
+            proof: baseProof,
+            locationException: validLocExc,
+            identityException: validIdExc,
+          }).success,
+        ).toBe(true);
+      });
+
+      it('rejects payload when Location dimension is unsatisfied', () => {
+        // Only QR verified, no GPS and no LocationException
+        const res = SubmitEvidenceRequestSchema.safeParse({
+          taskId: 'TSK-1',
+          expectedVersion: 1,
+          proof: baseProof,
+          siteVerification: { qrCheck: validQr },
+        });
+        expect(res.success).toBe(false);
+      });
+
+      it('rejects payload when Identity dimension is unsatisfied', () => {
+        // Only GPS verified, no QR and no IdentityException
+        const res = SubmitEvidenceRequestSchema.safeParse({
+          taskId: 'TSK-1',
+          expectedVersion: 1,
+          proof: baseProof,
+          siteVerification: { gpsCheck: validGps },
+        });
+        expect(res.success).toBe(false);
+      });
+
+      it('rejects payload when NEITHER Location nor Identity dimension is satisfied', () => {
+        const res = SubmitEvidenceRequestSchema.safeParse({
+          taskId: 'TSK-1',
+          expectedVersion: 1,
+          proof: baseProof,
+        });
+        expect(res.success).toBe(false);
+      });
+
+      it('rejects ambiguous payload providing both verified and exception for the same dimension', () => {
+        // Ambiguous Location: both verified GPS and LocationException
+        const ambiguousLoc = SubmitEvidenceRequestSchema.safeParse({
+          taskId: 'TSK-1',
+          expectedVersion: 1,
+          proof: baseProof,
+          siteVerification: { gpsCheck: validGps, qrCheck: validQr },
+          locationException: validLocExc,
+        });
+        expect(ambiguousLoc.success).toBe(false);
+
+        // Ambiguous Identity: both verified QR and IdentityException
+        const ambiguousId = SubmitEvidenceRequestSchema.safeParse({
+          taskId: 'TSK-1',
+          expectedVersion: 1,
+          proof: baseProof,
+          siteVerification: { gpsCheck: validGps, qrCheck: validQr },
+          identityException: validIdExc,
+        });
+        expect(ambiguousId.success).toBe(false);
+      });
+
+      it('validates SubmittedChecklistItemSchema requires done === true', () => {
+        expect(SubmittedChecklistItemSchema.safeParse({ id: 'c1', text: 'Tưới đẫm tán', done: true }).success).toBe(
+          true,
+        );
+        expect(SubmittedChecklistItemSchema.safeParse({ id: 'c1', text: 'Tưới đẫm tán', done: false }).success).toBe(
+          false,
+        );
+      });
+
+      it('requires 100% completed checklist (done: true) for CHANGE_PROOF submissions', () => {
+        const changeProofIncomplete = {
+          proofProfile: 'CHANGE_PROOF',
+          beforePhotoUri: 'file:///before.jpg',
+          afterPhotoUri: 'file:///after.jpg',
+          checklist: [
+            { id: 'c1', text: 'Xới đất', done: true },
+            { id: 'c2', text: 'Bón lót', done: false }, // Incomplete!
+          ],
+        };
+        expect(ChangeProofPayloadSchema.safeParse(changeProofIncomplete).success).toBe(false);
+
+        const changeProofComplete = {
+          ...changeProofIncomplete,
+          checklist: [
+            { id: 'c1', text: 'Xới đất', done: true },
+            { id: 'c2', text: 'Bón lót', done: true },
+          ],
+        };
+        expect(ChangeProofPayloadSchema.safeParse(changeProofComplete).success).toBe(true);
+      });
+
+      it('requires 100% completed checklist (done: true) for SERVICE_PROOF submissions', () => {
+        const serviceProofIncomplete = {
+          proofProfile: 'SERVICE_PROOF',
+          completionPhotoUri: 'file:///done.jpg',
+          checklist: [
+            { id: 'c1', text: 'Tưới nước đẫm tán', done: false }, // Incomplete!
+          ],
+        };
+        expect(ServiceProofPayloadSchema.safeParse(serviceProofIncomplete).success).toBe(false);
+
+        const serviceProofComplete = {
+          ...serviceProofIncomplete,
+          checklist: [{ id: 'c1', text: 'Tưới nước đẫm tán', done: true }],
+        };
+        expect(ServiceProofPayloadSchema.safeParse(serviceProofComplete).success).toBe(true);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // W1-C05: Identity Exception Optional Manual Code
+    // --------------------------------------------------------------------------
+    describe('W1-C05: Identity Exception Manual Code Optionality', () => {
+      it('photo + reason + NO embossed code -> PASS', () => {
+        const exc = {
+          reason: 'QR tag bị rách do thời tiết',
+          damagedQrPhotoUri: 'file:///sandbox/torn-qr.jpg',
+          timestamp: '2026-09-21T10:00:00Z',
+        };
+        expect(IdentityExceptionSchema.safeParse(exc).success).toBe(true);
+      });
+
+      it('photo + reason + embossed code -> PASS', () => {
+        const exc = {
+          reason: 'QR tag bị mờ số',
+          damagedQrPhotoUri: 'file:///sandbox/faded-qr.jpg',
+          embossedCode: 'EMB-TRE-101',
+          timestamp: '2026-09-21T10:00:00Z',
+        };
+        expect(IdentityExceptionSchema.safeParse(exc).success).toBe(true);
+      });
+
+      it('missing required photo -> FAIL', () => {
+        const exc = {
+          reason: 'QR tag bị mờ',
+          embossedCode: 'EMB-TRE-101',
+          timestamp: '2026-09-21T10:00:00Z',
+        };
+        expect(IdentityExceptionSchema.safeParse(exc).success).toBe(false);
+      });
+
+      it('missing reason -> FAIL', () => {
+        const exc = {
+          damagedQrPhotoUri: 'file:///sandbox/faded-qr.jpg',
+          embossedCode: 'EMB-TRE-101',
+          timestamp: '2026-09-21T10:00:00Z',
+        };
+        expect(IdentityExceptionSchema.safeParse(exc).success).toBe(false);
+      });
+    });
+
+    // --------------------------------------------------------------------------
+    // W1-C06: GPS Verification Threshold & Coordinate Range Invariants
+    // --------------------------------------------------------------------------
+    describe('W1-C06: GPS Threshold & Geographic Coordinate Ranges', () => {
+      it('enforces verified GPS distance <= 10m', () => {
+        const base = {
+          lat: 10.7769,
+          lng: 106.6908,
+          timestamp: '2026-09-21T10:00:00Z',
+        };
+
+        // verified=true + distance <= 10 -> PASS
+        expect(GpsCheckSchema.safeParse({ ...base, verified: true, distance: 0 }).success).toBe(true);
+        expect(GpsCheckSchema.safeParse({ ...base, verified: true, distance: 5 }).success).toBe(true);
+        expect(GpsCheckSchema.safeParse({ ...base, verified: true, distance: 10 }).success).toBe(true);
+
+        // verified=true + distance > 10 -> FAIL
+        expect(GpsCheckSchema.safeParse({ ...base, verified: true, distance: 10.1 }).success).toBe(false);
+        expect(GpsCheckSchema.safeParse({ ...base, verified: true, distance: 50 }).success).toBe(false);
+
+        // verified=false + distance > 10 -> PASS (unverified measurement / exception context)
+        expect(GpsCheckSchema.safeParse({ ...base, verified: false, distance: 50 }).success).toBe(true);
+      });
+
+      it('enforces latitude range [-90, 90]', () => {
+        expect(LatitudeSchema.safeParse(0).success).toBe(true);
+        expect(LatitudeSchema.safeParse(90).success).toBe(true);
+        expect(LatitudeSchema.safeParse(-90).success).toBe(true);
+
+        expect(LatitudeSchema.safeParse(90.1).success).toBe(false);
+        expect(LatitudeSchema.safeParse(-90.1).success).toBe(false);
+        expect(LatitudeSchema.safeParse(100).success).toBe(false);
+      });
+
+      it('enforces longitude range [-180, 180]', () => {
+        expect(LongitudeSchema.safeParse(0).success).toBe(true);
+        expect(LongitudeSchema.safeParse(180).success).toBe(true);
+        expect(LongitudeSchema.safeParse(-180).success).toBe(true);
+
+        expect(LongitudeSchema.safeParse(180.1).success).toBe(false);
+        expect(LongitudeSchema.safeParse(-180.1).success).toBe(false);
+        expect(LongitudeSchema.safeParse(200).success).toBe(false);
+      });
+
+      it('validates coordinate boundaries across Tree and Verification schemas', () => {
+        // CreateTreeRequestSchema
+        const validTree = {
+          treeId: 'TRE-01',
+          qrCode: 'QR-01',
+          name: 'Cây bàng',
+          species: 'Terminalia catappa',
+          lat: 10.5,
+          lng: 106.5,
+          address: 'Hồ Chí Minh',
+          healthStatus: 'Khỏe mạnh' as const,
+          ageYears: 10,
+        };
+        expect(CreateTreeRequestSchema.safeParse(validTree).success).toBe(true);
+        expect(CreateTreeRequestSchema.safeParse({ ...validTree, lat: 90.1 }).success).toBe(false);
+        expect(CreateTreeRequestSchema.safeParse({ ...validTree, lng: 180.1 }).success).toBe(false);
+
+        // UpdateCanonicalCoordinatesRequestSchema
+        const validCoordUpdate = {
+          treeId: 'TRE-01',
+          expectedVersion: 1,
+          lat: -89.9,
+          lng: 179.9,
+          reason: 'Hiệu chỉnh tọa độ GPS chuẩn',
+        };
+        expect(UpdateCanonicalCoordinatesRequestSchema.safeParse(validCoordUpdate).success).toBe(true);
+        expect(UpdateCanonicalCoordinatesRequestSchema.safeParse({ ...validCoordUpdate, lat: -90.1 }).success).toBe(
+          false,
+        );
+        expect(UpdateCanonicalCoordinatesRequestSchema.safeParse({ ...validCoordUpdate, lng: 180.1 }).success).toBe(
+          false,
+        );
+
+        // TreeDtoSchema
+        const validTreeDto = {
+          id: 'TRE-01',
+          version: 2,
+          name: 'Cây bàng',
+          species: 'Terminalia catappa',
+          lat: 0,
+          lng: 0,
+          address: 'Xích đạo',
+          qrCode: 'QR-01',
+          healthStatus: 'Khỏe mạnh' as const,
+          ageYears: 10,
+        };
+        expect(TreeDtoSchema.safeParse(validTreeDto).success).toBe(true);
+        expect(TreeDtoSchema.safeParse({ ...validTreeDto, lat: 100 }).success).toBe(false);
+        expect(TreeDtoSchema.safeParse({ ...validTreeDto, lng: 200 }).success).toBe(false);
+
+        // LocationExceptionSchema
+        const validLocExc = {
+          reason: 'Tán cây dày',
+          distanceMeters: 20,
+          explanationPhotoUri: 'file:///photo.jpg',
+          recordedLat: 10.0,
+          recordedLng: 106.0,
+          timestamp: '2026-09-21T10:00:00Z',
+        };
+        expect(LocationExceptionSchema.safeParse(validLocExc).success).toBe(true);
+        expect(LocationExceptionSchema.safeParse({ ...validLocExc, recordedLat: 95 }).success).toBe(false);
+        expect(LocationExceptionSchema.safeParse({ ...validLocExc, recordedLng: -185 }).success).toBe(false);
+      });
     });
   });
 });
