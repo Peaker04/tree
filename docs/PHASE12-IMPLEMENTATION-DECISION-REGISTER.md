@@ -141,8 +141,11 @@
   2. **Phương án B — bcrypt:** Cổ điển, phổ biến rộng rãi, nhưng khả năng kháng tấn công phần cứng GPU chuyên dụng kém hơn Argon2id, giới hạn độ dài mật khẩu đầu vào 72 bytes.
   3. **Phương án C — PBKDF2:** Tiêu chuẩn NIST cũ, tốn chu kỳ CPU nhưng kháng GPU kém hơn Argon2id.
 - **Tách biệt Tham số Cơ sở Khuyến nghị và Đo đạc Thực tế:**
-  - *Tham số cơ sở đề xuất theo khuyến nghị OWASP:* Memory cost: 64MB ($m=65536$), Time cost: 3 iterations ($t=3$), Parallelism: 1 ($p=1$). Phân loại tham số: `CANDIDATE_BASELINE`.
-  - *Yêu cầu đo đạc (Benchmark):* Thời gian thực thi thực tế phụ thuộc trực tiếp vào cấu hình phần cứng CPU/RAM của máy chủ triển khai. Do đó, việc xác nhận thời gian băm mật khẩu đạt ngưỡng chấp nhận được (ví dụ mục tiêu $\le 150\text{ms}$ để tránh nghẽn Event Loop) phải được thực hiện thông qua bài kiểm thử đo đạc thực nghiệm (`NEEDS_BENCHMARK`) trên môi trường phần cứng đích, không coi đây là một cam kết bất biến mặc định.
+  - *Tham số khuyến nghị từ tài liệu gốc (Primary Sources):*
+    - **OWASP Password Storage Cheat Sheet (Mức tối thiểu thực tế):** $m = 19\text{ MiB}$ ($19456\text{ KiB}$), $t = 2$, $p = 1$.
+    - **RFC 9106 (Tùy chọn khuyến nghị thứ hai cho môi trường hạn chế bộ nhớ):** $m = 64\text{ MiB}$ ($65536\text{ KiB}$), $t = 3$, $p = 4$.
+    - *Phân loại tham số cơ sở:* `CANDIDATE_BASELINE` (Không gộp lẫn hoặc tự ý hợp nhất tham số giữa hai nguồn).
+  - *Yêu cầu đo đạc (Benchmark):* Thời gian thực thi thực tế phụ thuộc trực tiếp vào cấu hình phần cứng CPU/RAM của máy chủ triển khai. Do đó, việc lựa chọn work factors cụ thể cho môi trường sản xuất phải được xác định thông qua bài kiểm thử đo đạc thực nghiệm (`NEEDS_BENCHMARK`) trên môi trường phần cứng đích, không tự ý đóng băng mục tiêu thời gian (như $\le 150\text{ms}$) khi chưa có chính sách NFR/an ninh chính thức phê duyệt.
 - **Sự phù hợp Kho mã nguồn:** Node.js 22 hỗ trợ thư viện native `@node-rs/argon2` với binding tối ưu.
 - **Sự phù hợp Kiến trúc:** Nằm trọn vẹn trong module IAM của `apps/api`.
 - **Tác động An ninh:** Đáp ứng các tiêu chuẩn bảo vệ an toàn danh tính hiện đại trước nguy cơ rò rỉ cơ sở dữ liệu.
@@ -324,6 +327,7 @@ Các tham số định lượng dưới đây là các giá trị ứng viên c�
 | **Free-space GC Threshold** | 300 MB | `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT` | Ngưỡng dung lượng trống để kích hoạt dọn dẹp ảnh cũ; cần kiểm thử trên các dòng máy Android thực địa giá rẻ. |
 | **Outbox Warning Threshold**| 100 tác vụ | `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT` | Cảnh báo khi tích tụ quá nhiều lệnh ngoại tuyến; cần đo đạc dựa trên kích thước SQLite và dung lượng RAM thiết bị. |
 | **Session Lookup Latency** | $< 1\text{ms}$ (Giả định cũ) | `NEEDS_BENCHMARK` | Không được coi là bảo đảm mặc định; cần kiểm thử tải (benchmark) trên môi trường phần cứng máy chủ thực tế. |
+| **Argon2id Work Factors** | OWASP min ($19\text{ MiB}/t=2/p=1$); RFC 9106 ($64\text{ MiB}/t=3/p=4$) | `CANDIDATE_BASELINE` / `NEEDS_BENCHMARK` | Tham số băm mật khẩu được đề xuất theo hai cơ sở tài liệu gốc; tham số sản xuất chính thức bắt buộc đo đạc (benchmark) trên phần cứng máy chủ đích, không tự ý đóng băng mục tiêu thời gian cố định. |
 
 ---
 
@@ -337,7 +341,7 @@ Dưới đây là bảng đối soát dẫn chứng kỹ thuật từ các tài 
 | **IDB-02** | [Fastify Documentation (v5.x)](https://fastify.dev/docs/v5.0.x/) | Kiến trúc plugin bất đồng bộ phân lập ngữ cảnh (`fastify-plugin`), hỗ trợ bộ thẩm định schema trực tiếp qua `fastify-type-provider-zod`. | 21/09/2026 |
 | **IDB-03** | [Drizzle ORM Documentation (v0.30+)](https://orm.drizzle.team/docs/overview) | Khai báo schema thuần TypeScript, kiểm tra kiểu tĩnh lúc biên dịch, tự động tham số hóa câu truy vấn (Parameterized queries), hỗ trợ API giao dịch rõ ràng. | 21/09/2026 |
 | **IDB-04** | [RFC 7519 (JSON Web Token)](https://datatracker.ietf.org/doc/html/rfc7519) & [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) | Token chứa claims tự ký; việc thu hồi tức thời đối với tài khoản bị khóa bắt buộc phải duy trì kiểm tra trạng thái máy chủ (Server-side Freshness Check) trên mỗi request có bảo vệ theo ADR 0006. | 21/09/2026 |
-| **IDB-05** | [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) & [RFC 9106](https://datatracker.ietf.org/doc/html/rfc9106) | Argon2id là thuật toán khuyến nghị hàng đầu; tham số tối thiểu đề xuất: memory 64MB, iterations 3, parallelism 1; khuyến nghị đo đạc (benchmark) trên phần cứng thực tế. | 21/09/2026 |
+| **IDB-05** | [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) & [RFC 9106](https://datatracker.ietf.org/doc/html/rfc9106) | Argon2id là thuật toán khuyến nghị hàng đầu. Khuyến nghị tài liệu gốc phân biệt rõ: OWASP đề xuất mức tối thiểu thực tế ($m=19\text{ MiB}, t=2, p=1$); RFC 9106 khuyến nghị cấu hình hạn chế bộ nhớ thứ hai ($m=64\text{ MiB}, t=3, p=4$). Cấu hình tham số sản xuất thuộc diện `NEEDS_BENCHMARK` trên phần cứng đích. | 21/09/2026 |
 | **IDB-06** | [Vite Official Guide](https://vitejs.dev/guide/) & [React 19 Documentation](https://react.dev/) | Hỗ trợ đóng gói Static SPA tối ưu, thời gian build nhanh, không có bề mặt tấn công SSR, dễ dàng chia sẻ packages trong monorepo. | 21/09/2026 |
 | **IDB-07** | [AWS S3 REST API Reference](https://docs.aws.amazon.com/AmazonS3/latest/API/Welcome.html) | Chuẩn giao diện REST API phổ biến cho object storage; hỗ trợ cơ chế Pre-signed URL và tương thích cao giữa MinIO (dev) và AWS S3/Cloudflare R2 (prod). | 21/09/2026 |
 | **IDB-08** | [Docker Compose Specification](https://docs.docker.com/compose/compose-file/) | Định nghĩa triển khai đa dịch vụ cô lập mạng qua bridge network nội bộ, phù hợp cho triển khai đơn khối trên VM đám mây. | 21/09/2026 |

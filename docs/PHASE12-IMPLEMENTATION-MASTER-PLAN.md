@@ -73,16 +73,16 @@ Toàn bộ 15 khoảng cách kỹ thuật đã được kiểm chứng thực t�
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | **IMP-GAP-001** | `MobileApp.tsx:398`, `LoginScreen.tsx:41,117` | `CAP-ADM-01..09` | ADR 0005 | `QAS-SEC-01` | `apps/mobile` | **CRITICAL** | **Wave 5** | Kiểm thử đăng nhập Admin trên mobile bị từ chối chuyển hướng tác vụ hiện trường |
 | **IMP-GAP-002** | `MobileApp.tsx:274, 276` (`isStaff = role === 'Staff'`) | `AC-01..04` | ADR 0007 | `QAS-SEC-01` | `apps/mobile` | **HIGH** | **Wave 5** | Phân quyền 3 vai trò độc lập, không dùng cờ nhị phân |
-| **IMP-GAP-003** | `packages/contracts/src/index.ts:54-62` (Thiếu BLOCKED/CANCELLED)| `DR-02`, `WF-01` | ADR 0003, 0010 | `QAS-FAULT-01`| `packages/contracts` | **CRITICAL** | **Wave 1** | TypeScript compilation & Zod parsing test đúng 7 trạng thái |
-| **IMP-GAP-004** | `packages/contracts/src/index.ts:71` (Thiếu ProofProfile & 4 Reviews)| `DR-03`, `DR-05` | ADR 0010 | `QAS-OFFLINE-01`| `packages/contracts` | **HIGH** | **Wave 1** | Schema validation kiểm tra 3 profiles và 4 kết luận duyệt chuẩn tắc: `APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL` |
-| **IMP-GAP-005** | `scripts/greenops-dev-api.cjs:407-430`, `greenOpsService.ts:418` | `AC-01..04`, `SoD-02` | ADR 0007, 0012 | `QAS-SEC-01` | `apps/api` | **CRITICAL** | **Wave 3, Wave 4**| Integration test từ chối tạo task nếu caller không phải Manager |
+| **IMP-GAP-003** | `packages/contracts/src/index.ts:54-62` (Thiếu BLOCKED/CANCELLED)| `DR-MVP-03`, `WF-01` | ADR 0003, 0010 | `QAS-FAULT-01`| `packages/contracts` | **CRITICAL** | **Wave 1** | TypeScript compilation & Zod parsing test đúng 7 trạng thái |
+| **IMP-GAP-004** | `packages/contracts/src/index.ts:71` (Thiếu ProofProfile & 4 Reviews)| `DR-MVP-02`, `DR-MVP-06` | ADR 0010 | `QAS-OFFLINE-01`| `packages/contracts` | **HIGH** | **Wave 1** | Schema validation kiểm tra 3 profiles và 4 kết luận duyệt chuẩn tắc: `APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL` |
+| **IMP-GAP-005** | `scripts/greenops-dev-api.cjs:407-430`, `greenOpsService.ts:418` | `AC-01..04`, `DR-HARD-02` | ADR 0007, 0012 | `QAS-SEC-01` | `apps/api` | **CRITICAL** | **Wave 3, Wave 4**| Integration test từ chối tạo task nếu caller không phải Manager |
 | **IMP-GAP-006** | `scripts/greenops-dev-api.cjs:397-404` (Task list bảo vệ ở UI) | `AC-01..04` | ADR 0007 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 3, Wave 4**| Security test: Staff chỉ nhận danh sách task gán cho chính mình |
 | **IMP-GAP-007** | `greenOpsService.ts:354`, `greenops-dev-api.cjs:234` (RAM snapshot) | `NFR-OFFLINE` | ADR 0008, 0013 | `QAS-OFFLINE-01, 02` | `apps/mobile`, `apps/api` | **CRITICAL** | **Wave 2, Wave 5**| Kill app & restart máy: dữ liệu tồn lưu nguyên vẹn từ SQLite |
 | **IMP-GAP-008** | Toàn bộ `apps/mobile/src/` (0 kết quả outbox) | `CAP-01, CAP-02` | ADR 0008 | `QAS-OFFLINE-01`| `apps/mobile` | **CRITICAL** | **Wave 5** | Airplane mode test: đóng gói outbox và retry tự động thành công |
 | **IMP-GAP-009** | Cấu trúc thư mục root (Chưa có `apps/api`) | Kiến trúc Mục tiêu | ADR 0013 | Toàn bộ NFR | `apps/api` | **BLOCKER** | **Wave 2, 3, 4** | Khởi tạo thành công service Node.js Modular Monolith theo HTTP framework được Chủ quản phê duyệt (IDB-02) |
 | **IMP-GAP-010** | Cấu trúc thư mục root (Chưa có `apps/admin-web`) | `CAP-ADM-01..09` | ADR 0005 | `QAS-A11Y-01` | `apps/admin-web` | **HIGH** | **Wave 6** | E2E test các chức năng quản trị trên giao diện Web chuyên biệt |
 | **IMP-GAP-011** | Toàn bộ repo (Chưa có bảng AuditEvent & DB privilege) | `CAP-ADM-05` | ADR 0011 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 2, Wave 3**| Chạy lệnh SQL UPDATE/DELETE trên bảng Audit bị DB từ chối |
-| **IMP-GAP-012** | `contracts/src/index.ts` (Thiếu version / expectedVersion) | `DR-09` | ADR 0009 | `QAS-FAULT-01` | `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 4, 5** | Concurrency test: Gửi expectedVersion cũ nhận mã lỗi 409 CONFLICT |
+| **IMP-GAP-012** | `contracts/src/index.ts` (Thiếu version / expectedVersion) | `DR-HARD-05`, `WF-01..08` | ADR 0009 | `QAS-FAULT-01` | `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 4, 5** | Concurrency test: Gửi expectedVersion cũ nhận mã lỗi 409 CONFLICT |
 | **IMP-GAP-013** | `greenOpsService.ts`, `contracts` (Thiếu Idempotency-Key) | Toàn vẹn Outbox | ADR 0009 | `QAS-OFFLINE-01`| `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 2, 5** | Retry test: Gửi cùng Idempotency-Key nhận response cached, không trùng task |
 | **IMP-GAP-014** | `greenOpsService.ts:1-856` (Service ôm đồm 10 trách nhiệm) | Clean Architecture | ADR 0012 | `QAS-FAULT-01` | `apps/mobile` | **MEDIUM** | **Wave 5, Wave 7**| Phân rã thành Ports, Use Cases, Adapters độc lập theo Wave |
 | **IMP-GAP-015** | `mobileWorkflow.ts:146-153`, `StaffProofFlow.tsx` (Logic ở UI) | Domain Engine | ADR 0012 | `QAS-A11Y-01` | `apps/mobile` | **MEDIUM** | **Wave 5** | Giao diện chỉ hiển thị (Advisory), gọi State Machine điều phối |
@@ -222,7 +222,7 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 
 - **Mục tiêu:** Hiện thực hóa 3 module tác nghiệp còn lại trong `apps/api`: Work Management (Core), Tree Asset Registry (Supporting), và Policy & Template Governance (Supporting).
 - **Phạm vi & Tệp tin:**
-  - `apps/api/src/modules/work-management/`: Task Aggregate, máy trạng thái 7 bước, xác thực bằng chứng (GPS/QR), workflow thẩm định 4 kết luận duyệt chuẩn tắc (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`), kiểm tra SoD-02 (người nộp không được tự duyệt).
+  - `apps/api/src/modules/work-management/`: Task Aggregate, máy trạng thái 7 bước, xác thực bằng chứng (GPS/QR), workflow thẩm định 4 kết luận duyệt chuẩn tắc (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`), kiểm tra DR-HARD-02 (người nộp không được tự duyệt).
   - `apps/api/src/modules/tree-asset/`: Quản lý cây, QR code, CareHistory Projection (chỉ ghi nhận task `COMPLETED`).
   - `apps/api/src/modules/policy-governance/`: Cấu hình 3 ProofProfiles, mẫu Checklist.
   - `apps/api/src/infrastructure/storage/`: Port lưu trữ tệp nhị phân ảnh (theo adapter lưu trữ nhị phân được Chủ quản phê duyệt - IDB-07).
@@ -256,7 +256,7 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
   - Khởi tạo workspace `apps/admin-web` chia sẻ `@novyx/contracts` và `@novyx/ui`.
   - Hiện thực hóa 9 năng lực quản trị MVP (`CAP-ADM-01..09`): Cấp phát tài khoản, gán vai trò, khóa/mở tài khoản, xem nhật ký kiểm toán, quản trị danh mục cây, quản lý mẫu ProofProfile và Checklist.
   - Hiện thực hóa chức năng tra cứu lịch sử cây toàn hệ thống `OP-22 ViewCareHistory` ở chế độ chỉ đọc (Read-Only).
-- **Ràng buộc:** Admin Web tuyệt đối không có tính năng nhận việc, chuyển trạng thái task hay thẩm định nghiệm thu công việc hiện trường (bảo vệ SoD-01).
+- **Ràng buộc:** Admin Web tuyệt đối không có tính năng nhận việc, chuyển trạng thái task hay thẩm định nghiệm thu công việc hiện trường (bảo vệ PLAN-SOD-ADMIN / BR-ACT-01).
 - **Tiêu chuẩn Nghiệm thu (Exit Gate):** E2E test giao diện web Admin thực hiện đầy đủ các tác vụ quản trị tài khoản và xem audit log thành công qua máy chủ API.
 
 ---
@@ -301,8 +301,13 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 2. **Di trú Dữ liệu Client Cục bộ (Mobile Data Migration):**
    - Thiết lập SQLite schema versioning qua `PRAGMA user_version`.
    - Mọi thay đổi schema bảng SQLite phải có script nâng cấp tự động, bảo toàn 100% ảnh bằng chứng đã lưu trong Sandbox Filesystem trước đó.
-3. **Chiến lược Khôi phục Khi Lỗi (Rollback Strategy):**
-   - Mọi migration CSDL máy chủ phải có file `down.sql` tương ứng để rollback cấu trúc khi cần.
+3. **Chiến lược Khôi phục & An toàn Di trú (Rollback & Recovery Strategy):**
+   - Thay vì áp đặt quy tắc cứng nhắc buộc mọi migration phải có file `down.sql` đối xứng (dễ tạo ra tính thuận nghịch giả tạo - fake reversibility - dẫn đến nguy cơ phá hủy hoặc làm hỏng dữ liệu khi revert), hệ thống xác lập bất biến: **Mọi đợt di trú dữ liệu hoặc thay đổi schema CSDL máy chủ bắt buộc phải có Chiến lược Khôi phục / Phục hồi (Rollback / Recovery Strategy) được lập thành tài liệu rõ ràng**, phân loại theo từng bản chất thay đổi:
+     - **A. Di trú schema thuận nghịch (Reversible schema migration):** Áp dụng script down migration an toàn khi thay đổi thực sự có thể hoàn nguyên mà không làm mất mát dữ liệu (ví dụ: tạo bảng mới chưa dùng, thêm cột nullable mới, thêm index).
+     - **B. Di trú schema/dữ liệu có tính phá hủy (Destructive schema/data migration):** Áp dụng chiến lược sao lưu/phục hồi (backup/restore) hoặc chiến lược sửa tiến (forward-fix strategy), tuyệt đối không rollback mù quáng.
+     - **C. Di trú tương thích trực tuyến (Online compatibility migration):** Áp dụng mô hình mở rộng / thu hẹp (expand/contract migration), hỗ trợ cả phiên bản ứng dụng cũ và mới trong giai đoạn chuyển đổi.
+     - **D. Chuyển đổi dữ liệu không thể đảo ngược (Irreversible data transformation):** Bắt buộc tạo điểm kiểm tra sao lưu (checkpoint/backup snapshot) độc lập và quy trình phục hồi chi tiết trước khi thực thi.
+   - Kế hoạch Phase 12 ưu tiên tuyệt đối **bảo toàn dữ liệu (data preservation) và năng lực phục hồi (recoverability)** thay vì ép buộc migration đối xứng hình thức.
    - Ứng dụng di động duy trì cờ chuyển đổi nguồn dữ liệu (`EXPO_PUBLIC_DATA_SOURCE`) ở cấp môi trường build/chạy thử nghiệm. Cờ này không được dùng làm cơ chế failover tự động theo từng request sau khi đã chuyển sang ghi dữ liệu sản xuất.
 
 ---
@@ -313,7 +318,7 @@ Hệ thống thiết lập 10 tầng kiểm thử tự động tương ứng v�
 
 | Tầng Kiểm Thử | Đối Tượng Kiểm Thử | Công Cụ Thực Thi | Trách Nhiệm Đảm Bảo |
 | :--- | :--- | :---: | :--- |
-| **1. Domain Tests** | Task Aggregate, Invariants, State Transitions | Vitest | Đảm bảo đúng 7 trạng thái, cấm chuyển sai quy tắc, bảo vệ SoD-02 |
+| **1. Domain Tests** | Task Aggregate, Invariants, State Transitions | Vitest | Đảm bảo đúng 7 trạng thái, cấm chuyển sai quy tắc, bảo vệ DR-HARD-02 (Cấm tự nghiệm thu) |
 | **2. Contract Tests** | Zod Schemas, Request/Response Envelopes | Vitest | Đảm bảo bắt lỗi dữ liệu sai ngay tại ranh giới, type-safety |
 | **3. Auth & RBAC Tests** | Tier 2 Gate, Tier 3 Domain Eligibility | Supertest / Framework Inject | Kiểm tra ma trận quyền 4 chiều, cấm Admin can thiệp task |
 | **4. IAM Freshness Tests**| Vòng đời phiên, kiểm tra AccountStatus, authVersion | Vitest + DB Testbed | Kiểm tra thu hồi phiên tức thì khi tài khoản bị khóa |
@@ -449,7 +454,7 @@ Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái
 - [x] **P12-G06:** Mô hình chuyển đổi là Strangler Pattern từng bước, cấm đập đi xây lại toàn bộ (No Big-Bang).
 - [x] **P12-G07:** Không đánh đồng 48 lệnh nghiệp vụ thành 48 endpoints công khai (tuân thủ ADR 0010).
 - [x] **P12-G08:** Không tạo nguồn chân lý kép; một nguồn chân lý nghiệp vụ duy nhất cho mỗi môi trường sản xuất; máy chủ là thẩm quyền tối cao và duy nhất cho mọi đột biến nghiệp vụ; trạng thái di động cục bộ là ý đồ ngoại tuyến/advisory; tuyệt đối không tự động fallback thực thi nghiệp vụ sang mock/local engine sau cutover.
-- [x] **P12-G09:** Mọi kế hoạch di trú dữ liệu đều có phương án rollback và bảo toàn dữ liệu ngoại tuyến.
+- [x] **P12-G09:** Mọi kế hoạch di trú schema/dữ liệu đều có cơ chế rollback an toàn HOẶC phương án phục hồi (recovery mechanism) được tài liệu hóa rõ ràng, ưu tiên bảo toàn dữ liệu thay vì ép buộc `down.sql` hình thức; bảo toàn 100% dữ liệu ngoại tuyến.
 - [x] **P12-G10:** Mọi đợt triển khai (Wave 0..8) đều có tiêu chuẩn nghiệm thu đầu ra khả thi bằng kiểm thử và không phụ thuộc vào công nghệ chưa được phê duyệt.
 - [x] **P12-G11:** Việc tiêu hủy mã nguồn cũ bị chặn nghiêm ngặt bởi các cổng nghiệm thu tại Wave 7.
 - [x] **P12-G12:** Toàn bộ kịch bản NFR đều ánh xạ tới cơ chế kỹ thuật và phương pháp đo đạc thực nghiệm; các tham số chưa đóng băng được phân loại rõ ràng và không bị áp đặt sớm.
