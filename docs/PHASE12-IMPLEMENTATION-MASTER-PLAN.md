@@ -41,7 +41,7 @@ Khi đọc và diễn giải các tài liệu kỹ thuật để lập kế ho�
      ↓
 [4] Văn bản Kiến trúc Hợp nhất Chuẩn tắc (docs/ARCHITECTURE.md)
      ↓
-[5] Văn văn lịch sử tiền chấp thuận (Options Considered, Proposed Decision cũ, Candidate Examples)
+[5] Văn bản lịch sử tiền chấp thuận (Options Considered, Proposed Decision cũ, Candidate Examples)
 ```
 
 > **GHI CHÚ DIỄN GIẢI TRIỂN KHAI QUAN TRỌNG (`IMPLEMENTATION_INTERPRETATION_NOTE` — ADR 0009):**
@@ -58,7 +58,7 @@ Khi đọc và diễn giải các tài liệu kỹ thuật để lập kế ho�
 Theo báo cáo chứng cứ pháp y [`docs/PHASE12-CURRENT-SOURCE-EVIDENCE.md`](PHASE12-CURRENT-SOURCE-EVIDENCE.md):
 - **Cấu trúc Không gian làm việc:** Monorepo npm workspaces gồm `@novyx/mobile`, `@novyx/contracts`, `@novyx/config`, `@novyx/ui`.
 - **Thành phần còn thiếu:** Chưa có `apps/api` (backend máy chủ) và chưa có `apps/admin-web` (cổng quản trị web).
-- **Hợp đồng hiện hữu:** `@novyx/contracts` thiếu 2 trạng thái `BLOCKED` / `CANCELLED`, thiếu `ProofProfile`, thiếu 4 kết luận duyệt, thiếu trường `version` / `expectedVersion`, và chưa có bất kỳ Zod schema runtime validation nào.
+- **Hợp đồng hiện hữu:** `@novyx/contracts` thiếu 2 trạng thái `BLOCKED` / `CANCELLED`, thiếu `ProofProfile`, thiếu 2 kết luận duyệt chuẩn tắc (`APPROVE_WITH_EXCEPTION`, `CANCEL`) và chưa chuẩn hóa SCREAMING_SNAKE_CASE, thiếu trường `version` / `expectedVersion`, và chưa có Zod schema runtime validation.
 - **Dịch vụ di động:** `greenOpsService.ts` là một đơn khối 856 dòng ôm đồm 10 trách nhiệm (RAM snapshot volatile, fetch, login, projection, multipart, v.v.).
 - **Giao diện di động:** `MobileApp.tsx` (2.054 dòng) ép cứng tài khoản Admin thành Manager và điều hướng qua cờ nhị phân `isStaff`. Logic quy trình 5 bước cũ bị mã hóa cứng trong UI (`mobileWorkflow.ts`).
 - **Hạ tầng kiểm thử:** Chưa có test runner tự động (Jest/Vitest) cho mã nguồn sản phẩm; chưa có CI workflows.
@@ -74,14 +74,14 @@ Toàn bộ 15 khoảng cách kỹ thuật đã được kiểm chứng thực t�
 | **IMP-GAP-001** | `MobileApp.tsx:398`, `LoginScreen.tsx:41,117` | `CAP-ADM-01..09` | ADR 0005 | `QAS-SEC-01` | `apps/mobile` | **CRITICAL** | **Wave 5** | Kiểm thử đăng nhập Admin trên mobile bị từ chối chuyển hướng tác vụ hiện trường |
 | **IMP-GAP-002** | `MobileApp.tsx:274, 276` (`isStaff = role === 'Staff'`) | `AC-01..04` | ADR 0007 | `QAS-SEC-01` | `apps/mobile` | **HIGH** | **Wave 5** | Phân quyền 3 vai trò độc lập, không dùng cờ nhị phân |
 | **IMP-GAP-003** | `packages/contracts/src/index.ts:54-62` (Thiếu BLOCKED/CANCELLED)| `DR-02`, `WF-01` | ADR 0003, 0010 | `QAS-FAULT-01`| `packages/contracts` | **CRITICAL** | **Wave 1** | TypeScript compilation & Zod parsing test đúng 7 trạng thái |
-| **IMP-GAP-004** | `packages/contracts/src/index.ts:71` (Thiếu ProofProfile & 4 Reviews)| `DR-03`, `DR-05` | ADR 0010 | `QAS-OFFLINE-01`| `packages/contracts` | **HIGH** | **Wave 1** | Schema validation kiểm tra 3 profiles và 4 kết luận duyệt |
+| **IMP-GAP-004** | `packages/contracts/src/index.ts:71` (Thiếu ProofProfile & 4 Reviews)| `DR-03`, `DR-05` | ADR 0010 | `QAS-OFFLINE-01`| `packages/contracts` | **HIGH** | **Wave 1** | Schema validation kiểm tra 3 profiles và 4 kết luận duyệt chuẩn tắc: `APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL` |
 | **IMP-GAP-005** | `scripts/greenops-dev-api.cjs:407-430`, `greenOpsService.ts:418` | `AC-01..04`, `SoD-02` | ADR 0007, 0012 | `QAS-SEC-01` | `apps/api` | **CRITICAL** | **Wave 3, Wave 4**| Integration test từ chối tạo task nếu caller không phải Manager |
 | **IMP-GAP-006** | `scripts/greenops-dev-api.cjs:397-404` (Task list bảo vệ ở UI) | `AC-01..04` | ADR 0007 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 3, Wave 4**| Security test: Staff chỉ nhận danh sách task gán cho chính mình |
 | **IMP-GAP-007** | `greenOpsService.ts:354`, `greenops-dev-api.cjs:234` (RAM snapshot) | `NFR-OFFLINE` | ADR 0008, 0013 | `QAS-OFFLINE-01, 02` | `apps/mobile`, `apps/api` | **CRITICAL** | **Wave 2, Wave 5**| Kill app & restart máy: dữ liệu tồn lưu nguyên vẹn từ SQLite |
-| **IMP-GAP-008** | Toàn bộ `apps/mobile/src/` (0 kết quả outbox) | `CAP-OPS-07` | ADR 0008 | `QAS-OFFLINE-01`| `apps/mobile` | **CRITICAL** | **Wave 5** | Airplane mode test: đóng gói outbox và retry tự động thành công |
-| **IMP-GAP-009** | Cấu trúc thư mục root (Chưa có `apps/api`) | Kiến trúc Mục tiêu | ADR 0013 | Toàn bộ NFR | `apps/api` | **BLOCKER** | **Wave 2, 3, 4** | Khởi tạo thành công service Node.js/Fastify Modular Monolith |
+| **IMP-GAP-008** | Toàn bộ `apps/mobile/src/` (0 kết quả outbox) | `CAP-01, CAP-02` | ADR 0008 | `QAS-OFFLINE-01`| `apps/mobile` | **CRITICAL** | **Wave 5** | Airplane mode test: đóng gói outbox và retry tự động thành công |
+| **IMP-GAP-009** | Cấu trúc thư mục root (Chưa có `apps/api`) | Kiến trúc Mục tiêu | ADR 0013 | Toàn bộ NFR | `apps/api` | **BLOCKER** | **Wave 2, 3, 4** | Khởi tạo thành công service Node.js Modular Monolith theo HTTP framework được Chủ quản phê duyệt (IDB-02) |
 | **IMP-GAP-010** | Cấu trúc thư mục root (Chưa có `apps/admin-web`) | `CAP-ADM-01..09` | ADR 0005 | `QAS-A11Y-01` | `apps/admin-web` | **HIGH** | **Wave 6** | E2E test các chức năng quản trị trên giao diện Web chuyên biệt |
-| **IMP-GAP-011** | Toàn bộ repo (Chưa có bảng AuditEvent & DB privilege) | `CAP-ADM-04` | ADR 0011 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 2, Wave 3**| Chạy lệnh SQL UPDATE/DELETE trên bảng Audit bị DB từ chối |
+| **IMP-GAP-011** | Toàn bộ repo (Chưa có bảng AuditEvent & DB privilege) | `CAP-ADM-05` | ADR 0011 | `QAS-SEC-01` | `apps/api` | **HIGH** | **Wave 2, Wave 3**| Chạy lệnh SQL UPDATE/DELETE trên bảng Audit bị DB từ chối |
 | **IMP-GAP-012** | `contracts/src/index.ts` (Thiếu version / expectedVersion) | `DR-09` | ADR 0009 | `QAS-FAULT-01` | `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 4, 5** | Concurrency test: Gửi expectedVersion cũ nhận mã lỗi 409 CONFLICT |
 | **IMP-GAP-013** | `greenOpsService.ts`, `contracts` (Thiếu Idempotency-Key) | Toàn vẹn Outbox | ADR 0009 | `QAS-OFFLINE-01`| `contracts`, `api`, `mobile` | **HIGH** | **Wave 1, 2, 5** | Retry test: Gửi cùng Idempotency-Key nhận response cached, không trùng task |
 | **IMP-GAP-014** | `greenOpsService.ts:1-856` (Service ôm đồm 10 trách nhiệm) | Clean Architecture | ADR 0012 | `QAS-FAULT-01` | `apps/mobile` | **MEDIUM** | **Wave 5, Wave 7**| Phân rã thành Ports, Use Cases, Adapters độc lập theo Wave |
@@ -92,18 +92,18 @@ Toàn bộ 15 khoảng cách kỹ thuật đã được kiểm chứng thực t�
 ## 6. Sổ Bộ Quyết Định Cấp Triển Khai (Implementation Decision Register Summary)
 
 Chi tiết đầy đủ 11 quyết định mở được quản lý tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md).
-**Toàn bộ đều ở trạng thái `OPEN` chờ Chủ quản phê duyệt tại Phase 12B:**
+**Toàn bộ đều ở trạng thái `OPEN` có điều kiện, chờ Chủ quản xem xét và phê duyệt tại Phase 12B trước khi thực thi mã nguồn:**
 - **IDB-01 (CSDL Quan hệ):** Khuyến nghị **PostgreSQL 16+** (`BLOCKS_BACKEND`).
 - **IDB-02 (Web Framework):** Khuyến nghị **Fastify 5.x** (`BLOCKS_BACKEND`).
 - **IDB-03 (ORM / Query Builder):** Khuyến nghị **Drizzle ORM** (`BLOCKS_BACKEND`).
-- **IDB-04 (Định dạng Token):** Khuyến nghị **Signed JWT 15m + RTR 30d** (`BLOCKS_BACKEND`).
-- **IDB-05 (Băm Mật khẩu):** Khuyến nghị **Argon2id** (`BLOCKS_BACKEND`).
-- **IDB-06 (Nền tảng Admin Web):** Khuyến nghị **Vite + React SPA** (`BLOCKS_ADMIN_WEB`).
-- **IDB-07 (Lưu trữ Bằng chứng Ảnh):** Khuyến nghị **S3 Port (MinIO cho dev, S3/R2 cho prod)** (`BLOCKS_BACKEND`).
+- **IDB-04 (Định dạng Token):** Khuyến nghị **Signed JWT** (thời gian cơ sở ứng viên: 15m) + RTR (thời gian cơ sở ứng viên: 30d) HOẶC **Opaque Token** (`BLOCKS_BACKEND`).
+- **IDB-05 (Băm Mật khẩu):** Khuyến nghị **Argon2id** (yêu cầu benchmark trên phần cứng máy chủ đích, `BLOCKS_BACKEND`).
+- **IDB-06 (Nền tảng Admin Web):** Khuyến nghị **Vite + React 19 SPA** (`BLOCKS_ADMIN_WEB`).
+- **IDB-07 (Lưu trữ Bằng chứng Ảnh):** Khuyến nghị **S3-Compatible Port (MinIO cho dev, S3/R2 cho prod)** (`BLOCKS_BACKEND`).
 - **IDB-08 (Chiến lược Đóng gói & Hosting):** Khuyến nghị **Docker Compose trên Linux VM cho MVP** (`CAN_DEFER_TO_DEPLOYMENT`).
-- **IDB-09 (Thời gian Lưu Idempotency):** Khuyến nghị **Biến môi trường (mặc định 72h)** (`CAN_DEFER_TO_FIELD_MEASUREMENT`).
-- **IDB-10 (Dọn Dẹp Ảnh Mobile GC):** Khuyến nghị **Lưu 14 ngày sau COMPLETED ACK** (`CAN_DEFER_TO_FIELD_MEASUREMENT`).
-- **IDB-11 (Quản Lý Phiên Máy Chủ):** Khuyến nghị **Bảng `sessions` trong PostgreSQL cho MVP** (`BLOCKS_BACKEND`).
+- **IDB-09 (Thời gian Lưu Idempotency):** Khuyến nghị **Biến môi trường** (giá trị cơ sở ứng viên: 72h, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`).
+- **IDB-10 (Dọn Dẹp Ảnh Mobile GC):** Khuyến nghị **Giữ ảnh sau COMPLETED ACK** (giá trị cơ sở ứng viên: 14 ngày, ngưỡng dọn dẹp cơ sở: 300 MB, phân loại: `CANDIDATE_BASELINE` / `NEEDS_FIELD_MEASUREMENT`).
+- **IDB-11 (Quản Lý Phiên Máy Chủ):** Khuyến nghị **Bảng `sessions` trong CSDL quan hệ cho MVP** (phân loại: `NEEDS_BENCHMARK` tải thực tế, `BLOCKS_BACKEND`).
 
 ---
 
@@ -115,7 +115,7 @@ Mô hình triển khai được tổ chức thành đồ thị có hướng khô
 flowchart TD
     W0["WAVE 0: Thiết lập Nền tảng Kiểm thử & Quản trị (Vitest, Lint, CI)"] --> W1
     W1["WAVE 1: Hợp đồng Dùng chung & Runtime Validation (@novyx/contracts)"] --> W2
-    W2["WAVE 2: Nền tảng Máy chủ & CSDL Quan hệ (apps/api, Drizzle, DB Roles)"] --> W3
+    W2["WAVE 2: Nền tảng Máy chủ & CSDL Quan hệ (apps/api, persistence được chọn, DB Roles)"] --> W3
     W3["WAVE 3: Định danh (IAM), Session Freshness, Auth Gate & Audit Trail"] --> W4
     W4["WAVE 4: Nghiệp vụ Tác nghiệp Máy chủ (Work Mgmt, Tree Asset, Policy)"] --> W5
     W4 --> W6
@@ -130,24 +130,36 @@ flowchart TD
 
 ---
 
-## 8. Chiến Lược Chuyển Đổi Không Gián Đoạn (Migration Strategy — Strangler Pattern)
+## 8. Chiến Lược Chuyển Đổi Không Gián Đoạn (Migration Strategy — Single Authoritative Business Truth)
 
-Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite). Quá trình di trú tuân thủ mô hình cây si siết cổ (Strangler Fig Pattern) qua 4 giai đoạn tiến hóa:
+Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite). Quá trình di trú tuân thủ mô hình Strangler Fig Pattern qua 4 giai đoạn tiến hóa, bảo đảm **DUY NHẤT MỘT NGUỒN CHÂN LÝ NGHIỆP VỤ (Single Authoritative Business Truth)** trên mỗi môi trường:
 
 ```text
 [Giai đoạn 1: Hiện trạng AS-IS]
   Mobile App ──(Gọi trực tiếp)──> greenOpsService (Mock RAM / greenops-dev-api.cjs)
 
 [Giai đoạn 2: Song song Chuyển tiếp (Transitional Coexistence - Wave 2..4)]
-  Xây dựng apps/api hoàn chỉnh độc lập. Mobile App vẫn chạy bình thường với mock/dev-api.
+  Xây dựng apps/api hoàn chỉnh độc lập. Mobile App tiếp tục chạy với mock/dev-api trong môi trường dev/test.
 
 [Giai đoạn 3: Bật Chuyển đổi Từng phần (Strangler Cutover - Wave 5)]
-  Mobile App ──(Cờ EXPO_PUBLIC_DATA_SOURCE=rest)──> apps/api (Modular Monolith)
-             └──(Fallback an toàn nếu lỗi)──────> greenOpsService Local SQLite
+  Mobile App ──(Cờ EXPO_PUBLIC_DATA_SOURCE=rest)──> apps/api (Authoritative Monolith)
+             └──(Khi mất mạng / lỗi kết nối)──────> SQLite Local Draft & Outbox Intent
+             *(TUYỆT ĐỐI CẤM fallback thực thi nghiệp vụ sang Mock RAM / Legacy Engine)*
 
 [Giai đoạn 4: Thu hồi Mã Lạc hậu (Legacy Retirement - Wave 7)]
-  Xóa bỏ hoàn toàn mã giả lập RAM và scripts/greenops-dev-api.cjs.
+  Xóa bỏ hoàn toàn mã giả lập RAM và scripts/greenops-dev-api.cjs sau khi hoàn tất nghiệm thu.
 ```
+
+### Nguyên tắc Bất biến về Thẩm quyền Nghiệp vụ (No Dual Business Truth):
+1. **Trước Cắt Chuyển (Pre-cutover):** Chế độ giả lập (`mock`) hoặc máy chủ dev cũ (`greenops-dev-api.cjs`) chỉ phục vụ mục đích phát triển cục bộ, kiểm thử tự động và đảm bảo tương thích ngược trong các đợt chưa cắt chuyển.
+2. **Sau Cắt Chuyển (Post-cutover):** Một khi môi trường (staging/production) đã cấu hình nhận lệnh ghi vào `apps/api`, máy chủ là **thẩm quyền tối cao và duy nhất xác thực và ghi nhận đột biến nghiệp vụ**.
+3. **Cấm Tự Động Rớt Lại (No Automatic Mutation Failover):** Khi gặp sự cố mạng hoặc lỗi API REST (5xx, Timeout, Connection Refused), ứng dụng di động **TUYỆT ĐỐI KHÔNG TỰ ĐỘNG CHUYỂN HOẶC RƠI VỀ (FALLBACK) để thực thi cùng chuyển dịch nghiệp vụ đó trên Mock RAM, local business engine, hoặc dev API cũ như một thẩm quyền thay thế**.
+4. **Hành vi Ngoại tuyến Chuẩn tắc:**
+   - Bảo tồn bản nháp (Draft) và ảnh bằng chứng an toàn trong Sandbox của thiết bị.
+   - Đóng gói ý đồ nộp vào Hàng đợi Outbox bền vững trên SQLite kèm `Idempotency-Key` cố định.
+   - Thử lại gửi lên máy chủ khi có kết nối mạng trở lại.
+   - SQLite chỉ lưu đệm (cache), lưu nháp (draft), hàng đợi (outbox) và metadata đồng bộ; **không tự ý quyết định chuyển dịch trạng thái tác vụ chính thức**.
+5. **Kỷ luật Cờ Dữ liệu (`EXPO_PUBLIC_DATA_SOURCE`):** Cờ này chỉ được sử dụng ở cấp độ cấu hình môi trường (Build-time / Environment Configuration) phục vụ phát triển/kiểm thử hoặc quyết định rollback toàn môi trường có kế hoạch trước cutover. Cờ này **tuyệt đối không được sử dụng làm cơ chế failover tự động theo từng request (per-request runtime failover) giữa hai thẩm quyền nghiệp vụ khác nhau**. Mọi kịch bản rollback sau khi đã phát sinh dữ liệu ghi chính thức bắt buộc phải có quy trình đối soát dữ liệu rõ ràng.
 
 ---
 
@@ -170,7 +182,7 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
   - [`packages/contracts/src/index.ts`](packages/contracts/src/index.ts), bổ sung các tệp schema module hóa.
   - Cài đặt `zod` vào `packages/contracts`.
   - Bổ sung enum chuẩn tắc: `TaskStatus` (7 trạng thái SCREAMING_SNAKE_CASE: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`).
-  - Bổ sung `ProofProfile` (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`) và 4 `ReviewDecision` (`APPROVED`, `REWORK_REQUESTED`, `REJECTED_BLOCKED`, `CANCELLED`).
+  - Bổ sung `ProofProfile` (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`) và 4 `ReviewDecision` chuẩn tắc: `APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`.
   - Bổ sung `AccountStatus` (`INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`).
   - Bổ sung `version: number` vào entity DTOs và `expectedVersion: number` vào mutation payloads đối với entity đã có phiên bản.
   - Định nghĩa Header schema: `Idempotency-Key` (UUIDv4).
@@ -182,10 +194,10 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 
 ## 11. Wave 2: Nền Tảng Máy Chủ & CSDL Quan Hệ (Wave 2)
 
-- **Mục tiêu:** Khởi tạo workspace `apps/api`, thiết lập kết nối CSDL quan hệ (theo IDB-01), Drizzle ORM (theo IDB-03), Fastify server (theo IDB-02) và phân tách đặc quyền DB.
+- **Mục tiêu:** Khởi tạo workspace `apps/api`, thiết lập kết nối CSDL quan hệ theo quyết định của Chủ quản (IDB-01), công cụ persistence / data-access được chọn (IDB-03), framework HTTP máy chủ được chọn (IDB-02) và phân tách đặc quyền DB.
 - **Phạm vi & Tệp tin:**
   - Khởi tạo thư mục `apps/api/` với cấu trúc Clean Architecture: `src/core/`, `src/infrastructure/`, `src/modules/`.
-  - Cấu hình file di trú CSDL (`drizzle-kit` migrations).
+  - Cấu hình file di trú CSDL theo công cụ persistence được phê duyệt (IDB-03).
   - Khởi tạo migration DDL tạo bảng người dùng, bảng phiên, bảng kiểm toán `audit_events`.
   - Tạo script SQL phân tách đặc quyền người dùng runtime DB: Cấp quyền `INSERT, SELECT` trên `audit_events`, thu hồi `UPDATE, DELETE, TRUNCATE`.
 - **Ràng buộc:** Cấm import `packages/ui`. Bounded Contexts là module logic nội bộ của `apps/api`, không tách thành npm packages riêng.
@@ -197,7 +209,7 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 
 - **Mục tiêu:** Hiện thực hóa module IAM, bảo vệ an ninh tầng máy chủ và lưu trữ nhật ký kiểm toán trung tâm.
 - **Phạm vi & Tệp tin:**
-  - `apps/api/src/modules/iam/`: Đăng nhập, cấp cặp token (JWT + Refresh Token theo IDB-04), băm mật khẩu Argon2id (theo IDB-05), thu hồi phiên (`authVersion`).
+  - `apps/api/src/modules/iam/`: Đăng nhập, cấp credential xác thực theo giải pháp được Chủ quản phê duyệt (IDB-04) kết hợp ngữ nghĩa thu hồi phiên xoay vòng, hàm băm mật khẩu được chọn (IDB-05), thu hồi phiên (`authVersion`). Quản lý phiên theo giải pháp được phê duyệt (IDB-11).
   - `apps/api/src/infrastructure/security/`: Middleware Tier 2 Security Gate kiểm tra token, kiểm tra tươi tài khoản `AccountStatus == ACTIVE` tức thì theo `WF-12`.
   - `apps/api/src/modules/audit/`: Dịch vụ ghi nhận `AuditEvent` append-only tức thời trong giao dịch.
   - Các endpoint quản trị tài khoản MVP: `ProvisionUser`, `AssignRole`, `SuspendAccount`, `ActivateAccount`, `DisableAccount`, `UnlockAccount`, `ResetCredentialSetup`.
@@ -210,10 +222,10 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 
 - **Mục tiêu:** Hiện thực hóa 3 module tác nghiệp còn lại trong `apps/api`: Work Management (Core), Tree Asset Registry (Supporting), và Policy & Template Governance (Supporting).
 - **Phạm vi & Tệp tin:**
-  - `apps/api/src/modules/work-management/`: Task Aggregate, máy trạng thái 7 bước, xác thực bằng chứng (GPS/QR), workflow thẩm định, kiểm tra SoD-02 (người nộp không được tự duyệt).
+  - `apps/api/src/modules/work-management/`: Task Aggregate, máy trạng thái 7 bước, xác thực bằng chứng (GPS/QR), workflow thẩm định 4 kết luận duyệt chuẩn tắc (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`), kiểm tra SoD-02 (người nộp không được tự duyệt).
   - `apps/api/src/modules/tree-asset/`: Quản lý cây, QR code, CareHistory Projection (chỉ ghi nhận task `COMPLETED`).
   - `apps/api/src/modules/policy-governance/`: Cấu hình 3 ProofProfiles, mẫu Checklist.
-  - `apps/api/src/infrastructure/storage/`: Port lưu trữ tệp nhị phân ảnh (MinIO/S3 theo IDB-07).
+  - `apps/api/src/infrastructure/storage/`: Port lưu trữ tệp nhị phân ảnh (theo adapter lưu trữ nhị phân được Chủ quản phê duyệt - IDB-07).
   - Tích hợp Middleware kiểm soát đồng thời (OCC): Bắt lỗi `expectedVersion` lệch và trả về `409 CONFLICT (STALE_VERSION)`.
   - Tích hợp Middleware Idempotency: Kiểm tra Header `Idempotency-Key`, lưu và phát lại response an toàn.
 - **Ràng buộc:** Cấm đột biến SQL chéo module. Giao tiếp liên module qua In-Process Module Interfaces.
@@ -227,19 +239,19 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 - **Phạm vi & Tệp tin:**
   - Cài đặt và cấu hình `expo-sqlite` trong `apps/mobile`.
   - Xây dựng Hàng đợi Outbox (`DurableOutboxService`) trên SQLite: lưu trữ lệnh nộp bằng chứng kèm `Idempotency-Key` ổn định, tự động retry tuần tự (FIFO) khi có mạng.
-  - Phân tách 3 chiều trạng thái: `TaskStatus` (server), `LocalSubmissionStatus`, `SyncStatus`.
+  - Phân tách 3 chiều trạng thái: `TaskStatus` (thẩm quyền máy chủ), `LocalSubmissionStatus`, `SyncStatus`.
   - Xây dựng tầng REST Adapter chuẩn hóa, thay thế dần các nhánh trong `greenOpsService.ts`.
   - Xóa bỏ việc ép vai trò Admin thành Manager trong `MobileApp.tsx` và `LoginScreen.tsx`.
   - Cập nhật quy trình nộp bằng chứng linh hoạt theo 3 ProofProfiles, loại bỏ chuỗi 5 bước cứng nhắc cũ trong `mobileWorkflow.ts`.
   - Hiện thực hóa cơ chế hòa giải xung đột: Khi server trả về 409 Conflict, bằng chứng cục bộ vẫn được bảo toàn an toàn trên máy, nhưng `TaskStatus` cập nhật theo server.
-- **Ràng buộc:** Giữ nguyên giao diện mượt mà, touch targets $\ge 48\text{px}$, không làm mất dữ liệu người dùng khi kill app hoặc mất mạng (QAS-OFFLINE-01, 02).
+- **Ràng buộc:** Giữ nguyên giao diện mượt mà, touch targets $\ge 48\text{px}$, không làm mất dữ liệu người dùng khi kill app hoặc mất mạng (QAS-OFFLINE-01, 02). Tuyệt đối không fallback thực thi nghiệp vụ sang mock engine khi lỗi kết nối.
 - **Tiêu chuẩn Nghiệm thu (Exit Gate):** Kiểm thử ngắt mạng (Airplane mode) trên thiết bị Android: nộp bài ngoại tuyến, kill app, mở lại, bật mạng -> Outbox tự động đồng bộ thành công lên máy chủ.
 
 ---
 
 ## 15. Wave 6: Cổng Quản Trị Web Độc Lập (Wave 6)
 
-- **Mục tiêu:** Khởi tạo và phát triển ứng dụng `apps/admin-web` dành riêng cho Platform Administrator theo ADR 0005 (Vite + React SPA theo IDB-06).
+- **Mục tiêu:** Khởi tạo và phát triển ứng dụng `apps/admin-web` dành riêng cho Platform Administrator theo ADR 0005 (sử dụng nền tảng Admin Web được Chủ quản phê duyệt - IDB-06).
 - **Phạm vi & Tệp tin:**
   - Khởi tạo workspace `apps/admin-web` chia sẻ `@novyx/contracts` và `@novyx/ui`.
   - Hiện thực hóa 9 năng lực quản trị MVP (`CAP-ADM-01..09`): Cấp phát tài khoản, gán vai trò, khóa/mở tài khoản, xem nhật ký kiểm toán, quản trị danh mục cây, quản lý mẫu ProofProfile và Checklist.
@@ -267,7 +279,7 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
   - Profiling hiệu năng danh sách lớn (`QAS-PERF-01`): Đảm bảo tỷ lệ dropped frames $< 5\%$ trên thiết bị Android phổ thông.
   - Kiểm toán an ninh toàn diện: Kiểm tra thâm nhập (Pen-test) các ranh giới Tier 2 và Tier 3, kiểm tra rò rỉ dữ liệu qua API.
   - Kiểm toán độ tương phản và khả năng tiếp cận ngoài trời (`QAS-A11Y-01`): WCAG AA $\ge 4.5:1$, touch target $\ge 48\text{px}$.
-  - Đóng gói Docker Compose sản xuất theo IDB-08.
+  - Đóng gói hạ tầng sản xuất theo phương án được phê duyệt (IDB-08).
 - **Tiêu chuẩn Nghiệm thu (Exit Gate):** Báo cáo nghiệm thu kỹ thuật xác nhận đạt 100% các tiêu chí SLO định lượng trong `docs/NFR.md`.
 
 ---
@@ -285,13 +297,13 @@ Tuyệt đối cấm viết lại toàn bộ cùng một lúc (Big-Bang Rewrite)
 ## 19. Chiến Lược Di Trú Dữ Liệu & Khôi Phục (Data Migration Strategy)
 
 1. **Di trú Dữ liệu Hạt giống (Seed Data Migration):**
-   - Chuyển đổi dữ liệu cây và nhân viên mẫu từ `apps/mobile/src/data.ts` thành bộ migration seed dữ liệu chuẩn cho PostgreSQL trong Wave 2.
+   - Chuyển đổi dữ liệu cây và nhân viên mẫu từ `apps/mobile/src/data.ts` thành bộ migration seed dữ liệu chuẩn cho CSDL quan hệ trong Wave 2.
 2. **Di trú Dữ liệu Client Cục bộ (Mobile Data Migration):**
    - Thiết lập SQLite schema versioning qua `PRAGMA user_version`.
    - Mọi thay đổi schema bảng SQLite phải có script nâng cấp tự động, bảo toàn 100% ảnh bằng chứng đã lưu trong Sandbox Filesystem trước đó.
 3. **Chiến lược Khôi phục Khi Lỗi (Rollback Strategy):**
    - Mọi migration CSDL máy chủ phải có file `down.sql` tương ứng để rollback cấu trúc khi cần.
-   - Ứng dụng di động duy trì cờ chuyển đổi nguồn dữ liệu (`EXPO_PUBLIC_DATA_SOURCE`) cho phép rơi về chế độ an toàn nếu API máy chủ gặp sự cố trong quá trình thử nghiệm.
+   - Ứng dụng di động duy trì cờ chuyển đổi nguồn dữ liệu (`EXPO_PUBLIC_DATA_SOURCE`) ở cấp môi trường build/chạy thử nghiệm. Cờ này không được dùng làm cơ chế failover tự động theo từng request sau khi đã chuyển sang ghi dữ liệu sản xuất.
 
 ---
 
@@ -303,8 +315,8 @@ Hệ thống thiết lập 10 tầng kiểm thử tự động tương ứng v�
 | :--- | :--- | :---: | :--- |
 | **1. Domain Tests** | Task Aggregate, Invariants, State Transitions | Vitest | Đảm bảo đúng 7 trạng thái, cấm chuyển sai quy tắc, bảo vệ SoD-02 |
 | **2. Contract Tests** | Zod Schemas, Request/Response Envelopes | Vitest | Đảm bảo bắt lỗi dữ liệu sai ngay tại ranh giới, type-safety |
-| **3. Auth & RBAC Tests** | Tier 2 Gate, Tier 3 Domain Eligibility | Supertest / Fastify Inject | Kiểm tra ma trận quyền 4 chiều, cấm Admin can thiệp task |
-| **4. IAM Freshness Tests**| Vòng đời phiên, kiểm tra AccountStatus, authVersion | Vitest + Mock DB | Kiểm tra thu hồi phiên tức thì khi tài khoản bị khóa |
+| **3. Auth & RBAC Tests** | Tier 2 Gate, Tier 3 Domain Eligibility | Supertest / Framework Inject | Kiểm tra ma trận quyền 4 chiều, cấm Admin can thiệp task |
+| **4. IAM Freshness Tests**| Vòng đời phiên, kiểm tra AccountStatus, authVersion | Vitest + DB Testbed | Kiểm tra thu hồi phiên tức thì khi tài khoản bị khóa |
 | **5. Concurrency (OCC)** | Đột biến đồng thời trên cùng 1 task | Concurrent HTTP Requests | Kiểm tra trả về đúng mã lỗi `409 CONFLICT (STALE_VERSION)` |
 | **6. Idempotency Tests** | Gửi lặp lại request cùng `Idempotency-Key` | Integration Tests | Kiểm tra máy chủ trả về kết quả lưu trữ, không tạo trùng task |
 | **7. Offline Fault Tests** | Rớt mạng, kill app, phục hồi tiến trình | Headless Emulator / Mock OS | Đảm bảo 0% mất dữ liệu, khôi phục state $\le 2\text{s}$ (QAS-OFFLINE-01, 02) |
@@ -322,14 +334,16 @@ Toàn bộ 6 kịch bản chất lượng trong `docs/NFR.md` được ánh xạ
 - **`QAS-OFFLINE-02` (Phục hồi sau khi OS kill):** Thực hiện tại **Wave 5**. Auto-persist draft state. Kiểm chứng bằng chế độ "Don't keep activities" đo thời gian phục hồi $\le 2\text{s}$.
 - **`QAS-FAULT-01` (Suy thoái an toàn 503):** Thực hiện tại **Wave 5**. Phân loại lỗi mạng, hiển thị Actionable Error State. Kiểm chứng bằng mock server 503 đo thời gian phản hồi $\le 15\text{s}$, crash = 0.
 - **`QAS-A11Y-01` (Độ tương phản & Touch Target):** Thực hiện tại **Wave 5 & 6**. Token `DESIGN.md`, Touch Target $\ge 48\times 48\text{px}$. Kiểm chứng bằng WCAG Contrast Analyzer đạt $\ge 4.5:1$.
-- **`QAS-SEC-01` (Bảo toàn dữ liệu khi hết phiên):** Thực hiện tại **Wave 5**. Silent Token Refresh + Local Form Draft Preserver. Kiểm chứng bằng mock token expired đo thời gian làm mới $\le 1\text{s}$, mất form = 0.
+- **`QAS-SEC-01` (Bảo toàn dữ liệu khi hết phiên):** Thực hiện tại **Wave 5**. Silent Token Refresh + Local Form Draft Preserver. Kiểm chứng bằng mock token expired, mất form = 0.
+
+*Ghi chú về tham số:* Các giá trị số như TTL token (15m/30d), TTL idempotency (72h), thời gian lưu ảnh (14d), và ngưỡng dung lượng trống (300MB) là các giá trị ứng viên cơ sở (`CANDIDATE_BASELINE`), sẽ được đo đạc và căn chỉnh dựa trên dữ liệu thực tế ngoài hiện trường trước khi cố định vào môi trường sản xuất.
 
 ---
 
 ## 22. Chiến Lược Tương Thích Ngược & Cổng Tháo Gỡ (Rollback & Compatibility)
 
-1. **Khả năng Chạy Song Song:** Trong suốt Wave 2, 3, 4, ứng dụng di động tiếp tục hoạt động bình thường với `greenOpsService` hiện có. Các lập trình viên backend có thể phát triển và kiểm thử `apps/api` độc lập mà không làm gãy luồng công việc mobile.
-2. **Cờ Điều Khiển Nguồn Dữ Liệu:** Đưa biến `EXPO_PUBLIC_DATA_SOURCE` (`mock` | `rest`) vào `packages/config` trong Wave 5 để cho phép chuyển đổi tức thì giữa chế độ backend mới và chế độ fallback nếu phát hiện lỗi nghiêm trọng trên thiết bị thực tế.
+1. **Khả năng Chạy Song Song:** Trong suốt Wave 2, 3, 4, ứng dụng di động tiếp tục hoạt động bình thường với `greenOpsService` hiện có. Việc phát triển `apps/api` diễn ra độc lập mà không làm gãy luồng công việc mobile.
+2. **Cờ Điều Khiển Nguồn Dữ Liệu:** Đưa biến `EXPO_PUBLIC_DATA_SOURCE` (`mock` | `rest`) vào `packages/config` trong Wave 5 để cấu hình môi trường chạy. Sau khi chuyển sang môi trường sản xuất có dữ liệu ghi chính thức, cờ này không tạo ra chuyển mạch failover tự động giữa hai nguồn thẩm quyền khác nhau.
 
 ---
 
@@ -347,41 +361,66 @@ Việc xóa bỏ mã nguồn cũ chỉ được phép diễn ra tại **Wave 7**
 
 | Mã Rủi Ro | Mô Tả Rủi Ro Kỹ Thuật | Khả Năng | Tác Động | Biện Pháp Phòng Ngừa & Giảm Thiểu |
 | :---: | :--- | :---: | :---: | :--- |
-| **RSK-01** | Lỗi hết bộ nhớ thiết bị di động do tích tụ ảnh bằng chứng | Vừa | Lớn | Áp dụng chiến lược dọn dẹp ảnh rác (IDB-10) sau 14 ngày kể từ khi Task COMPLETED. |
+| **RSK-01** | Lỗi hết bộ nhớ thiết bị di động do tích tụ ảnh bằng chứng | Vừa | Lớn | Áp dụng chiến lược dọn dẹp ảnh (IDB-10) với giá trị cơ sở ứng viên 14 ngày và ngưỡng bộ nhớ 300MB, căn chỉnh theo số liệu đo đạc thực tế tại hiện trường. |
 | **RSK-02** | Xung đột phiên bản dữ liệu dày đặc khi nhiều bên thao tác | Thấp | Vừa | Áp dụng OCC (`expectedVersion`) bắt buộc và hiển thị banner thông báo giải cứu rõ ràng trên mobile. |
 | **RSK-03** | Khóa tài khoản không thu hồi phiên kịp thời trên thiết bị ngoại tuyến | Thấp | Lớn | Phân định rõ: Khi offline không thể giao tiếp mạng, nhưng ngay khi thiết bị gửi dữ liệu lên, Tier 2 Gate chặn ngay lập tức. |
-| **RSK-04** | Tràn bộ đệm Outbox khi thiết bị mất sóng nhiều tuần | Thấp | Vừa | Giới hạn dung lượng hàng đợi Outbox trên SQLite, cảnh báo người dùng khi hàng đợi vượt quá 100 tác vụ. |
+| **RSK-04** | Tràn bộ đệm Outbox khi thiết bị mất sóng nhiều tuần | Thấp | Vừa | Giới hạn dung lượng hàng đợi Outbox trên SQLite, cảnh báo người dùng khi hàng đợi vượt ngưỡng cơ sở ứng viên 100 tác vụ (đo đạc thực tế tại Wave 5). |
 | **RSK-05** | Phụ thuộc quá sâu vào tính năng riêng của một vendor DB cụ thể | Thấp | Lớn | Tuân thủ triệt để nguyên tắc Vendor Neutrality trong code nghiệp vụ, chỉ dùng chuẩn SQL quan hệ và Port abstraction. |
 
 ---
 
 ## 25. Gói Quyết Định Cần Chủ Quản Phê Duyệt (Owner Decisions Required)
 
-Để khởi động giai đoạn triển khai mã nguồn, Chủ quản cần xem xét phê duyệt các quyết định cấp triển khai tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md):
+Nhằm giảm tải nhận thức và tối ưu hóa quy trình phê duyệt, các quyết định cấp triển khai tại [`docs/PHASE12-IMPLEMENTATION-DECISION-REGISTER.md`](PHASE12-IMPLEMENTATION-DECISION-REGISTER.md) được phân tách theo tiến trình các đợt thực thi:
 
-| Mã IDB | Quyết Định Cấp Triển Khai | Đề Xuất Của Kỹ Sư | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
+### 25.1. Quyết Định Bắt Buộc Cần Chốt Trước Wave 2 (DECIDE BEFORE WAVE 2)
+
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
 | :---: | :--- | :--- | :---: | :---: |
 | **IDB-01** | RDBMS Engine | **PostgreSQL 16+** | `HIGH` | **Chặn Wave 2** |
 | **IDB-02** | Web Framework Máy chủ | **Fastify 5.x** | `HIGH` | **Chặn Wave 2** |
 | **IDB-03** | ORM / Query Builder | **Drizzle ORM** | `HIGH` | **Chặn Wave 2** |
-| **IDB-04** | Cấu trúc Token Xác thực | **Signed JWT 15m + RTR 30d** | `HIGH` | **Chặn Wave 3** |
-| **IDB-05** | Băm Mật khẩu | **Argon2id** | `HIGH` | **Chặn Wave 3** |
-| **IDB-06** | Web Quản trị Admin | **Vite + React SPA** | `HIGH` | **Chặn Wave 6** |
-| **IDB-07** | Lưu trữ File Bằng chứng | **S3 Port (MinIO/S3)** | `HIGH` | **Chặn Wave 4** |
-| **IDB-11** | Quản lý Phiên Máy chủ | **Bảng `sessions` trong PostgreSQL** | `HIGH` | **Chặn Wave 3** |
+
+### 25.2. Quyết Định Bắt Buộc Cần Chốt Trước Wave 3 (DECIDE BEFORE WAVE 3)
+
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
+| :---: | :--- | :--- | :---: | :---: |
+| **IDB-04** | Cấu trúc Token Xác thực | **Signed JWT HOẶC Opaque Token** | `MEDIUM` | **Chặn Wave 3** |
+| **IDB-05** | Băm Mật khẩu | **Argon2id (Cần Benchmark)** | `HIGH` | **Chặn Wave 3** |
+| **IDB-11** | Quản lý Phiên Máy chủ | **Bảng `sessions` DB (Cần Benchmark)** | `HIGH` | **Chặn Wave 3** |
+
+### 25.3. Quyết Định Bắt Buộc Cần Chốt Trước Wave 4 (DECIDE BEFORE WAVE 4)
+
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
+| :---: | :--- | :--- | :---: | :---: |
+| **IDB-07** | Lưu trữ File Bằng chứng | **S3-Compatible Port (MinIO/S3)** | `HIGH` | **Chặn Wave 4** |
+
+### 25.4. Quyết Định Bắt Buộc Cần Chốt Trước Wave 6 (DECIDE BEFORE WAVE 6)
+
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Đợt Bị Chặn Nếu Chưa Duyệt |
+| :---: | :--- | :--- | :---: | :---: |
+| **IDB-06** | Web Quản trị Admin | **Vite + React 19 SPA** | `HIGH` | **Chặn Wave 6** |
+
+### 25.5. Quyết Định An Toàn Để Hoãn (SAFE TO DEFER — Triển Khai / Đo Đạc)
+
+| Mã IDB | Hạng Mục Quyết Định | Phương Án Khuyến Nghị | Mức Độ Tin Cậy | Giai Đoạn Đóng Băng Phù Hợp |
+| :---: | :--- | :--- | :---: | :---: |
+| **IDB-08** | Đóng gói & Triển khai Hạ tầng | **Docker Compose trên Linux VM** | `HIGH` | Wave 8 (Đóng gói sản xuất) |
+| **IDB-09** | Cấu hình TTL Idempotency | **Biến môi trường (Mặc định 72h)** | `HIGH` | Đo đạc thực tế tại Wave 5 |
+| **IDB-10** | Dọn dẹp Ảnh Bằng chứng Mobile | **Xóa sau COMPLETED (14d/300MB)** | `MEDIUM` | Đo đạc thực địa tại Wave 5 |
 
 ---
 
 ## 26. Lộ Trình Đóng Gói Commits & PRs (Final Execution Roadmap)
 
-Khi bước vào giai đoạn thực thi mã nguồn sau khi Phase 12B được đóng băng, các đơn vị commit/PR phải được chia nhỏ theo ranh giới nguyên tử:
+Khi bước vào giai đoạn thực thi mã nguồn sau khi Phase 12B được phê duyệt, các đơn vị commit/PR phải được chia nhỏ theo ranh giới nguyên tử với tên gọi trung lập kiến trúc (chỉ dùng tên công nghệ cụ thể khi IDB tương ứng đã được phê duyệt chính thức):
 
 1. `test(infra): setup vitest runner and root test scripts` (Wave 0)
 2. `contracts(lifecycle): add canonical 7 task states, profiles and zod schemas` (Wave 1)
 3. `contracts(occ): introduce version and expectedVersion schemas` (Wave 1)
-4. `api(scaffold): initialize fastify modular monolith and drizzle config` (Wave 2)
+4. `api(scaffold): initialize modular monolith runtime and persistence foundation` (Wave 2)
 5. `api(persistence): add relational migrations and audit privilege separation` (Wave 2)
-6. `api(iam): implement argon2id hashing and token lifecycle` (Wave 3)
+6. `api(iam): implement accepted credential and password controls` (Wave 3)
 7. `api(security): enforce tier 2 freshness gate and account suspension check` (Wave 3)
 8. `api(audit): implement append-only audit persistence` (Wave 3)
 9. `api(work): implement task state machine and proof verification engine` (Wave 4)
@@ -391,7 +430,7 @@ Khi bước vào giai đoạn thực thi mã nguồn sau khi Phase 12B được 
 13. `mobile(auth): decouple admin role coercion and enforce 3-tier routing` (Wave 5)
 14. `mobile(sync): connect outbox queue with idempotency transport header` (Wave 5)
 15. `mobile(workflow): align proof collection with semantic proof profiles` (Wave 5)
-16. `admin(scaffold): setup vite react spa in apps/admin-web` (Wave 6)
+16. `admin(scaffold): initialize dedicated admin web workspace` (Wave 6)
 17. `admin(governance): implement user provisioning and role assignment views` (Wave 6)
 18. `admin(audit): implement immutable audit log viewer and care history lookup` (Wave 6)
 19. `cleanup(legacy): retire mock data adapter and greenops-dev-api script` (Wave 7)
@@ -401,19 +440,19 @@ Khi bước vào giai đoạn thực thi mã nguồn sau khi Phase 12B được 
 
 ## 27. Kết Luận & Đánh Giá Cổng Kiểm Soát Kế Hoạch (Planning Gates P12-G01..12)
 
-Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều đạt trạng thái **PASS**:
-- [x] **P12-G01:** Mọi tác vụ triển khai đều truy vết trực tiếp về yêu cầu/ADR/khoảng cách đã xác minh.
-- [x] **P12-G02:** Không tái thiết kế hay thay đổi bất kỳ ngữ nghĩa nghiệp vụ đóng băng nào.
+Toàn bộ 12 Cổng Kiểm soát Kế hoạch Triển khai đều được tái đánh giá nghiêm ngặt và đạt trạng thái **PASS**:
+- [x] **P12-G01:** Mọi tác vụ triển khai đều truy vết trực tiếp về yêu cầu chuẩn tắc (`CAP-01..05`, `CAP-ADM-01..09`, `OP-22`, `WF-*`, `DR-*`, `AC-*`, `QAS-*`)/ADR/khoảng cách đã xác minh; không sử dụng định danh tự tạo (`CAP-OPS-*`).
+- [x] **P12-G02:** Không tái thiết kế hay thay đổi bất kỳ ngữ nghĩa nghiệp vụ đóng băng nào; bảo toàn 4 kết luận duyệt chuẩn tắc (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`).
 - [x] **P12-G03:** Không tái thiết kế hay sửa đổi bất kỳ quyết định kiến trúc đã chấp thuận nào.
-- [x] **P12-G04:** Toàn bộ 11 quyết định mở cấp triển khai đều giữ trạng thái `OPEN` chờ Chủ quản duyệt.
+- [x] **P12-G04:** Toàn bộ 11 quyết định cấp triển khai đều giữ trạng thái `OPEN` có điều kiện, không khóa cứng công nghệ khi chưa có phê duyệt của Chủ quản.
 - [x] **P12-G05:** Mô hình máy chủ là Modular Monolith duy nhất, không giả định tách microservices.
 - [x] **P12-G06:** Mô hình chuyển đổi là Strangler Pattern từng bước, cấm đập đi xây lại toàn bộ (No Big-Bang).
 - [x] **P12-G07:** Không đánh đồng 48 lệnh nghiệp vụ thành 48 endpoints công khai (tuân thủ ADR 0010).
-- [x] **P12-G08:** Không tạo nguồn chân lý kép; máy chủ là thẩm quyền tối cao cho mọi chuyển dịch nghiệp vụ.
+- [x] **P12-G08:** Không tạo nguồn chân lý kép; một nguồn chân lý nghiệp vụ duy nhất cho mỗi môi trường sản xuất; máy chủ là thẩm quyền tối cao và duy nhất cho mọi đột biến nghiệp vụ; trạng thái di động cục bộ là ý đồ ngoại tuyến/advisory; tuyệt đối không tự động fallback thực thi nghiệp vụ sang mock/local engine sau cutover.
 - [x] **P12-G09:** Mọi kế hoạch di trú dữ liệu đều có phương án rollback và bảo toàn dữ liệu ngoại tuyến.
-- [x] **P12-G10:** Mọi đợt triển khai (Wave 0..8) đều có tiêu chuẩn nghiệm thu đầu ra khả thi bằng kiểm thử.
+- [x] **P12-G10:** Mọi đợt triển khai (Wave 0..8) đều có tiêu chuẩn nghiệm thu đầu ra khả thi bằng kiểm thử và không phụ thuộc vào công nghệ chưa được phê duyệt.
 - [x] **P12-G11:** Việc tiêu hủy mã nguồn cũ bị chặn nghiêm ngặt bởi các cổng nghiệm thu tại Wave 7.
-- [x] **P12-G12:** Toàn bộ kịch bản NFR đều ánh xạ tới cơ chế kỹ thuật và phương pháp đo đạc thực nghiệm.
+- [x] **P12-G12:** Toàn bộ kịch bản NFR đều ánh xạ tới cơ chế kỹ thuật và phương pháp đo đạc thực nghiệm; các tham số chưa đóng băng được phân loại rõ ràng và không bị áp đặt sớm.
 
 **KẾT LUẬN CHÍNH THỨC:**
 ```text

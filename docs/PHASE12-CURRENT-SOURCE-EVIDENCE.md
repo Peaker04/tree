@@ -82,7 +82,7 @@ Tài liệu là nền tảng bằng chứng thực nghiệm cho Kế hoạch Tri
    ```typescript
    export type ReviewDecision = 'approve' | 'request_rework';
    ```
-   - **Khiếm khuyết xác nhận:** Chỉ định nghĩa nhị phân 2 kết luận; thiếu 2 kết luận thẩm định chuẩn tắc: `REJECTED_BLOCKED` và `CANCELLED_UNFEASIBLE`.
+   - **Khoảng cách xác nhận (PRESENT_BUT_INSUFFICIENT):** Hiện chỉ định nghĩa 2 giá trị sơ khởi dạng chuỗi `'approve' | 'request_rework'`. Thiếu 2 kết luận chuẩn tắc: `APPROVE_WITH_EXCEPTION` và `CANCEL`, đồng thời chưa chuẩn hóa sang biểu diễn SCREAMING_SNAKE_CASE chuẩn tắc đã được đóng băng (`APPROVE`, `APPROVE_WITH_EXCEPTION`, `REQUEST_REWORK`, `CANCEL`).
 3. **`ProofProfile`:**
    - **Khiếm khuyết xác nhận:** Hoàn toàn KHÔNG TỒN TẠI trong contracts (chưa có `CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`).
 4. **`AccountStatus`:**
@@ -200,7 +200,7 @@ Dưới đây là kết quả xác minh thực nghiệm đối với 15 ứng vi
 | 1 | Admin role coerced to Manager | **CONFIRMED** | `apps/mobile/src/screens/MobileApp.tsx:398`, `LoginScreen.tsx:41, 117` | Chuỗi `admin` bị ép thành `'Manager'`; type `Role` chỉ có `'Staff' \| 'Manager'`. |
 | 2 | Binary `isStaff` routing causes Admin misrouting | **CONFIRMED** | `apps/mobile/src/screens/MobileApp.tsx:274, 276` | Phân quyền nhị phân `isStaff = role === 'Staff'`, tài khoản khác mặc định vào không gian Manager. |
 | 3 | TaskStatus contract missing BLOCKED / CANCELLED | **CONFIRMED** | `packages/contracts/src/index.ts:54-62` | Chỉ có 5 trạng thái PascalCase, thiếu hoàn toàn `BLOCKED` và `CANCELLED`. |
-| 4 | Missing ProofProfile / ReviewDecision contracts | **CONFIRMED** | `packages/contracts/src/index.ts:71` | Không có `ProofProfile`; `ReviewDecision` chỉ có `'approve' \| 'request_rework'`. |
+| 4 | Missing ProofProfile / ReviewDecision contracts | **CONFIRMED** | `packages/contracts/src/index.ts:71` | Không có `ProofProfile` (MISSING); `ReviewDecision` chỉ có `'approve' \| 'request_rework'`, thiếu `APPROVE_WITH_EXCEPTION` và `CANCEL` (PRESENT_BUT_INSUFFICIENT). |
 | 5 | `createTask` lacks authoritative role/resource guard | **CONFIRMED** | `scripts/greenops-dev-api.cjs:407-430`, `greenOpsService.ts:418, 806` | Không kiểm tra vai trò Manager; tự động fallback tree/staff nếu không tìm thấy. |
 | 6 | Task list protection exists only in UI | **CONFIRMED** | `scripts/greenops-dev-api.cjs:397-404` | Endpoint `GET /v1/tasks` không lọc theo actor token; chỉ dựa vào query param tùy chọn của client. |
 | 7 | RAM snapshot persistence | **CONFIRMED** | `apps/mobile/src/services/greenOpsService.ts:354`, `greenops-dev-api.cjs:234` | Dữ liệu lưu trong biến RAM tiến trình (`let snapshot`, `let tasks`), mất trắng khi kill app/process. |
@@ -217,6 +217,14 @@ Dưới đây là kết quả xác minh thực nghiệm đối với 15 ứng vi
 
 ## 8. Kết Luận Bằng Chứng (Forensic Conclusion)
 
-Kết quả điều tra thực nghiệm xác nhận: Toàn bộ 15 khiếm khuyết kỹ thuật được ghi nhận tại Phase 11C đều **tồn tại thực tế trong mã nguồn hiện tại** (15/15 CONFIRMED). Kho mã nguồn hiện hữu là một Fat Client Monolith đúng nghĩa tại commit `2f9a26b`, hoàn toàn chưa có bất kỳ phần nào của kiến trúc mục tiêu (ADR 0005..0013) được lập trình vào mã nguồn.
+Kết quả điều tra thực nghiệm xác nhận: Toàn bộ 15 khiếm khuyết kỹ thuật được ghi nhận tại Phase 11C đều **tồn tại thực tế trong mã nguồn hiện tại** (15/15 CONFIRMED).
+
+Tuy nhiên, cần phân biệt chính xác mức độ hiện diện: Kho mã nguồn hiện hữu không hoàn toàn là "con số không" mà đã có sẵn một số thành phần sơ khai (`primitives` cục bộ):
+- Nền tảng monorepo npm workspaces chuẩn hóa (`@novyx/contracts`, `@novyx/config`, `@novyx/ui`, `@novyx/mobile`).
+- Thư viện `zod` đã có mặt trong `packages/config`.
+- Thư viện bảo mật `expo-secure-store` đã được cài đặt trong `apps/mobile`.
+- REST client thô và script máy chủ dev giả lập `greenops-dev-api.cjs` đã có giao thức phong bì cơ bản.
+
+Dù vậy, các thành phần sơ khai này **mới chỉ ở mức PRESENT_BUT_INSUFFICIENT hoặc CONFLICTING_AS_IS**, hoàn toàn chưa đáp ứng được các yêu cầu bất biến của bộ ADR 0005..0013. Kiến trúc mục tiêu **CHƯA ĐƯỢC TRIỂN KHAI HOÀN CHỈNH ĐẦU-CUỐI (NOT IMPLEMENTED END-TO-END)**.
 
 Điều này chứng minh tính cấp thiết của một Kế hoạch Triển khai Phân tầng (Wave Model) nghiêm ngặt, chuyển đổi dần dần (Strangler Pattern) thay vì một đợt đập đi xây lại toàn bộ (Big-Bang Rewrite).
