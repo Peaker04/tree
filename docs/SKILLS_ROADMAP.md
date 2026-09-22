@@ -34,12 +34,23 @@ Chỉ sử dụng khi đụng vào Component, Style (Tokens), và Luồng Màn H
 | `taste-skill` | Clean lại UI do AI sinh ra (loại bỏ hiệu ứng rẻ tiền, viền gradient vô nghĩa...). | Định hình độ cao cấp (premium). Ép UI ngăn nắp, bento-grid, minimalism. |
 | `diagram-design`| Khi cần vẽ flow người dùng (cấp Manager/Staff), kiến trúc luồng dữ liệu trước khi code. | Sinh mã sơ đồ Mermaid, Draw.io để review trước với PO. |
 
-### Khối Điều phối & Tự động hoá Workflow (Orchestration)
+### Khối Điều phối & Tự động hoá Workflow (Orchestration - Local)
 Dành cho scale up mô hình dự án lớn (Sử dụng GSD workflow).
 
 | Skill | Ngữ cảnh sử dụng (Khi nào cần gọi?) | Tác dụng cốt lõi đích thực |
 |---|---|---|
 | `gsd-core` (và hệ sinh thái con) | Khi triển khai Epic/Feature lớn, chia Phase quy mô từ 2 ngày đến 2 tuần. Lập plan tổng biên. | Động cơ Spec-Driven Development: phân tác vụ, uỷ quyền qua Subagent chạy song song, review chéo, record decision. Dùng qua các lệnh `/gsd:xyz`. |
+
+---
+
+### Khối Môi trường PI hệ thống (Global/System-level Plugins)
+Đây là các skills **không nằm trong dự án (vô hình trong repo)**, nhưng đã cài trực tiếp trên máy tính (`C:\Users\...`) và PI CLI mặc định có sẵn. Bạn hoàn toàn có thể lôi ra dùng bất cứ lúc nào!
+
+| Skill | Ngữ cảnh sử dụng (Khi nào cần gọi?) | Tác dụng cốt lõi đích thực |
+|---|---|---|
+| `ponytail` (Đang Active!) | Gọi `/ponytail lite\|full`, *"lười biếng vào"*, *"yagni"*, *"cho file ngắn nhất"*. | Đóng vai Senior Developer "lười" nhưng sắc sảo. Ép Agent dùng tính năng Native/Stdlib thay vì tự chế (Over-engineering). Tự động tìm cách xóa code dư (qua `ponytail-audit`). |
+| `gitnexus` (Hệ sinh thái) | *"Trace bug này", "Impact analysis", "Refactoring", "Review lại PR này"*. | Đọc hiểu diện rộng. Index toàn bộ repo thành Graph (PDG/CDG) để phân tích tác động trước khi sửa mã nguồn lớn, truy xuất flow data (taint-analysis). |
+| `pi-subagents` & `council-mode` | Phân thân Agent làm nhiều nhánh, hoặc lệnh *"Mở council tranh biện giải pháp này"*. | Mở hội đồng tư vấn đa góc nhìn hoặc chạy đệ quy agent cho multi-step execution. Cốt lõi của kiến trúc AI song song. |
 
 ## 3. Demo cách tư duy ghép Skill của Agent (PI Prompting)
 
