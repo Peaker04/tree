@@ -67,6 +67,93 @@ describe('Phase 13 Wave 3: IAM Governance Commands (GV-01 to GV-07) & Audit Trai
     });
   });
 
+  describe('GET /v1/governance/users', () => {
+    let staffToken: string;
+    let managerToken: string;
+
+    beforeEach(async () => {
+      const staffUser = await userRepo.create({
+        id: 'staff-1',
+        version: 0,
+        email: 'staff@example.com',
+        initialRole: 'staff',
+        role: 'staff',
+        accountStatus: 'ACTIVE',
+        authVersion: 1,
+      });
+      staffToken = tokenService.generateToken(32);
+      await sessionRepo.createSession({
+        id: 'staff-session-1',
+        userId: staffUser.id,
+        tokenFamily: 'f-1',
+        accessTokenHash: tokenService.hashToken(staffToken),
+        refreshTokenHash: tokenService.hashToken(tokenService.generateToken(32)),
+        authVersion: 1,
+        sessionVersion: 1,
+        accessExpiresAt: new Date(Date.now() + 3600_000),
+        refreshExpiresAt: new Date(Date.now() + 86400_000),
+        expiresAt: new Date(Date.now() + 86400_000),
+      });
+
+      const managerUser = await userRepo.create({
+        id: 'mgr-1',
+        version: 0,
+        email: 'manager@example.com',
+        initialRole: 'manager',
+        role: 'manager',
+        accountStatus: 'ACTIVE',
+        authVersion: 1,
+      });
+      managerToken = tokenService.generateToken(32);
+      await sessionRepo.createSession({
+        id: 'mgr-session-1',
+        userId: managerUser.id,
+        tokenFamily: 'f-2',
+        accessTokenHash: tokenService.hashToken(managerToken),
+        refreshTokenHash: tokenService.hashToken(tokenService.generateToken(32)),
+        authVersion: 1,
+        sessionVersion: 1,
+        accessExpiresAt: new Date(Date.now() + 3600_000),
+        refreshExpiresAt: new Date(Date.now() + 86400_000),
+        expiresAt: new Date(Date.now() + 86400_000),
+      });
+    });
+
+    it('R1X-P01: Anonymous real governance GET = 401', async () => {
+      const response = await app.inject({ method: 'GET', url: '/v1/governance/users' });
+      expect(response.statusCode).toBe(401);
+    });
+
+    it('R1X-P02: Staff real governance GET = 403', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/governance/users',
+        headers: { authorization: `Bearer ${staffToken}` },
+      });
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('R1X-P03: Manager real governance GET = 403', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/governance/users',
+        headers: { authorization: `Bearer ${managerToken}` },
+      });
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('R1X-P04: Admin real governance GET = 200', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/governance/users',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(response.statusCode).toBe(200);
+      const json = response.json();
+      expect(Array.isArray(json.data)).toBe(true);
+    });
+  });
+
   it('proves LOCKED was NOT added to AccountStatus (P13W3-N10)', () => {
     expect(CANONICAL_ACCOUNT_STATUSES).toEqual(['INVITED', 'ACTIVE', 'SUSPENDED', 'DISABLED']);
     expect(CANONICAL_ACCOUNT_STATUSES).not.toContain('LOCKED');

@@ -27,6 +27,10 @@ export interface MobileRuntimeOptions {
   binaryReader?: IEvidenceBinaryReader;
 }
 
+function isOperationalMobileRole(role?: string): boolean {
+  return role === 'staff' || role === 'manager';
+}
+
 export class MobileSyncRuntime {
   public db: IDatabaseConnection | null = null;
   public taskRepo: IMobileTaskRepository | null = null;
@@ -168,6 +172,12 @@ export class MobileSyncRuntime {
     try {
       const session = await this.sessionManager.getSession();
       if (!session?.accessToken) {
+        return [];
+      }
+      if (!isOperationalMobileRole(session.user?.role)) {
+        return [];
+      }
+      if (!isOperationalMobileRole(session.user?.role)) {
         return [];
       }
       return await this.coordinator.processAll();

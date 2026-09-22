@@ -136,6 +136,14 @@ export class InMemoryUserRepository implements IUserRepository {
     }
   }
 
+  async listUsers(
+    limit: number = 20,
+    cursor?: string,
+  ): Promise<{ data: UserAccount[]; meta: { hasMore: boolean; nextCursor: string | null } }> {
+    const rows = Array.from(this.users.values());
+    return { data: rows.slice(0, limit), meta: { hasMore: false, nextCursor: null } };
+  }
+
   async advanceAuthVersion(id: string, expectedVersion?: number): Promise<UserAccount> {
     const user = this.users.get(id);
     if (!user) throw new NotFoundError(`User ${id} not found`);
