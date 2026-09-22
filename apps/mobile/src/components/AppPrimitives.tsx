@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   brandText: {
     color: colors.forest,
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '600',
     letterSpacing: 0,
   },
   brandTextCompact: {

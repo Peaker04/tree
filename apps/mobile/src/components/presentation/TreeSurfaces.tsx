@@ -48,6 +48,7 @@ export function TreeSearchFilters({
                 accessibilityRole="button"
                 accessibilityLabel={`Lọc cây: ${option.label}`}
                 accessibilityState={{ selected: active }}
+                accessibilityHint={`Nhấn để ${active ? 'tắt' : 'bật'} bộ lọc ${option.label}`}
                 key={option.id}
                 onPress={() => onFilterChange(option.id)}
                 style={[styles.filterChip, active && styles.filterChipActive]}
@@ -92,6 +93,7 @@ export function TaskStatusFilters({
               accessibilityRole="button"
               accessibilityLabel={`Lọc công việc: ${option.label}`}
               accessibilityState={{ selected: active }}
+              accessibilityHint={`Nhấn để ${active ? 'tắt' : 'bật'} bộ lọc ${option.label}`}
               key={option.id}
               onPress={() => onFilterChange(option.id)}
               style={[styles.filterChip, active && styles.filterChipActive]}
