@@ -26,6 +26,7 @@ import {
   getTaskProofCount,
   getTaskProofGaps,
   getTaskStatusMeta,
+  getTaskProofWorkflowState,
   removePhotoEvidence,
   upsertPhotoEvidence,
 } from '../../domain/mobileWorkflow';
@@ -317,63 +318,80 @@ export function StaffProofFlow(props: {
   if (props.step === 'DETAIL' && props.activeTask) {
     const statusMeta = getTaskStatusMeta(props.activeTask.status);
     const proofGaps = getTaskProofGaps(props.activeTask);
-    const canResumeProof =
-      props.activeTask.status === TaskStatus.IN_PROGRESS || props.activeTask.status === TaskStatus.REWORK_REQUIRED;
+    const wState = getTaskProofWorkflowState(props.activeTask);
 
     return (
       <ScrollView contentContainerStyle={styles.screenPad}>
         <Header title="Chi tiết công việc" subtitle={props.activeTask.id} onBack={() => props.setStep('WORK')} />
-        <Card tone={statusMeta.tone === 'danger' ? 'danger' : statusMeta.tone === 'amber' ? 'amber' : 'soft'}>
-          <View style={styles.rowBetween}>
-            <View style={styles.flex}>
-              <Text style={styles.metricLabel}>Trạng thái</Text>
-              <Text style={styles.itemTitle}>{statusMeta.label}</Text>
+        <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
+          <View style={[styles.detailSection, { backgroundColor: statusMeta.tone === 'danger' ? '#fef2f2' : statusMeta.tone === 'amber' ? '#fffbeb' : '#f8fafc' }]}>
+            <View style={styles.rowBetween}>
+              <View style={styles.flex}>
+                <Text style={styles.metricLabel}>Trạng thái</Text>
+                <Text style={styles.itemTitle}>{statusMeta.label}</Text>
+              </View>
+              <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
             </View>
-            <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+            {props.activeTask.status === TaskStatus.REWORK_REQUIRED && props.activeTask.rejectReason ? (
+              <Text style={styles.bodyText}>Quản lý yêu cầu sửa: {props.activeTask.rejectReason}</Text>
+            ) : null}
           </View>
-          {props.activeTask.status === TaskStatus.REWORK_REQUIRED && props.activeTask.rejectReason ? (
-            <Text style={styles.bodyText}>Quản lý yêu cầu sửa: {props.activeTask.rejectReason}</Text>
+
+          <View style={styles.hairlineDivider} />
+
+          <View style={styles.detailSection}>
+            <Text style={styles.itemTitle}>{props.activeTask.title}</Text>
+            <Text style={styles.bodyText}>{props.activeTask.description}</Text>
+            <View style={{ marginTop: 12 }}>
+              <SectionTitle icon="leaf-outline">Hồ sơ cây mục tiêu</SectionTitle>
+              <Text style={styles.itemTitle}>{activeTree?.name ?? props.activeTask.treeName}</Text>
+              <Text style={styles.bodyText}>{activeTree?.species} - {props.activeTask.treeAddress}</Text>
+              <Text style={styles.monoSmall}>QR: {activeTree?.qrCode ?? props.activeTask.treeId}</Text>
+            </View>
+          </View>
+
+          <View style={styles.hairlineDivider} />
+
+          <View style={styles.detailSection}>
+            <SectionTitle icon="list-outline">Các bước thực hiện</SectionTitle>
+            {props.activeTask.checklist.map((item, index) => (
+              <ChecklistLine key={item.id} index={index} item={item} />
+            ))}
+          </View>
+
+          {!wState.isSubmittedOrCompleted && proofGaps.length > 0 ? (
+            <View>
+              <View style={styles.hairlineDivider} />
+              <View style={[styles.detailSection, { backgroundColor: '#fffbeb' }]}>
+                <SectionTitle icon="build-outline">Cần hoàn thiện</SectionTitle>
+                {proofGaps.map((gap) => (
+                  <Text key={gap} style={styles.bodyText}>
+                    - {gap}
+                  </Text>
+                ))}
+              </View>
+            </View>
           ) : null}
         </Card>
-        <TaskSummary task={props.activeTask} tree={activeTree} />
-        <Card>
-          <SectionTitle icon="list-outline">Các bước thực hiện</SectionTitle>
-          {props.activeTask.checklist.map((item, index) => (
-            <ChecklistLine key={item.id} index={index} item={item} />
-          ))}
-        </Card>
-        {proofGaps.length > 0 && canResumeProof ? (
-          <Card tone="amber">
-            <SectionTitle icon="build-outline">Cần hoàn thiện</SectionTitle>
-            {proofGaps.map((gap) => (
-              <Text key={gap} style={styles.bodyText}>
-                - {gap}
-              </Text>
-            ))}
-          </Card>
-        ) : null}
+
         <Button
-          icon={canResumeProof ? 'build-outline' : 'play-outline'}
-          disabled={
-            props.activeTask.status === TaskStatus.WAITING_REVIEW || props.activeTask.status === TaskStatus.COMPLETED
-          }
+          variant="forest" pill size="field"
+          icon={wState.nextStep === 'GPS' ? 'location-outline' : wState.nextStep ? 'play-outline' : 'checkmark-circle-outline'}
+          disabled={wState.isSubmittedOrCompleted}
           onPress={() => {
             resetQrError();
-            patchActiveTask({
-              status: TaskStatus.IN_PROGRESS,
-              rejectReason:
-                props.activeTask?.status === TaskStatus.REWORK_REQUIRED ? props.activeTask.rejectReason : undefined,
-            });
-            props.setStep(canResumeProof ? getNextProofStep(props.activeTask as Task) : 'GPS');
+            if (props.activeTask) {
+              props.setActiveTask({
+                ...props.activeTask,
+                status: TaskStatus.IN_PROGRESS,
+                rejectReason:
+                  props.activeTask?.status === TaskStatus.REWORK_REQUIRED ? props.activeTask.rejectReason : undefined,
+              });
+            }
+            props.setStep(wState.nextStep ?? 'WORK');
           }}
         >
-          {props.activeTask.status === TaskStatus.WAITING_REVIEW
-            ? 'Đang chờ quản lý duyệt'
-            : props.activeTask.status === TaskStatus.COMPLETED
-              ? 'Đã hoàn thành'
-              : canResumeProof
-                ? 'Hoàn thiện bằng chứng'
-                : 'Bắt đầu công việc'}
+          {wState.activeActionText || (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
         </Button>
       </ScrollView>
     );
@@ -775,77 +793,106 @@ export function StaffProofFlow(props: {
   if (props.step === 'REVIEW' && props.activeTask) {
     const proofGaps = getTaskProofGaps(props.activeTask);
     const evidenceTransport = getEvidenceTransportMeta(props.activeTask);
+    const wState = getTaskProofWorkflowState(props.activeTask);
 
     return (
-      <ScrollView contentContainerStyle={styles.screenPad}>
+      <ScrollView contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
         <Header title="Xem lại báo cáo" subtitle={props.activeTask.id} onBack={() => props.setStep('CHECKLIST')} />
-        <Card tone={proofGaps.length === 0 ? 'green' : 'danger'} style={styles.proofGateCard}>
-          <View style={styles.alertRow}>
-            <Ionicons
-              name={proofGaps.length === 0 ? 'checkmark-circle-outline' : 'alert-circle-outline'}
-              size={20}
-              color={proofGaps.length === 0 ? colors.primary : colors.danger}
+        <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
+          
+          {/* Gate */}
+          <View style={[styles.detailSection, { backgroundColor: proofGaps.length === 0 ? '#f0fdf4' : '#fef2f2' }]}>
+            <View style={styles.alertRow}>
+              <Ionicons
+                name={proofGaps.length === 0 ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+                size={20}
+                color={proofGaps.length === 0 ? colors.primary : colors.danger}
+              />
+              <Text style={proofGaps.length === 0 ? styles.successTitle : styles.alertText}>
+                {proofGaps.length === 0 ? 'GPS, QR và bằng chứng hợp lệ' : 'Chưa đủ điều kiện gửi nghiệm thu'}
+              </Text>
+            </View>
+            {proofGaps.length > 0 ? (
+              <View style={styles.proofGapList}>
+                {proofGaps.map((gap) => (
+                  <Text key={gap} style={styles.bodyText}>
+                    - {gap}
+                  </Text>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.bodyText}>Báo cáo đã có đủ dữ liệu để quản lý kiểm duyệt.</Text>
+            )}
+          </View>
+
+          <View style={styles.hairlineDivider} />
+
+          {/* Proof Chain */}
+          <View style={styles.detailSection}>
+            <ProofChainCard task={props.activeTask} />
+          </View>
+
+          <View style={styles.hairlineDivider} />
+
+          {/* Transport */}
+          <View style={[styles.detailSection, { backgroundColor: evidenceTransport.mode === 'multipart' ? '#f0fdf4' : '#f8fafc' }]}>
+            <View style={styles.rowBetween}>
+              <View style={styles.flex}>
+                <SectionTitle icon="cloud-upload-outline">Kênh gửi bằng chứng</SectionTitle>
+                <Text style={styles.bodyText}>{evidenceTransport.label}</Text>
+              </View>
+              <Badge tone={evidenceTransport.mode === 'multipart' ? 'green' : 'sky'}>
+                {evidenceTransport.mode === 'multipart' ? 'File thật' : 'Metadata'}
+              </Badge>
+            </View>
+          </View>
+
+          <View style={styles.hairlineDivider} />
+
+          {/* Photos */}
+          <View style={styles.detailSection}>
+             <PhotoPair task={props.activeTask} />
+          </View>
+
+          <View style={styles.hairlineDivider} />
+
+          {/* Checklist */}
+          <View style={styles.detailSection}>
+            <SectionTitle icon="checkbox-outline">Checklist hiện trường</SectionTitle>
+            {props.activeTask.checklist.map((item, index) => (
+              <ChecklistLine key={item.id} index={index} item={item} />
+            ))}
+          </View>
+
+          <View style={styles.hairlineDivider} />
+
+          {/* Notes */}
+          <View style={styles.detailSection}>
+            <SectionTitle icon="document-text-outline">Ghi chú nghiệm thu</SectionTitle>
+            <Field
+              label="Ghi chú hiện trường"
+              value={props.activeTask.notes ?? ''}
+              onChangeText={(notes) => patchActiveTask({ notes })}
+              placeholder="Ví dụ: đã thu gom cành khô phía Bắc, cần kiểm tra lại sau mưa..."
+              multiline
+              style={styles.multilineInput}
             />
-            <Text style={proofGaps.length === 0 ? styles.successTitle : styles.alertText}>
-              {proofGaps.length === 0 ? 'GPS, QR và bằng chứng hợp lệ' : 'Chưa đủ điều kiện gửi nghiệm thu'}
-            </Text>
           </View>
-          {proofGaps.length > 0 ? (
-            <View style={styles.proofGapList}>
-              {proofGaps.map((gap) => (
-                <Text key={gap} style={styles.bodyText}>
-                  - {gap}
-                </Text>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.bodyText}>Báo cáo đã có đủ dữ liệu để quản lý kiểm duyệt.</Text>
-          )}
+
         </Card>
-        <ProofChainCard task={props.activeTask} />
-        <Card tone={evidenceTransport.mode === 'multipart' ? 'green' : 'soft'}>
-          <View style={styles.rowBetween}>
-            <View style={styles.flex}>
-              <SectionTitle icon="cloud-upload-outline">Kênh gửi bằng chứng</SectionTitle>
-              <Text style={styles.bodyText}>{evidenceTransport.label}</Text>
-            </View>
-            <Badge tone={evidenceTransport.mode === 'multipart' ? 'green' : 'sky'}>
-              {evidenceTransport.mode === 'multipart' ? 'File thật' : 'Metadata'}
-            </Badge>
-          </View>
-        </Card>
-        <PhotoPair task={props.activeTask} />
-        <Card>
-          <SectionTitle icon="checkbox-outline">Checklist hiện trường</SectionTitle>
-          {props.activeTask.checklist.map((item, index) => (
-            <ChecklistLine key={item.id} index={index} item={item} />
-          ))}
-        </Card>
-        <Card>
-          <SectionTitle icon="document-text-outline">Ghi chú nghiệm thu</SectionTitle>
-          <Field
-            label="Ghi chú hiện trường"
-            value={props.activeTask.notes ?? ''}
-            onChangeText={(notes) => patchActiveTask({ notes })}
-            placeholder="Ví dụ: đã thu gom cành khô phía Bắc, cần kiểm tra lại sau mưa..."
-            multiline
-            style={styles.multilineInput}
-          />
-        </Card>
+
         <Button
-          icon={proofGaps.length === 0 ? 'send-outline' : 'build-outline'}
-          variant={proofGaps.length === 0 ? 'primary' : 'outline'}
+          variant="forest" pill size="field" icon={proofGaps.length === 0 ? 'send-outline' : 'build-outline'}
           disabled={submittingEvidence}
           onPress={async () => {
             const task = props.activeTask;
             if (!task) return;
-            const gaps = getTaskProofGaps(task);
-            if (gaps.length > 0) {
-              props.setStep(getNextProofStep(task));
+            if (!wState.isComplete && wState.nextStep) {
+              props.setStep(wState.nextStep);
               return;
             }
             setSubmittingEvidence(true);
-            const submittedTask: Task = {
+            const submittedTask = {
               ...task,
               status: TaskStatus.WAITING_REVIEW,
               rejectReason: undefined,
@@ -863,11 +910,7 @@ export function StaffProofFlow(props: {
             props.setStep('SUCCESS');
           }}
         >
-          {submittingEvidence
-            ? 'Đang gửi...'
-            : proofGaps.length === 0
-              ? 'Gửi báo cáo nghiệm thu'
-              : 'Hoàn thiện bằng chứng'}
+          {submittingEvidence ? 'Đang đóng gói...' : proofGaps.length === 0 ? 'Gửi báo cáo nghiệm thu' : wState.activeActionText}
         </Button>
       </ScrollView>
     );
@@ -1163,6 +1206,14 @@ function TreeCheckinMap({
 }
 
 const styles = StyleSheet.create({
+  detailSection: {
+    padding: 16,
+    gap: 8,
+  },
+  hairlineDivider: {
+    height: 1,
+    backgroundColor: colors.hairlineBorder,
+  },
   flex: { flex: 1 },
   screenPad: {
     padding: 16,

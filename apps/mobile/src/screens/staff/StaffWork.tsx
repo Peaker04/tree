@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, EmptyState, GradientCard, SectionTitle } from '../../components/AppPrimitives';
+import { Badge, Card, EmptyState, SectionTitle } from '../../components/AppPrimitives';
 import { TaskCard } from '../../components/presentation/TaskSurfaces';
 import { TaskStatusFilters } from '../../components/presentation/TreeSurfaces';
 import { colors } from '../../theme/tokens';
@@ -24,54 +24,62 @@ export function StaffWork({
   onOpenTask: (task: Task) => void;
 }) {
   return (
-    <ScrollView contentContainerStyle={styles.screenPad}>
-      <View style={styles.headerBlock}>
-        <View>
-          <Text style={styles.mutedSmall}>Danh sách nhiệm vụ</Text>
-          <Text style={styles.pageTitle}>Công việc của bạn</Text>
-        </View>
-        <Badge tone="green">{openTaskCount} việc mở</Badge>
-      </View>
-      <GradientCard variant="review" style={styles.workHeroCard}>
-        <View style={styles.rowBetween}>
-          <View style={styles.flex}>
-            <Text style={styles.lightHeroTitle}>Ưu tiên việc cần check-in</Text>
-            <Text style={styles.lightHeroBody}>
-              Mở từng nhiệm vụ để xác minh GPS, quét QR, chụp ảnh và gửi nghiệm thu.
-            </Text>
+    <FlatList
+      data={visibleTasks}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.screenPad}
+      ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+      ListHeaderComponent={
+        <View style={styles.headerContainer}>
+          <View style={styles.headerBlock}>
+            <View>
+              <Text style={styles.mutedSmall}>Danh sách nhiệm vụ</Text>
+              <Text style={styles.pageTitle}>Công việc của bạn</Text>
+            </View>
+            <Badge tone="green">{openTaskCount} việc mở</Badge>
           </View>
-          <Ionicons name="clipboard-outline" size={34} color={colors.primaryDark} />
-        </View>
-      </GradientCard>
+          <Card tone="warm" style={styles.workHeroCard}>
+            <View style={styles.rowBetween}>
+              <View style={styles.flex}>
+                <Text style={styles.lightHeroTitle}>Ưu tiên việc cần check-in</Text>
+                <Text style={styles.lightHeroBody}>
+                  Mở từng nhiệm vụ để xác minh GPS, quét QR, chụp ảnh và gửi nghiệm thu.
+                </Text>
+              </View>
+              <Ionicons name="clipboard-outline" size={34} color={colors.primaryDark} />
+            </View>
+          </Card>
 
-      <TaskStatusFilters
-        activeFilter={activeFilter}
-        onFilterChange={onFilterChange}
-        resultCount={visibleTasks.length}
-        totalCount={totalTasks}
-      />
-      <SectionTitle icon="clipboard-outline">Nhiệm vụ của bạn ({visibleTasks.length})</SectionTitle>
-      {totalTasks === 0 ? (
-        <EmptyState title="Không có việc tồn đọng" body="Khi quản lý phân công, nhiệm vụ sẽ xuất hiện tại đây." />
-      ) : visibleTasks.length === 0 ? (
-        <EmptyState
-          icon="funnel-outline"
-          title="Không có nhiệm vụ trong bộ lọc"
-          body="Đổi trạng thái để xem các việc đang chờ bắt đầu, chờ duyệt hoặc đã hoàn thành."
-        />
-      ) : (
-        visibleTasks.map((task) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Mở công việc ${task.title}`}
-            key={task.id}
-            onPress={() => onOpenTask(task)}
-          >
-            <TaskCard task={task} />
-          </Pressable>
-        ))
+          <TaskStatusFilters
+            activeFilter={activeFilter}
+            onFilterChange={onFilterChange}
+            resultCount={visibleTasks.length}
+            totalCount={totalTasks}
+          />
+          
+          <SectionTitle icon="clipboard-outline">Nhiệm vụ của bạn ({visibleTasks.length})</SectionTitle>
+
+          {totalTasks === 0 ? (
+            <EmptyState title="Không có việc tồn đọng" body="Khi quản lý phân công, nhiệm vụ sẽ xuất hiện tại đây." />
+          ) : visibleTasks.length === 0 ? (
+            <EmptyState
+              icon="funnel-outline"
+              title="Không có nhiệm vụ trong bộ lọc"
+              body="Đổi trạng thái để xem các việc đang chờ bắt đầu, chờ duyệt hoặc đã hoàn thành."
+            />
+          ) : null}
+        </View>
+      }
+      renderItem={({ item: task }) => (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Mở công việc {task.title}`}
+          onPress={() => onOpenTask(task)}
+        >
+          <TaskCard task={task} />
+        </Pressable>
       )}
-    </ScrollView>
+    />
   );
 }
 
@@ -79,7 +87,10 @@ const styles = StyleSheet.create({
   screenPad: {
     padding: 16,
     paddingBottom: 104,
+  },
+  headerContainer: {
     gap: 16,
+    marginBottom: 16, // gap between header and first list item
   },
   flex: {
     flex: 1,
@@ -99,25 +110,25 @@ const styles = StyleSheet.create({
   mutedSmall: {
     color: colors.muted,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   pageTitle: {
     color: colors.foreground,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   workHeroCard: {
     minHeight: 132,
   },
   lightHeroTitle: {
     color: colors.foreground,
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '600',
   },
   lightHeroBody: {
     color: colors.foregroundSoft,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '400',
     lineHeight: 18,
     marginTop: 6,
   },
