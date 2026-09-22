@@ -635,8 +635,8 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       expect(taskInDb?.version).toBe(1);
 
       // Exactly one SUCCESS audit for the business command
-      const audits = await db.select().from(schema.auditEvents).where(eq(schema.auditEvents.entityId, taskId));
-      const startAudits = audits.filter((a) => a.action === 'TASK_STARTED' && a.severity === 'INFO');
+      const audits = await db.select().from(schema.auditEvents).where(eq(schema.auditEvents.resourceId, taskId));
+      const startAudits = audits.filter((a) => a.actionType === 'TASK_STARTED' && a.outcome === 'SUCCESS');
       expect(startAudits).toHaveLength(1);
 
       // Idempotency row == COMPLETED, no permanent PROCESSING record
@@ -701,40 +701,45 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
 
       const payload = { taskId, expectedVersion: 0 };
 
-      // Set beforeCommitHook to throw an error simulating crash / rollback after business logic prepared
-      operationalUow.setBeforeCommitHook(async () => {
-        throw new Error('SIMULATED_FAILURE_BEFORE_COMMIT');
-      });
+      try {
+        // Set beforeCommitHook to throw an error simulating crash / rollback after business logic prepared
+        operationalUow.setBeforeCommitHook(async () => {
+          throw new Error('SIMULATED_FAILURE_BEFORE_COMMIT');
+        });
 
-      const failedRes = await app.inject({
-        method: 'POST',
-        url: `/v1/tasks/${taskId}/start`,
-        headers: {
-          authorization: `Bearer ${staff.token}`,
-          'idempotency-key': idempotencyKey,
-        },
-        payload,
-      });
+        const failedRes = await app.inject({
+          method: 'POST',
+          url: `/v1/tasks/${taskId}/start`,
+          headers: {
+            authorization: `Bearer ${staff.token}`,
+            'idempotency-key': idempotencyKey,
+          },
+          payload,
+        });
 
-      expect(failedRes.statusCode).toBe(500);
+        expect(failedRes.statusCode).toBe(500);
 
-      // Verify real PostgreSQL rollback:
-      // 1. No business mutation (Task remains PENDING at version 0)
-      const taskAfterFail = await taskRepo.findById(taskId);
-      expect(taskAfterFail?.status).toBe('PENDING');
-      expect(taskAfterFail?.version).toBe(0);
+        // Verify real PostgreSQL rollback:
+        // 1. No business mutation (Task remains PENDING at version 0)
+        const taskAfterFail = await taskRepo.findById(taskId);
+        expect(taskAfterFail?.status).toBe('PENDING');
+        expect(taskAfterFail?.version).toBe(0);
 
-      // 2. No SUCCESS audit
-      const auditsAfterFail = await db.select().from(schema.auditEvents).where(eq(schema.auditEvents.entityId, taskId));
-      const successAudits = auditsAfterFail.filter((a) => a.action === 'TASK_STARTED');
-      expect(successAudits).toHaveLength(0);
+        // 2. No SUCCESS audit
+        const auditsAfterFail = await db
+          .select()
+          .from(schema.auditEvents)
+          .where(eq(schema.auditEvents.resourceId, taskId));
+        const successAudits = auditsAfterFail.filter((a) => a.actionType === 'TASK_STARTED' && a.outcome === 'SUCCESS');
+        expect(successAudits).toHaveLength(0);
 
-      // 3. No COMPLETED record, no permanent PROCESSING poison record
-      const idemRecordAfterFail = await idempotencyRepo.findByKey(staff.userId, idempotencyKey);
-      expect(idemRecordAfterFail).toBeNull();
-
-      // Reset the test hook
-      operationalUow.setBeforeCommitHook(undefined);
+        // 3. No COMPLETED record, no permanent PROCESSING poison record
+        const idemRecordAfterFail = await idempotencyRepo.findByKey(staff.userId, idempotencyKey);
+        expect(idemRecordAfterFail).toBeNull();
+      } finally {
+        // Reset the test hook
+        operationalUow.setBeforeCommitHook(undefined);
+      }
 
       // Retry with the EXACT same Idempotency-Key: executes successfully once
       const retryRes = await app.inject({
@@ -892,8 +897,8 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       expect(attempts).toHaveLength(0);
 
       // Assert: no SUCCESS audit
-      const audits = await db.select().from(schema.auditEvents).where(eq(schema.auditEvents.entityId, taskId));
-      const successAudits = audits.filter((a) => a.action === 'TASK_EVIDENCE_SUBMITTED');
+      const audits = await db.select().from(schema.auditEvents).where(eq(schema.auditEvents.resourceId, taskId));
+      const successAudits = audits.filter((a) => a.actionType === 'TASK_EVIDENCE_SUBMITTED' && a.outcome === 'SUCCESS');
       expect(successAudits).toHaveLength(0);
 
       // Also test: wrong size
