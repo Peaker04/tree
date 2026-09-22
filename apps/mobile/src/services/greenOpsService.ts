@@ -250,7 +250,7 @@ const cloneCareHistory = (items: CareHistory[]): CareHistory[] =>
 const buildCareHistory = (tasks: Task[], treeId: string): CareHistory[] =>
   tasks
     .filter((task) => task.treeId === treeId)
-    .filter((task) => task.status === TaskStatus.COMPLETED || task.status === TaskStatus.WAITING_REVIEW)
+    .filter((task) => task.status === TaskStatus.COMPLETED)
     .map((task) => ({
       id: `hist-${task.id}`,
       treeId: task.treeId,
