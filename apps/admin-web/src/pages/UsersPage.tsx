@@ -1,23 +1,33 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Button, Badge } from '../components/ui';
-// import { ProvisionUserRequest } from '@novyx/contracts';
+import type { GovernanceUserDto } from '@novyx/contracts';
 
-const MOCK_USERS = [
-  { id: 'usr_01', email: 'admin@novyx.vn', role: 'Admin', status: 'ACTIVE' },
-  { id: 'usr_02', email: 'manager.hq@novyx.vn', role: 'Manager', status: 'ACTIVE' },
-  { id: 'usr_03', email: 'staff.field@novyx.vn', role: 'Staff', status: 'SUSPENDED' },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 export function UsersPage() {
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [users, setUsers] = useState<GovernanceUserDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showProvision, setShowProvision] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/v1/governance/users`)
+      .then(res => res.json())
+      .then(json => {
+        setUsers(json.data || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>User Governance</h1>
-          <p style={{ margin: '8px 0 0 0', color: 'var(--pewter)', fontSize: '14px' }}>
+          <p style={{ margin: '8px 0', color: 'var(--pewter)', fontSize: '14px' }}>
             Provision network credentials and assign operational roles.
           </p>
         </div>
@@ -35,12 +45,16 @@ export function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map(u => (
+            {loading ? (
+               <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>Loading...</td></tr>
+            ) : users.length === 0 ? (
+               <tr><td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>Không có dữ liệu</td></tr>
+            ) : users.map(u => (
               <tr key={u.id} style={{ borderBottom: '1px solid var(--hairlineBorder)' }}>
                 <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: 500 }}>{u.email}</td>
                 <td style={{ padding: '16px 24px', fontSize: '14px' }}>{u.role}</td>
                 <td style={{ padding: '16px 24px' }}>
-                  <Badge status={u.status === 'ACTIVE' ? 'active' : 'suspended'}>{u.status}</Badge>
+                  <Badge status={u.accountStatus === 'ACTIVE' ? 'active' : 'suspended'}>{u.accountStatus}</Badge>
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   <Button variant="outline">Manage</Button>

@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Badge, Button } from '../components/ui';
+import type { AuditEventDto } from '@novyx/contracts';
 
-const MOCK_AUDIT = [
-  { id: 'aud_1', timestamp: '2026-09-23T08:12:00Z', action: 'TASK_APPROVED', resourceId: 'TSK-1002', actor: 'manager.hq@novyx.vn', outcome: 'SUCCESS' },
-  { id: 'aud_2', timestamp: '2026-09-23T08:15:00Z', action: 'CREDENTIAL_RESET_REQUESTED', resourceId: 'USR-04', actor: 'admin@novyx.vn', outcome: 'SUCCESS' },
-  { id: 'aud_3', timestamp: '2026-09-23T09:00:12Z', action: 'ROLE_ASSIGNED', resourceId: 'USR-09', actor: 'admin@novyx.vn', outcome: 'FAILURE' },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 export function AuditPage() {
-  const [logs] = useState(MOCK_AUDIT);
+  const [logs, setLogs] = useState<AuditEventDto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/v1/audit/events`)
+      .then(res => res.json())
+      .then(json => {
+        setLogs(json.data || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -31,12 +42,16 @@ export function AuditPage() {
             </tr>
           </thead>
           <tbody>
-            {logs.map(l => (
+            {loading ? (
+               <tr><td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>Loading...</td></tr>
+            ) : logs.length === 0 ? (
+               <tr><td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>Không có dữ liệu audit</td></tr>
+            ) : logs.map(l => (
               <tr key={l.id} style={{ borderBottom: '1px solid var(--hairlineBorder)' }}>
                 <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--pewter)' }}>{new Date(l.timestamp).toLocaleString('vi-VN')}</td>
                 <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: 600 }}>{l.action}</td>
-                <td style={{ padding: '16px 24px', fontSize: '14px', fontFamily: 'monospace' }}>{l.resourceId}</td>
-                <td style={{ padding: '16px 24px', fontSize: '14px' }}>{l.actor}</td>
+                <td style={{ padding: '16px 24px', fontSize: '14px', fontFamily: 'monospace' }}>{l.targetResourceId}</td>
+                <td style={{ padding: '16px 24px', fontSize: '14px' }}>{l.actorId}</td>
                 <td style={{ padding: '16px 24px' }}>
                   <Badge status={l.outcome === 'SUCCESS' ? 'active' : 'suspended'}>{l.outcome}</Badge>
                 </td>
