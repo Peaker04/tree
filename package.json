@@ -10,10 +10,12 @@
   "scripts": {
     "start": "npm run mobile:start",
     "mobile:start": "node scripts/expo-mobile.cjs start --port 8082 --dev-client --host localhost",
+    "mobile:start:ios:go": "node scripts/expo-mobile.cjs start --port 8082 --go",
     "mobile:connect:android": "node scripts/mobile-connect-android.cjs",
     "mobile:android": "node scripts/expo-mobile.cjs run:android --no-install --port 8082",
     "mobile:prebuild:android": "node scripts/expo-mobile.cjs prebuild --platform android --clean --no-install",
     "mobile:export:android": "npm run export:android --workspace @novyx/mobile",
+    "mobile:export:ios": "npm run export:ios --workspace @novyx/mobile",
     "mobile:smoke:check": "node scripts/mobile-smoke-check.cjs",
     "qr:demo": "node scripts/generate-qr-demo.cjs",
     "typecheck": "npm run typecheck --workspaces --if-present",

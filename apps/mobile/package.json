@@ -35,7 +35,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "export:android": "expo export --platform android --output-dir ../../dist/mobile-android"
+    "export:android": "expo export --platform android --output-dir ../../dist/mobile-android",
+    "export:ios": "expo export --platform ios --output-dir ../../dist/mobile-ios",
+    "start:go": "expo start --go"
   },
   "private": true
 }

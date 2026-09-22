@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { DeviceCameraView, type DeviceCameraViewHandle } from '../../components/DeviceCameraView';
@@ -1098,7 +1098,7 @@ function TreeCheckinMap({
   const MapView = mapsModule?.default;
   const Circle = mapsModule?.Circle;
   const Marker = mapsModule?.Marker;
-  const providerGoogle = mapsModule?.PROVIDER_GOOGLE;
+  const providerGoogle = Platform.OS === 'ios' ? undefined : mapsModule?.PROVIDER_GOOGLE;
   const locationAgeSeconds = locationCapturedAt
     ? Math.max(0, Math.round((Date.now() - new Date(locationCapturedAt).getTime()) / 1000))
     : null;

@@ -2357,7 +2357,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       } as unknown;
 
       // We stub out the native NetInfo which calls runtime.triggerSync
-//       const sm = new AuthSessionManager('http://localhost', storage);
+      //       const sm = new AuthSessionManager('http://localhost', storage);
       const runtime = new MobileSyncRuntime({
         storage,
         envSource: {
