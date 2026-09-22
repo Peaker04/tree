@@ -12,10 +12,12 @@ export function LoginScreen({
   authLoading,
   onLogin,
   onForgot,
+  errorMessage,
 }: {
   authLoading: boolean;
   onLogin: (role: Role, email: string, password: string) => Promise<void>;
   onForgot: () => void;
+  errorMessage?: string;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,10 +56,10 @@ export function LoginScreen({
         </View>
 
         <View style={styles.formStack}>
-          {error ? (
+          {error || errorMessage ? (
             <Card tone="danger" style={styles.alertRow}>
               <Ionicons name="alert-circle-outline" size={17} color={colors.danger} />
-              <Text style={styles.alertText}>{error}</Text>
+              <Text style={styles.alertText}>{error || errorMessage}</Text>
             </Card>
           ) : null}
           <Field

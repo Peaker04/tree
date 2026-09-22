@@ -32,7 +32,7 @@ type DataSourceState = {
 };
 type AuthSourceState = {
   source: DataSourceStatus | 'none';
-  role?: Role;
+  role?: Role | 'UNSUPPORTED';
   message?: string;
 };
 
@@ -42,9 +42,9 @@ export default function MobileApp() {
   const [data, setData] = useState(() => greenOpsService.getSnapshot());
   const [careHistoryByTree, setCareHistoryByTree] = useState<Record<string, CareHistory[]>>({});
   const [dataSource, setDataSource] = useState<DataSourceState>({ source: 'rest', loading: true });
-  const [, setAuthSource] = useState<AuthSourceState>({ source: 'none' });
+  const [authSource, setAuthSource] = useState<AuthSourceState>({ source: 'none' });
   const [screen, setScreen] = useState<Screen>('Login');
-  const [role, setRole] = useState<Role | null>(null);
+  const [role, setRole] = useState<Role | 'UNSUPPORTED' | null>(null);
   const [authRestoring, setAuthRestoring] = useState(true);
   const [staffStep, setStaffStep] = useState<StaffStep>('HOME');
   const [managerStep, setManagerStep] = useState<ManagerStep>('HOME');
@@ -191,9 +191,12 @@ export default function MobileApp() {
         if (result.role === 'Staff') {
           setStaffStep('HOME');
           setScreen('Main');
-        } else {
+        } else if (result.role === 'Manager') {
           setManagerStep('HOME');
           setScreen('Main');
+        } else {
+          setScreen('Login');
+          setAuthSource({ source: 'rest', message: 'Ứng dụng mobile không hỗ trợ quyển admin.' });
         }
         void refreshData();
         void runtime.triggerSync();
@@ -280,7 +283,7 @@ export default function MobileApp() {
   }
 
   if (screen === 'Login') {
-    return <LoginScreen authLoading={authLoading} onForgot={() => setScreen('Forgot')} onLogin={login} />;
+    return <LoginScreen authLoading={authLoading} errorMessage={authSource.message} onForgot={() => setScreen('Forgot')} onLogin={login} />;
   }
 
   const isStaff = role === 'Staff';

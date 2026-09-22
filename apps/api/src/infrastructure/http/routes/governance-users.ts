@@ -81,6 +81,7 @@ export const governanceUserRoutes: FastifyPluginAsync<GovernanceUserRouteOptions
           200: ListGovernanceUsersResponseSchema,
         },
       },
+      preHandler: authPreHandlers,
     },
     async (request, reply) => {
       const { limit, cursor } = request.query;

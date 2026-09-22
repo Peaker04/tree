@@ -65,7 +65,7 @@ export interface SnapshotLoadResult {
 }
 
 export interface LoginResult {
-  role: Role;
+  role: Role | 'UNSUPPORTED';
   source: DataSourceStatus;
   session?: AuthSession;
   message?: string;
@@ -276,7 +276,11 @@ const upsertTask = (tasks: Task[], nextTask: Task) =>
 const findTreeInSnapshot = (snapshot: AppData, payload: string) =>
   snapshot.trees.find((tree) => tree.qrCode === payload || tree.id === payload) ?? null;
 
-const mapSessionRole = (session: AuthSession): Role => (session.user.role === 'staff' ? 'Staff' : 'Manager');
+const mapSessionRole = (session: AuthSession): Role | 'UNSUPPORTED' => {
+  if (session.user.role === 'staff') return 'Staff';
+  if (session.user.role === 'manager') return 'Manager';
+  return 'UNSUPPORTED';
+};
 
 const buildEvidenceRequest = (task: Task): SubmitTaskEvidenceRequest => ({
   taskId: task.id,
