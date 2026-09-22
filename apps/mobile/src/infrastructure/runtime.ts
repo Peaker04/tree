@@ -177,9 +177,6 @@ export class MobileSyncRuntime {
       if (!isOperationalMobileRole(session.user?.role)) {
         return [];
       }
-      if (!isOperationalMobileRole(session.user?.role)) {
-        return [];
-      }
       return await this.coordinator.processAll();
     } finally {
       this.isSyncing = false;

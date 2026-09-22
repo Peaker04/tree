@@ -138,7 +138,7 @@ export class InMemoryUserRepository implements IUserRepository {
 
   async listUsers(
     limit: number = 20,
-    cursor?: string,
+    _cursor?: string,
   ): Promise<{ data: UserAccount[]; meta: { hasMore: boolean; nextCursor: string | null } }> {
     const rows = Array.from(this.users.values());
     return { data: rows.slice(0, limit), meta: { hasMore: false, nextCursor: null } };
