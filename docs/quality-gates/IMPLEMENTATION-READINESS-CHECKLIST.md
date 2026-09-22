@@ -3,7 +3,7 @@
 ## Implementation Readiness & Source Boundary Checklist
 
 > **Mục tiêu:** Thiết lập hàng rào kiểm soát tuyệt đối trước khi bước vào bất kỳ pha triển khai mã nguồn (Technical Architecture / Feature Implementation) nào; bảo vệ ranh giới monorepo, kiểm soát toàn vẹn cú pháp/format/lint/typecheck và truy quét toàn diện các chuỗi văn bản lỗi thời.  
-> **Tài liệu thẩm quyền:** [`AGENTS.md`](../../AGENTS.md), [`GEMINI.md`](../../GEMINI.md), `package.json`.
+> **Tài liệu thẩm quyền:** [`AGENTS.md`](../../AGENTS.md), `package.json`.
 
 ---
 

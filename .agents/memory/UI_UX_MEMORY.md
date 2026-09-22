@@ -1,8 +1,8 @@
-# Antigravity FE UI/UX memory
+# PI FE UI/UX memory
 
 Updated: 2026-09-19
 
-This is Antigravity's compact durable memory for mobile UI/UX work. Source code and current runtime evidence override stale notes. Task plans and checklists belong in `.planning/`, not here.
+This is the PI agent's compact durable memory for mobile UI/UX work. Source code and current runtime evidence override stale notes. Task plans and checklists belong in `.planning/`, not here.
 
 ## Project identity
 
@@ -13,13 +13,12 @@ This is Antigravity's compact durable memory for mobile UI/UX work. Source code 
 
 ## Canonical reading order
 
-1. `GEMINI.md`
-2. `AGENTS.md`
-3. This file
-4. `docs/MOBILE_UI_RULES.md`
-5. Relevant architecture/product/testing docs
-6. `.agents/skills/mobile-ui-ux/SKILL.md`
-7. Affected implementation and callers
+1. `AGENTS.md`
+2. This file
+3. `docs/MOBILE_UI_RULES.md`
+4. Relevant architecture/product/testing docs
+5. `.agents/skills/mobile-ui-ux/SKILL.md`
+6. Affected implementation and callers
 
 ## Stable architecture
 

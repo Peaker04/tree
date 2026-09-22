@@ -14,8 +14,8 @@ The repository already includes Taste Skill for visual direction and GSD Core fo
 
 Start mobile interface tasks with `mobile-ui-ux`. Add only the supporting skill required by the task.
 
-## Antigravity harness
+## PI CLI Harness
 
-- Root `GEMINI.md` is Antigravity's automatically loaded project harness.
-- `.agents/memory/ANTIGRAVITY_UI_UX_MEMORY.md` is its dedicated durable FE UI/UX memory.
+- Root `AGENTS.md` is automatically loaded project harness.
+- `.agents/memory/UI_UX_MEMORY.md` is its dedicated durable FE UI/UX memory.
 - Project-local skills remain under the canonical `.agents/skills/` discovery path.
