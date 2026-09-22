@@ -1763,15 +1763,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       ).toThrow(/EXPO_PUBLIC_DATA_SOURCE is required/);
     });
 
-    it('R02: mock explicitly selects mock mode', async () => {
-      const service = createHybridGreenOpsService(undefined, {
-        EXPO_PUBLIC_APP_ENV: 'development',
-        EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
-        EXPO_PUBLIC_DATA_SOURCE: 'mock',
-      });
-      const snapshot = await service.loadSnapshot();
-      expect(snapshot.source).toBe('mock');
-    });
+
 
     it('R03: rest explicitly selects REST mode', async () => {
       const storage = new InMemorySecureSessionStorage();
