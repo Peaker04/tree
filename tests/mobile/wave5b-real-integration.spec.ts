@@ -411,11 +411,13 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
         body: JSON.stringify({
           name: `Replay TaskType ${Date.now()}`,
           defaultProofProfile: 'SERVICE_PROOF',
+          description: 'Replay task type description',
         }),
       });
+      expect(taskTypeRes.status).toBe(201);
       const { data: taskType } = (await taskTypeRes.json()) as { data: { id: string } };
 
-      await fetch(`${serverBaseUrl}/v1/governance/policies/proof`, {
+      const policyRes = await fetch(`${serverBaseUrl}/v1/governance/policies/proof`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -428,8 +430,9 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
           policyDescription: 'Replay test policy',
         }),
       });
+      expect(policyRes.status).toBe(201);
 
-      await fetch(`${serverBaseUrl}/v1/governance/policies/checklist`, {
+      const templateRes = await fetch(`${serverBaseUrl}/v1/governance/policies/checklist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -441,6 +444,7 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
           templateItems: [{ text: 'Item 1', order: 1 }],
         }),
       });
+      expect(templateRes.status).toBe(201);
 
       // Manager creates Task & Staff starts it
       const taskCreateRes = await fetch(`${serverBaseUrl}/v1/tasks`, {
@@ -452,12 +456,14 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
         },
         body: JSON.stringify({
           title: 'Replay Test Task',
+          description: 'Replay test task description',
           taskTypeId: taskType.id,
           treeId,
           assignedStaffId: staff.userId,
           deadline: '2026-12-31T17:00:00Z',
         }),
       });
+      expect(taskCreateRes.status).toBe(201);
       const { data: serverTask } = (await taskCreateRes.json()) as { data: { id: string; version: number } };
 
       const startRes = await fetch(`${serverBaseUrl}/v1/tasks/${serverTask.id}/start`, {
