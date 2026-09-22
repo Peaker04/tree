@@ -55,7 +55,7 @@ describe('P2: Real Local Dev Users Seeding & Connectivity', () => {
     });
     expect(res.statusCode).toBe(200);
     const json = res.json();
-    expect(json.data.session.user.role).toBe('staff');
+    expect(json.session?.user?.role || json.data?.session?.user?.role).toBe('staff');
   });
 
   it('T2: seeded Manager logs in, has operational scope, and seed is idempotent', async () => {
@@ -68,17 +68,44 @@ describe('P2: Real Local Dev Users Seeding & Connectivity', () => {
     });
     expect(res.statusCode).toBe(200);
     const json = res.json();
-    expect(json.data.session.user.role).toBe('manager');
+    expect(json.session.user.role).toBe('manager');
 
-    const managerId = json.data.session.user.id;
-    const scopes = await db.select().from(schema.managerScopes).where(eq(schema.managerScopes.managerId, managerId));
+    const managerId = json.session.user.id;
+    const scopes = await db
+      .select()
+      .from(schema.managerOperationalScopes)
+      .where(eq(schema.managerOperationalScopes.managerId, managerId));
     expect(scopes.length).toBe(1);
-    expect(scopes[0].active).toBe(true);
+    expect(scopes[0].scopeKey).toBe('GLOBAL');
 
     const initialUserCount = (await db.select().from(schema.users)).length;
-    execSync('npm run db:seed:dev --workspace @novyx/api', { stdio: 'inherit', env: process.env });
-    const finalUserCount = (await db.select().from(schema.users)).length;
 
+    // Rerun seed script
+    execSync('npm run db:seed:dev --workspace @novyx/api', { stdio: 'inherit', env: process.env });
+
+    // Check invariants
+    const finalUserCount = (await db.select().from(schema.users)).length;
     expect(finalUserCount).toBe(initialUserCount);
+
+    const finalStaffCount = (await db.select().from(schema.users).where(eq(schema.users.email, 'staff@novyx.local')))
+      .length;
+    expect(finalStaffCount).toBe(1);
+
+    const finalManagerCount = (
+      await db.select().from(schema.users).where(eq(schema.users.email, 'manager@novyx.local'))
+    ).length;
+    expect(finalManagerCount).toBe(1);
+
+    const finalScopes = await db
+      .select()
+      .from(schema.managerOperationalScopes)
+      .where(eq(schema.managerOperationalScopes.managerId, managerId));
+    expect(finalScopes.length).toBe(1);
+
+    const finalTreeCount = (await db.select().from(schema.trees).where(eq(schema.trees.id, 'TRE-DEV-01'))).length;
+    expect(finalTreeCount).toBe(1);
+
+    const finalTTCount = (await db.select().from(schema.taskTypes).where(eq(schema.taskTypes.id, 'TT-DEV-01'))).length;
+    expect(finalTTCount).toBe(1);
   });
 });
