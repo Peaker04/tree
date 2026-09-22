@@ -251,7 +251,6 @@ export default function MobileApp() {
         }));
       }
       setRole(result.role);
-      void refreshData();
 
       if (result.role === 'Staff') {
         setStaffStep('HOME');
