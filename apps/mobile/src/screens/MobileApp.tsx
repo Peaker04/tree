@@ -191,15 +191,19 @@ export default function MobileApp() {
         if (result.role === 'Staff') {
           setStaffStep('HOME');
           setScreen('Main');
+          void refreshData();
+          void runtime.triggerSync();
         } else if (result.role === 'Manager') {
           setManagerStep('HOME');
           setScreen('Main');
+          void refreshData();
+          void runtime.triggerSync();
         } else {
           setScreen('Login');
-          setAuthSource({ source: 'rest', message: 'Ứng dụng mobile không hỗ trợ quyển admin.' });
+          setAuthSource({ source: 'rest', message: 'Platform Administrator must use Admin Web' });
+          void clearAuthSession();
+          void runtime.sessionManager.clearLocalSession();
         }
-        void refreshData();
-        void runtime.triggerSync();
       })
       .catch(() => {
         if (mounted) {
@@ -232,7 +236,7 @@ export default function MobileApp() {
         ...(result.message ? { message: result.message } : {}),
       });
       try {
-        if (result.session) {
+        if (result.session && result.role !== 'UNSUPPORTED') {
           await saveAuthSession(result.session);
           await runtime.sessionManager.setSession(result.session);
           void runtime.triggerSync();
@@ -252,9 +256,14 @@ export default function MobileApp() {
       if (result.role === 'Staff') {
         setStaffStep('HOME');
         setScreen('Main');
-      } else {
+        void refreshData();
+      } else if (result.role === 'Manager') {
         setManagerStep('HOME');
         setScreen('Main');
+        void refreshData();
+      } else {
+        setScreen('Login');
+        setAuthSource((curr) => ({ ...curr, message: 'Platform Administrator must use Admin Web' }));
       }
     } finally {
       setAuthLoading(false);
@@ -283,7 +292,14 @@ export default function MobileApp() {
   }
 
   if (screen === 'Login') {
-    return <LoginScreen authLoading={authLoading} errorMessage={authSource.message} onForgot={() => setScreen('Forgot')} onLogin={login} />;
+    return (
+      <LoginScreen
+        authLoading={authLoading}
+        errorMessage={authSource.message}
+        onForgot={() => setScreen('Forgot')}
+        onLogin={login}
+      />
+    );
   }
 
   const isStaff = role === 'Staff';

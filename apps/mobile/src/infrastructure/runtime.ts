@@ -37,6 +37,7 @@ export class MobileSyncRuntime {
   public dispatcher: SubmitEvidenceOutboxDispatcher | null = null;
   public coordinator: OutboxCoordinator | null = null;
   public readonly greenOpsService: GreenOpsService;
+  public readonly dataSource: 'mock' | 'rest';
 
   private envSource: Record<string, string | undefined>;
   private storage?: ISecureSessionStorage;
@@ -56,6 +57,7 @@ export class MobileSyncRuntime {
     this.binaryReader = options?.binaryReader ?? new DefaultEvidenceBinaryReader();
 
     const config = readPublicRuntimeConfig(this.envSource);
+    this.dataSource = config.dataSource;
     const apiBaseUrl = config.apiBaseUrl;
 
     this.sessionManager = new AuthSessionManager(apiBaseUrl, this.storage);
@@ -157,6 +159,7 @@ export class MobileSyncRuntime {
   }
 
   async triggerSync(): Promise<OutboxDispatchResult[]> {
+    if (this.dataSource === 'mock') return [];
     if (this.isSyncing || !this.coordinator) {
       return [];
     }
