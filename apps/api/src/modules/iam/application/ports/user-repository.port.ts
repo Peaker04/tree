@@ -27,4 +27,5 @@ export interface IUserRepository {
   resetFailedLogin(id: string): Promise<void>;
   updatePasswordHash(id: string, newHash: string): Promise<void>;
   advanceAuthVersion(id: string, expectedVersion?: number): Promise<UserAccount>;
+  listUsers(limit?: number, cursor?: string): Promise<{ data: UserAccount[], meta: { hasMore: boolean, nextCursor: string | null } }>;
 }

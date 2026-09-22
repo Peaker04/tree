@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import {
+  ListGovernanceUsersResponseSchema,
+  ListGovernanceUsersQuerySchema,
   ProvisionUserRequestSchema,
   AssignRoleRequestSchema,
   ActivateAccountRequestSchema,
@@ -16,6 +18,7 @@ import {
   type UnlockAccountRequest,
   type ResetCredentialSetupRequest,
   type GovernanceUserDto,
+  type ListGovernanceUsersQuery,
 } from '@novyx/contracts';
 import type { ProvisionUserUseCase } from '../../../modules/iam/application/use-cases/provision-user.use-case';
 import type { AssignRoleUseCase } from '../../../modules/iam/application/use-cases/assign-role.use-case';
@@ -28,6 +31,7 @@ import type { UserAccount } from '../../../modules/iam/domain/entities/user';
 import { ValidationError } from '../../../core/errors';
 
 export interface GovernanceUserRouteOptions {
+  userRepository: any; // Quick type patch, will replace with proper IUserRepository later
   provisionUserUseCase: ProvisionUserUseCase;
   assignRoleUseCase: AssignRoleUseCase;
   activateAccountUseCase: ActivateAccountUseCase;
@@ -66,6 +70,31 @@ export const governanceUserRoutes: FastifyPluginAsync<GovernanceUserRouteOptions
   const authPreHandlers = [options.authenticate, options.requireAdmin];
 
   // GV-01: ProvisionUser
+    fastify.get<{ Querystring: ListGovernanceUsersQuery }>(
+    '/v1/governance/users',
+    {
+      schema: {
+        querystring: ListGovernanceUsersQuerySchema,
+        response: {
+          200: ListGovernanceUsersResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { limit, cursor } = request.query;
+      const result = await options.userRepository.listUsers(limit, cursor);
+      const data: GovernanceUserDto[] = result.data.map((u: any) => ({
+        id: u.id,
+        version: u.version,
+        email: u.email,
+        phone: u.phone,
+        role: u.role,
+        accountStatus: u.accountStatus,
+      }));
+      return reply.code(200).send({ data, meta: result.meta });
+    }
+  );
+
   fastify.post<{ Body: ProvisionUserRequest }>(
     '/v1/governance/users',
     {

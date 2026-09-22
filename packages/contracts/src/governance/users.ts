@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { HumanRoleSchema } from '../auth/roles';
 import { AccountStatusSchema } from '../auth/account-status';
-import { createApiSuccessSchema } from '../common/envelopes';
+import { createApiSuccessSchema, createApiListSchema } from '../common/envelopes';
+import { PaginationQuerySchema } from '../common/pagination';
 
 /**
  * Canonical governance user network representation.
@@ -98,3 +99,9 @@ export const ResetCredentialSetupRequestSchema = z.object({
 });
 
 export type ResetCredentialSetupRequest = z.infer<typeof ResetCredentialSetupRequestSchema>;
+
+export const ListGovernanceUsersQuerySchema = PaginationQuerySchema;
+export type ListGovernanceUsersQuery = z.infer<typeof ListGovernanceUsersQuerySchema>;
+
+export const ListGovernanceUsersResponseSchema = createApiListSchema(GovernanceUserDtoSchema);
+export type ListGovernanceUsersResponse = z.infer<typeof ListGovernanceUsersResponseSchema>;

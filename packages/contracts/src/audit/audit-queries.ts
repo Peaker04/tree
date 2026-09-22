@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { AuditEventDtoSchema } from './audit-event';
+import { PaginationQuerySchema } from '../common/pagination';
+import { createApiListSchema } from '../common/envelopes';
 
 export const ListAuditLogsQuerySchema = z.object({
   actorId: z.string().optional(),
@@ -12,3 +15,9 @@ export const ListAuditLogsQuerySchema = z.object({
 });
 
 export type ListAuditLogsQuery = z.infer<typeof ListAuditLogsQuerySchema>;
+
+export const ListAuditEventsQuerySchema = PaginationQuerySchema;
+export type ListAuditEventsQuery = z.infer<typeof ListAuditEventsQuerySchema>;
+
+export const ListAuditEventsResponseSchema = createApiListSchema(AuditEventDtoSchema); // We can align this with AuditEventSchema later
+export type ListAuditEventsResponse = z.infer<typeof ListAuditEventsResponseSchema>;

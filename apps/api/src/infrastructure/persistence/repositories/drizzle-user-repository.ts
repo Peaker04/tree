@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, desc, lte } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { UserAccount } from '../../../modules/iam/domain/entities/user';
 import type { IUserRepository } from '../../../modules/iam/application/ports/user-repository.port';
@@ -169,6 +169,28 @@ export class DrizzleUserRepository implements IUserRepository {
         updatedAt: new Date(),
       })
       .where(eq(schema.users.id, id));
+  }
+
+  async listUsers(
+    limit: number = 20,
+    cursor?: string,
+  ): Promise<{ data: UserAccount[]; meta: { hasMore: boolean; nextCursor: string | null } }> {
+    let whereClause = undefined;
+    if (cursor) {
+      whereClause = lte(schema.users.id, cursor);
+    }
+    const rows = await this.db.query.users.findMany({
+      where: whereClause,
+      orderBy: [desc(schema.users.id)],
+      limit: limit + 1,
+    });
+    const hasMore = rows.length > limit;
+    const data = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? data[data.length - 1]?.id ?? null : null;
+    return {
+      data: data.map((r) => this.mapRowToEntity(r)),
+      meta: { hasMore, nextCursor },
+    };
   }
 
   async advanceAuthVersion(id: string, expectedVersion?: number): Promise<UserAccount> {

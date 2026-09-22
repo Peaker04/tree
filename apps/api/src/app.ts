@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { healthRoutes } from './infrastructure/http/routes/health';
 import { authRoutes } from './infrastructure/http/routes/auth';
 import { governanceUserRoutes } from './infrastructure/http/routes/governance-users';
+import { auditRoutes } from './infrastructure/http/routes/audit';
 import { treeRoutes } from './infrastructure/http/routes/trees';
 import { governanceOperationalRoutes } from './infrastructure/http/routes/governance-operational';
 import { taskRoutes } from './infrastructure/http/routes/tasks';
@@ -281,7 +282,14 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     });
 
     // Register governance IAM routes
+    server.register(auditRoutes, {
+      auditWriter,
+      authenticate,
+      requireAdmin,
+    });
+
     server.register(governanceUserRoutes, {
+      userRepository: userRepo,
       provisionUserUseCase,
       assignRoleUseCase,
       activateAccountUseCase,
