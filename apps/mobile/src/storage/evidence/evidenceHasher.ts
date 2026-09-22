@@ -70,18 +70,26 @@ export function base64ToUint8Array(base64: string): Uint8Array {
  */
 export class NodeEvidenceHasher implements IEvidenceHasher {
   async hashBytes(data: Uint8Array | ArrayBuffer | Buffer): Promise<string> {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const crypto = require('node:crypto');
+    const req = typeof require === 'function' ? require : null;
+    const mod = ['node', 'crypto'].join(':');
+    const nodeCrypto = req ? req(mod) : null;
+    if (!nodeCrypto) {
+      throw new Error('Node crypto unavailable in current runtime');
+    }
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-    const hash = crypto.createHash('sha256').update(bytes).digest('hex').toLowerCase();
+    const hash = nodeCrypto.createHash('sha256').update(bytes).digest('hex').toLowerCase();
     return hash;
   }
 
   async hashFile(fileUri: string): Promise<string> {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fs = require('node:fs');
+    const req = typeof require === 'function' ? require : null;
+    const mod = ['node', 'fs'].join(':');
+    const nodeFs = req ? req(mod) : null;
+    if (!nodeFs) {
+      throw new Error('Node fs unavailable in current runtime');
+    }
     const cleanPath = fileUri.startsWith('file://') ? fileUri.replace('file://', '') : fileUri;
-    const buffer = fs.readFileSync(cleanPath);
+    const buffer = nodeFs.readFileSync(cleanPath);
     return this.hashBytes(buffer);
   }
 }

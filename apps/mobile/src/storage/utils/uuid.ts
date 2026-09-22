@@ -17,17 +17,12 @@ export function generateSecureUuid(): string {
   }
 
   // 1. Web / React Native 0.86+ / Node global crypto.randomUUID
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-
-  // 2. Node.js environment
-  if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const nodeCrypto = require('node:crypto');
-    if (typeof nodeCrypto.randomUUID === 'function') {
-      return nodeCrypto.randomUUID();
-    }
+  const globalCrypto =
+    typeof crypto !== 'undefined'
+      ? crypto
+      : (globalThis as unknown as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (globalCrypto && typeof globalCrypto.randomUUID === 'function') {
+    return globalCrypto.randomUUID();
   }
 
   // 3. Expo runtime environment

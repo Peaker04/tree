@@ -30,13 +30,10 @@ export function readPublicRuntimeConfig(source: Record<string, string | undefine
     }
   }
 
-  let dataSource: DataSourceMode = 'rest';
-  if (rawDataSource !== undefined && rawDataSource !== '') {
-    if (allowedDataSources.has(rawDataSource as DataSourceMode)) {
-      dataSource = rawDataSource as DataSourceMode;
-    } else {
-      errors.push('EXPO_PUBLIC_DATA_SOURCE must be mock or rest.');
-    }
+  if (!rawDataSource || rawDataSource.trim() === '') {
+    errors.push('EXPO_PUBLIC_DATA_SOURCE is required.');
+  } else if (!allowedDataSources.has(rawDataSource as DataSourceMode)) {
+    errors.push('EXPO_PUBLIC_DATA_SOURCE must be mock or rest.');
   }
 
   if (errors.length > 0) {
@@ -50,6 +47,6 @@ export function readPublicRuntimeConfig(source: Record<string, string | undefine
   return {
     appEnv: appEnv as AppEnvironment,
     apiBaseUrl,
-    dataSource,
+    dataSource: rawDataSource as DataSourceMode,
   };
 }

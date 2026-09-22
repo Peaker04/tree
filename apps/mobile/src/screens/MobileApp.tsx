@@ -4,7 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark, Button, Card, Field } from '../components/AppPrimitives';
 import { clearAuthSession, loadStoredAuthSession, saveAuthSession } from '../services/authSessionStore';
-import { createHybridGreenOpsService, DataSourceStatus } from '../services/greenOpsService';
+import { DataSourceStatus } from '../services/greenOpsService';
+import { getSharedMobileRuntime } from '../infrastructure/runtime';
 import { AppNotification, CareHistory, Role, Task } from '../types';
 import { colors, radius, spacing } from '../theme/tokens';
 import type {
@@ -39,7 +40,8 @@ type AuthSourceState = {
 };
 
 export default function MobileApp() {
-  const [greenOpsService] = useState(() => createHybridGreenOpsService());
+  const [runtime] = useState(() => getSharedMobileRuntime());
+  const greenOpsService = runtime.greenOpsService;
   const [data, setData] = useState(() => greenOpsService.getSnapshot());
   const [careHistoryByTree, setCareHistoryByTree] = useState<Record<string, CareHistory[]>>({});
   const [dataSource, setDataSource] = useState<DataSourceState>({ source: 'mock', loading: true });
@@ -166,6 +168,13 @@ export default function MobileApp() {
   }, [refreshData]);
 
   useEffect(() => {
+    void runtime.start();
+    return () => {
+      void runtime.stop();
+    };
+  }, [runtime]);
+
+  useEffect(() => {
     let mounted = true;
 
     loadStoredAuthSession()
@@ -174,6 +183,7 @@ export default function MobileApp() {
           return;
         }
 
+        void runtime.sessionManager.setSession(session);
         const result = greenOpsService.restoreSession(session);
         setAuthSource({
           source: result.source,
@@ -189,6 +199,7 @@ export default function MobileApp() {
           setScreen('Main');
         }
         void refreshData();
+        void runtime.triggerSync();
       })
       .catch(() => {
         if (mounted) {
@@ -207,7 +218,7 @@ export default function MobileApp() {
     return () => {
       mounted = false;
     };
-  }, [greenOpsService, refreshData]);
+  }, [greenOpsService, refreshData, runtime]);
 
   const login = async (fallbackRole: Role, identifier: string, password: string) => {
     setAuthLoading(true);
@@ -223,8 +234,11 @@ export default function MobileApp() {
       try {
         if (result.session) {
           await saveAuthSession(result.session);
+          await runtime.sessionManager.setSession(result.session);
+          void runtime.triggerSync();
         } else {
           await clearAuthSession();
+          await runtime.sessionManager.clearLocalSession();
         }
       } catch {
         setAuthSource((current) => ({
@@ -249,6 +263,7 @@ export default function MobileApp() {
 
   const logout = () => {
     void clearAuthSession();
+    void runtime.sessionManager.logout();
     greenOpsService.logout();
     setRole(null);
     setAuthSource({ source: 'none' });

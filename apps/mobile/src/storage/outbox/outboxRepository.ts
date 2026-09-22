@@ -13,6 +13,7 @@ export interface IDurableOutboxRepository {
     lastError?: string | null,
     errorClassification?: ErrorClassification | null,
   ): Promise<void>;
+  updatePayload(id: string, payloadJson: string): Promise<void>;
   markCompleted(id: string): Promise<void>;
   listItems(): Promise<OutboxItem[]>;
   listPendingItems(): Promise<OutboxItem[]>;
@@ -244,6 +245,17 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
         updated_at = ?
        WHERE id = ?;`,
       [now, id],
+    );
+  }
+
+  async updatePayload(id: string, payloadJson: string): Promise<void> {
+    const now = new Date().toISOString();
+    await this.db.runAsync(
+      `UPDATE outbox_items SET
+        payload_json = ?,
+        updated_at = ?
+       WHERE id = ?;`,
+      [payloadJson, now, id],
     );
   }
 

@@ -50,6 +50,7 @@ export class AuthSessionError extends Error {
 }
 
 export interface IAuthSessionManager {
+  initialize?(): Promise<AuthSession | null>;
   getSession(): Promise<AuthSession | null>;
   getActiveSessionSync(): AuthSession | null;
   login(request: LoginRequest): Promise<AuthSession>;

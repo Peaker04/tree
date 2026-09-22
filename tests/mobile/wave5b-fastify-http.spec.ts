@@ -387,7 +387,7 @@ describe('Phase 13 Wave 5B: Fastify In-Process HTTP Loopback Pipeline & Idempote
       return res;
     };
 
-    const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, mobileTaskRepo);
+    const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, mobileTaskRepo, mobileOutboxRepo);
     const coordinator = new OutboxCoordinator(mobileOutboxRepo, dispatcher, mobileTaskRepo, mobileDb);
 
     const idempotencyKey = generateSecureUuid();

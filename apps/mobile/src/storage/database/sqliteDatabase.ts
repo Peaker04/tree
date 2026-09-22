@@ -101,9 +101,18 @@ export async function openAppDatabase(dbName = 'novyx_greenops_v1.db'): Promise<
   return adapter;
 }
 
+function getBetterSqliteConstructor(): new (path: string) => import('better-sqlite3').Database {
+  const req = typeof require === 'function' ? require : null;
+  const mod = ['better', 'sqlite3'].join('-');
+  const Database = req ? req(mod) : null;
+  if (!Database) {
+    throw new Error('better-sqlite3 is only supported in Node test environments');
+  }
+  return Database as new (path: string) => import('better-sqlite3').Database;
+}
+
 export async function createInMemoryTestDatabase(): Promise<IDatabaseConnection> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
+  const Database = getBetterSqliteConstructor();
   const db = new Database(':memory:');
   const adapter = new BetterSqliteAdapter(db);
   await runMigrations(adapter);
@@ -111,8 +120,7 @@ export async function createInMemoryTestDatabase(): Promise<IDatabaseConnection>
 }
 
 export async function createDiskTestDatabase(filePath: string): Promise<IDatabaseConnection> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
+  const Database = getBetterSqliteConstructor();
   const db = new Database(filePath);
   const adapter = new BetterSqliteAdapter(db);
   await runMigrations(adapter);

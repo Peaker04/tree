@@ -3,8 +3,6 @@ import { AppData, AppNotification, CareHistory, Role, Task, TaskStatus } from '.
 import type {
   AuthSession,
   ApiFailure,
-  ApiList,
-  ApiSuccess,
   CareHistoryDto,
   CreateNotificationRequest,
   CreateTaskRequest,
@@ -21,8 +19,13 @@ import type {
   TaskDto,
   TreeDto,
   UpdateTaskProgressRequest,
+  CanonicalTaskDto,
+  ReviewTaskBody,
 } from '@novyx/contracts';
 import { readPublicRuntimeConfig } from '@novyx/config';
+import type { IAuthSessionManager } from './authSessionManager';
+import { AuthSessionManager } from './authSessionManager';
+import { MobileApiClient } from './mobileApiClient';
 
 const defaultPublicEnvSource = {
   EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
@@ -138,75 +141,6 @@ const toLoadFailureMessage = (error: unknown) => {
   return 'Không thể kết nối API.';
 };
 
-const isApiFailure = (value: unknown): value is ApiFailure =>
-  Boolean(value && typeof value === 'object' && 'error' in value);
-
-const unwrapResource = <TData>(payload: ApiSuccess<TData> | ApiFailure): TData => {
-  if (isApiFailure(payload)) {
-    throw new GreenOpsApiError(payload.error);
-  }
-  return payload.data;
-};
-
-const unwrapList = <TData>(payload: ApiList<TData> | ApiFailure): TData[] => {
-  if (isApiFailure(payload)) {
-    throw new GreenOpsApiError(payload.error);
-  }
-  return payload.data;
-};
-
-const appendQuery = <TQuery extends object>(url: URL, query?: TQuery) => {
-  Object.entries(query ?? {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== '') {
-      url.searchParams.set(key, String(value));
-    }
-  });
-  return url;
-};
-
-const createJsonRequest = (method: 'POST' | 'PATCH', body: unknown): RequestInit => ({
-  method,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(body),
-});
-
-const isLocalEvidenceUri = (uri: string) =>
-  uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('asset-library://');
-
-const getEvidenceFileName = (taskId: string, stage: string, uri: string) => {
-  const rawName = uri.split('/').filter(Boolean).pop();
-  return rawName && rawName.includes('.') ? rawName : `${taskId}-${stage}.jpg`;
-};
-
-const createEvidenceMultipartRequest = (request: SubmitTaskEvidenceRequest): RequestInit => {
-  const formData = new FormData();
-  formData.append('metadata', JSON.stringify(request));
-  request.evidence
-    .filter((item) => isLocalEvidenceUri(item.uri))
-    .forEach((item) => {
-      formData.append(item.stage, {
-        uri: item.uri,
-        name: getEvidenceFileName(request.taskId, item.stage, item.uri),
-        type: 'image/jpeg',
-      } as unknown as Blob);
-    });
-
-  return {
-    method: 'POST',
-    body: formData as unknown as BodyInit,
-  };
-};
-
-const createEvidenceRequest = (request: SubmitTaskEvidenceRequest): RequestInit =>
-  request.evidence.some((item) => isLocalEvidenceUri(item.uri))
-    ? createEvidenceMultipartRequest(request)
-    : createJsonRequest('POST', request);
-
-const createEvidenceMetadataRequest = (request: SubmitTaskEvidenceRequest): RequestInit =>
-  createJsonRequest('POST', request);
-
 const cloneGpsCheck = (gpsCheck: GpsCheckDto | undefined): GpsCheckDto | undefined => {
   if (!gpsCheck) return undefined;
 
@@ -296,7 +230,7 @@ const cloneTasks = (tasks: Task[]): Task[] =>
     ...(task.gpsCheck ? { gpsCheck: cloneGpsCheck(task.gpsCheck) } : {}),
     ...(task.qrCheck ? { qrCheck: cloneQrCheck(task.qrCheck) } : {}),
     ...(task.evidence ? { evidence: buildTaskEvidenceItems(task) } : {}),
-    checklist: task.checklist.map((check) => ({ ...check })),
+    checklist: (task.checklist ?? []).map((check) => ({ ...check })),
   }));
 
 const cloneData = (data: AppData): AppData => ({
@@ -338,11 +272,6 @@ const upsertTask = (tasks: Task[], nextTask: Task) =>
   tasks.some((task) => task.id === nextTask.id)
     ? tasks.map((task) => (task.id === nextTask.id ? nextTask : task))
     : [nextTask, ...tasks];
-
-const mergeNotifications = (notifications: AppNotification[], updates: AppNotification[]) => {
-  const updatesById = new Map(updates.map((notification) => [notification.id, notification]));
-  return notifications.map((notification) => updatesById.get(notification.id) ?? notification);
-};
 
 const findTreeInSnapshot = (snapshot: AppData, payload: string) =>
   snapshot.trees.find((tree) => tree.qrCode === payload || tree.id === payload) ?? null;
@@ -489,6 +418,8 @@ export function createMockGreenOpsService(seed: AppData = createInitialData()): 
 export function createHybridGreenOpsService(
   seed: AppData = createInitialData(),
   envSource: Record<string, string | undefined> = defaultPublicEnvSource,
+  sessionManager?: IAuthSessionManager,
+  apiClient?: MobileApiClient,
 ): GreenOpsService {
   const config = readPublicRuntimeConfig(envSource);
   // Section 5 & 33: Explicit data source selection. In mock mode, use mock intentionally.
@@ -497,7 +428,7 @@ export function createHybridGreenOpsService(
   }
 
   let snapshot = cloneData(seed);
-  const restService = createGreenOpsRestService(envSource);
+  const restService = createGreenOpsRestService(envSource, sessionManager, apiClient);
 
   return {
     getSnapshot: () => cloneData(snapshot),
@@ -625,24 +556,23 @@ export function createHybridGreenOpsService(
       return { data: cloneTasks([nextTask])[0], source: 'rest' };
     },
     createNotification: async (request) => {
-      const notification = await restService.createNotification(request);
+      // Backend does not have notification routes; keep local/mock explicitly
+      const notification = buildFallbackNotification(request);
       snapshot = {
         ...snapshot,
         notifications: [notification, ...snapshot.notifications.filter((item) => item.id !== notification.id)],
       };
-      return { data: { ...notification }, source: 'rest' };
+      return { data: { ...notification }, source: 'mock' };
     },
-    markNotificationsRead: async (notificationIds, _fallbackNotifications) => {
-      const updatedNotifications = await Promise.all(
-        notificationIds.map((notificationId) => restService.markNotificationRead(notificationId)),
-      );
+    markNotificationsRead: async (_notificationIds, fallbackNotifications) => {
+      // Backend does not have notification routes; keep local/mock explicitly
       snapshot = {
         ...snapshot,
-        notifications: mergeNotifications(snapshot.notifications, updatedNotifications),
+        notifications: fallbackNotifications.map((notification) => ({ ...notification, read: true })),
       };
       return {
         data: snapshot.notifications.map((notification) => ({ ...notification })),
-        source: 'rest',
+        source: 'mock',
       };
     },
     replaceTasks: (tasks) => {
@@ -668,121 +598,103 @@ export function createHybridGreenOpsService(
 
 export function createGreenOpsRestService(
   envSource: Record<string, string | undefined> = defaultPublicEnvSource,
+  sessionManager?: IAuthSessionManager,
+  apiClient?: MobileApiClient,
 ): GreenOpsRestService {
   const config = readPublicRuntimeConfig(envSource);
-  const baseUrl = config.apiBaseUrl.endsWith('/') ? config.apiBaseUrl : `${config.apiBaseUrl}/`;
-  let accessToken: string | null = null;
-
-  const withAuthorization = (init?: RequestInit, authenticated = true): RequestInit | undefined => {
-    if (!authenticated || !accessToken) {
-      return init;
-    }
-    const headers = new Headers(init?.headers);
-    headers.set('Authorization', `Bearer ${accessToken}`);
-    return {
-      ...init,
-      headers,
-    };
-  };
-
-  const requestJson = async <TEnvelope>(
-    path: string,
-    init?: RequestInit,
-    options?: { authenticated?: boolean },
-  ): Promise<TEnvelope> => {
-    const response = await fetch(
-      new URL(path, baseUrl).toString(),
-      withAuthorization(init, options?.authenticated ?? true),
-    );
-    const payload = (await response.json().catch(() => null)) as TEnvelope | ApiFailure | null;
-
-    if (!response.ok) {
-      if (payload && isApiFailure(payload)) {
-        throw new GreenOpsApiError(payload.error);
-      }
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    if (!payload) {
-      throw new Error('API response body is empty.');
-    }
-
-    return payload as TEnvelope;
-  };
+  const authSessionManager = sessionManager ?? new AuthSessionManager(config.apiBaseUrl);
+  const client = apiClient ?? new MobileApiClient(config.apiBaseUrl, authSessionManager);
 
   return {
     login: async (request) => {
-      const response = unwrapResource(
-        await requestJson<ApiSuccess<LoginResponse> | ApiFailure>('auth/login', createJsonRequest('POST', request), {
-          authenticated: false,
-        }),
-      );
-      accessToken = response.session.accessToken;
-      return response;
+      const session = await authSessionManager.login(request);
+      return {
+        session,
+        user: session.user,
+      };
     },
     restoreSession: (session) => {
-      accessToken = session.accessToken;
+      void authSessionManager.setSession(session);
     },
     logout: () => {
-      accessToken = null;
+      void authSessionManager.logout();
     },
     listTasks: async (query) => {
-      const url = appendQuery(new URL('tasks', baseUrl), query);
-      return unwrapList(await requestJson<ApiList<TaskDto> | ApiFailure>(url.toString()));
+      const queryParams = new URLSearchParams();
+      if (query) {
+        Object.entries(query).forEach(([k, v]) => {
+          if (v !== undefined && v !== '') queryParams.set(k, String(v));
+        });
+      }
+      const qStr = queryParams.toString();
+      const path = `/v1/tasks${qStr ? `?${qStr}` : ''}`;
+      return await client.get<TaskDto[]>(path);
     },
     listTrees: async (query) => {
-      const url = appendQuery(new URL('trees', baseUrl), query);
-      return unwrapList(await requestJson<ApiList<TreeDto> | ApiFailure>(url.toString()));
-    },
-    listCareHistoryByTree: async (treeId) =>
-      unwrapList(await requestJson<ApiList<CareHistoryDto> | ApiFailure>(`trees/${treeId}/care-history`)),
-    createTask: async (request) =>
-      unwrapResource(await requestJson<ApiSuccess<TaskDto> | ApiFailure>('tasks', createJsonRequest('POST', request))),
-    updateTaskProgress: async (request) =>
-      unwrapResource(
-        await requestJson<ApiSuccess<TaskDto> | ApiFailure>(
-          `tasks/${request.taskId}/progress`,
-          createJsonRequest('PATCH', request),
-        ),
-      ),
-    submitTaskEvidence: async (request) => {
-      const endpoint = `tasks/${request.taskId}/evidence`;
-      try {
-        return unwrapResource(
-          await requestJson<ApiSuccess<TaskDto> | ApiFailure>(endpoint, createEvidenceRequest(request)),
-        );
-      } catch (error) {
-        if (!request.evidence.some((item) => isLocalEvidenceUri(item.uri))) {
-          throw error;
-        }
-
-        return unwrapResource(
-          await requestJson<ApiSuccess<TaskDto> | ApiFailure>(endpoint, createEvidenceMetadataRequest(request)),
-        );
+      const queryParams = new URLSearchParams();
+      if (query) {
+        Object.entries(query).forEach(([k, v]) => {
+          if (v !== undefined && v !== '') queryParams.set(k, String(v));
+        });
       }
+      const qStr = queryParams.toString();
+      const path = `/v1/trees${qStr ? `?${qStr}` : ''}`;
+      return await client.get<TreeDto[]>(path);
     },
-    reviewTask: async (request) =>
-      unwrapResource(
-        await requestJson<ApiSuccess<TaskDto> | ApiFailure>(
-          `tasks/${request.taskId}/review`,
-          createJsonRequest('PATCH', request),
-        ),
-      ),
-    listNotifications: async () =>
-      unwrapList(await requestJson<ApiList<NotificationDto> | ApiFailure>('notifications')),
-    createNotification: async (request) =>
-      unwrapResource(
-        await requestJson<ApiSuccess<NotificationDto> | ApiFailure>(
-          'notifications',
-          createJsonRequest('POST', request),
-        ),
-      ),
-    markNotificationRead: async (notificationId) =>
-      unwrapResource(
-        await requestJson<ApiSuccess<NotificationDto> | ApiFailure>(
-          `notifications/${notificationId}/read`,
-          createJsonRequest('PATCH', {}),
-        ),
-      ),
+    listCareHistoryByTree: async (treeId) => {
+      return await client.get<CareHistoryDto[]>(`/v1/trees/${treeId}/care-history`);
+    },
+    createTask: async (request) => {
+      const payload = {
+        title: request.title,
+        taskTypeId: (request as unknown as { taskTypeId?: string }).taskTypeId ?? request.taskType,
+        description: request.description,
+        treeId: request.treeId,
+        assignedStaffId: request.assignedStaffId,
+        deadline: request.deadline,
+      };
+      return await client.post<TaskDto>('/v1/tasks', payload);
+    },
+    updateTaskProgress: async () => {
+      throw new Error('UNSUPPORTED_IN_REST_MODE: /tasks/:id/progress does not exist on backend.');
+    },
+    submitTaskEvidence: async () => {
+      throw new Error('NOT_CUT_OVER: submitTaskEvidence direct REST call is deprecated. Use durable Outbox pipeline.');
+    },
+    reviewTask: async (request) => {
+      if (request.expectedVersion === undefined) {
+        throw new Error('NOT_CUT_OVER: Review in REST mode requires expectedVersion.');
+      }
+      const decisionMap: Record<string, 'APPROVE' | 'REQUEST_REWORK' | 'APPROVE_WITH_EXCEPTION' | 'CANCEL'> = {
+        approve: 'APPROVE',
+        request_rework: 'REQUEST_REWORK',
+        APPROVE: 'APPROVE',
+        REQUEST_REWORK: 'REQUEST_REWORK',
+        APPROVE_WITH_EXCEPTION: 'APPROVE_WITH_EXCEPTION',
+        CANCEL: 'CANCEL',
+      };
+      const canonicalDecision = decisionMap[request.decision];
+      if (!canonicalDecision) {
+        throw new Error(`NOT_CUT_OVER: Unsupported review decision "${request.decision}"`);
+      }
+      const body: ReviewTaskBody = {
+        expectedVersion: request.expectedVersion,
+        decision: canonicalDecision,
+        ...(request.reason ? { notes: request.reason } : {}),
+        ...((request.rejectReason ?? request.reason) ? { reworkReason: request.rejectReason ?? request.reason } : {}),
+      };
+      const result = await client.post<CanonicalTaskDto>(`/v1/tasks/${request.taskId}/review`, body);
+      return result as unknown as TaskDto;
+    },
+    listNotifications: async () => {
+      // Backend does not have notification routes; do not emit HTTP calls
+      return Promise.resolve([]);
+    },
+    createNotification: async () => {
+      throw new Error('NOT_CUT_OVER: Notifications not supported on backend.');
+    },
+    markNotificationRead: async () => {
+      throw new Error('NOT_CUT_OVER: Notifications not supported on backend.');
+    },
   };
 }

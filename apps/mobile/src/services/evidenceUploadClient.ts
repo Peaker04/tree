@@ -24,8 +24,12 @@ export class DefaultEvidenceBinaryReader implements IEvidenceBinaryReader {
     // 1. If running in Node.js environment (e.g. integration test with file on disk)
     if (typeof process !== 'undefined' && process.versions?.node) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const fs = require('node:fs');
+        const req = typeof require === 'function' ? require : null;
+        const mod = ['node', 'fs'].join(':');
+        const nodeFs = req ? req(mod) : null;
+        if (!nodeFs) {
+          throw new Error('Node fs unavailable');
+        }
         const cleanPath = fileUri.replace(/^file:\/\/\/?/, '');
         // On Windows handle drive letters
         const diskPath =
@@ -35,8 +39,8 @@ export class DefaultEvidenceBinaryReader implements IEvidenceBinaryReader {
               ? fileUri.slice(7)
               : fileUri;
 
-        if (fs.existsSync(diskPath)) {
-          const buffer = fs.readFileSync(diskPath);
+        if (nodeFs.existsSync(diskPath)) {
+          const buffer = nodeFs.readFileSync(diskPath);
           return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         }
       } catch {

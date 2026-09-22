@@ -67,10 +67,10 @@ All network communication targets the canonical Fastify backend routes under `/v
 | **Login** | `POST` | `/v1/auth/login` | `Content-Type: application/json` | `{ email, password }` |
 | **Token Refresh** | `POST` | `/v1/auth/refresh` | `Content-Type: application/json` | `{ refreshToken }` |
 | **Logout** | `POST` | `/v1/auth/logout` | `Authorization: Bearer <token>`, `Content-Type: application/json` | `{ refreshToken? }` |
-| **Get Current User** | `GET` | `/v1/auth/me` | `Authorization: Bearer <token>` | Response: user profile & roles |
 | **List Tasks** | `GET` | `/v1/tasks` | `Authorization: Bearer <token>` | Query params: status, treeId, limit |
 | **Get Task Details** | `GET` | `/v1/tasks/:id` | `Authorization: Bearer <token>` | Response: authoritative `Task` DTO |
-| **Presign Evidence Upload** | `POST` | `/v1/tasks/:id/evidence/presign` | `Authorization: Bearer <token>`, `Content-Type: application/json` | `{ items: [{ fileName, contentType, byteSize, sha256Hex }] }` |
+| **Review Task** | `POST` | `/v1/tasks/:id/review` | `Authorization: Bearer <token>`, `Content-Type: application/json` | `{ expectedVersion, decision, notes?, reworkReason? }` |
+| **Presign Evidence Upload** | `POST` | `/v1/tasks/:id/evidence/presign` | `Authorization: Bearer <token>`, `Content-Type: application/json` | `{ fileName, contentType, sizeBytes, contentHash }` |
 | **Upload Binary Object** | `PUT` | `<presignedUrl>` | Presigned headers (e.g. `Host`, `x-amz-*`) | Raw binary payload (exact bytes, `Uint8Array`) |
 | **Submit Evidence** | `POST` | `/v1/tasks/:id/evidence` | `Authorization: Bearer <token>`, `Idempotency-Key: <uuid-v4>`, `Content-Type: application/json` | Submit Evidence payload (idempotency key excluded from JSON body) |
 
@@ -81,7 +81,7 @@ All network communication targets the canonical Fastify backend routes under `/v
 ### Contract Invariants
 1. **Zero JWT Parsing**: Tokens are treated as opaque, structured credentials. No client-side JWT claims parsing, expiration estimation, or Base64 decoding occurs.
 2. **Single-Flight Coalescing**: When multiple parallel requests encounter an HTTP 401 Unauthorized, only a single refresh request (`POST /v1/auth/refresh`) is dispatched to the server. All waiting callers await the exact same promise (`refreshFlightPromise`).
-3. **Secure Persistence**: Session tokens (`accessToken`, `refreshToken`, `actorId`, `role`) are stored via `expo-secure-store` with hardware-backed encryption where available, falling back gracefully to in-memory persistence in test/CLI environments.
+3. **Secure Persistence**: Session tokens (`accessToken`, `refreshToken`, `user: { id, email, role }`) are stored via `expo-secure-store` with hardware-backed encryption where available, falling back gracefully to in-memory persistence in test/CLI environments.
 4. **Finite Retry Bound**: The client retries a failed request at most once after a successful token refresh. If the retried request returns 401 or refresh fails, the session is cleared and callers receive an explicit `AUTH` error.
 
 ### Sequence Flow
@@ -95,9 +95,9 @@ sequenceDiagram
     participant API as Fastify API (/v1)
 
     C1->>Client: GET /v1/tasks
-    C2->>Client: GET /v1/auth/me
+    C2->>Client: GET /v1/trees
     Client->>API: GET /v1/tasks (Token A)
-    Client->>API: GET /v1/auth/me (Token A)
+    Client->>API: GET /v1/trees (Token A)
     API-->>Client: 401 Unauthorized
     API-->>Client: 401 Unauthorized
 
@@ -110,7 +110,7 @@ sequenceDiagram
 
     Note over Client,API: Automatic retry with Token B
     Client->>API: GET /v1/tasks (Token B)
-    Client->>API: GET /v1/auth/me (Token B)
+    Client->>API: GET /v1/trees (Token B)
     API-->>C1: 200 OK
     API-->>C2: 200 OK
 ```
@@ -119,31 +119,38 @@ sequenceDiagram
 
 ## 5. Evidence Upload Pipeline & S3 / MinIO Integration
 
-### Presign -> Binary PUT -> SubmitEvidence Pipeline
+### Durable Preparation Boundary (Presign -> Binary PUT -> Durable Canonical Request -> Final POST)
 
-The `SubmitEvidenceOutboxDispatcher` executes a 3-stage transactional dispatch:
+The `SubmitEvidenceOutboxDispatcher` executes a safe, multi-stage transactional dispatch:
 
-1. **Evidence Presigning**:
-   - Computes exact file size and exact SHA-256 hash using `ExpoEvidenceHasher` / `NodeEvidenceHasher`.
-   - Sends batch presign request to `POST /v1/tasks/:id/evidence/presign`.
-   - Receives presigned PUT URLs, required upload headers (`X-Amz-SignedHeaders`), and target canonical object keys (`tasks/:id/evidence/...`).
+1. **Evidence Presigning (Single Object)**:
+   - For each local evidence item, computes exact file size and exact SHA-256 hash using `ExpoEvidenceHasher` / `NodeEvidenceHasher`.
+   - Sends presign request to `POST /v1/tasks/:id/evidence/presign` with single object metadata: `{ fileName, contentType, sizeBytes, contentHash: sha256Hex }`.
+   - Receives presigned PUT URL and target canonical storage reference (`storageRef` or `objectKey`).
 
 2. **Binary Stream Upload**:
    - `EvidenceUploadClient` uploads exact bytes (`Uint8Array` / binary buffer) directly to the storage bucket via `PUT <uploadUrl>`.
    - **No Base64 transformation** during transport: ensures byte-level integrity matching client and server SHA-256 digests.
-   - Preserves signed headers: inspects `signedHeaders` returned by S3/MinIO and forwards them verbatim.
+   - Preserves signed headers: forwards any server-signed headers verbatim.
 
-3. **Canonical Evidence Submission**:
-   - Rewrites local `file://` URIs in the proof payload to canonical storage URIs (`s3://<bucket>/<objectKey>`).
+3. **Durable Canonical Request Persistence (5B-R01)**:
+   - Transforms all local `file://` URIs in `SubmitEvidenceRequest` into canonical storage URIs (`s3://<bucket>/<objectKey>` or `tasks/:id/...`).
+   - Verifies that zero local file or temporary HTTP URLs remain in the canonical request.
+   - **Durably persists** the canonical request into `outbox_items.payload_json` in the local SQLite database **BEFORE** the final business POST.
+   - This ensures that if the app crashes or network drops after upload or after server commit, the outbox row already contains canonical server references.
+
+4. **Canonical Evidence Submission (Business POST)**:
    - Injects the persisted `idempotencyKey` strictly as the `Idempotency-Key` HTTP header.
-   - Excludes `idempotencyKey` from the JSON request body.
-   - Calls `POST /v1/tasks/:id/evidence`.
+   - Excludes `idempotencyKey` from the JSON request body (`stateSeparation.ts`).
+   - Dispatches `POST /v1/tasks/:id/evidence` with the canonical request body.
 
 ### Supported Proof Profiles
-The dispatcher transparently maps and verifies proof payloads across all operational domain task types:
-- `SURFACE_CLEANING` (`checklistAnswers`, `collectedLiters`, `photos`, `notes`)
-- `TREE_PLANTING` (`treeSpecies`, `plantingLocation`, `saplingHeightCm`, `photos`)
-- `ORGANIC_FERTILIZATION` (`fertilizerType`, `quantityKg`, `applicationAreaSqM`, `photos`)
+The canonical operational system defines exactly three valid ProofProfiles:
+- `CHANGE_PROOF`: Requires `beforePhotoUri` and `afterPhotoUri`.
+- `SERVICE_PROOF`: Requires `completionPhotoUri`.
+- `INSPECTION_PROOF`: Requires `conditionPhotos` (array of at least one condition photo).
+
+Domain task types (e.g. `SURFACE_CLEANING`, `TREE_PLANTING`, `ORGANIC_FERTILIZATION`) are TaskType catalog entities, **not** ProofProfile identifiers.
 
 ---
 
@@ -152,7 +159,7 @@ The dispatcher transparently maps and verifies proof payloads across all operati
 ### Local Storage Updates upon Successful Submission
 Upon receiving HTTP 200/201 from `POST /v1/tasks/:id/evidence`, `OutboxCoordinator` orchestrates the local reconciliation transaction:
 1. **`cached_tasks` Table**:
-   - Updated with the authoritative server `Task` DTO (status transitions from `IN_PROGRESS` to `WAITING_REVIEW`, updated version, server timestamps).
+   - Updated with the authoritative server `Task` DTO (status transitions to `WAITING_REVIEW`, updated version, server timestamps).
 2. **`local_drafts` Table**:
    - Draft submission status resets from `PENDING_SYNC` to `IDLE` (`last_synced_at = ISO timestamp`).
 3. **`local_evidence` Table**:
@@ -161,19 +168,20 @@ Upon receiving HTTP 200/201 from `POST /v1/tasks/:id/evidence`, `OutboxCoordinat
    - Outbox entry transitions from `SYNCING` to `SYNCED`, recording zero remaining sync attempts.
 
 ### Transaction Isolation & Savepoint Safety
-To prevent nested transaction deadlocks in SQLite drivers (such as `better-sqlite3` and `expo-sqlite`), `OutboxCoordinator` ensures `taskRepo.cacheTasks` and draft/evidence updates execute sequentially in distinct transactions rather than overlapping savepoints.
+To prevent nested transaction deadlocks in SQLite drivers, `OutboxCoordinator` ensures `taskRepo.cacheTasks` and draft/evidence updates execute sequentially in distinct transactions rather than overlapping savepoints.
 
 ---
 
 ## 7. Replay & Idempotency Guarantees
 
-### Safe Network Crash Replay
+### Safe Network Crash Replay & Exact-Body Replay
 When a network failure occurs after the server processed the submission but before the mobile client received the HTTP 200 response:
-1. The outbox item remains in `SYNC_FAILED` with the original, immutable `idempotencyKey`.
-2. On next dispatch cycle, `SubmitEvidenceOutboxDispatcher` detects that evidence files are already canonical (`isAlreadyCanonical(parsedPayload)`).
-3. The dispatcher bypasses the presign and binary upload stages, re-submitting the exact same canonical payload with the identical `Idempotency-Key` header.
-4. Fastify's server-side `IdempotencyRepository` matches the actor ID and idempotency key, returning the cached 200 response without duplicating attempts in the operational ledger.
-5. If the server already transitioned the task to `WAITING_REVIEW`, any 400 Bad Request or 409 Conflict triggers an authoritative lookup (`GET /v1/tasks/:id`). If verified in `WAITING_REVIEW`, the dispatcher succeeds immediately and reconciles local state.
+1. The outbox item remains in `SYNC_FAILED` with the original, immutable `idempotencyKey` and the durably stored canonical request in `payload_json`.
+2. On the next dispatch cycle, `SubmitEvidenceOutboxDispatcher` detects that the payload is already canonical via `isAlreadyCanonical(parsedPayload)`.
+3. The dispatcher bypasses the presign and binary upload stages entirely (0 additional presign calls, 0 additional binary PUT calls).
+4. The dispatcher re-submits the **exact deeply equal canonical request body** with the **same identical `Idempotency-Key` header**.
+5. Fastify's server-side `IdempotencyRepository` matches the actor ID and idempotency key, returning the replayed committed 200 response without duplicating attempts in the operational ledger (server `EvidenceAttempts` count remains 1).
+6. **No Status Shortcut**: The dispatcher requires an authoritative response from `SubmitEvidence` (including idempotency replay). Simply seeing `WAITING_REVIEW` on a task does not constitute success without a matching replay response.
 
 ---
 
@@ -193,14 +201,14 @@ When a network failure occurs after the server processed the submission but befo
 ## 9. Verification & Test Evidence
 
 ### 1. Specification Unit & Mock Suite (`tests/mobile/wave5b-rest-sync.spec.ts`)
-- **Coverage**: 30 dedicated test cases covering requirements B01 through B30.
-  - B01–B05: Auth session persistence, single-flight refresh coalescing, 401 retry, logout cleanup.
-  - B06–B10: Typed REST client methods, base URL resolution, custom header injection.
-  - B11–B15: Presign payload generation, SHA-256 validation, S3 PUT binary stream dispatch.
-  - B16–B20: Proof profile transformation (`SURFACE_CLEANING`, `TREE_PLANTING`, `ORGANIC_FERTILIZATION`).
-  - B21–B25: Outbox dispatcher execution, idempotency header inclusion, body sanitation.
-  - B26–B30: Error classification (`NETWORK`, `SERVER_5XX`, `AUTH`, `FORBIDDEN`, `CONFLICT`, `VALIDATION`), authoritative server state reconciliation.
-- **Result**: **30 / 30 PASSING** (110ms execution time).
+- **Coverage**: 46 dedicated test cases covering requirements B01 through B30, R01 through R15, and Section 31:
+  - B01–B09: Auth session persistence, single-flight refresh coalescing, 401 retry, logout cleanup, no JWT decode, tokens outside SQLite/outbox.
+  - B10–B20: Presign payload generation (`fileName`, `contentType`, `sizeBytes`, `contentHash`), SHA-256 validation, S3 PUT binary stream dispatch, proof profile transformation (`CHANGE_PROOF`, `SERVICE_PROOF`, `INSPECTION_PROOF`), LocationException/IdentityException transformation.
+  - B21–B30: Outbox dispatcher execution, idempotency header inclusion, body sanitation, error classification (`NETWORK`, `SERVER_5XX`, `AUTH`, `FORBIDDEN`, `CONFLICT`, `VALIDATION`), authoritative server state reconciliation.
+  - R01–R08: REST authority invariants (explicit mock/rest configuration, no silent fallbacks, no `/progress`, `POST /v1/tasks/:id/review`, no notification HTTP calls, shared session authority).
+  - R09–R15: Mobile sync runtime and lifecycle invariants (single SQLite/migrations init, startup recovery, single shared coordinator, restored session dispatch, parallel worker prevention, logout invalidation, task status preservation).
+  - Section 31: WAITING_REVIEW status-as-success shortcut regression prevention.
+- **Result**: **46 / 46 PASSING**.
 
 ### 2. Fastify Loopback Integration Suite (`tests/mobile/wave5b-fastify-http.spec.ts`)
 - **Coverage**:
@@ -208,8 +216,9 @@ When a network failure occurs after the server processed the submission but befo
   - Full cryptographic authentication flow: Argon2 password verification, token issuance, single-flight refresh.
   - End-to-end task execution: Start task (`IN_PROGRESS`), presign evidence, binary upload to MinIO/S3 test double, submit evidence with `Idempotency-Key` header.
   - Idempotency replay verification: duplicate dispatch with the same key returns cached 200 response; exactly 1 evidence attempt exists in the server ledger.
-- **Result**: **2 / 2 PASSING** (227ms execution time).
+- **Result**: **2 / 2 PASSING**.
 
 ### 3. Real Postgres 18 & MinIO Integration Suite (`tests/mobile/wave5b-real-integration.spec.ts`)
-- **Coverage**: Sections 41, 42, and 43 tested against live containerized PostgreSQL 18 and MinIO services.
+- **Coverage**: Sections 41, 42, and 43 tested against live containerized PostgreSQL 18 and MinIO services:
+  - Section 30 Ambiguous Success Replay: asserts 1 presign call, 1 binary PUT call, 2 SubmitEvidence POST calls with identical canonical bodies and keys, 1 server evidence attempt in PostgreSQL, server and cached task WAITING_REVIEW, local outbox SYNCED, local evidence preserved.
 - **Result**: Configured with conditional test execution (`it.runIf(hasDatabase && hasS3)`) for execution in CI/CD pipeline.

@@ -2,6 +2,7 @@ import type { CanonicalTaskDto, SubmitEvidenceRequest } from '@novyx/contracts';
 import type { IOutboxDispatcher } from './outboxCoordinator';
 import type { OutboxItem } from './types';
 import type { IMobileTaskRepository } from '../task/mobileTaskRepository';
+import type { IDurableOutboxRepository } from './outboxRepository';
 import type { EvidenceUploadClient } from '../../services/evidenceUploadClient';
 import { MobileApiClient, MobileApiError } from '../../services/mobileApiClient';
 import { assertNoIdempotencyKeyInBody } from './stateSeparation';
@@ -10,11 +11,18 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
   private apiClient: MobileApiClient;
   private uploadClient: EvidenceUploadClient;
   private taskRepo: IMobileTaskRepository;
+  private outboxRepo?: IDurableOutboxRepository;
 
-  constructor(apiClient: MobileApiClient, uploadClient: EvidenceUploadClient, taskRepo: IMobileTaskRepository) {
+  constructor(
+    apiClient: MobileApiClient,
+    uploadClient: EvidenceUploadClient,
+    taskRepo: IMobileTaskRepository,
+    outboxRepo?: IDurableOutboxRepository,
+  ) {
     this.apiClient = apiClient;
     this.uploadClient = uploadClient;
     this.taskRepo = taskRepo;
+    this.outboxRepo = outboxRepo;
   }
 
   async dispatch(item: OutboxItem): Promise<{
@@ -84,10 +92,16 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
         canonicalRequest = this.transformProofUris(parsedRequest, uriToDurableRef, stageToDurableRef, conditionRefs);
       }
 
-      // Ensure no file:// or temporary URLs remain in the canonical request
+      // Step 5: Ensure no file:// or temporary URLs remain in the canonical request
       this.assertNoLocalOrTemporaryUris(canonicalRequest);
 
-      // Step 4: Dispatch canonical SubmitEvidence to server with Idempotency-Key HEADER
+      // Step 6: 5B-R01 / Section 4: DURABLY persist canonical request into same Outbox row BEFORE final POST
+      if (this.outboxRepo) {
+        await this.outboxRepo.updatePayload(item.id, JSON.stringify(canonicalRequest));
+      }
+      item.payloadJson = JSON.stringify(canonicalRequest);
+
+      // Step 7: Dispatch canonical SubmitEvidence to server with Idempotency-Key HEADER
       const response = await this.apiClient.post<CanonicalTaskDto>(
         `/v1/tasks/${item.taskId}/evidence`,
         canonicalRequest,
@@ -96,6 +110,7 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
         },
       );
 
+      // Step 8: Return authoritative result
       return {
         success: true,
         status: 200,
@@ -119,28 +134,6 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
             error: err.message,
             serverTask: currentServerTask,
           };
-        }
-
-        // Section 41: If presign failed with 400 because task is already WAITING_REVIEW
-        if (
-          err.status === 400 &&
-          (err.message.includes('WAITING_REVIEW') ||
-            err.message.includes('Evidence may only be uploaded in IN_PROGRESS'))
-        ) {
-          let currentServerTask: CanonicalTaskDto | undefined;
-          try {
-            currentServerTask = await this.apiClient.get<CanonicalTaskDto>(`/v1/tasks/${item.taskId}`);
-          } catch {
-            // ignore
-          }
-
-          if (currentServerTask && currentServerTask.status === 'WAITING_REVIEW') {
-            return {
-              success: true,
-              status: 200,
-              serverTask: currentServerTask,
-            };
-          }
         }
 
         return {

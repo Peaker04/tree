@@ -15,7 +15,7 @@ import { S3ObjectStorageAdapter } from '../../apps/api/src/infrastructure/storag
 import * as schema from '../../apps/api/src/infrastructure/persistence/schema';
 
 import { AuthSessionManager, InMemorySecureSessionStorage } from '../../apps/mobile/src/services/authSessionManager';
-import { MobileApiClient } from '../../apps/mobile/src/services/mobileApiClient';
+import { MobileApiClient, MobileApiError, type RequestOptions } from '../../apps/mobile/src/services/mobileApiClient';
 import { EvidenceUploadClient, type IEvidenceBinaryReader } from '../../apps/mobile/src/services/evidenceUploadClient';
 import { SubmitEvidenceOutboxDispatcher } from '../../apps/mobile/src/storage/outbox/submitEvidenceDispatcher';
 import { OutboxCoordinator } from '../../apps/mobile/src/storage/outbox/outboxCoordinator';
@@ -308,7 +308,7 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
       });
 
       const uploadClient = new EvidenceUploadClient(apiClient, new RealBufferBinaryReader());
-      const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, mobileTaskRepo);
+      const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, mobileTaskRepo, mobileOutboxRepo);
       const coordinator = new OutboxCoordinator(mobileOutboxRepo, dispatcher, mobileTaskRepo, mobileDb);
 
       // 8. Enqueue SubmitEvidence in local Outbox
@@ -516,8 +516,15 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
       const binaryContent = Buffer.from('BINARY-REPLAY-PHOTO-DATA');
       const sha256 = createHash('sha256').update(binaryContent).digest('hex');
 
+      let presignCalls = 0;
+      let binaryPutCalls = 0;
+      let submitEvidenceCalls = 0;
+      const capturedPostBodies: unknown[] = [];
+      const capturedIdempotencyKeys: string[] = [];
+
       class BufferReader implements IEvidenceBinaryReader {
         async readBinary(): Promise<Uint8Array> {
+          binaryPutCalls++;
           return new Uint8Array(binaryContent.buffer, binaryContent.byteOffset, binaryContent.byteLength);
         }
       }
@@ -535,8 +542,28 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
         isPersistedInSandbox: true,
       });
 
+      // Intercept apiClient.post to count presigns, count submits, capture bodies/keys, and simulate response drop
+      const origPost = apiClient.post.bind(apiClient);
+      let dropResponseOnce = true;
+      apiClient.post = async <T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> => {
+        if (path.includes('/evidence/presign')) {
+          presignCalls++;
+        } else if (path.includes('/evidence')) {
+          submitEvidenceCalls++;
+          capturedPostBodies.push(JSON.parse(JSON.stringify(body)));
+          capturedIdempotencyKeys.push(options?.idempotencyKey ?? '');
+          const response = await origPost<T>(path, body, options);
+          if (dropResponseOnce) {
+            dropResponseOnce = false;
+            throw new MobileApiError('Simulated network drop after server commit', 0, 'NETWORK_ERROR');
+          }
+          return response;
+        }
+        return await origPost<T>(path, body, options);
+      };
+
       const uploadClient = new EvidenceUploadClient(apiClient, new BufferReader());
-      const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, mobileTaskRepo);
+      const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, mobileTaskRepo, mobileOutboxRepo);
 
       // Stable idempotency key K
       const stableKeyK = generateSecureUuid();
@@ -569,34 +596,59 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
         idempotencyKey: stableKeyK,
       });
 
-      // Step 1: Outbox sends SubmitEvidence with key K -> Server commits acceptance
-      const firstResult = await dispatcher.dispatch(outboxItem);
-      expect(firstResult.success).toBe(true);
-      expect(firstResult.status).toBe(200);
-
-      // Step 2: SIMULATE CLIENT CRASH before local SQLite marks row SYNCED
-      // (The outbox item is still in IDLE or SYNCING state with stableKeyK)
-      const uncommittedItem = await mobileOutboxRepo.getItemById(outboxItem.id);
-      expect(uncommittedItem?.syncStatus).toBe('IDLE');
-      expect(uncommittedItem?.idempotencyKey).toBe(stableKeyK);
-
-      // Step 3: Client restarts, picks up same row with same key K, and replays request
+      // Step 1: Outbox sends SubmitEvidence with key K -> Server commits acceptance, but network drop thrown
       const coordinator = new OutboxCoordinator(mobileOutboxRepo, dispatcher, mobileTaskRepo, mobileDb);
-      const secondResult = await coordinator.processNext();
+      const firstResult = await coordinator.processNext();
+      expect(firstResult?.success).toBe(false);
 
+      // Step 2: VERIFY CLIENT STATE after network drop:
+      // (The outbox item is SYNC_FAILED with durable canonical payload, not SYNCED)
+      const uncommittedItem = await mobileOutboxRepo.getItemById(outboxItem.id);
+      expect(uncommittedItem?.syncStatus).not.toBe('SYNCED');
+      expect(uncommittedItem?.idempotencyKey).toBe(stableKeyK);
+      expect(uncommittedItem?.payloadJson).not.toContain('file://');
+
+      // Step 3: Client restarts / replays same row with same key K
+      const secondResult = await coordinator.processNext();
       expect(secondResult?.success).toBe(true);
       expect(secondResult?.idempotencyKey).toBe(stableKeyK);
 
-      // Step 4: Reconciled local task state
-      const finalCached = await mobileTaskRepo.getCachedTask(startedTask.id);
-      expect(finalCached?.status).toBe('WAITING_REVIEW');
+      // Section 30 Invariants:
+      // - 1 presign call across first attempt + replay
+      expect(presignCalls).toBe(1);
+      // - 1 binary PUT call
+      expect(binaryPutCalls).toBe(1);
+      // - 2 final SubmitEvidence POST calls
+      expect(submitEvidenceCalls).toBe(2);
+      // - both final POST request bodies deeply equal canonical DTO
+      expect(capturedPostBodies[0]).toEqual(capturedPostBodies[1]);
+      // - both Idempotency-Key headers: same K
+      expect(capturedIdempotencyKeys[0]).toBe(stableKeyK);
+      expect(capturedIdempotencyKeys[1]).toBe(stableKeyK);
 
-      // Step 5: Exactly ONE server EvidenceAttempt was recorded in PostgreSQL database
+      // - Exactly ONE server EvidenceAttempt was recorded in PostgreSQL database
       const attempts = await db
         .select()
         .from(schema.evidenceAttempts)
         .where(eq(schema.evidenceAttempts.taskId, startedTask.id));
       expect(attempts).toHaveLength(1);
+
+      // - Server task: WAITING_REVIEW
+      const [finalDbTask] = await db.select().from(schema.tasks).where(eq(schema.tasks.id, startedTask.id));
+      expect(finalDbTask.status).toBe('WAITING_REVIEW');
+
+      // - Reconciled local task state: WAITING_REVIEW
+      const finalCached = await mobileTaskRepo.getCachedTask(startedTask.id);
+      expect(finalCached?.status).toBe('WAITING_REVIEW');
+
+      // - Local outbox row: SYNCED
+      const finalOutbox = await mobileOutboxRepo.getItemById(outboxItem.id);
+      expect(finalOutbox?.syncStatus).toBe('SYNCED');
+
+      // - Local evidence still present
+      const localEvidence = await mobileTaskRepo.getEvidenceMetadata('ev-replay-01');
+      expect(localEvidence).toBeDefined();
+      expect(localEvidence?.taskId).toBe(startedTask.id);
     },
   );
 

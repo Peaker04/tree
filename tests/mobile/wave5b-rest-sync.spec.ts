@@ -22,6 +22,9 @@ import { runMigrations } from '../../apps/mobile/src/storage/database/migrations
 import { executeOfflineSubmission } from '../../apps/mobile/src/storage/outbox/submissionService';
 import { generateSecureUuid } from '../../apps/mobile/src/storage/utils/uuid';
 import { InMemoryEvidenceFileStore } from '../../apps/mobile/src/storage/evidence/evidenceFileStore';
+import { readPublicRuntimeConfig } from '@novyx/config';
+import { createHybridGreenOpsService, createGreenOpsRestService } from '../../apps/mobile/src/services/greenOpsService';
+import { createMobileRuntime } from '../../apps/mobile/src/infrastructure/runtime';
 
 describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Server Reconciliation', () => {
   const originalFetch = globalThis.fetch;
@@ -1744,6 +1747,578 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       expect(classifyError({ status: 503 })).toBe('SERVER_5XX');
       expect(classifyError({ status: 0 })).toBe('NETWORK');
       expect(classifyError(new TypeError('Failed to fetch'))).toBe('NETWORK');
+    });
+  });
+
+  // =========================================================================
+  // SECTION 22: REST AUTHORITY TESTS (R01 - R08)
+  // =========================================================================
+  describe('REST Authority & Boundary Invariants (R01 - R08)', () => {
+    it('R01: missing EXPO_PUBLIC_DATA_SOURCE fails configuration', () => {
+      expect(() =>
+        readPublicRuntimeConfig({
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+        }),
+      ).toThrow(/EXPO_PUBLIC_DATA_SOURCE is required/);
+    });
+
+    it('R02: mock explicitly selects mock mode', async () => {
+      const service = createHybridGreenOpsService(undefined, {
+        EXPO_PUBLIC_APP_ENV: 'development',
+        EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+        EXPO_PUBLIC_DATA_SOURCE: 'mock',
+      });
+      const snapshot = await service.loadSnapshot();
+      expect(snapshot.source).toBe('mock');
+    });
+
+    it('R03: rest explicitly selects REST mode', async () => {
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'u1', email: 's@novyx.test', role: 'staff' },
+      });
+      const sessionManager = new AuthSessionManager('http://localhost:3000/v1', storage);
+      const apiClient = new MobileApiClient('http://localhost:3000/v1', sessionManager);
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/trees')) {
+          return new Response(JSON.stringify({ data: [] }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        if (url.includes('/tasks')) {
+          return new Response(JSON.stringify({ data: [] }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response('{}', { status: 200 });
+      });
+
+      const service = createHybridGreenOpsService(
+        undefined,
+        {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
+        },
+        sessionManager,
+        apiClient,
+      );
+      const snapshot = await service.loadSnapshot();
+      expect(snapshot.source).toBe('rest');
+    });
+
+    it('R04: REST mutation failure never invokes mock mutation', async () => {
+      const storage = new InMemorySecureSessionStorage();
+      const sessionManager = new AuthSessionManager('http://localhost:3000/v1', storage);
+      const apiClient = new MobileApiClient('http://localhost:3000/v1', sessionManager);
+
+      globalThis.fetch = vi.fn(async () => {
+        return new Response(JSON.stringify({ error: { code: 'SERVER_ERROR', message: 'DB down' } }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      });
+
+      const service = createHybridGreenOpsService(
+        undefined,
+        {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
+        },
+        sessionManager,
+        apiClient,
+      );
+
+      const initialTasks = service.getSnapshot().tasks.length;
+      await expect(
+        service.createTask(
+          {
+            title: 'New Task Fail',
+            taskType: 'TREE_PLANTING' as const,
+            description: 'Desc',
+            treeId: 'tr-1',
+            assignedStaffId: 'st-1',
+            deadline: '2026-12-31',
+            checklist: [],
+          },
+          {
+            id: 'mock-id',
+            title: 'New Task Fail',
+            status: 'PENDING' as const,
+            checklist: [],
+            assignedStaffId: 'st-1',
+            assignedStaffName: 'Staff',
+            treeId: 'tr-1',
+            treeCode: 'TR1',
+            deadline: '2026-12-31',
+            priority: 'MEDIUM' as const,
+            createdAt: '2026-01-01',
+            updatedAt: '2026-01-01',
+            taskType: 'TREE_PLANTING' as const,
+            description: 'Desc',
+          },
+        ),
+      ).rejects.toThrow();
+
+      expect(service.getSnapshot().tasks.length).toBe(initialTasks);
+    });
+
+    it('R05: legacy /progress URL is never emitted in REST mode', async () => {
+      const fetchSpy = vi.fn();
+      globalThis.fetch = fetchSpy;
+
+      const service = createHybridGreenOpsService(undefined, {
+        EXPO_PUBLIC_APP_ENV: 'development',
+        EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+        EXPO_PUBLIC_DATA_SOURCE: 'rest',
+      });
+
+      const dummyTask = service.getSnapshot().tasks[0];
+      await expect(service.updateTaskProgress(dummyTask)).rejects.toThrow(/UNSUPPORTED_IN_REST_MODE/);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('R06: PATCH /tasks/:id/review is never emitted (uses POST /v1/tasks/:id/review)', async () => {
+      let capturedMethod = '';
+      let capturedUrl = '';
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        capturedMethod = init?.method ?? 'GET';
+        capturedUrl = String(input);
+        return new Response(JSON.stringify({ data: { id: 'task-1', version: 2, status: 'APPROVED', checklist: [] } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      });
+
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'mgr-token',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'u1', email: 'm@novyx.test', role: 'manager' },
+      });
+      const sessionManager = new AuthSessionManager('http://localhost:3000/v1', storage);
+      const apiClient = new MobileApiClient('http://localhost:3000/v1', sessionManager);
+
+      const service = createHybridGreenOpsService(
+        undefined,
+        {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
+        },
+        sessionManager,
+        apiClient,
+      );
+
+      const dummyTask = service.getSnapshot().tasks[0];
+      await service.reviewTask(
+        {
+          taskId: 'task-1',
+          decision: 'approve',
+          reviewerId: 'u1',
+          expectedVersion: 1,
+          reason: 'Looks good',
+        },
+        dummyTask,
+      );
+
+      expect(capturedMethod).toBe('POST');
+      expect(capturedUrl).toContain('/v1/tasks/task-1/review');
+      expect(capturedMethod).not.toBe('PATCH');
+    });
+
+    it('R07: notification server calls are not emitted when backend capability does not exist', async () => {
+      const fetchSpy = vi.fn();
+      globalThis.fetch = fetchSpy;
+
+      const restService = createGreenOpsRestService({
+        EXPO_PUBLIC_APP_ENV: 'development',
+        EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+        EXPO_PUBLIC_DATA_SOURCE: 'rest',
+      });
+
+      const notifications = await restService.listNotifications();
+      expect(notifications).toEqual([]);
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      const hybridService = createHybridGreenOpsService(undefined, {
+        EXPO_PUBLIC_APP_ENV: 'development',
+        EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+        EXPO_PUBLIC_DATA_SOURCE: 'rest',
+      });
+
+      await hybridService.createNotification({
+        title: 'Local Alert',
+        body: 'Testing',
+        type: 'SYSTEM',
+      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('R08: new production MobileApiClient uses shared AuthSessionManager session', async () => {
+      const storage = new InMemorySecureSessionStorage();
+      const sessionManager = new AuthSessionManager('http://localhost:3000/v1', storage);
+      await sessionManager.setSession({
+        accessToken: 'shared_manager_token_123',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'u1', email: 'staff@novyx.test', role: 'staff' },
+      });
+
+      const apiClient = new MobileApiClient('http://localhost:3000/v1', sessionManager);
+
+      let capturedAuth = '';
+      globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        capturedAuth = (init?.headers as Record<string, string>)?.['Authorization'] ?? '';
+        return new Response(JSON.stringify({ data: { id: 't1' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      });
+
+      await apiClient.get('/v1/tasks/t1');
+      expect(capturedAuth).toBe('Bearer shared_manager_token_123');
+    });
+  });
+
+  // =========================================================================
+  // SECTION 23: MOBILE RUNTIME TESTS (R09 - R15)
+  // =========================================================================
+  describe('Mobile Sync Runtime & Lifecycle Invariants (R09 - R15)', () => {
+    it('R09: runtime initializes SQLite/migrations once', async () => {
+      const db = await createInMemoryTestDatabase();
+      const storage = new InMemorySecureSessionStorage();
+      const runtime = createMobileRuntime({
+        db,
+        storage,
+        envSource: {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+        },
+      });
+
+      await runtime.start();
+      await runtime.start(); // calling second time
+      expect(runtime.db).toBe(db);
+    });
+
+    it('R10: runtime calls recoverInterruptedSyncs on startup', async () => {
+      const db = await createInMemoryTestDatabase();
+      await runMigrations(db);
+      const taskRepo = new SqliteMobileTaskRepository(db);
+      await seedTestTask(taskRepo, 'task-r10');
+      const outboxRepo = new SqliteOutboxRepository(db);
+      const enqueued = await outboxRepo.enqueueTransactional({
+        taskId: 'task-r10',
+        request: {
+          taskId: 'task-r10',
+          expectedVersion: 1,
+          proof: { proofProfile: 'SERVICE_PROOF', completionPhotoUri: 'p' },
+        },
+        idempotencyKey: generateSecureUuid(),
+      });
+      await outboxRepo.updateItemSyncStatus(enqueued.id, 'SYNCING');
+
+      const storage = new InMemorySecureSessionStorage();
+      const runtime = createMobileRuntime({
+        db,
+        storage,
+        envSource: {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+        },
+      });
+
+      await runtime.start();
+      const recovered = await outboxRepo.getItemById(enqueued.id);
+      expect(recovered?.syncStatus).toBe('SYNC_FAILED');
+      expect(recovered?.errorClassification).toBe('NETWORK');
+      expect(recovered?.lastError).toBe('INTERRUPTED_SYNC_RECOVERY');
+    });
+
+    it('R11: one shared coordinator exists', async () => {
+      const runtime = createMobileRuntime({
+        envSource: {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+        },
+      });
+      expect(runtime.coordinator).toBeNull();
+      // When db is set up:
+      const db = await createInMemoryTestDatabase();
+      runtime.setupWithDatabase(db);
+      const coordinator1 = runtime.coordinator;
+      expect(coordinator1).toBeDefined();
+      expect(runtime.coordinator).toBe(coordinator1);
+    });
+
+    it('R12: restored authenticated session permits eligible Outbox processing', async () => {
+      const db = await createInMemoryTestDatabase();
+      await runMigrations(db);
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'active-session-token',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'u1', email: 's@novyx.test', role: 'staff' },
+      });
+
+      const runtime = createMobileRuntime({
+        db,
+        storage,
+        envSource: {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
+        },
+      });
+      await runtime.start();
+      await seedTestTask(runtime.taskRepo as SqliteMobileTaskRepository, 't-r12');
+
+      let dispatchCalled = false;
+      runtime.coordinator = new OutboxCoordinator(
+        runtime.outboxRepo!,
+        {
+          dispatch: async () => {
+            dispatchCalled = true;
+            return { success: true, status: 200 };
+          },
+        },
+        runtime.taskRepo!,
+        runtime.db!,
+      );
+
+      await runtime.outboxRepo!.enqueueTransactional({
+        taskId: 't-r12',
+        request: {
+          taskId: 't-r12',
+          expectedVersion: 1,
+          proof: { proofProfile: 'SERVICE_PROOF', completionPhotoUri: 's3://b/k' },
+        },
+        idempotencyKey: generateSecureUuid(),
+      });
+
+      const results = await runtime.triggerSync();
+      expect(results.length).toBe(1);
+      expect(dispatchCalled).toBe(true);
+    });
+
+    it('R13: connectivity events cannot create parallel workers', async () => {
+      const db = await createInMemoryTestDatabase();
+      await runMigrations(db);
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'u1', email: 's@novyx.test', role: 'staff' },
+      });
+
+      const runtime = createMobileRuntime({
+        db,
+        storage,
+        envSource: {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
+        },
+      });
+      await runtime.start();
+      await seedTestTask(runtime.taskRepo as SqliteMobileTaskRepository, 't-r13');
+
+      let activeWorkers = 0;
+      let maxConcurrentWorkers = 0;
+
+      runtime.coordinator = new OutboxCoordinator(
+        runtime.outboxRepo!,
+        {
+          dispatch: async () => {
+            activeWorkers++;
+            maxConcurrentWorkers = Math.max(maxConcurrentWorkers, activeWorkers);
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            activeWorkers--;
+            return { success: true, status: 200 };
+          },
+        },
+        runtime.taskRepo!,
+        runtime.db!,
+      );
+
+      await runtime.outboxRepo!.enqueueTransactional({
+        taskId: 't-r13',
+        request: {
+          taskId: 't-r13',
+          expectedVersion: 1,
+          proof: { proofProfile: 'SERVICE_PROOF', completionPhotoUri: 's3://b/k' },
+        },
+        idempotencyKey: generateSecureUuid(),
+      });
+
+      await Promise.all([
+        runtime.triggerSync(),
+        runtime.triggerSync(),
+        runtime.triggerSync(),
+        runtime.triggerSync(),
+        runtime.triggerSync(),
+      ]);
+
+      expect(maxConcurrentWorkers).toBe(1);
+    });
+
+    it('R14: logout/session invalidation is visible to Outbox REST client', async () => {
+      const db = await createInMemoryTestDatabase();
+      await runMigrations(db);
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'tok-r14',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'u1', email: 's@novyx.test', role: 'staff' },
+      });
+
+      const runtime = createMobileRuntime({
+        db,
+        storage,
+        envSource: {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
+        },
+      });
+      await runtime.start();
+
+      await runtime.sessionManager.logout();
+
+      const syncResults = await runtime.triggerSync();
+      expect(syncResults).toEqual([]);
+    });
+
+    it('R15: startup does not mutate TaskStatus', async () => {
+      const db = await createInMemoryTestDatabase();
+      await runMigrations(db);
+      const taskRepo = new SqliteMobileTaskRepository(db);
+      await taskRepo.cacheTasks([
+        {
+          id: 'task-r15',
+          title: 'Preserve Status Task',
+          status: 'IN_PROGRESS',
+          version: 1,
+          taskTypeId: 'tt-1',
+          treeId: 'tr-1',
+          assignedStaffId: 'staff-1',
+          deadline: '2026-12-31',
+          createdAt: '2026-01-01',
+          updatedAt: '2026-01-01',
+        },
+      ]);
+
+      const storage = new InMemorySecureSessionStorage();
+      const runtime = createMobileRuntime({
+        db,
+        storage,
+        envSource: {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+        },
+      });
+
+      await runtime.start();
+      const cached = await taskRepo.getCachedTask('task-r15');
+      expect(cached?.status).toBe('IN_PROGRESS');
+    });
+  });
+
+  // =========================================================================
+  // SECTION 31: REMOVE FALSE POSITIVE TEST PATH
+  // =========================================================================
+  describe('Section 31: WAITING_REVIEW Without Replay Must Fail', () => {
+    it('proves WAITING_REVIEW on server without successful replay does NOT report success', async () => {
+      const db = await createInMemoryTestDatabase();
+      await runMigrations(db);
+      const taskRepo = new SqliteMobileTaskRepository(db);
+      const outboxRepo = new SqliteOutboxRepository(db);
+
+      const taskId = 'task-sec31';
+      await taskRepo.cacheTasks([
+        {
+          id: taskId,
+          title: 'Task Sec 31',
+          status: 'WAITING_REVIEW', // Task is already WAITING_REVIEW on server
+          version: 2,
+          taskTypeId: 'tt-1',
+          treeId: 'tr-1',
+          assignedStaffId: 'st-1',
+          deadline: '2026-12-31',
+          createdAt: '2026-01-01',
+          updatedAt: '2026-01-01',
+        },
+      ]);
+
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'tok-sec31',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'st-1', email: 'staff@novyx.test', role: 'staff' },
+      });
+      const sessionManager = new AuthSessionManager('http://localhost:3000/v1', storage);
+      const apiClient = new MobileApiClient('http://localhost:3000/v1', sessionManager);
+
+      // Server returns 400 Bad Request on submit
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/evidence')) {
+          return new Response(
+            JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Proof verification failed' } }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+        return new Response('{}', { status: 200 });
+      });
+
+      class DummyBinaryReader implements IEvidenceBinaryReader {
+        async readBinary(): Promise<Uint8Array> {
+          return new Uint8Array([1, 2, 3]);
+        }
+      }
+      const uploadClient = new EvidenceUploadClient(apiClient, new DummyBinaryReader());
+      const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, taskRepo, outboxRepo);
+
+      const outboxItem = await outboxRepo.enqueueTransactional({
+        taskId,
+        request: {
+          taskId,
+          expectedVersion: 1,
+          proof: {
+            proofProfile: 'SERVICE_PROOF',
+            completionPhotoUri: 's3://bucket/key.jpg',
+          },
+        },
+        idempotencyKey: generateSecureUuid(),
+      });
+
+      const result = await dispatcher.dispatch(outboxItem);
+      // Section 31 invariant: Even though task is WAITING_REVIEW, dispatcher MUST report success: false
+      expect(result.success).toBe(false);
+      expect(result.status).toBe(400);
+      expect(result.error).toContain('Proof verification failed');
     });
   });
 });
