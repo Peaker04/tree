@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, Card, EmptyState, Field, GradientCard, SectionTitle } from '../../components/AppPrimitives';
 import { ChecklistLine, Header, PhotoPair, ProofChainCard, TaskCard } from '../../components/presentation/TaskSurfaces';
@@ -44,8 +44,14 @@ export function ManagerReview(props: ManagerAreaProps) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.screenPad}>
-      <Header title="Danh sách chờ duyệt" subtitle="Các báo cáo nghiệm thu hiện trường" />
+    <FlatList
+      data={visiblePendingReview}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.screenPad}
+      ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+      ListHeaderComponent={
+        <View style={styles.headerContainer}>
+          <Header title="Danh sách chờ duyệt" subtitle="Các báo cáo nghiệm thu hiện trường" />
       <GradientCard variant="review">
         <View style={styles.rowBetween}>
           <View style={styles.flex}>
@@ -74,30 +80,30 @@ export function ManagerReview(props: ManagerAreaProps) {
           {visiblePendingReview.length}/{pendingReview.length} báo cáo
         </Text>
       </Card>
-      {pendingReview.length === 0 ? (
-        <EmptyState title="Không có báo cáo tồn đọng" body="Mọi báo cáo hiện trường đã được xử lý." />
-      ) : visiblePendingReview.length === 0 ? (
-        <EmptyState
-          title="Không tìm thấy báo cáo"
-          body="Thử tìm theo mã task, cây hoặc nhân viên khác."
-          icon="search-outline"
-        />
-      ) : (
-        visiblePendingReview.map((task) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Duyệt báo cáo ${task.title}`}
-            key={task.id}
-            onPress={() => {
-              props.setReviewTask(task);
-              props.setActiveStep('REVIEW_DETAIL');
-            }}
-          >
-            <TaskCard task={task} />
-          </Pressable>
-        ))
+          {pendingReview.length === 0 ? (
+            <EmptyState title="Không có báo cáo tồn đọng" body="Mọi báo cáo hiện trường đã được xử lý." />
+          ) : visiblePendingReview.length === 0 ? (
+            <EmptyState
+              title="Không tìm thấy báo cáo"
+              body="Thử tìm theo mã task, cây hoặc nhân viên khác."
+              icon="search-outline"
+            />
+          ) : null}
+        </View>
+      }
+      renderItem={({ item: task }) => (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Duyệt báo cáo ${task.title}`}
+          onPress={() => {
+            props.setReviewTask(task);
+            props.setActiveStep('REVIEW_DETAIL');
+          }}
+        >
+          <TaskCard task={task} />
+        </Pressable>
       )}
-    </ScrollView>
+    />
   );
 }
 
@@ -188,127 +194,119 @@ function ManagerReviewDetail({
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.screenPad}>
+    <ScrollView contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
       <Header title="Duyệt bằng chứng" subtitle={reviewTask.id} onBack={() => props.setActiveStep('REVIEW')} />
-      <GradientCard variant={reviewProofGaps.length === 0 ? 'canopy' : 'review'} contentStyle={styles.proofGateInner}>
-        <View style={styles.rowBetween}>
-          <View style={styles.flex}>
-            <Text style={styles.successTitle}>
-              {reviewProofGaps.length === 0 ? 'Bằng chứng đủ điều kiện' : 'Bằng chứng cần kiểm tra kỹ'}
-            </Text>
-            <Text style={styles.bodyText}>Manager phải xác nhận đúng cây, đúng vị trí và đủ ảnh trước khi duyệt.</Text>
-          </View>
-          <Badge tone={reviewProofGaps.length === 0 ? 'green' : 'amber'}>{reviewProofCount}/5</Badge>
-        </View>
-        {reviewProofGaps.length > 0 ? (
-          <View style={styles.proofGapList}>
-            {reviewProofGaps.map((gap) => (
-              <Text key={gap} style={styles.bodyText}>
-                - {gap}
+
+      <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
+        
+        {/* Gate status - Flattened */}
+        <View style={[styles.detailSection, { backgroundColor: reviewProofGaps.length === 0 ? '#f0fdf4' : '#fffbeb' }]}>
+          <View style={styles.rowBetween}>
+            <View style={styles.flex}>
+              <Text style={styles.successTitle}>
+                {reviewProofGaps.length === 0 ? 'Bằng chứng đủ điều kiện' : 'Bằng chứng cần kiểm tra kỹ'}
               </Text>
-            ))}
+              <Text style={styles.bodyText}>Manager phải xác nhận đúng cây, đúng vị trí và đủ ảnh trước khi duyệt.</Text>
+            </View>
+            <Badge tone={reviewProofGaps.length === 0 ? 'green' : 'amber'}>{reviewProofCount}/5</Badge>
           </View>
-        ) : null}
-      </GradientCard>
-
-      <Card>
-        <SectionTitle icon="navigate-outline">GPS và QR</SectionTitle>
-        <View style={styles.auditGrid}>
-          <AuditBox label="Khoảng cách" value={`${reviewTask.gpsCheck?.distance.toFixed(1) ?? 'N/A'}m`} />
-          <AuditBox label="Ngưỡng" value="10m" />
-          <AuditBox label="Timestamp" value={gpsTimestamp} />
-          <AuditBox label="QR" value={reviewTask.qrCheck?.verified ? reviewTask.qrCheck.scannedCode : 'Chưa hợp lệ'} />
+          {reviewProofGaps.length > 0 ? (
+            <View style={styles.proofGapList}>
+              {reviewProofGaps.map((gap) => (
+                <Text key={gap} style={styles.bodyText}>
+                  - {gap}
+                </Text>
+              ))}
+            </View>
+          ) : null}
         </View>
-      </Card>
 
-      <ProofChainCard task={reviewTask} />
-      <PhotoPair task={reviewTask} />
+        <View style={styles.hairlineDivider} />
 
-      <Card>
-        <SectionTitle icon="checkbox-outline">Checklist nhân viên</SectionTitle>
-        {reviewTask.checklist.map((item, index) => (
-          <ChecklistLine key={item.id} index={index} item={item} />
-        ))}
-      </Card>
-
-      <Card>
-        <SectionTitle icon="finger-print-outline">Ghi chú và metadata</SectionTitle>
-        <View style={styles.auditGrid}>
-          <AuditBox label="Nhân viên" value={reviewTask.assignedStaffName} />
-          <AuditBox label="Hạn" value={new Date(reviewTask.deadline).toLocaleDateString('vi-VN')} />
-          <AuditBox label="Cập nhật" value={new Date(reviewTask.updatedAt).toLocaleTimeString('vi-VN')} />
-          <AuditBox label="Cây" value={reviewTask.treeName} />
+        {/* GPS context */}
+        <View style={styles.detailSection}>
+          <SectionTitle icon="navigate-outline">GPS và QR</SectionTitle>
+          <View style={styles.auditGrid}>
+            <AuditBox label="Khoảng cách" value={`${reviewTask.gpsCheck?.distance.toFixed(1) ?? 'N/A'}m`} />
+            <AuditBox label="Ngưỡng" value="30m" />
+            <AuditBox label="Timestamp" value={gpsTimestamp} />
+            <AuditBox label="QR" value={reviewTask.qrCheck?.verified ? reviewTask.qrCheck.scannedCode : 'Chưa hợp lệ'} />
+          </View>
         </View>
-        <Text style={styles.bodyText}>Ghi chú: {reviewTask.notes || 'Không có ghi chú bổ sung.'}</Text>
-      </Card>
 
-      <Card tone="amber" style={styles.reviewDecisionCard}>
-        <SectionTitle icon="return-down-back-outline">Yêu cầu làm lại</SectionTitle>
-        <View style={styles.reasonChips}>
-          {REWORK_REASON_OPTIONS.map((reason) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Chọn lý do từ chối: ${reason}`}
-              accessibilityState={{ selected: cleanRejectReason === reason }}
-              key={reason}
-              onPress={() => {
-                setRejectReason(reason);
-                setRejectTouched(false);
-              }}
-              style={[styles.reasonChip, cleanRejectReason === reason && styles.reasonChipActive]}
-            >
-              <Text style={[styles.reasonChipText, cleanRejectReason === reason && styles.reasonChipTextActive]}>
-                {reason}
-              </Text>
-            </Pressable>
+        <View style={styles.hairlineDivider} />
+        
+        <View style={styles.detailSection}>
+          <ProofChainCard task={reviewTask} />
+        </View>
+
+        <View style={styles.hairlineDivider} />
+
+        <View style={styles.detailSection}>
+          <PhotoPair task={reviewTask} />
+        </View>
+
+        <View style={styles.hairlineDivider} />
+
+        <View style={styles.detailSection}>
+          <SectionTitle icon="checkbox-outline">Checklist nhân viên</SectionTitle>
+          {reviewTask.checklist.map((item, index) => (
+            <ChecklistLine key={item.id} index={index} item={item} />
           ))}
         </View>
-        <Field
-          label="Lý do từ chối"
-          value={rejectReason}
-          onChangeText={(value) => {
-            setRejectReason(value);
-            if (value.trim()) setRejectTouched(false);
-          }}
-          placeholder="Nhập lý do để nhân viên biết cần sửa gì"
-          multiline
-          style={styles.multilineInput}
-        />
-        <View style={styles.recoveryPath}>
-          <Ionicons name="return-down-forward-outline" size={16} color={colors.amber} />
-          <Text style={styles.bodyText}>
-            Khi từ chối, Staff sẽ thấy lý do này trong Công việc và tiếp tục từ bước bằng chứng còn thiếu.
-          </Text>
-        </View>
-        {rejectTouched && !cleanRejectReason ? (
-          <Text style={styles.alertText}>Cần nhập lý do trước khi yêu cầu làm lại.</Text>
-        ) : null}
-      </Card>
 
-      <View style={styles.reviewActionBar}>
-        <Button
-          variant="danger"
-          style={styles.reviewActionButton}
-          disabled={reviewSubmitting !== null}
-          loading={reviewSubmitting === 'reject'}
-          onPress={() => void requestRework()}
-        >
-          {reviewSubmitting === 'reject' ? 'Đang gửi...' : 'Từ chối'}
-        </Button>
-        <Button
-          icon="checkmark-outline"
-          style={styles.reviewActionButton}
-          disabled={reviewProofGaps.length > 0 || reviewSubmitting !== null}
-          loading={reviewSubmitting === 'approve'}
-          onPress={() => void completeReview()}
-        >
-          {reviewSubmitting === 'approve'
-            ? 'Đang duyệt...'
-            : reviewProofGaps.length > 0
-              ? 'Thiếu bằng chứng'
-              : 'Phê duyệt'}
-        </Button>
-      </View>
+        <View style={styles.hairlineDivider} />
+
+        <View style={styles.detailSection}>
+          <SectionTitle icon="shield-checkmark-outline">Quyết định quản lý</SectionTitle>
+          <Field
+            label="Lý do yêu cầu làm lại (nếu có)"
+            value={rejectReason}
+            onChangeText={(text) => {
+              setRejectReason(text);
+              setRejectTouched(true);
+            }}
+            placeholder="Ghi rõ lý do không đạt..."
+            multiline
+            style={[styles.multilineInput, rejectTouched && !cleanRejectReason && { borderColor: colors.danger }]}
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reasonChips}>
+            {REWORK_REASON_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt}
+                style={[styles.reasonChip, selectedRejectChip === opt && styles.reasonChipActive]}
+                onPress={() => setRejectReason(opt)}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.reasonChipText, selectedRejectChip === opt && styles.reasonChipTextActive]}>
+                  {opt}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <View style={styles.reviewActionBar}>
+            <Button
+              variant="danger"
+              icon="refresh-outline"
+              disabled={!!reviewSubmitting}
+              onPress={requestRework}
+              style={{ flex: 1 }}
+            >
+              {reviewSubmitting === 'reject' ? 'Đang gửi...' : 'Yêu cầu sửa'}
+            </Button>
+            <Button
+              variant="forest" pill
+              icon="checkmark-circle-outline"
+              disabled={!!reviewSubmitting || reviewProofGaps.length > 0}
+              onPress={completeReview}
+              style={{ flex: 1 }}
+            >
+              {reviewSubmitting === 'approve' ? 'Đang lưu...' : 'Duyệt nghiệm thu'}
+            </Button>
+          </View>
+        </View>
+
+      </Card>
     </ScrollView>
   );
 }
@@ -324,6 +322,9 @@ function AuditBox({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  headerContainer: { gap: 16, marginBottom: 16 },
+  detailSection: { padding: 16, gap: 8 },
+  hairlineDivider: { height: 1, backgroundColor: colors.hairlineBorder },
   screenPad: {
     padding: spacing.screen,
     gap: spacing.section,
@@ -338,13 +339,13 @@ const styles = StyleSheet.create({
   lightHeroTitle: {
     color: colors.forest,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '600',
     lineHeight: 28,
   },
   lightHeroBody: {
     color: colors.foregroundSoft,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 18,
     marginTop: 8,
   },
@@ -361,12 +362,12 @@ const styles = StyleSheet.create({
   reviewHeroNumber: {
     color: colors.amber,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   reviewHeroLabel: {
     color: colors.mutedForeground,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   taskFilterPanel: {
     gap: 10,
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
   resultText: {
     color: colors.subtle,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   proofGateInner: {
     gap: 10,
@@ -388,12 +389,12 @@ const styles = StyleSheet.create({
   successTitle: {
     color: colors.primaryDark,
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   bodyText: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 18,
   },
   auditGrid: {
@@ -414,12 +415,12 @@ const styles = StyleSheet.create({
   metricLabel: {
     color: colors.mutedForeground,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   auditValue: {
     color: colors.foreground,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '600',
     marginTop: 5,
   },
   reviewDecisionCard: {
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
   reasonChipText: {
     color: colors.mutedForeground,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   reasonChipTextActive: {
     color: colors.amber,
@@ -468,7 +469,7 @@ const styles = StyleSheet.create({
   alertText: {
     color: colors.danger,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 18,
   },
   reviewActionBar: {

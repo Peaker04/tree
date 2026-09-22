@@ -125,7 +125,7 @@ export function TreeAssignmentCard({
   const healthTone =
     tree.healthStatus === 'Sâu bệnh' ? 'danger' : tree.healthStatus === 'Cần chăm sóc' ? 'amber' : 'green';
   return (
-    <Card style={styles.treeAssignmentCard}>
+    <Card tone="flat" style={styles.treeAssignmentCard}>
       <View style={styles.treeImageWrap}>
         <TreeIdentityVisual tree={tree} />
         <View style={styles.treeImageOverlay}>
@@ -201,7 +201,7 @@ export function TreeLookupResult({
     tree.healthStatus === 'Sâu bệnh' ? 'danger' : tree.healthStatus === 'Cần chăm sóc' ? 'amber' : 'green';
 
   return (
-    <Card style={styles.treeAssignmentCard} tone="green">
+    <Card tone="flat" style={[styles.treeAssignmentCard, { backgroundColor: "#f0fdf4" }]} >
       <TreeIdentityVisual tree={tree} />
       <View style={styles.rowBetween}>
         <View style={styles.row}>

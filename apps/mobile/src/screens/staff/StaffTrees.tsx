@@ -1,6 +1,6 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { BrandMark, EmptyState, GradientCard } from '../../components/AppPrimitives';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { BrandMark, Card, EmptyState } from '../../components/AppPrimitives';
 import { TreeAssignmentCard, TreeSearchFilters } from '../../components/presentation/TreeSurfaces';
 import { TreeIdentityVisual } from '../../components/presentation/TreeIdentityVisual';
 import { colors } from '../../theme/tokens';
@@ -33,8 +33,14 @@ export function StaffTrees({
   onMap: (task: Task) => void;
 }) {
   return (
-    <ScrollView contentContainerStyle={styles.screenPad}>
-      <GradientCard variant="canopy" style={styles.treeHeroCard}>
+    <FlatList
+      data={visibleAssignedTrees}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.screenPad}
+      ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+      ListHeaderComponent={
+        <View style={styles.headerContainer}>
+          <Card tone="warm" style={styles.treeHeroCard}>
         <View style={styles.heroContentRow}>
           <View style={styles.flex}>
             <BrandMark compact />
@@ -45,7 +51,7 @@ export function StaffTrees({
           </View>
           <TreeIdentityVisual tree={assignedTrees[0] ?? fallbackTree} compact />
         </View>
-      </GradientCard>
+      </Card>
       <TreeSearchFilters
         query={query}
         onQueryChange={onQueryChange}
@@ -54,36 +60,37 @@ export function StaffTrees({
         resultCount={visibleAssignedTrees.length}
         totalCount={assignedTrees.length}
       />
-      {assignedTrees.length === 0 ? (
-        <EmptyState
-          title="Chưa có cây được phân công"
-          body="Khi quản lý giao việc, cây phụ trách sẽ hiển thị tại đây."
-        />
-      ) : visibleAssignedTrees.length === 0 ? (
-        <EmptyState
-          icon="search-outline"
-          title="Không tìm thấy cây phù hợp"
-          body="Thử đổi từ khóa, mã QR hoặc bộ lọc tình trạng để xem lại cây được giao."
-        />
-      ) : (
-        visibleAssignedTrees.map((tree) => {
-          const relatedTasks = staffTasks.filter((task) => task.treeId === tree.id);
-          const activeRelatedTask = relatedTasks.find((task) => task.status !== TaskStatus.COMPLETED);
-          const displayTask = activeRelatedTask ?? relatedTasks[0];
-          return (
-            <TreeAssignmentCard
-              key={tree.id}
-              tree={tree}
-              task={displayTask}
-              careHistory={getCareHistoryByTree(tree.id)}
-              loadCareHistory={loadCareHistoryByTree}
-              onOpenTask={activeRelatedTask ? () => onOpenTask(activeRelatedTask) : undefined}
-              onMap={activeRelatedTask ? () => onMap(activeRelatedTask) : undefined}
+          {assignedTrees.length === 0 ? (
+            <EmptyState
+              title="Chưa có cây được phân công"
+              body="Khi quản lý giao việc, cây phụ trách sẽ hiển thị tại đây."
             />
-          );
-        })
-      )}
-    </ScrollView>
+          ) : visibleAssignedTrees.length === 0 ? (
+            <EmptyState
+              icon="search-outline"
+              title="Không tìm thấy cây phù hợp"
+              body="Thử đổi từ khóa, mã QR hoặc bộ lọc tình trạng để xem lại cây được giao."
+            />
+          ) : null}
+        </View>
+      }
+      renderItem={({ item: tree }) => {
+        const relatedTasks = staffTasks.filter((task) => task.treeId === tree.id);
+        const activeRelatedTask = relatedTasks.find((task) => task.status !== TaskStatus.COMPLETED);
+        const displayTask = activeRelatedTask ?? relatedTasks[0];
+        return (
+          <TreeAssignmentCard
+            tree={tree}
+            task={displayTask}
+            careHistory={getCareHistoryByTree(tree.id)}
+            loadCareHistory={loadCareHistoryByTree}
+            onOpenTask={activeRelatedTask ? () => onOpenTask(activeRelatedTask) : undefined}
+            onMap={activeRelatedTask ? () => onMap(activeRelatedTask) : undefined}
+          />
+        );
+      }}
+    />
+
   );
 }
 
@@ -104,6 +111,14 @@ const styles = StyleSheet.create({
   screenPad: {
     padding: 16,
     paddingBottom: 104,
+  },
+  headerContainer: {
+    gap: 16,
+    marginBottom: 16,
+  },
+  unusedScreenPad: {
+    padding: 16,
+    paddingBottom: 104,
     gap: 16,
   },
   flex: {
@@ -120,13 +135,13 @@ const styles = StyleSheet.create({
   lightHeroTitle: {
     color: colors.foreground,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '600',
     marginTop: 14,
   },
   lightHeroBody: {
     color: colors.foregroundSoft,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '400',
     lineHeight: 18,
     marginTop: 6,
   },
