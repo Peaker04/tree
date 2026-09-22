@@ -8,7 +8,7 @@ import {
   Card,
   EmptyState,
   Field,
-  GradientCard,
+  
   SectionTitle,
 } from '../../components/AppPrimitives';
 import { ChecklistLine } from '../../components/presentation/TaskSurfaces';
@@ -152,7 +152,7 @@ export function ManagerCreateTask(props: ManagerAreaProps) {
   return (
     <ScrollView contentContainerStyle={styles.screenPad}>
       <Header title="Tạo công việc mới" subtitle="Giao việc cho nhân viên hiện trường" />
-      <GradientCard variant="canopy">
+      <Card tone="green">
         <View style={styles.heroContentRow}>
           <View style={styles.flex}>
             <BrandMark compact />
@@ -163,7 +163,7 @@ export function ManagerCreateTask(props: ManagerAreaProps) {
           </View>
           <TreeIdentityVisual tree={selectedTree ?? fallbackTree} compact />
         </View>
-      </GradientCard>
+      </Card>
 
       {submitted && invalid ? (
         <Card tone="danger" style={styles.alertRow}>
@@ -376,12 +376,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: colors.foreground,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   headerSub: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 18,
   },
   heroContentRow: {
@@ -392,14 +392,14 @@ const styles = StyleSheet.create({
   lightHeroTitle: {
     color: colors.forest,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '600',
     lineHeight: 28,
     marginTop: 12,
   },
   lightHeroBody: {
     color: colors.foregroundSoft,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 18,
     marginTop: 8,
   },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   alertText: {
     color: colors.danger,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 18,
   },
   createPreviewCard: {
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   createStepText: {
     color: colors.primaryDark,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   createStepTextInvalid: {
     color: colors.danger,
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   chipText: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   chipTextActive: {
     color: colors.amber,
@@ -494,24 +494,24 @@ const styles = StyleSheet.create({
   itemTitle: {
     color: colors.foreground,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '600',
     lineHeight: 20,
   },
   itemSub: {
     color: colors.muted,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     marginTop: 1,
   },
   bodyText: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 18,
   },
   monoSmall: {
     color: colors.muted,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 });

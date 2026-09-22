@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, BrandMark, Button, Card, GradientCard, SectionTitle } from '../../components/AppPrimitives';
+import { Badge, BrandMark, Button, Card, SectionTitle } from '../../components/AppPrimitives';
 import { Metric, TaskCard } from '../../components/presentation/TaskSurfaces';
 import { TreeIdentityVisual } from '../../components/presentation/TreeIdentityVisual';
 import { getTaskProofGaps, getTreeRiskStatus, isTaskOverdue } from '../../domain/mobileWorkflow';
@@ -26,7 +26,7 @@ export function ManagerDashboard(props: ManagerAreaProps) {
         <BrandMark />
         <Badge tone="sky">NOVYX HQ</Badge>
       </View>
-      <GradientCard style={styles.adminHero}>
+      <Card tone="warm" style={styles.adminHero}>
         <View style={styles.heroContentRow}>
           <View style={styles.flex}>
             <BrandMark compact dark />
@@ -47,19 +47,19 @@ export function ManagerDashboard(props: ManagerAreaProps) {
           </View>
           <Image source={mockTreeLandscapePhoto} style={styles.heroImage} />
         </View>
-      </GradientCard>
+      </Card>
 
-      <View style={styles.statsGrid}>
-        <Metric label="Tổng việc" value={total} tone="slate" />
-        <Metric label="Hoàn thành" value={completed} tone="green" />
-        <Metric label="Chờ duyệt" value={pendingReview.length} tone="amber" />
-      </View>
-      <View style={styles.statsGrid}>
-        <Metric label="Cây quản lý" value={props.trees.length} tone="green" />
-        <Metric label="Đang mở" value={active} tone="amber" />
-      </View>
+      <Card tone="flat" style={styles.statsBar}>
+        <Metric label="Tổng việc" value={total} tone="slate" bordered={false} />
+        <View style={styles.statsDivider} />
+        <Metric label="Hoàn thành" value={completed} tone="green" bordered={false} />
+        <View style={styles.statsDivider} />
+        <Metric label="Đang mở" value={active} tone="amber" bordered={false} />
+        <View style={styles.statsDivider} />
+        <Metric label="Cây quản lý" value={props.trees.length} tone="green" bordered={false} />
+      </Card>
 
-      <GradientCard variant="review" contentStyle={styles.opsPulseInner}>
+      <Card tone="warm" style={styles.opsPulseInner}>
         <SectionTitle icon="analytics-outline">Tình hình tác nghiệp ngày</SectionTitle>
         <PulseRow label="Đã xong" value={completed} tone="green" />
         <PulseRow label="Đang chạy / chờ" value={active} tone="amber" />
@@ -67,7 +67,7 @@ export function ManagerDashboard(props: ManagerAreaProps) {
         {incompleteReview.length > 0 ? (
           <PulseRow label="Thiếu bằng chứng" value={incompleteReview.length} tone="danger" />
         ) : null}
-      </GradientCard>
+      </Card>
 
       <Card tone="soft" style={styles.quickActionPanel}>
         <SectionTitle icon="flash-outline">Hành động nhanh</SectionTitle>
@@ -84,7 +84,7 @@ export function ManagerDashboard(props: ManagerAreaProps) {
         </Button>
       </Card>
 
-      <GradientCard variant={pendingReview.length > 0 ? 'review' : 'canopy'} contentStyle={styles.reviewQueueInner}>
+      <Card tone="flat" style={[styles.reviewQueueInner, { backgroundColor: pendingReview.length > 0 ? '#fffbeb' : '#f0fdf4' }]}>
         <View style={styles.rowBetween}>
           <View style={styles.flex}>
             <SectionTitle icon="shield-checkmark-outline">Hàng chờ nghiệm thu</SectionTitle>
@@ -114,7 +114,7 @@ export function ManagerDashboard(props: ManagerAreaProps) {
             <Ionicons name="chevron-forward" size={18} color={colors.muted} />
           </Pressable>
         ))}
-      </GradientCard>
+      </Card>
 
       <Card tone="soft">
         <View style={styles.managerSectionHeader}>
@@ -248,6 +248,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  statsBar: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 4, paddingHorizontal: 2, borderWidth: 1, borderColor: colors.hairlineBorder },
+  statsDivider: { width: 1, backgroundColor: colors.hairlineBorder, alignSelf: 'stretch', marginVertical: 4 },
   adminHero: {
     minHeight: 184,
   },

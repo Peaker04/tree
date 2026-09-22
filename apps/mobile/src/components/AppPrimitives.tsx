@@ -29,48 +29,6 @@ export function Card({
   return <View style={[styles.card, styles[tone], style]}>{children}</View>;
 }
 
-export function GradientCard({
-  children,
-  style,
-  contentStyle,
-  variant = 'forest',
-}: {
-  children: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
-  contentStyle?: StyleProp<ViewStyle>;
-  variant?: 'forest' | 'light' | 'sky' | 'canopy' | 'review';
-}) {
-  const variantStyle =
-    variant === 'review'
-      ? styles.gradientCardReview
-      : variant === 'canopy'
-        ? styles.gradientCardCanopy
-        : variant === 'sky'
-          ? styles.gradientCardSky
-          : variant === 'light'
-            ? styles.gradientCardLight
-            : styles.gradientCardForest;
-  const glowStyle =
-    variant === 'review'
-      ? styles.gradientGlowReview
-      : variant === 'canopy'
-        ? styles.gradientGlowCanopy
-        : variant === 'sky'
-          ? styles.gradientGlowSky
-          : variant === 'light'
-            ? styles.gradientGlowLight
-            : styles.gradientGlowForest;
-
-  return (
-    <View style={[styles.gradientCard, variantStyle, style]}>
-      <View pointerEvents="none" style={[styles.gradientGlow, styles.gradientGlowTop, glowStyle]} />
-      <View pointerEvents="none" style={[styles.gradientGlow, styles.gradientGlowBottom, glowStyle]} />
-      <View pointerEvents="none" style={styles.gradientAccent} />
-      <View style={[styles.gradientInner, contentStyle]}>{children}</View>
-    </View>
-  );
-}
-
 export function BrandMark({ compact = false, dark = false }: { compact?: boolean; dark?: boolean }) {
   return (
     <View style={styles.brandMark}>
@@ -253,82 +211,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 1,
-  },
-  gradientCard: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    position: 'relative',
-    borderWidth: 1,
-    shadowColor: colors.forest,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    elevation: 4,
-  },
-  gradientCardForest: {
-    backgroundColor: colors.forestDeep,
-    borderColor: '#2b6344',
-  },
-  gradientCardLight: {
-    backgroundColor: colors.honeydew,
-    borderColor: colors.primaryBorder,
-  },
-  gradientCardCanopy: {
-    backgroundColor: colors.canopy,
-    borderColor: colors.primaryBorder,
-  },
-  gradientCardSky: {
-    backgroundColor: colors.sky,
-    borderColor: '#5fb2c4',
-  },
-  gradientCardReview: {
-    backgroundColor: colors.brandIvory,
-    borderColor: '#ead879',
-  },
-  gradientGlow: {
-    position: 'absolute',
-    borderRadius: radius.full,
-    opacity: 0.9,
-  },
-  gradientGlowTop: {
-    width: 180,
-    height: 180,
-    top: -96,
-    right: -54,
-  },
-  gradientGlowBottom: {
-    width: 150,
-    height: 150,
-    left: -68,
-    bottom: -92,
-    opacity: 0.7,
-  },
-  gradientGlowForest: {
-    backgroundColor: 'rgba(117, 201, 127, 0.26)',
-  },
-  gradientGlowLight: {
-    backgroundColor: 'rgba(170, 208, 128, 0.22)',
-  },
-  gradientGlowCanopy: {
-    backgroundColor: 'rgba(240, 247, 234, 0.5)',
-  },
-  gradientGlowSky: {
-    backgroundColor: 'rgba(207, 232, 201, 0.24)',
-  },
-  gradientGlowReview: {
-    backgroundColor: 'rgba(117, 201, 127, 0.18)',
-  },
-  gradientAccent: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 5,
-    backgroundColor: 'rgba(255, 250, 224, 0.34)',
-  },
-  gradientInner: {
-    padding: 18,
-    minHeight: 120,
   },
   brandMark: {
     flexDirection: 'row',

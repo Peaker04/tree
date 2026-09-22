@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 16,
-    backgroundColor: colors.brandIvory || '#f7f3e9',
+    backgroundColor: colors.warmStone,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.primaryDark,

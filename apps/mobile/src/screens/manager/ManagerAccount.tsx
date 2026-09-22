@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, BrandMark, Button, Card, GradientCard, SectionTitle } from '../../components/AppPrimitives';
+import { Badge, BrandMark, Button, Card, SectionTitle } from '../../components/AppPrimitives';
 import { Header, Metric } from '../../components/presentation/TaskSurfaces';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { TaskStatus } from '../../types';
@@ -15,7 +15,7 @@ export function ManagerAccount(props: ManagerAreaProps) {
   return (
     <ScrollView contentContainerStyle={styles.screenPad}>
       <Header title="Tài khoản quản lý" subtitle="Kỹ sư Trưởng" />
-      <GradientCard variant="forest" style={styles.managerAccountHero}>
+      <Card tone="warm" style={styles.managerAccountHero}>
         <View style={styles.row}>
           <View style={styles.managerAvatarDark}>
             <Text style={styles.managerAvatarDarkText}>M</Text>
@@ -36,12 +36,12 @@ export function ManagerAccount(props: ManagerAreaProps) {
             <Text style={styles.heroMetaText}>NOVYX HQ</Text>
           </View>
         </View>
-      </GradientCard>
-      <View style={styles.statsGrid}>
-        <Metric label="Cây quản lý" value={props.trees.length} tone="green" />
-        <Metric label="Đang mở" value={openTaskCount} tone="slate" />
-        <Metric label="Chờ duyệt" value={pendingReviewCount} tone="amber" />
-      </View>
+      </Card>
+      <Card tone="flat" style={styles.statsBar}>
+        <Metric label="Cây quản lý" value={props.trees.length} tone="slate" bordered={false} />
+        <View style={styles.statsDivider} />
+        <Metric label="Chờ duyệt" value={props.tasks.filter((t) => t.status === 'WAITING_REVIEW').length} tone="amber" bordered={false} />
+      </Card>
       <Card tone="soft" style={styles.accountInfoCard}>
         <SectionTitle icon="id-card-outline">Thông tin phiên làm việc</SectionTitle>
         <InfoRow label="Email" value="manager@novyx.vn" />
@@ -103,6 +103,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  statsBar: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 4, paddingHorizontal: 2, borderWidth: 1, borderColor: colors.hairlineBorder },
+  statsDivider: { width: 1, backgroundColor: colors.hairlineBorder, alignSelf: 'stretch', marginVertical: 4 },
   managerAccountHero: {
     minHeight: 168,
   },
@@ -119,12 +121,12 @@ const styles = StyleSheet.create({
   managerAvatarDarkText: {
     color: colors.forest,
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   managerAccountName: {
     color: '#fff',
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '600',
     marginTop: 10,
   },
   managerAccountRole: {
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     color: colors.foreground,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '600',
     lineHeight: 20,
   },
   bodyText: {
@@ -202,6 +204,6 @@ const styles = StyleSheet.create({
   auditValue: {
     color: colors.foreground,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '600',
   },
 });
