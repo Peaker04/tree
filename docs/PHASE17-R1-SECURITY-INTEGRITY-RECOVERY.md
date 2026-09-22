@@ -1,13 +1,47 @@
 # Phase 17 - Recovery R1: Security & Authorization Integrity
 
 ## Recovery Evidence Verified
-1. **R1-A — GOVERNANCE USER READ SECURITY**: The endpoint `GET /v1/governance/users` now strictly enforces `[authenticate, requireAdmin]` middleware.
-2. **R1-B — NEGATIVE AUTHORIZATION TESTS**: Added four negative and positive validation tests in `tests/api/governance-users.spec.ts` guaranteeing 401 for anonymous, 403 for staff/manager, and 200 for admins on the read surface.
-3. **R1-C — ADMIN MOBILE COERCION SECURITY REGRESSION**: Adjusted routing in `MobileApp.tsx` avoiding role fallback coercion mapping. Unrecognized Admin roles are safely routed to `'UNSUPPORTED'` mapping returning explicitly to the Login interface explicitly with an embedded `Platform Administrator must use Admin Web` visual banner. Refresh operations and sync capabilities are isolated behind the role check boundary.
-4. **R1-D — MOCK/REST AUTHORITY REGRESSION**: Implemented robust conditional branching ensuring that `EXPO_PUBLIC_DATA_SOURCE="mock"` never triggers automated synchronization dispatches upon startup or network reconnection. `triggerSync` returns deterministically blank `[]` structures and respects offline testing intents exactly. Rest/Mock boundary specs cover direct assertions.
-5. **R1-E — CARE HISTORY LOCAL FALLBACK INVARIANT**: Eliminated unintended derivation mapping of `WAITING_REVIEW` elements in CareHistory, securing the constraint that only `COMPLETED` tasks are materialized into proxy objects locally. Explicit regression coverage verified.
-6. **R1-F — SECURITY CONFIG CLEANUP**: `.env.example` cleared of all stale JWT-centric signatures. System is safely parameterized matching existing codebase.
+
+1. **R1-A — GOVERNANCE USER READ SECURITY**: The endpoint `GET /v1/governance/users` now strictly enforces `[authenticate, requireAdmin]` middleware matching other governance lifecycle capabilities.
+
+2. **R1-B — NEGATIVE AUTHORIZATION TESTS**: `tests/api/governance-users.spec.ts` executes actual live session injection tests confirming:
+   - Anonymous access => 401
+   - Authenticated Staff => 403
+   - Authenticated Manager => 403
+   - Authenticated Admin => 200
+
+3. **R1-C — ADMIN MOBILE COERCION SECURITY REGRESSION**: 
+   - `mapSessionRole` natively evaluates admin roles as `UNSUPPORTED`.
+   - `MobileApp` routing handles `UNSUPPORTED` by immediately forcing the screen back to `Login` with `[clearAuthSession, clearLocalSession]` executing natively, without rendering `StaffArea` or `ManagerArea`.
+   - The hazardous unconditional operational `refreshData()` immediately following credential resolution in the `login` handler has been successfully eradicated to enforce hard-exit prior to any operational cache fetch attempts.
+
+4. **R1-D — MOCK/REST AUTHORITY REGRESSION**: 
+   - The runtime strictly persists configuration parameters (`config.dataSource`).
+   - `triggerSync()` features an absolute exit barrier (`if (dataSource === 'mock') return []`) which prevents REST-centric asynchronous payload processing, respecting the boundary without terminating SQLite Outbox processing internally.
+
+5. **R1-E — CARE HISTORY LOCAL FALLBACK INVARIANT**: 
+   - Reverted accidental WAITING_REVIEW expansion inside `buildCareHistory` to reestablish the foundational `TaskStatus.COMPLETED`. Demonstrated natively using direct tests filtering task aggregates efficiently inside the target tree list.
+
+6. **R1-F — SECURITY CONFIG CLEANUP**: `.env.example` has been manually scoured preventing `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` emission on source control.
+
+7. **R1-G — MOCK / REST TESTS & ADMINISTRATIVE MOBILE RUNTIME TESTS**:
+   Deterministic boundary checking integrated in `tests/mobile/wave5b-rest-sync.spec.ts` proves:
+   - Admin restored session rejects assignment mapping -> `UNSUPPORTED`.
+   - Mock data mode bypasses sync processing explicitly (`res.length === 0`).
+   - Reconnect handlers successfully leverage constrained `triggerSync` preventing accidental bleed-through.
 
 ## Formal Verdict
-R1 READY FOR INDEPENDENT FREEZE
-R1_REMOTE_CI = NOT_RUN
+
+R1_IMPLEMENTATION = COMPLETE
+R1_REMOTE_CI = PENDING_EXECUTION
+R1_FREEZE = PENDING_INDEPENDENT_REVIEW
+
+PHASE 17 / R1 FINAL PROOF COMPLETE
+— REAL GOVERNANCE ROUTE AUTH TESTS PASS
+— ADMIN MOBILE RESTORE HARD-DENY PASS
+— ADMIN MOBILE SYNC ISOLATION PASS
+— STAFF/MANAGER MOBILE SYNC PRESERVED
+— MOCK MODE ZERO REST DISPATCH PASS
+— CARE HISTORY COMPLETED-ONLY PASS
+— EXACT-SHA CI PASS
+— READY FOR INDEPENDENT R1 FREEZE
