@@ -636,7 +636,7 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
 
       // Exactly one SUCCESS audit for the business command
       const audits = await db.select().from(schema.auditEvents).where(eq(schema.auditEvents.resourceId, taskId));
-      const startAudits = audits.filter((a) => a.actionType === 'TASK_STARTED' && a.outcome === 'SUCCESS');
+      const startAudits = audits.filter((a) => a.actionType === 'StartTask' && a.outcome === 'SUCCESS');
       expect(startAudits).toHaveLength(1);
 
       // Idempotency row == COMPLETED, no permanent PROCESSING record
@@ -730,7 +730,7 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
           .select()
           .from(schema.auditEvents)
           .where(eq(schema.auditEvents.resourceId, taskId));
-        const successAudits = auditsAfterFail.filter((a) => a.actionType === 'TASK_STARTED' && a.outcome === 'SUCCESS');
+        const successAudits = auditsAfterFail.filter((a) => a.actionType === 'StartTask' && a.outcome === 'SUCCESS');
         expect(successAudits).toHaveLength(0);
 
         // 3. No COMPLETED record, no permanent PROCESSING poison record
@@ -898,7 +898,7 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
 
       // Assert: no SUCCESS audit
       const audits = await db.select().from(schema.auditEvents).where(eq(schema.auditEvents.resourceId, taskId));
-      const successAudits = audits.filter((a) => a.actionType === 'TASK_EVIDENCE_SUBMITTED' && a.outcome === 'SUCCESS');
+      const successAudits = audits.filter((a) => a.actionType === 'SubmitEvidence' && a.outcome === 'SUCCESS');
       expect(successAudits).toHaveLength(0);
 
       // Also test: wrong size
@@ -1007,16 +1007,35 @@ describe('Phase 13 Wave 4: Real PostgreSQL & Real S3 Integration Tests (Sections
       ).rejects.toThrow(ForbiddenError);
 
       // Also test: wrong Task
-      const wrongTaskKey = `tasks/OTHER-TASK/evidence/wrong-task.jpg`;
+      const otherTaskId = `task-other-${Date.now()}`;
+      await taskRepo.save(
+        new Task({
+          id: otherTaskId,
+          version: 0,
+          title: 'Other Task',
+          description: 'Other Task for testing wrong Task',
+          taskTypeId: ttId,
+          taskTypeName: 'S3 Verify Type',
+          proofProfile: 'SERVICE_PROOF',
+          treeId,
+          treeName: 'S3 Verify Tree',
+          treeAddress: 'District 1',
+          assignedStaffId: staff1.userId,
+          assignedStaffName: 'Staff 1',
+          deadline: '2026-11-01T00:00:00Z',
+          status: 'IN_PROGRESS',
+        }),
+      );
+      const wrongTaskKey = `tasks/${otherTaskId}/evidence/wrong-task.jpg`;
       await storageAdapter.putObjectDirect({
         objectKey: wrongTaskKey,
         data: exactBytes,
         contentType: 'image/jpeg',
-        metadata: { taskId: 'OTHER-TASK', uploadedBy: staff1.userId },
+        metadata: { taskId: otherTaskId, uploadedBy: staff1.userId },
       });
       await evidenceRepo.saveReservation({
         id: crypto.randomUUID(),
-        taskId: 'OTHER-TASK',
+        taskId: otherTaskId,
         actorId: staff1.userId,
         objectKey: wrongTaskKey,
         storageRef: `s3://${process.env['S3_BUCKET'] || 'novyx-evidence'}/${wrongTaskKey}`,
