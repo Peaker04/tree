@@ -2323,9 +2323,9 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
           user: { id: 'admin1', email: 'adm@t.com', role: 'admin' },
           expiresAt: '2100-01-01',
         }),
-      } as any;
-      const dispatcher = { dispatchAll: vi.fn(async () => [{ success: true }]) } as any;
-      const coordinator = { processAll: vi.fn(async () => [{ success: true }]) } as any;
+      } as unknown;
+      const dispatcher = { dispatchAll: vi.fn(async () => [{ success: true }]) } as unknown;
+      const coordinator = { processAll: vi.fn(async () => [{ success: true }]) } as unknown;
 
       const runtime = new MobileSyncRuntime({
         storage,
@@ -2354,10 +2354,10 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         }),
         saveSession: vi.fn(),
         clearSession: vi.fn(),
-      } as any;
+      } as unknown;
 
       // We stub out the native NetInfo which calls runtime.triggerSync
-      const sm = new AuthSessionManager('http://localhost', storage);
+//       const sm = new AuthSessionManager('http://localhost', storage);
       const runtime = new MobileSyncRuntime({
         storage,
         envSource: {
@@ -2379,7 +2379,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
           processCalled = true;
           return [];
         },
-      } as any;
+      } as unknown;
       runtime.coordinator = coordinator;
 
       await runtime.start().catch((e) => {
@@ -2397,8 +2397,8 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
           user: { id: 'staff1', email: 'staff@t.com', role: 'staff' },
           expiresAt: '2100-01-01',
         }),
-      } as any;
-      const coordinator = { processAll: vi.fn(async () => [{ id: 'evt-1', success: true }]) } as any;
+      } as unknown;
+      const coordinator = { processAll: vi.fn(async () => [{ id: 'evt-1', success: true }]) } as unknown;
 
       const runtime = new MobileSyncRuntime({
         storage,
@@ -2424,8 +2424,8 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
           user: { id: 'mgr1', email: 'mgr@t.com', role: 'manager' },
           expiresAt: '2100-01-01',
         }),
-      } as any;
-      const coordinator = { processAll: vi.fn(async () => [{ id: 'evt-1', success: true }]) } as any;
+      } as unknown;
+      const coordinator = { processAll: vi.fn(async () => [{ id: 'evt-1', success: true }]) } as unknown;
 
       const runtime = new MobileSyncRuntime({
         storage,
@@ -2451,8 +2451,8 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
           user: { id: 'staff1', email: 's@t.com', role: 'staff' },
           expiresAt: '2100-01-01',
         }),
-      } as any;
-      const coordinator = { processAll: vi.fn(async () => [{ id: 'evt-1', success: true }]) } as any;
+      } as unknown;
+      const coordinator = { processAll: vi.fn(async () => [{ id: 'evt-1', success: true }]) } as unknown;
 
       const runtime = new MobileSyncRuntime({
         storage,
