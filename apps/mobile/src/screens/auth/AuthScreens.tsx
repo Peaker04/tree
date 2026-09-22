@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, StatusBar, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, StatusBar, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark, Button, Card, Field } from '../../components/AppPrimitives';
@@ -35,53 +35,59 @@ export function LoginScreen({
 
   return (
     <SafeAreaView style={styles.root}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.loginWrap}>
-        <View style={styles.hero}>
-          <View style={styles.heroTopRow}>
-            <View style={styles.logoBox}>
-              <NovyxMark size={36} color={colors.brandForest} accentColor={colors.brandOlive} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardAvoider}>
+        <ScrollView
+          contentContainerStyle={styles.loginWrap}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.hero}>
+            <View style={styles.heroTopRow}>
+              <View style={styles.logoBox}>
+                <NovyxMark size={36} color={colors.brandForest} accentColor={colors.brandOlive} />
+              </View>
+              <Text style={styles.brandKicker}>Urban green verification</Text>
             </View>
-            <Text style={styles.brandKicker}>Urban green verification</Text>
+            <Text style={styles.brand}>NOVYX</Text>
+            <Text style={styles.brandBody}>Quản lý cây xanh, QR, GPS và bằng chứng ảnh cho đội vận hành đô thị.</Text>
           </View>
-          <Text style={styles.brand}>NOVYX</Text>
-          <Text style={styles.brandBody}>Quản lý cây xanh, QR, GPS và bằng chứng ảnh cho đội vận hành đô thị.</Text>
-        </View>
 
-        <View style={styles.formStack}>
-          {error || errorMessage ? (
-            <Card tone="danger" style={styles.alertRow}>
-              <Ionicons name="alert-circle-outline" size={17} color={colors.danger} />
-              <Text style={styles.alertText}>{error || errorMessage}</Text>
-            </Card>
-          ) : null}
-          <Field
-            label="Email hoặc Số điện thoại"
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              setError('');
-            }}
-            placeholder="hung.nguyen@novyx.vn"
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <Field
-            label="Mật khẩu"
-            value={password}
-            onChangeText={(value) => {
-              setPassword(value);
-              setError('');
-            }}
-            placeholder="••••••••"
-            secureTextEntry={!showPassword}
-            rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-            onRightIconPress={() => setShowPassword((prev) => !prev)}
-          />
+          <View style={styles.formStack}>
+            {error || errorMessage ? (
+              <Card tone="danger" style={styles.alertRow}>
+                <Ionicons name="alert-circle-outline" size={17} color={colors.danger} />
+                <Text style={styles.alertText}>{error || errorMessage}</Text>
+              </Card>
+            ) : null}
+            <Field
+              label="Email hoặc Số điện thoại"
+              value={email}
+              onChangeText={(value) => {
+                setEmail(value);
+                setError('');
+              }}
+              placeholder="hung.nguyen@novyx.vn"
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <Field
+              label="Mật khẩu"
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                setError('');
+              }}
+              placeholder="••••••••"
+              secureTextEntry={!showPassword}
+              rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              onRightIconPress={() => setShowPassword((prev) => !prev)}
+            />
 
-          <Button disabled={authLoading} icon="key-outline" loading={authLoading} onPress={submit}>
-            {authLoading ? 'Đang đăng nhập' : 'Đăng nhập'}
-          </Button>
-        </View>
+            <Button disabled={authLoading} icon="key-outline" loading={authLoading} onPress={submit}>
+              {authLoading ? 'Đang đăng nhập' : 'Đăng nhập'}
+            </Button>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -113,8 +119,11 @@ const styles = StyleSheet.create({
     gap: spacing.section,
     paddingBottom: 34,
   },
-  loginWrap: {
+  keyboardAvoider: {
     flex: 1,
+  },
+  loginWrap: {
+    flexGrow: 1,
     paddingHorizontal: 22,
     paddingTop: Platform.OS === 'android' ? 20 + (StatusBar.currentHeight ?? 0) * 0.35 : 22,
     paddingBottom: 16,
