@@ -27,6 +27,7 @@ import { readPublicRuntimeConfig } from '@novyx/config';
 const defaultPublicEnvSource = {
   EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
   EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL,
+  EXPO_PUBLIC_DATA_SOURCE: process.env.EXPO_PUBLIC_DATA_SOURCE,
 };
 
 export interface GreenOpsService {
@@ -489,6 +490,12 @@ export function createHybridGreenOpsService(
   seed: AppData = createInitialData(),
   envSource: Record<string, string | undefined> = defaultPublicEnvSource,
 ): GreenOpsService {
+  const config = readPublicRuntimeConfig(envSource);
+  // Section 5 & 33: Explicit data source selection. In mock mode, use mock intentionally.
+  if (config.dataSource === 'mock') {
+    return createMockGreenOpsService(seed);
+  }
+
   let snapshot = cloneData(seed);
   const restService = createGreenOpsRestService(envSource);
 
@@ -536,10 +543,11 @@ export function createHybridGreenOpsService(
         };
         return { data: cloneData(snapshot), source: 'rest' };
       } catch (error) {
+        // Read-only stale cached data with explicit offline/stale indication
         return {
           data: cloneData(snapshot),
           source: 'fallback',
-          message: toLoadFailureMessage(error),
+          message: `Stale cached data (offline): ${toLoadFailureMessage(error)}`,
         };
       }
     },
@@ -555,7 +563,7 @@ export function createHybridGreenOpsService(
         return {
           data: cloneCareHistory(buildCareHistory(snapshot.tasks, treeId)),
           source: 'fallback',
-          message: toLoadFailureMessage(error),
+          message: `Stale cached data (offline): ${toLoadFailureMessage(error)}`,
         };
       }
     },
@@ -579,138 +587,63 @@ export function createHybridGreenOpsService(
         return {
           data: findTreeInSnapshot(snapshot, payload),
           source: 'fallback',
-          message: toLoadFailureMessage(error),
+          message: `Stale cached data (offline): ${toLoadFailureMessage(error)}`,
         };
       }
     },
-    createTask: async (request, fallbackTask) => {
-      try {
-        const task = await restService.createTask(request);
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, task),
-        };
-        return { data: cloneTasks([task])[0], source: 'rest' };
-      } catch (error) {
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, fallbackTask),
-        };
-        return {
-          data: cloneTasks([fallbackTask])[0],
-          source: 'fallback',
-          message: toLoadFailureMessage(error),
-        };
-      }
+    // Section 5: In rest mode, mutation failures MUST NOT execute against mock or mutate fake tasks
+    createTask: async (request, _fallbackTask) => {
+      const task = await restService.createTask(request);
+      snapshot = {
+        ...snapshot,
+        tasks: upsertTask(snapshot.tasks, task),
+      };
+      return { data: cloneTasks([task])[0], source: 'rest' };
     },
     updateTaskProgress: async (task) => {
-      try {
-        const nextTask = await restService.updateTaskProgress(buildTaskProgressRequest(task));
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, nextTask),
-        };
-        return { data: cloneTasks([nextTask])[0], source: 'rest' };
-      } catch (error) {
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, task),
-        };
-        return {
-          data: cloneTasks([task])[0],
-          source: 'fallback',
-          message: toLoadFailureMessage(error),
-        };
-      }
+      const nextTask = await restService.updateTaskProgress(buildTaskProgressRequest(task));
+      snapshot = {
+        ...snapshot,
+        tasks: upsertTask(snapshot.tasks, nextTask),
+      };
+      return { data: cloneTasks([nextTask])[0], source: 'rest' };
     },
     submitTaskEvidence: async (task) => {
-      try {
-        const nextTask = await restService.submitTaskEvidence(buildEvidenceRequest(task));
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, nextTask),
-        };
-        return { data: cloneTasks([nextTask])[0], source: 'rest' };
-      } catch (error) {
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, task),
-        };
-        return {
-          data: cloneTasks([task])[0],
-          source: 'fallback',
-          message: toLoadFailureMessage(error),
-        };
-      }
+      const nextTask = await restService.submitTaskEvidence(buildEvidenceRequest(task));
+      snapshot = {
+        ...snapshot,
+        tasks: upsertTask(snapshot.tasks, nextTask),
+      };
+      return { data: cloneTasks([nextTask])[0], source: 'rest' };
     },
-    reviewTask: async (request, fallbackTask) => {
-      try {
-        const nextTask = await restService.reviewTask(request);
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, nextTask),
-        };
-        return { data: cloneTasks([nextTask])[0], source: 'rest' };
-      } catch (error) {
-        snapshot = {
-          ...snapshot,
-          tasks: upsertTask(snapshot.tasks, fallbackTask),
-        };
-        return {
-          data: cloneTasks([fallbackTask])[0],
-          source: 'fallback',
-          message: toLoadFailureMessage(error),
-        };
-      }
+    reviewTask: async (request, _fallbackTask) => {
+      const nextTask = await restService.reviewTask(request);
+      snapshot = {
+        ...snapshot,
+        tasks: upsertTask(snapshot.tasks, nextTask),
+      };
+      return { data: cloneTasks([nextTask])[0], source: 'rest' };
     },
     createNotification: async (request) => {
-      const fallbackNotification = buildFallbackNotification(request);
-      try {
-        const notification = await restService.createNotification(request);
-        snapshot = {
-          ...snapshot,
-          notifications: [notification, ...snapshot.notifications.filter((item) => item.id !== notification.id)],
-        };
-        return { data: { ...notification }, source: 'rest' };
-      } catch (error) {
-        snapshot = {
-          ...snapshot,
-          notifications: [
-            fallbackNotification,
-            ...snapshot.notifications.filter((item) => item.id !== fallbackNotification.id),
-          ],
-        };
-        return {
-          data: { ...fallbackNotification },
-          source: 'fallback',
-          message: toLoadFailureMessage(error),
-        };
-      }
+      const notification = await restService.createNotification(request);
+      snapshot = {
+        ...snapshot,
+        notifications: [notification, ...snapshot.notifications.filter((item) => item.id !== notification.id)],
+      };
+      return { data: { ...notification }, source: 'rest' };
     },
-    markNotificationsRead: async (notificationIds, fallbackNotifications) => {
-      try {
-        const updatedNotifications = await Promise.all(
-          notificationIds.map((notificationId) => restService.markNotificationRead(notificationId)),
-        );
-        snapshot = {
-          ...snapshot,
-          notifications: mergeNotifications(snapshot.notifications, updatedNotifications),
-        };
-        return {
-          data: snapshot.notifications.map((notification) => ({ ...notification })),
-          source: 'rest',
-        };
-      } catch (error) {
-        snapshot = {
-          ...snapshot,
-          notifications: fallbackNotifications.map((notification) => ({ ...notification })),
-        };
-        return {
-          data: snapshot.notifications.map((notification) => ({ ...notification })),
-          source: 'fallback',
-          message: toLoadFailureMessage(error),
-        };
-      }
+    markNotificationsRead: async (notificationIds, _fallbackNotifications) => {
+      const updatedNotifications = await Promise.all(
+        notificationIds.map((notificationId) => restService.markNotificationRead(notificationId)),
+      );
+      snapshot = {
+        ...snapshot,
+        notifications: mergeNotifications(snapshot.notifications, updatedNotifications),
+      };
+      return {
+        data: snapshot.notifications.map((notification) => ({ ...notification })),
+        source: 'rest',
+      };
     },
     replaceTasks: (tasks) => {
       snapshot = {

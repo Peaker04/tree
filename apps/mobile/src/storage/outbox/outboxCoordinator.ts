@@ -1,5 +1,8 @@
 import type { IDurableOutboxRepository } from './outboxRepository';
 import type { ErrorClassification, OutboxDispatchResult, OutboxItem } from './types';
+import type { IMobileTaskRepository } from '../task/mobileTaskRepository';
+import type { IDatabaseConnection } from '../database/types';
+import type { TaskDto } from '@novyx/contracts';
 
 export function classifyError(error: unknown): ErrorClassification {
   if (!error) {
@@ -55,11 +58,20 @@ export interface IOutboxDispatcher {
 export class OutboxCoordinator {
   private repository: IDurableOutboxRepository;
   private dispatcher: IOutboxDispatcher;
+  private taskRepo?: IMobileTaskRepository;
+  private db?: IDatabaseConnection;
   private isProcessing = false;
 
-  constructor(repository: IDurableOutboxRepository, dispatcher: IOutboxDispatcher) {
+  constructor(
+    repository: IDurableOutboxRepository,
+    dispatcher: IOutboxDispatcher,
+    taskRepo?: IMobileTaskRepository,
+    db?: IDatabaseConnection,
+  ) {
     this.repository = repository;
     this.dispatcher = dispatcher;
+    this.taskRepo = taskRepo;
+    this.db = db;
   }
 
   /**
@@ -87,8 +99,26 @@ export class OutboxCoordinator {
         const response = await this.dispatcher.dispatch(item);
 
         if (response.success) {
-          // Success: mark outbox item SYNCED
-          await this.repository.markCompleted(item.id);
+          // Section 21 & 30: Success reconciliation
+          if (this.taskRepo && response.serverTask) {
+            await this.taskRepo.cacheTasks([response.serverTask as TaskDto]);
+          }
+
+          if (this.db) {
+            await this.db.withTransactionAsync(async () => {
+              const now = new Date().toISOString();
+              await this.db!.runAsync(
+                `UPDATE local_drafts SET submission_status = 'IDLE', updated_at = ? WHERE task_id = ?;`,
+                [now, item.taskId],
+              );
+              await this.db!.runAsync(`UPDATE local_evidence SET sync_status = 'SYNCED' WHERE task_id = ?;`, [
+                item.taskId,
+              ]);
+              await this.repository.markCompleted(item.id);
+            });
+          } else {
+            await this.repository.markCompleted(item.id);
+          }
 
           return {
             outboxId: item.id,
@@ -100,6 +130,13 @@ export class OutboxCoordinator {
         } else {
           // Dispatcher reported failure
           const classification = classifyError(response);
+
+          // Section 27: Conflict reconciliation (409)
+          // If serverTask was provided from authoritative fetch/conflict, reconcile cached task state
+          if (classification === 'CONFLICT' && this.taskRepo && response.serverTask) {
+            await this.taskRepo.cacheTasks([response.serverTask as TaskDto]);
+          }
+
           await this.repository.updateItemSyncStatus(
             item.id,
             'SYNC_FAILED',

@@ -1,7 +1,21 @@
-import * as SecureStore from 'expo-secure-store';
 import type { AuthSession } from '@novyx/contracts';
 
 const SESSION_KEY = 'novyx.greenops.authSession.v1';
+
+type SecureStoreModule = typeof import('expo-secure-store');
+let cachedSecureStore: SecureStoreModule | null = null;
+
+async function getSecureStore(): Promise<SecureStoreModule | null> {
+  if (cachedSecureStore) {
+    return cachedSecureStore;
+  }
+  try {
+    cachedSecureStore = await import('expo-secure-store');
+    return cachedSecureStore;
+  } catch {
+    return null;
+  }
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -22,6 +36,10 @@ const isStoredAuthSession = (value: unknown): value is AuthSession => {
 };
 
 export async function loadStoredAuthSession(): Promise<AuthSession | null> {
+  const SecureStore = await getSecureStore();
+  if (!SecureStore) {
+    return null;
+  }
   const available = await SecureStore.isAvailableAsync();
   if (!available) {
     return null;
@@ -46,6 +64,10 @@ export async function loadStoredAuthSession(): Promise<AuthSession | null> {
 }
 
 export async function saveAuthSession(session: AuthSession): Promise<void> {
+  const SecureStore = await getSecureStore();
+  if (!SecureStore) {
+    return;
+  }
   const available = await SecureStore.isAvailableAsync();
   if (!available) {
     return;
@@ -55,6 +77,10 @@ export async function saveAuthSession(session: AuthSession): Promise<void> {
 }
 
 export async function clearAuthSession(): Promise<void> {
+  const SecureStore = await getSecureStore();
+  if (!SecureStore) {
+    return;
+  }
   const available = await SecureStore.isAvailableAsync();
   if (!available) {
     return;

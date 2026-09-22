@@ -16,6 +16,7 @@ export * from './outbox/stateSeparation';
 export * from './outbox/outboxRepository';
 export * from './outbox/outboxCoordinator';
 export * from './outbox/submissionService';
+export * from './outbox/submitEvidenceDispatcher';
 
 // Mobile task repository
 export * from './task/mobileTaskRepository';
