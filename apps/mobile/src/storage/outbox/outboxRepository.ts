@@ -1,7 +1,7 @@
 import type { IDatabaseConnection } from '../database/types';
 import type { EnqueueSubmitEvidenceParams, ErrorClassification, OutboxItem, SyncStatus } from './types';
 import { assertNoIdempotencyKeyInBody } from './stateSeparation';
-import { generateSecureUuid } from '../utils/uuid';
+import { generateSecureUuid, assertValidUuidV4 } from '../utils/uuid';
 
 export interface IDurableOutboxRepository {
   enqueueTransactional(params: EnqueueSubmitEvidenceParams): Promise<OutboxItem>;
@@ -29,6 +29,11 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
   async enqueueTransactional(params: EnqueueSubmitEvidenceParams): Promise<OutboxItem> {
     // P13W5A-N04: Ensure Idempotency-Key is NEVER in payload body
     assertNoIdempotencyKeyInBody(params.request);
+
+    // 5A-R03: Validate caller-supplied idempotencyKey as strict RFC 4122 UUIDv4
+    if (params.idempotencyKey !== undefined) {
+      assertValidUuidV4(params.idempotencyKey, 'idempotencyKey');
+    }
 
     const outboxId = generateSecureUuid();
     // P13W5A-P06: Stable UUIDv4 idempotency key generated once

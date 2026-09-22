@@ -35,6 +35,7 @@ import { SqliteMobileTaskRepository } from '../../apps/mobile/src/storage/task/m
 import {
   InMemoryEvidenceFileStore,
   canSafelyDeleteEvidence,
+  sanitizeEvidenceFileName,
 } from '../../apps/mobile/src/storage/evidence/evidenceFileStore';
 import {
   isValidSha256,
@@ -42,7 +43,12 @@ import {
   base64ToUint8Array,
   bytesToHex,
 } from '../../apps/mobile/src/storage/evidence/evidenceHasher';
-import { generateSecureUuid, setUuidGenerator } from '../../apps/mobile/src/storage/utils/uuid';
+import {
+  generateSecureUuid,
+  setUuidGenerator,
+  isValidUuidV4,
+  assertValidUuidV4,
+} from '../../apps/mobile/src/storage/utils/uuid';
 import { executeOfflineSubmission } from '../../apps/mobile/src/storage/outbox/submissionService';
 
 describe('Phase 13 Wave 5A: Mobile Durable Persistence & Outbox Foundation', () => {
@@ -645,13 +651,10 @@ describe('Phase 13 Wave 5A: Mobile Durable Persistence & Outbox Foundation', () 
   });
 
   // =========================================================================
-  // W5A-F12: Atomic submission rollback under failure (with sandbox preservation)
+  // 5A-R01 / W5A-F12: Atomic submission rollback under actual SQLite failure
   // =========================================================================
-  it('W5A-F12: offline submission transaction rolls back draft + evidence metadata + outbox together under injected failure', async () => {
-    // Use an injected failure in a sub-step to simulate SQLite transaction failure
-    const failingRepo = new SqliteOutboxRepository(db);
-
-    // Mock evidence input
+  it('5A-R01 / W5A-F12: offline submission transaction rolls back draft + evidence metadata after internal write failure before commit', async () => {
+    // 1. Persist sandbox file before transaction
     const evidenceInputs = [
       {
         taskId: 'task-test-01',
@@ -661,53 +664,235 @@ describe('Phase 13 Wave 5A: Mobile Durable Persistence & Outbox Foundation', () 
       },
     ];
 
-    // Spy/force error during transactional enqueue
-    const poisonedRequest = {
-      ...validSampleRequest,
-      idempotencyKey: 'illegal-body-key', // Will trigger assertNoIdempotencyKeyInBody violation
-    };
+    const persisted = await fileStore.persistEvidence(evidenceInputs[0]);
+    expect(await fileStore.fileExists(persisted.sandboxFileUri)).toBe(true);
 
-    await expect(
-      executeOfflineSubmission(fileStore, failingRepo, {
-        taskId: 'task-test-01',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        request: poisonedRequest as any,
-        evidenceInputs,
-      }),
-    ).rejects.toThrow('P13W5A-N04');
+    // 2. Inject a clean SQLite trigger that fails specifically on outbox_items INSERT
+    // This allows step 1 (local_drafts INSERT) and step 2 (local_evidence INSERT)
+    // to execute their writes inside the transaction before SQLite aborts on step 3.
+    await db.execAsync(
+      `CREATE TRIGGER test_fail_outbox_insert
+       BEFORE INSERT ON outbox_items
+       BEGIN
+         SELECT RAISE(ABORT, 'INJECTED_SQLITE_OUTBOX_INSERT_FAILURE');
+       END;`,
+    );
 
-    // 1. Verify sandbox file was written and preserved (not deleted)
-    const storedSandboxFiles = Array.from((fileStore as unknown as { files: Map<string, unknown> }).files.keys());
-    expect(storedSandboxFiles.length).toBe(1);
+    try {
+      // 3. Execute real SqliteOutboxRepository.enqueueTransactional against real BetterSqliteAdapter
+      await expect(
+        outboxRepo.enqueueTransactional({
+          taskId: 'task-test-01',
+          request: validSampleRequest,
+          evidenceFiles: [persisted],
+        }),
+      ).rejects.toThrow(/INJECTED_SQLITE_OUTBOX_INSERT_FAILURE/);
 
-    // 2. Verify SQLite draft state was NOT modified
-    const draft = await taskRepo.getDraft('task-test-01');
-    expect(draft?.submissionStatus).toBeUndefined();
+      // 4. Verify full SQLite rollback after internal failure:
+      // A. local_drafts: no new PENDING_SYNC state committed
+      const draft = await taskRepo.getDraft('task-test-01');
+      expect(draft?.submissionStatus).toBeUndefined();
 
-    // 3. Verify SQLite evidence metadata was NOT inserted
-    const evidence = await taskRepo.listEvidenceByTask('task-test-01');
-    expect(evidence.length).toBe(0);
+      // B. local_evidence: no metadata row committed
+      const evidence = await taskRepo.listEvidenceByTask('task-test-01');
+      expect(evidence.length).toBe(0);
 
-    // 4. Verify SQLite outbox was NOT inserted
-    const outboxItems = await outboxRepo.listItems();
-    expect(outboxItems.length).toBe(0);
+      // C. outbox_items: no row committed
+      const outboxItems = await outboxRepo.listItems();
+      expect(outboxItems.length).toBe(0);
 
-    // Now execute valid submission successfully
-    const successResult = await executeOfflineSubmission(fileStore, failingRepo, {
+      // D. sandbox file: still preserved in filesystem
+      expect(await fileStore.fileExists(persisted.sandboxFileUri)).toBe(true);
+    } finally {
+      // Clean up trigger
+      await db.execAsync('DROP TRIGGER IF EXISTS test_fail_outbox_insert;');
+    }
+
+    // 5. Successful retry with same evidence file
+    const successItem = await outboxRepo.enqueueTransactional({
       taskId: 'task-test-01',
       request: validSampleRequest,
-      evidenceInputs,
+      evidenceFiles: [persisted],
     });
 
-    expect(successResult.outboxItem).toBeDefined();
+    expect(successItem).toBeDefined();
+    expect(successItem.syncStatus).toBe('IDLE');
+
     const updatedDraft = await taskRepo.getDraft('task-test-01');
     expect(updatedDraft?.submissionStatus).toBe('PENDING_SYNC');
 
     const updatedEvidence = await taskRepo.listEvidenceByTask('task-test-01');
     expect(updatedEvidence.length).toBe(1);
+    expect(updatedEvidence[0].id).toBe(persisted.id);
 
     const updatedOutbox = await outboxRepo.listItems();
     expect(updatedOutbox.length).toBe(1);
+    expect(updatedOutbox[0].id).toBe(successItem.id);
+
+    // Sandbox file remains intact
+    expect(await fileStore.fileExists(persisted.sandboxFileUri)).toBe(true);
+
+    // 6. Verify executeOfflineSubmission application service completes cleanly
+    await taskRepo.cacheTasks([
+      {
+        id: 'task-test-02',
+        title: 'Task 02',
+        taskType: 'PRUNING',
+        treeId: 'tree-02',
+        treeName: 'Cây Me',
+        treeAddress: 'Quận 1',
+        assignedStaffId: 'staff-01',
+        assignedStaffName: 'Nguyễn Văn A',
+        deadline: '2026-09-25T17:00:00.000Z',
+        status: 'IN_PROGRESS',
+        version: 1,
+        checklist: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+    const subResult = await executeOfflineSubmission(fileStore, outboxRepo, {
+      taskId: 'task-test-02',
+      request: { ...validSampleRequest, taskId: 'task-test-02' },
+      evidenceInputs,
+    });
+    expect(subResult.outboxItem.syncStatus).toBe('IDLE');
+    expect(subResult.persistedEvidenceFiles.length).toBe(1);
+  });
+
+  // =========================================================================
+  // 5A-R02: Collision-safe durable evidence identity & same-filename regression
+  // =========================================================================
+  it('5A-R02: same-filename capture preserves distinct identities, sandbox paths, and SHA-256 hashes without overwrite', async () => {
+    // Capture Evidence A: task = task-test-01, original fileName = photo.jpg
+    const evidenceA = await fileStore.persistEvidence({
+      taskId: 'task-test-01',
+      stage: 'BEFORE',
+      sourceUri: 'file:///camera/dcim/1001.jpg',
+      fileName: 'photo.jpg',
+      content: new Uint8Array([1, 2, 3, 4, 5]),
+    });
+
+    // Capture Evidence B: task = task-test-01, original fileName = photo.jpg (identical camera filename hint)
+    const evidenceB = await fileStore.persistEvidence({
+      taskId: 'task-test-01',
+      stage: 'BEFORE',
+      sourceUri: 'file:///camera/dcim/1002.jpg',
+      fileName: 'photo.jpg',
+      content: new Uint8Array([6, 7, 8, 9, 10]),
+    });
+
+    // Invariants:
+    // 1. Unique IDs
+    expect(evidenceA.id).not.toBe(evidenceB.id);
+
+    // 2. Distinct sandbox URIs incorporating evidence ID
+    expect(evidenceA.sandboxFileUri).not.toBe(evidenceB.sandboxFileUri);
+    expect(evidenceA.sandboxFileUri).toContain(evidenceA.id);
+    expect(evidenceB.sandboxFileUri).toContain(evidenceB.id);
+
+    // 3. Evidence A still exists after Evidence B is persisted (no overwrite)
+    expect(await fileStore.fileExists(evidenceA.sandboxFileUri)).toBe(true);
+    expect(await fileStore.fileExists(evidenceB.sandboxFileUri)).toBe(true);
+
+    // 4. SHA-256 values remain independently tied to their own exact bytes
+    expect(evidenceA.sha256).not.toBe(evidenceB.sha256);
+    expect(isValidSha256(evidenceA.sha256)).toBe(true);
+    expect(isValidSha256(evidenceB.sha256)).toBe(true);
+
+    // 5. Display/original filename hint is preserved safely
+    expect(evidenceA.fileName).toBe('photo.jpg');
+    expect(evidenceB.fileName).toBe('photo.jpg');
+
+    // 6. Filename safety / directory traversal prevention
+    expect(sanitizeEvidenceFileName('../../etc/passwd')).toBe('passwd');
+    expect(sanitizeEvidenceFileName('..\\..\\secret.png')).toBe('secret.png');
+    expect(sanitizeEvidenceFileName('..', 'fallback.jpg')).toBe('fallback.jpg');
+
+    const traversedEvidence = await fileStore.persistEvidence({
+      taskId: 'task-test-01',
+      stage: 'AFTER',
+      sourceUri: 'file:///camera/dcim/1003.jpg',
+      fileName: '../../etc/passwd',
+    });
+    expect(traversedEvidence.sandboxFileUri).not.toContain('..');
+    expect(traversedEvidence.fileName).toBe('passwd');
+
+    const backslashEvidence = await fileStore.persistEvidence({
+      taskId: 'task-test-01',
+      stage: 'AFTER',
+      sourceUri: 'file:///camera/dcim/1004.jpg',
+      fileName: '..\\..\\secret.png',
+    });
+    expect(backslashEvidence.sandboxFileUri).not.toContain('..');
+    expect(backslashEvidence.fileName).toBe('secret.png');
+  });
+
+  // =========================================================================
+  // 5A-R03: Strict UUIDv4 idempotency key validation
+  // =========================================================================
+  it('5A-R03: validates idempotencyKey strictly against RFC 4122 UUIDv4', async () => {
+    // 1. Generated key: valid UUIDv4
+    const generatedItem = await outboxRepo.enqueueTransactional({
+      taskId: 'task-test-01',
+      request: validSampleRequest,
+    });
+    expect(isValidUuidV4(generatedItem.idempotencyKey)).toBe(true);
+
+    // 2. Supplied valid UUIDv4: accepted unchanged
+    const validUuidV4 = 'c24d4554-4a46-46b5-9f5b-6fcebc4d0f7a';
+    expect(assertValidUuidV4(validUuidV4)).toBe(validUuidV4);
+    expect(() => assertValidUuidV4('invalid-uuid')).toThrow(/RFC 4122 UUIDv4/);
+
+    const suppliedItem = await outboxRepo.enqueueTransactional({
+      taskId: 'task-test-01',
+      request: validSampleRequest,
+      idempotencyKey: validUuidV4,
+    });
+    expect(suppliedItem.idempotencyKey).toBe(validUuidV4);
+
+    // 3. Supplied malformed string: rejected before DB mutation
+    const countBefore = (await outboxRepo.listItems()).length;
+    await expect(
+      outboxRepo.enqueueTransactional({
+        taskId: 'task-test-01',
+        request: validSampleRequest,
+        idempotencyKey: 'not-a-valid-uuid',
+      }),
+    ).rejects.toThrow(/RFC 4122 UUIDv4/);
+    const countAfterMalformed = (await outboxRepo.listItems()).length;
+    expect(countAfterMalformed).toBe(countBefore);
+
+    // 4. Supplied UUIDv1: rejected
+    const uuidV1 = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+    await expect(
+      outboxRepo.enqueueTransactional({
+        taskId: 'task-test-01',
+        request: validSampleRequest,
+        idempotencyKey: uuidV1,
+      }),
+    ).rejects.toThrow(/RFC 4122 UUIDv4/);
+
+    // 5. Supplied UUIDv5: rejected
+    const uuidV5 = '886313e1-3b8a-5372-9b90-0c9aee199e5d';
+    await expect(
+      outboxRepo.enqueueTransactional({
+        taskId: 'task-test-01',
+        request: validSampleRequest,
+        idempotencyKey: uuidV5,
+      }),
+    ).rejects.toThrow(/RFC 4122 UUIDv4/);
+
+    // 6. Retry of existing outbox row: same persisted UUIDv4
+    await outboxRepo.updateItemSyncStatus(suppliedItem.id, 'SYNC_FAILED', 'Network timeout', 'NETWORK');
+    const retryItem = await outboxRepo.getItemById(suppliedItem.id);
+    expect(retryItem?.idempotencyKey).toBe(validUuidV4);
+
+    // 7. Idempotency-Key remains absent from SubmitEvidenceRequest payload body
+    const payload = JSON.parse(suppliedItem.payloadJson);
+    expect(payload.idempotencyKey).toBeUndefined();
+    expect(payload.idempotency_key).toBeUndefined();
+    expect(payload['Idempotency-Key']).toBeUndefined();
   });
 
   // =========================================================================

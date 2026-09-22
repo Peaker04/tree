@@ -24,6 +24,7 @@ export interface SaveEvidenceInput {
   fileName?: string;
   contentType?: string;
   capturedAt?: string;
+  content?: Uint8Array;
 }
 
 export interface RetentionCheckParams {
@@ -37,6 +38,40 @@ export interface IEvidenceFileStore {
   fileExists(fileUri: string): Promise<boolean>;
   canSafelyDeleteEvidence(params: RetentionCheckParams): boolean;
   deleteEvidenceFile(fileUri: string, params: RetentionCheckParams): Promise<boolean>;
+}
+
+/**
+ * Sanitizes input fileName display hint to prevent directory traversal
+ * and ensure it cannot escape the evidence sandbox directory.
+ *
+ * Normalizes:
+ * - strips path separators (/ and \)
+ * - strips directory traversal sequences (..)
+ * - removes unsafe characters
+ * - provides safe fallback if empty or invalid
+ */
+export function sanitizeEvidenceFileName(rawFileName?: string | null, fallback = 'evidence.jpg'): string {
+  if (!rawFileName || typeof rawFileName !== 'string') {
+    return fallback;
+  }
+
+  // Extract basename after any slash or backslash
+  const basename = rawFileName.split(/[/\\]/).pop() ?? '';
+
+  // Strip traversal dots (e.g. .., ..., etc.)
+  let cleaned = basename.replace(/\.{2,}/g, '');
+
+  // Strip characters outside safe alphanumeric, dot, underscore, hyphen
+  cleaned = cleaned.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  // Strip leading dots or underscores to avoid hidden files or empty base
+  cleaned = cleaned.replace(/^[._]+/, '');
+
+  if (!cleaned.trim()) {
+    return fallback;
+  }
+
+  return cleaned.trim();
 }
 
 /**
@@ -77,7 +112,10 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
     }
 
     const id = input.id ?? generateSecureUuid();
-    const fileName = input.fileName ?? `${input.stage.toLowerCase()}_${Date.now()}.jpg`;
+    const fallbackName = `${input.stage.toLowerCase()}_evidence.jpg`;
+    const sanitizedFileName = sanitizeEvidenceFileName(input.fileName, fallbackName);
+
+    // Section 5 & 5A-R02: Durable path incorporates evidence ID to guarantee collision safety
     const targetDir = `${docDir}evidence/${input.taskId}/`;
 
     // Ensure target directory exists in application sandbox
@@ -86,7 +124,8 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
       await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
     }
 
-    const targetUri = `${targetDir}${fileName}`;
+    const durableFileName = `${id}_${sanitizedFileName}`;
+    const targetUri = `${targetDir}${durableFileName}`;
 
     // Copy from temporary camera cache to sandbox
     await FileSystem.copyAsync({
@@ -103,7 +142,7 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
       taskId: input.taskId,
       stage: input.stage,
       sandboxFileUri: targetUri,
-      fileName,
+      fileName: sanitizedFileName,
       contentType: input.contentType ?? 'image/jpeg',
       sizeBytes,
       sha256,
@@ -145,11 +184,15 @@ export class InMemoryEvidenceFileStore implements IEvidenceFileStore {
 
   async persistEvidence(input: SaveEvidenceInput): Promise<PersistedEvidenceFile> {
     const id = input.id ?? generateSecureUuid();
-    const fileName = input.fileName ?? `${input.stage.toLowerCase()}_${Date.now()}.jpg`;
-    const sandboxUri = `file:///sandbox/evidence/${input.taskId}/${fileName}`;
+    const fallbackName = `${input.stage.toLowerCase()}_evidence.jpg`;
+    const sanitizedFileName = sanitizeEvidenceFileName(input.fileName, fallbackName);
 
-    // Simulate binary file content
-    const mockContent = new TextEncoder().encode(`evidence-bytes-${input.sourceUri}-${Date.now()}`);
+    // Section 5 & 5A-R02: Collision-safe URI containing evidence ID
+    const durableFileName = `${id}_${sanitizedFileName}`;
+    const sandboxUri = `file:///sandbox/evidence/${input.taskId}/${durableFileName}`;
+
+    // Unique binary content per file identity / sourceUri so hashes remain independently tied to exact bytes
+    const mockContent = input.content ?? new TextEncoder().encode(`evidence-bytes-${input.sourceUri}-${id}`);
     const sha256 = await this.hasher.hashBytes(mockContent);
 
     const record: PersistedEvidenceFile = {
@@ -157,7 +200,7 @@ export class InMemoryEvidenceFileStore implements IEvidenceFileStore {
       taskId: input.taskId,
       stage: input.stage,
       sandboxFileUri: sandboxUri,
-      fileName,
+      fileName: sanitizedFileName,
       contentType: input.contentType ?? 'image/jpeg',
       sizeBytes: mockContent.byteLength,
       sha256,

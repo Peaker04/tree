@@ -114,6 +114,19 @@ In alignment with Section 5 (Dependency Policy) and Expo SDK 57:
 ## 7. Device & Process-Kill Verification Strategy
 
 ### Distinction of Verification Environments:
+- **`SQLITE_TRANSACTION_ROLLBACK`**: **PASS**
+  - Proven via real SQLite transaction failure (`5A-R01 / W5A-F12`).
+  - An internal statement failure after `local_drafts` and `local_evidence` writes aborts before commit, executing a real SQLite rollback to savepoint.
+  - Verified that all partial writes are rolled back together while the pre-written sandbox binary file remains safely preserved.
+- **`EVIDENCE_PATH_COLLISION_SAFETY`**: **PASS**
+  - Proven via same-filename regression test (`5A-R02`).
+  - Durable sandbox file identity incorporates the unique evidence UUID (`<evidenceId>_<sanitizedOriginalFileName>`).
+  - Identical camera filenames (`photo.jpg`) for the same task produce separate sandbox URIs, separate IDs, and independent SHA-256 byte hashes without overwriting existing files.
+  - Input filename hints are sanitized to prevent directory traversal (`..`, slashes).
+- **`SUPPLIED_IDEMPOTENCY_UUIDV4`**: **PASS**
+  - Proven via strict RFC 4122 UUIDv4 validation (`5A-R03`).
+  - Caller-supplied keys are validated before any database mutation. Valid UUIDv4 keys are accepted unchanged; malformed strings, UUIDv1, and UUIDv5 are rejected immediately.
+  - Generated keys strictly use CSPRNG (`generateSecureUuid()`).
 - **`NODE_SQLITE_REOPEN_CHARACTERIZATION`**: **PASS**
   - Verified on disk using a temporary SQLite file via `createDiskTestDatabase`.
   - Data was written, process crash was simulated by closing connection, new connection was opened to the same file, `recoverInterruptedSyncs()` ran, and all rows and Idempotency-Keys were recovered intact.
@@ -133,9 +146,9 @@ In alignment with Section 5 (Dependency Policy) and Expo SDK 57:
 | ESLint | `npm run lint` | **PASS** | 0 errors, 0 warnings |
 | Workspace Typecheck | `npm run typecheck` | **PASS** | 0 type errors across all 6 workspaces |
 | Mobile Typecheck | `npm run typecheck --workspace @novyx/mobile` | **PASS** | 0 type errors in `@novyx/mobile` |
-| Full Test Suite | `npm test` | **PASS** | 220 passed, 21 skipped |
+| Full Test Suite | `npm test` | **PASS** | 222 passed, 21 skipped |
 | Git Diff Check | `git diff --check` | **PASS** | Clean diff |
-| Android Bundle Sanity | `npm run mobile:export:android` | **PASS** | 854 modules bundled cleanly in 11.6s |
+| Android Bundle Sanity | `npm run mobile:export:android` | **PASS** | 854 modules bundled cleanly |
 | npm Audit | `npm audit --omit=dev` | **WARN** | 24 upstream vulnerabilities in transitive packages (baseline) |
 
 ### Integrity Correction Test Matrix (`tests/mobile/offline-durable-foundation.spec.ts`)
@@ -150,7 +163,9 @@ In alignment with Section 5 (Dependency Policy) and Expo SDK 57:
 - **W5A-F09**: `CONFLICT` failure is NOT auto-eligible — **PASS**
 - **W5A-F10**: `FORBIDDEN` failure is NOT auto-eligible — **PASS**
 - **W5A-F11**: `AUTH` failure is NOT auto-eligible — **PASS**
-- **W5A-F12**: Offline submission transaction rolls back draft + evidence + outbox on failure — **PASS**
+- **5A-R01 / W5A-F12**: Actual internal SQLite rollback rolls back draft + evidence metadata on failure before commit — **PASS**
+- **5A-R02**: Collision-safe durable evidence identity & same-filename regression without overwrite — **PASS**
+- **5A-R03**: Strict RFC 4122 UUIDv4 idempotency key validation (rejects malformed, v1, v5) — **PASS**
 - **W5A-F13**: Cached task deletion cannot cascade-delete pending evidence/outbox (`ON DELETE RESTRICT`) — **PASS**
 - **W5A-F14**: Source contains no hardcoded Android `/data/user/0/` fallback — **PASS**
 - **W5A-F15**: UUID generation uses CSPRNG and remains stable on retry — **PASS**
