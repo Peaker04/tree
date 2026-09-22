@@ -21,10 +21,10 @@ import {
   type ManagerStep,
 } from './manager/ManagerArea';
 import { StaffArea } from './staff/StaffArea';
-import { LoginScreen, SessionRestoreScreen, ForgotScreen } from './auth/AuthScreens';
+import { LoginScreen, SessionRestoreScreen } from './auth/AuthScreens';
 import { type StaffStep } from '../domain/mobileWorkflow';
 
-type Screen = 'Login' | 'Forgot' | 'Main';
+type Screen = 'Login' | 'Main';
 type DataSourceState = {
   source: DataSourceStatus;
   loading: boolean;
@@ -224,11 +224,11 @@ export default function MobileApp() {
     };
   }, [greenOpsService, refreshData, runtime]);
 
-  const login = async (fallbackRole: Role, identifier: string, password: string) => {
+  const login = async (identifier: string, password: string) => {
     setAuthLoading(true);
     const request: LoginRequest = { identifier, password };
     try {
-      const result = await greenOpsService.login(request, fallbackRole);
+      const result = await greenOpsService.login(request);
       applyMutationSource(result.source, result.message);
       setAuthSource({
         source: result.source,
@@ -282,23 +282,12 @@ export default function MobileApp() {
     setScreen('Login');
   };
 
-  if (screen === 'Forgot') {
-    return <ForgotScreen onBack={() => setScreen('Login')} />;
-  }
-
   if (authRestoring && screen === 'Login') {
     return <SessionRestoreScreen />;
   }
 
   if (screen === 'Login') {
-    return (
-      <LoginScreen
-        authLoading={authLoading}
-        errorMessage={authSource.message}
-        onForgot={() => setScreen('Forgot')}
-        onLogin={login}
-      />
-    );
+    return <LoginScreen authLoading={authLoading} errorMessage={authSource.message} onLogin={login} />;
   }
 
   const isStaff = role === 'Staff';

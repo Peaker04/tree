@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, StatusBar, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, StatusBar, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark, Button, Card, Field } from '../../components/AppPrimitives';
-import { Header } from '../../components/presentation/TaskSurfaces';
 import { NovyxMark } from '../../components/NovyxMark';
-import { colors, radius, spacing } from '../../theme/tokens';
-import type { Role } from '../../types';
+import { colors, spacing } from '../../theme/tokens';
 
 export function LoginScreen({
   authLoading,
   onLogin,
-  onForgot,
   errorMessage,
 }: {
   authLoading: boolean;
-  onLogin: (role: Role, email: string, password: string) => Promise<void>;
-  onForgot: () => void;
+  onLogin: (email: string, password: string) => Promise<void>;
   errorMessage?: string;
 }) {
   const [email, setEmail] = useState('');
@@ -34,11 +30,7 @@ export function LoginScreen({
       return;
     }
     const normalized = email.trim().toLowerCase();
-    void onLogin(
-      normalized.includes('manager') || normalized.includes('admin') ? 'Manager' : 'Staff',
-      normalized,
-      password,
-    );
+    void onLogin(normalized, password);
   };
 
   return (
@@ -85,36 +77,10 @@ export function LoginScreen({
             rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
             onRightIconPress={() => setShowPassword((prev) => !prev)}
           />
-          <Pressable accessibilityRole="button" onPress={onForgot} hitSlop={10}>
-            <Text style={styles.linkText}>Quên mật khẩu?</Text>
-          </Pressable>
+
           <Button disabled={authLoading} icon="key-outline" loading={authLoading} onPress={submit}>
             {authLoading ? 'Đang đăng nhập' : 'Đăng nhập'}
           </Button>
-        </View>
-
-        <View style={styles.quickLogin}>
-          <Text style={styles.quickTitle}>Đăng nhập nhanh để kiểm thử</Text>
-          <View style={styles.quickRow}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={authLoading}
-              style={[styles.quickCard, styles.quickStaff, authLoading && styles.quickCardDisabled]}
-              onPress={() => void onLogin('Staff', 'hung.nguyen@novyx.vn', 'demo123')}
-            >
-              <Text style={styles.quickRoleStaff}>Nhân viên</Text>
-              <Text style={styles.quickDesc}>N.V. Hùng (Staff)</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              disabled={authLoading}
-              style={[styles.quickCard, styles.quickManager, authLoading && styles.quickCardDisabled]}
-              onPress={() => void onLogin('Manager', 'manager@novyx.vn', 'demo123')}
-            >
-              <Text style={styles.quickRoleManager}>Quản lý</Text>
-              <Text style={styles.quickDesc}>Admin (Manager)</Text>
-            </Pressable>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -132,34 +98,6 @@ export function SessionRestoreScreen() {
           <Text style={styles.bodyText}>NOVYX đang kiểm tra session bảo mật trên thiết bị.</Text>
         </Card>
       </View>
-    </SafeAreaView>
-  );
-}
-
-export function ForgotScreen({ onBack }: { onBack: () => void }) {
-  const [sent, setSent] = useState(false);
-  return (
-    <SafeAreaView style={styles.root}>
-      <ScrollView contentContainerStyle={styles.screenPad}>
-        <Header title="Khôi phục mật khẩu" subtitle="Gửi mã OTP xác nhận cấp lại mật khẩu." onBack={onBack} />
-        <View style={styles.formStack}>
-          <Field
-            label="Email đã đăng ký"
-            placeholder="ten.nhanvien@novyx.vn"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          {sent ? (
-            <Card tone="green">
-              <Text style={styles.successTitle}>Đã gửi liên kết</Text>
-              <Text style={styles.bodyText}>Link đặt lại mật khẩu đã được gửi về email của bạn.</Text>
-            </Card>
-          ) : null}
-          <Button onPress={() => setSent(true)} disabled={sent}>
-            Gửi liên kết khôi phục
-          </Button>
-        </View>
-      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -239,61 +177,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  linkText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  quickLogin: {
-    marginTop: 'auto',
-    paddingTop: 18,
-    gap: 12,
-  },
-  quickTitle: {
-    color: colors.subtle,
-    fontSize: 11,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  quickRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickCard: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: 11,
-    minHeight: 58,
-    justifyContent: 'center',
-  },
-  quickStaff: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primaryBorder,
-  },
-  quickManager: {
-    backgroundColor: colors.skySoft,
-    borderColor: '#ccebf4',
-  },
-  quickCardDisabled: {
-    opacity: 0.5,
-  },
-  quickRoleStaff: {
-    color: colors.primaryDark,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  quickRoleManager: {
-    color: colors.sky,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  quickDesc: {
-    marginTop: 4,
-    color: colors.foreground,
-    fontSize: 12,
-    fontWeight: '700',
-  },
+
   sessionRestoreCard: {
     alignItems: 'center',
     gap: 8,

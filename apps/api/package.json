@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/infrastructure/persistence/migrate.ts",
-    "db:verify": "tsx src/infrastructure/persistence/verify.ts"
+    "db:verify": "tsx src/infrastructure/persistence/verify.ts",
+    "db:seed:dev": "tsx src/infrastructure/persistence/scripts/seed-dev.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

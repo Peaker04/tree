@@ -2313,7 +2313,6 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
     });
   });
 
-  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
   describe('Phase 17 R1X: Admin Mobile Isolation Tests', () => {
     it('R1X-M01: admin restored session respects dispatch rejection', async () => {
       const storage = {
@@ -2382,7 +2381,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       } as unknown;
       runtime.coordinator = coordinator;
 
-      await runtime.start().catch((e) => {
+      await runtime.start().catch(() => {
         /* ignore netinfo mock failures in tests */
       });
 

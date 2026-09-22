@@ -35,7 +35,7 @@ const defaultPublicEnvSource = {
 
 export interface GreenOpsService {
   getSnapshot: () => AppData;
-  login: (request: LoginRequest, fallbackRole: Role) => Promise<LoginResult>;
+  login: (request: LoginRequest) => Promise<LoginResult>;
   restoreSession: (session: AuthSession) => LoginResult;
   logout: () => void;
   loadSnapshot: () => Promise<SnapshotLoadResult>;
@@ -338,7 +338,7 @@ export function createHybridGreenOpsService(
 
   return {
     getSnapshot: () => cloneData(snapshot),
-    login: async (request, _fallbackRole) => {
+    login: async (request) => {
       const response = await restService.login(request);
       return {
         role: mapSessionRole(response.session),
