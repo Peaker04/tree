@@ -1763,8 +1763,6 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       ).toThrow(/EXPO_PUBLIC_DATA_SOURCE is required/);
     });
 
-
-
     it('R03: rest explicitly selects REST mode', async () => {
       const storage = new InMemorySecureSessionStorage();
       await storage.saveSession({

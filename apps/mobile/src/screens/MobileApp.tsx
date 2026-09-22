@@ -1,22 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, StatusBar, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BrandMark, Button, Card, Field } from '../components/AppPrimitives';
 import { clearAuthSession, loadStoredAuthSession, saveAuthSession } from '../services/authSessionStore';
 import { DataSourceStatus } from '../services/greenOpsService';
 import { getSharedMobileRuntime } from '../infrastructure/runtime';
 import { AppNotification, CareHistory, Role, Task } from '../types';
-import { colors, radius, spacing } from '../theme/tokens';
+import { colors } from '../theme/tokens';
 import type {
   CreateNotificationRequest,
   CreateTaskRequest,
   LoginRequest,
   ReviewDecisionRequest,
 } from '@novyx/contracts';
-import { NovyxMark } from '../components/NovyxMark';
 import { NotchedBottomNav } from '../components/NotchedBottomNav';
-import { Header } from '../components/presentation/TaskSurfaces';
 import {
   MANAGER_NAV_FAB_ITEM,
   MANAGER_NAV_LEFT_ITEMS,
@@ -386,7 +382,6 @@ export default function MobileApp() {
   );
 }
 
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -395,5 +390,5 @@ const styles = StyleSheet.create({
   appShell: {
     flex: 1,
     backgroundColor: colors.background,
-  }
+  },
 });

@@ -9,7 +9,7 @@ import type { ManagerAreaProps } from './ManagerArea';
 
 export function ManagerAccount(props: ManagerAreaProps) {
   const pendingReviewCount = props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW).length;
-  const openTaskCount = props.tasks.filter((task) => task.status !== TaskStatus.COMPLETED).length;
+
   const unreadNotifications = props.notifications.filter((notification) => !notification.read).length;
 
   return (
@@ -40,7 +40,12 @@ export function ManagerAccount(props: ManagerAreaProps) {
       <Card tone="flat" style={styles.statsBar}>
         <Metric label="Cây quản lý" value={props.trees.length} tone="slate" bordered={false} />
         <View style={styles.statsDivider} />
-        <Metric label="Chờ duyệt" value={props.tasks.filter((t) => t.status === 'WAITING_REVIEW').length} tone="amber" bordered={false} />
+        <Metric
+          label="Chờ duyệt"
+          value={props.tasks.filter((t) => t.status === 'WAITING_REVIEW').length}
+          tone="amber"
+          bordered={false}
+        />
       </Card>
       <Card tone="soft" style={styles.accountInfoCard}>
         <SectionTitle icon="id-card-outline">Thông tin phiên làm việc</SectionTitle>
@@ -103,7 +108,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  statsBar: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 4, paddingHorizontal: 2, borderWidth: 1, borderColor: colors.hairlineBorder },
+  statsBar: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+  },
   statsDivider: { width: 1, backgroundColor: colors.hairlineBorder, alignSelf: 'stretch', marginVertical: 4 },
   managerAccountHero: {
     minHeight: 168,

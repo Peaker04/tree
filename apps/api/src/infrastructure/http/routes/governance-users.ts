@@ -30,8 +30,10 @@ import type { ResetCredentialSetupUseCase } from '../../../modules/iam/applicati
 import type { UserAccount } from '../../../modules/iam/domain/entities/user';
 import { ValidationError } from '../../../core/errors';
 
+import type { IUserRepository } from '../../../modules/iam/application/ports/user-repository.port';
+
 export interface GovernanceUserRouteOptions {
-  userRepository: any; // Quick type patch, will replace with proper IUserRepository later
+  userRepository: IUserRepository;
   provisionUserUseCase: ProvisionUserUseCase;
   assignRoleUseCase: AssignRoleUseCase;
   activateAccountUseCase: ActivateAccountUseCase;
@@ -70,7 +72,7 @@ export const governanceUserRoutes: FastifyPluginAsync<GovernanceUserRouteOptions
   const authPreHandlers = [options.authenticate, options.requireAdmin];
 
   // GV-01: ProvisionUser
-    fastify.get<{ Querystring: ListGovernanceUsersQuery }>(
+  fastify.get<{ Querystring: ListGovernanceUsersQuery }>(
     '/v1/governance/users',
     {
       schema: {
@@ -83,16 +85,18 @@ export const governanceUserRoutes: FastifyPluginAsync<GovernanceUserRouteOptions
     async (request, reply) => {
       const { limit, cursor } = request.query;
       const result = await options.userRepository.listUsers(limit, cursor);
-      const data: GovernanceUserDto[] = result.data.map((u: any) => ({
-        id: u.id,
-        version: u.version,
-        email: u.email,
-        phone: u.phone,
-        role: u.role,
-        accountStatus: u.accountStatus,
-      }));
+      const data: GovernanceUserDto[] = result.data.map(
+        (u: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => ({
+          id: u.id,
+          version: u.version,
+          email: u.email,
+          phone: u.phone,
+          role: u.role,
+          accountStatus: u.accountStatus,
+        }),
+      );
       return reply.code(200).send({ data, meta: result.meta });
-    }
+    },
   );
 
   fastify.post<{ Body: ProvisionUserRequest }>(

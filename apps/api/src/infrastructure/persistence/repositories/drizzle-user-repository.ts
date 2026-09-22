@@ -186,7 +186,7 @@ export class DrizzleUserRepository implements IUserRepository {
     });
     const hasMore = rows.length > limit;
     const data = hasMore ? rows.slice(0, limit) : rows;
-    const nextCursor = hasMore ? data[data.length - 1]?.id ?? null : null;
+    const nextCursor = hasMore ? (data[data.length - 1]?.id ?? null) : null;
     return {
       data: data.map((r) => this.mapRowToEntity(r)),
       meta: { hasMore, nextCursor },

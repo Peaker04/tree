@@ -41,25 +41,25 @@ export function StaffTrees({
       ListHeaderComponent={
         <View style={styles.headerContainer}>
           <Card tone="warm" style={styles.treeHeroCard}>
-        <View style={styles.heroContentRow}>
-          <View style={styles.flex}>
-            <BrandMark compact />
-            <Text style={styles.lightHeroTitle}>Cây của tôi</Text>
-            <Text style={styles.lightHeroBody}>
-              {assignedTrees.length} cây đang gắn với lịch chăm sóc của bạn trong công viên.
-            </Text>
-          </View>
-          <TreeIdentityVisual tree={assignedTrees[0] ?? fallbackTree} compact />
-        </View>
-      </Card>
-      <TreeSearchFilters
-        query={query}
-        onQueryChange={onQueryChange}
-        activeFilter={activeFilter}
-        onFilterChange={onFilterChange}
-        resultCount={visibleAssignedTrees.length}
-        totalCount={assignedTrees.length}
-      />
+            <View style={styles.heroContentRow}>
+              <View style={styles.flex}>
+                <BrandMark compact />
+                <Text style={styles.lightHeroTitle}>Cây của tôi</Text>
+                <Text style={styles.lightHeroBody}>
+                  {assignedTrees.length} cây đang gắn với lịch chăm sóc của bạn trong công viên.
+                </Text>
+              </View>
+              <TreeIdentityVisual tree={assignedTrees[0] ?? fallbackTree} compact />
+            </View>
+          </Card>
+          <TreeSearchFilters
+            query={query}
+            onQueryChange={onQueryChange}
+            activeFilter={activeFilter}
+            onFilterChange={onFilterChange}
+            resultCount={visibleAssignedTrees.length}
+            totalCount={assignedTrees.length}
+          />
           {assignedTrees.length === 0 ? (
             <EmptyState
               title="Chưa có cây được phân công"
@@ -90,7 +90,6 @@ export function StaffTrees({
         );
       }}
     />
-
   );
 }
 

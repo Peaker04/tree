@@ -84,7 +84,10 @@ export function ManagerDashboard(props: ManagerAreaProps) {
         </Button>
       </Card>
 
-      <Card tone="flat" style={[styles.reviewQueueInner, { backgroundColor: pendingReview.length > 0 ? '#fffbeb' : '#f0fdf4' }]}>
+      <Card
+        tone="flat"
+        style={[styles.reviewQueueInner, { backgroundColor: pendingReview.length > 0 ? '#fffbeb' : '#f0fdf4' }]}
+      >
         <View style={styles.rowBetween}>
           <View style={styles.flex}>
             <SectionTitle icon="shield-checkmark-outline">Hàng chờ nghiệm thu</SectionTitle>
@@ -248,7 +251,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  statsBar: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 4, paddingHorizontal: 2, borderWidth: 1, borderColor: colors.hairlineBorder },
+  statsBar: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+  },
   statsDivider: { width: 1, backgroundColor: colors.hairlineBorder, alignSelf: 'stretch', marginVertical: 4 },
   adminHero: {
     minHeight: 184,

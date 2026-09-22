@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Badge, Button } from '../components/ui';
+import { Card, Badge } from '../components/ui';
 import type { AuditEventDto } from '@novyx/contracts';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -10,12 +10,12 @@ export function AuditPage() {
 
   useEffect(() => {
     fetch(`${API_BASE}/v1/audit/events`)
-      .then(res => res.json())
-      .then(json => {
+      .then((res) => res.json())
+      .then((json) => {
         setLogs(json.data || []);
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
         setLoading(false);
       });
@@ -35,28 +35,48 @@ export function AuditPage() {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--hairlineBorder)', backgroundColor: '#fafafa' }}>
               <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>Time</th>
-              <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>Action</th>
-              <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>Resource</th>
+              <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>
+                Action
+              </th>
+              <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>
+                Resource
+              </th>
               <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>Actor</th>
-              <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>Outcome</th>
+              <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--pewter)', fontWeight: 500 }}>
+                Outcome
+              </th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-               <tr><td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>Loading...</td></tr>
-            ) : logs.length === 0 ? (
-               <tr><td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>Không có dữ liệu audit</td></tr>
-            ) : logs.map(l => (
-              <tr key={l.id} style={{ borderBottom: '1px solid var(--hairlineBorder)' }}>
-                <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--pewter)' }}>{new Date(l.timestamp).toLocaleString('vi-VN')}</td>
-                <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: 600 }}>{l.action}</td>
-                <td style={{ padding: '16px 24px', fontSize: '14px', fontFamily: 'monospace' }}>{l.targetResourceId}</td>
-                <td style={{ padding: '16px 24px', fontSize: '14px' }}>{l.actorId}</td>
-                <td style={{ padding: '16px 24px' }}>
-                  <Badge status={l.outcome === 'SUCCESS' ? 'active' : 'suspended'}>{l.outcome}</Badge>
+              <tr>
+                <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>
+                  Loading...
                 </td>
               </tr>
-            ))}
+            ) : logs.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--pewter)' }}>
+                  Không có dữ liệu audit
+                </td>
+              </tr>
+            ) : (
+              logs.map((l) => (
+                <tr key={l.id} style={{ borderBottom: '1px solid var(--hairlineBorder)' }}>
+                  <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--pewter)' }}>
+                    {new Date(l.timestamp).toLocaleString('vi-VN')}
+                  </td>
+                  <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: 600 }}>{l.action}</td>
+                  <td style={{ padding: '16px 24px', fontSize: '14px', fontFamily: 'monospace' }}>
+                    {l.targetResourceId}
+                  </td>
+                  <td style={{ padding: '16px 24px', fontSize: '14px' }}>{l.actorId}</td>
+                  <td style={{ padding: '16px 24px' }}>
+                    <Badge status={l.outcome === 'SUCCESS' ? 'active' : 'suspended'}>{l.outcome}</Badge>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </Card>

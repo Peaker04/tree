@@ -201,7 +201,7 @@ export function TreeLookupResult({
     tree.healthStatus === 'Sâu bệnh' ? 'danger' : tree.healthStatus === 'Cần chăm sóc' ? 'amber' : 'green';
 
   return (
-    <Card tone="flat" style={[styles.treeAssignmentCard, { backgroundColor: "#f0fdf4" }]} >
+    <Card tone="flat" style={[styles.treeAssignmentCard, { backgroundColor: '#f0fdf4' }]}>
       <TreeIdentityVisual tree={tree} />
       <View style={styles.rowBetween}>
         <View style={styles.row}>

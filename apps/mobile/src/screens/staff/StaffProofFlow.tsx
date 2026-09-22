@@ -4,13 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { DeviceCameraView, type DeviceCameraViewHandle } from '../../components/DeviceCameraView';
 import { DevicePermissionState } from '../../components/DevicePermissionState';
-import {
-  Header,
-  ChecklistLine,
-  PhotoPair,
-  ProofChainCard,
-  TaskSummary,
-} from '../../components/presentation/TaskSurfaces';
+import { Header, ChecklistLine, PhotoPair, ProofChainCard } from '../../components/presentation/TaskSurfaces';
 import { TreeLookupResult } from '../../components/presentation/TreeSurfaces';
 import { getDistanceMeters } from '../../data';
 import { useDevicePermissions } from '../../hooks/useDevicePermissions';
@@ -22,7 +16,6 @@ import type { CreateNotificationRequest } from '@novyx/contracts';
 import {
   StaffStep,
   getEvidenceTransportMeta,
-  getNextProofStep,
   getTaskProofCount,
   getTaskProofGaps,
   getTaskStatusMeta,
@@ -324,7 +317,15 @@ export function StaffProofFlow(props: {
       <ScrollView contentContainerStyle={styles.screenPad}>
         <Header title="Chi tiết công việc" subtitle={props.activeTask.id} onBack={() => props.setStep('WORK')} />
         <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
-          <View style={[styles.detailSection, { backgroundColor: statusMeta.tone === 'danger' ? '#fef2f2' : statusMeta.tone === 'amber' ? '#fffbeb' : '#f8fafc' }]}>
+          <View
+            style={[
+              styles.detailSection,
+              {
+                backgroundColor:
+                  statusMeta.tone === 'danger' ? '#fef2f2' : statusMeta.tone === 'amber' ? '#fffbeb' : '#f8fafc',
+              },
+            ]}
+          >
             <View style={styles.rowBetween}>
               <View style={styles.flex}>
                 <Text style={styles.metricLabel}>Trạng thái</Text>
@@ -345,7 +346,9 @@ export function StaffProofFlow(props: {
             <View style={{ marginTop: 12 }}>
               <SectionTitle icon="leaf-outline">Hồ sơ cây mục tiêu</SectionTitle>
               <Text style={styles.itemTitle}>{activeTree?.name ?? props.activeTask.treeName}</Text>
-              <Text style={styles.bodyText}>{activeTree?.species} - {props.activeTask.treeAddress}</Text>
+              <Text style={styles.bodyText}>
+                {activeTree?.species} - {props.activeTask.treeAddress}
+              </Text>
               <Text style={styles.monoSmall}>QR: {activeTree?.qrCode ?? props.activeTask.treeId}</Text>
             </View>
           </View>
@@ -375,8 +378,16 @@ export function StaffProofFlow(props: {
         </Card>
 
         <Button
-          variant="forest" pill size="field"
-          icon={wState.nextStep === 'GPS' ? 'location-outline' : wState.nextStep ? 'play-outline' : 'checkmark-circle-outline'}
+          variant="forest"
+          pill
+          size="field"
+          icon={
+            wState.nextStep === 'GPS'
+              ? 'location-outline'
+              : wState.nextStep
+                ? 'play-outline'
+                : 'checkmark-circle-outline'
+          }
           disabled={wState.isSubmittedOrCompleted}
           onPress={() => {
             resetQrError();
@@ -391,7 +402,8 @@ export function StaffProofFlow(props: {
             props.setStep(wState.nextStep ?? 'WORK');
           }}
         >
-          {wState.activeActionText || (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
+          {wState.activeActionText ||
+            (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
         </Button>
       </ScrollView>
     );
@@ -799,7 +811,6 @@ export function StaffProofFlow(props: {
       <ScrollView contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
         <Header title="Xem lại báo cáo" subtitle={props.activeTask.id} onBack={() => props.setStep('CHECKLIST')} />
         <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
-          
           {/* Gate */}
           <View style={[styles.detailSection, { backgroundColor: proofGaps.length === 0 ? '#f0fdf4' : '#fef2f2' }]}>
             <View style={styles.alertRow}>
@@ -835,7 +846,12 @@ export function StaffProofFlow(props: {
           <View style={styles.hairlineDivider} />
 
           {/* Transport */}
-          <View style={[styles.detailSection, { backgroundColor: evidenceTransport.mode === 'multipart' ? '#f0fdf4' : '#f8fafc' }]}>
+          <View
+            style={[
+              styles.detailSection,
+              { backgroundColor: evidenceTransport.mode === 'multipart' ? '#f0fdf4' : '#f8fafc' },
+            ]}
+          >
             <View style={styles.rowBetween}>
               <View style={styles.flex}>
                 <SectionTitle icon="cloud-upload-outline">Kênh gửi bằng chứng</SectionTitle>
@@ -851,7 +867,7 @@ export function StaffProofFlow(props: {
 
           {/* Photos */}
           <View style={styles.detailSection}>
-             <PhotoPair task={props.activeTask} />
+            <PhotoPair task={props.activeTask} />
           </View>
 
           <View style={styles.hairlineDivider} />
@@ -878,11 +894,13 @@ export function StaffProofFlow(props: {
               style={styles.multilineInput}
             />
           </View>
-
         </Card>
 
         <Button
-          variant="forest" pill size="field" icon={proofGaps.length === 0 ? 'send-outline' : 'build-outline'}
+          variant="forest"
+          pill
+          size="field"
+          icon={proofGaps.length === 0 ? 'send-outline' : 'build-outline'}
           disabled={submittingEvidence}
           onPress={async () => {
             const task = props.activeTask;
@@ -910,7 +928,11 @@ export function StaffProofFlow(props: {
             props.setStep('SUCCESS');
           }}
         >
-          {submittingEvidence ? 'Đang đóng gói...' : proofGaps.length === 0 ? 'Gửi báo cáo nghiệm thu' : wState.activeActionText}
+          {submittingEvidence
+            ? 'Đang đóng gói...'
+            : proofGaps.length === 0
+              ? 'Gửi báo cáo nghiệm thu'
+              : wState.activeActionText}
         </Button>
       </ScrollView>
     );

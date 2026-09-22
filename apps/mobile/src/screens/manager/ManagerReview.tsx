@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { ChecklistLine, Header, PhotoPair, ProofChainCard, TaskCard } from '../../components/presentation/TaskSurfaces';
 import { getTaskProofCount, getTaskProofGaps, matchesTaskQuery } from '../../domain/mobileWorkflow';
@@ -52,34 +51,34 @@ export function ManagerReview(props: ManagerAreaProps) {
       ListHeaderComponent={
         <View style={styles.headerContainer}>
           <Header title="Danh sách chờ duyệt" subtitle="Các báo cáo nghiệm thu hiện trường" />
-      <Card tone="warm">
-        <View style={styles.rowBetween}>
-          <View style={styles.flex}>
-            <Text style={styles.lightHeroTitle}>Kiểm tra bằng chứng</Text>
-            <Text style={styles.lightHeroBody}>
-              Ưu tiên báo cáo đủ GPS, QR, ảnh before/after và checklist trước khi phê duyệt.
+          <Card tone="warm">
+            <View style={styles.rowBetween}>
+              <View style={styles.flex}>
+                <Text style={styles.lightHeroTitle}>Kiểm tra bằng chứng</Text>
+                <Text style={styles.lightHeroBody}>
+                  Ưu tiên báo cáo đủ GPS, QR, ảnh before/after và checklist trước khi phê duyệt.
+                </Text>
+              </View>
+              <View style={styles.reviewHeroCount}>
+                <Text style={styles.reviewHeroNumber}>{pendingReview.length}</Text>
+                <Text style={styles.reviewHeroLabel}>chờ duyệt</Text>
+              </View>
+            </View>
+          </Card>
+          <Card style={styles.taskFilterPanel}>
+            <Field
+              label="Tìm báo cáo"
+              value={reviewQuery}
+              onChangeText={setReviewQuery}
+              placeholder="Mã task, cây, nhân viên, loại việc..."
+              autoCapitalize="none"
+              rightIcon={reviewQuery ? 'close-circle-outline' : 'search-outline'}
+              onRightIconPress={reviewQuery ? () => setReviewQuery('') : undefined}
+            />
+            <Text style={styles.resultText}>
+              {visiblePendingReview.length}/{pendingReview.length} báo cáo
             </Text>
-          </View>
-          <View style={styles.reviewHeroCount}>
-            <Text style={styles.reviewHeroNumber}>{pendingReview.length}</Text>
-            <Text style={styles.reviewHeroLabel}>chờ duyệt</Text>
-          </View>
-        </View>
-      </Card>
-      <Card style={styles.taskFilterPanel}>
-        <Field
-          label="Tìm báo cáo"
-          value={reviewQuery}
-          onChangeText={setReviewQuery}
-          placeholder="Mã task, cây, nhân viên, loại việc..."
-          autoCapitalize="none"
-          rightIcon={reviewQuery ? 'close-circle-outline' : 'search-outline'}
-          onRightIconPress={reviewQuery ? () => setReviewQuery('') : undefined}
-        />
-        <Text style={styles.resultText}>
-          {visiblePendingReview.length}/{pendingReview.length} báo cáo
-        </Text>
-      </Card>
+          </Card>
           {pendingReview.length === 0 ? (
             <EmptyState title="Không có báo cáo tồn đọng" body="Mọi báo cáo hiện trường đã được xử lý." />
           ) : visiblePendingReview.length === 0 ? (
@@ -198,7 +197,6 @@ function ManagerReviewDetail({
       <Header title="Duyệt bằng chứng" subtitle={reviewTask.id} onBack={() => props.setActiveStep('REVIEW')} />
 
       <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
-        
         {/* Gate status - Flattened */}
         <View style={[styles.detailSection, { backgroundColor: reviewProofGaps.length === 0 ? '#f0fdf4' : '#fffbeb' }]}>
           <View style={styles.rowBetween}>
@@ -206,7 +204,9 @@ function ManagerReviewDetail({
               <Text style={styles.successTitle}>
                 {reviewProofGaps.length === 0 ? 'Bằng chứng đủ điều kiện' : 'Bằng chứng cần kiểm tra kỹ'}
               </Text>
-              <Text style={styles.bodyText}>Manager phải xác nhận đúng cây, đúng vị trí và đủ ảnh trước khi duyệt.</Text>
+              <Text style={styles.bodyText}>
+                Manager phải xác nhận đúng cây, đúng vị trí và đủ ảnh trước khi duyệt.
+              </Text>
             </View>
             <Badge tone={reviewProofGaps.length === 0 ? 'green' : 'amber'}>{reviewProofCount}/5</Badge>
           </View>
@@ -230,12 +230,15 @@ function ManagerReviewDetail({
             <AuditBox label="Khoảng cách" value={`${reviewTask.gpsCheck?.distance.toFixed(1) ?? 'N/A'}m`} />
             <AuditBox label="Ngưỡng" value="30m" />
             <AuditBox label="Timestamp" value={gpsTimestamp} />
-            <AuditBox label="QR" value={reviewTask.qrCheck?.verified ? reviewTask.qrCheck.scannedCode : 'Chưa hợp lệ'} />
+            <AuditBox
+              label="QR"
+              value={reviewTask.qrCheck?.verified ? reviewTask.qrCheck.scannedCode : 'Chưa hợp lệ'}
+            />
           </View>
         </View>
 
         <View style={styles.hairlineDivider} />
-        
+
         <View style={styles.detailSection}>
           <ProofChainCard task={reviewTask} />
         </View>
@@ -295,7 +298,8 @@ function ManagerReviewDetail({
               {reviewSubmitting === 'reject' ? 'Đang gửi...' : 'Yêu cầu sửa'}
             </Button>
             <Button
-              variant="forest" pill
+              variant="forest"
+              pill
               icon="checkmark-circle-outline"
               disabled={!!reviewSubmitting || reviewProofGaps.length > 0}
               onPress={completeReview}
@@ -305,7 +309,6 @@ function ManagerReviewDetail({
             </Button>
           </View>
         </View>
-
       </Card>
     </ScrollView>
   );

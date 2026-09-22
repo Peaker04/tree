@@ -646,9 +646,11 @@ describe('Phase 13 Wave 5B: Real Infrastructure Integration (PostgreSQL + MinIO 
       expect(finalOutbox?.syncStatus).toBe('SYNCED');
 
       // - Local evidence still present
-      const localEvidence = await mobileTaskRepo.getEvidenceMetadata('ev-replay-01');
+      const localEvidenceList = await mobileTaskRepo.listEvidenceByTask(startedTask.id);
+      const localEvidence = localEvidenceList.find((e) => e.id === 'ev-replay-01');
       expect(localEvidence).toBeDefined();
       expect(localEvidence?.taskId).toBe(startedTask.id);
+      expect(localEvidence?.sha256).toBe(sha256);
     },
   );
 

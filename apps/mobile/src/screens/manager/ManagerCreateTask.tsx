@@ -1,16 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  Badge,
-  BrandMark,
-  Button,
-  Card,
-  EmptyState,
-  Field,
-  
-  SectionTitle,
-} from '../../components/AppPrimitives';
+import { Badge, BrandMark, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { ChecklistLine } from '../../components/presentation/TaskSurfaces';
 import { TreeIdentityVisual } from '../../components/presentation/TreeIdentityVisual';
 import { filterTrees } from '../../domain/mobileWorkflow';

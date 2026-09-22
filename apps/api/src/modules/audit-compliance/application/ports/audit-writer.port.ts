@@ -17,5 +17,8 @@ export interface AuditRecordInput {
 
 export interface IAuditWriter {
   writeEvent(event: AuditRecordInput): Promise<void>;
-  listEvents(limit?: number, cursor?: string): Promise<{ data: any[], meta: { hasMore: boolean, nextCursor: string | null } }>;
+  listEvents(
+    limit?: number,
+    cursor?: string,
+  ): Promise<{ data: unknown[]; meta: { hasMore: boolean; nextCursor: string | null } }>;
 }

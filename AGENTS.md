@@ -69,12 +69,14 @@ Reuse `apps/mobile/src/components/AppPrimitives.tsx` and existing tokens before 
 ## Verification
 
 For mobile UI changes:
+
 ```powershell
 npm run typecheck --workspace @novyx/mobile
 npm run lint
 ```
 
 For foundation, dependency, native configuration, or shared-token changes:
+
 ```powershell
 npm run format:check
 npm run lint

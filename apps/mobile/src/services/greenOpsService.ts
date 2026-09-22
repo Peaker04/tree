@@ -326,9 +326,8 @@ export function createHybridGreenOpsService(
   sessionManager?: IAuthSessionManager,
   apiClient?: MobileApiClient,
 ): GreenOpsService {
-  const config = readPublicRuntimeConfig(envSource);
+  const _config = readPublicRuntimeConfig(envSource);
   // Section 5 & 33: Explicit data source selection. In mock mode, use mock intentionally.
-  
 
   let snapshot = cloneData(seed);
   const restService = createGreenOpsRestService(envSource, sessionManager, apiClient);

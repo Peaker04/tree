@@ -1,5 +1,5 @@
 // Dummy globals for Seed + Linear
-import { colors, radius, spacing } from '@novyx/ui';
+import { colors, radius } from '@novyx/ui';
 
 export const GlobalStyles = `
   :root {

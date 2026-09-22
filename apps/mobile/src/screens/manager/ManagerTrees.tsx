@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Card, EmptyState, Button } from '../../components/AppPrimitives';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Card, EmptyState } from '../../components/AppPrimitives';
 import { TreeAssignmentCard } from '../../components/presentation/TreeSurfaces';
-import { CareHistoryLoader, TreeSearchFilters } from '../../components/presentation/TreeSurfaces';
+import { TreeSearchFilters } from '../../components/presentation/TreeSurfaces';
 import { TreeIdentityVisual } from '../../components/presentation/TreeIdentityVisual';
 import { Header } from '../../components/presentation/TaskSurfaces';
-import { filterTrees, getTaskStatusMeta } from '../../domain/mobileWorkflow';
+import { filterTrees } from '../../domain/mobileWorkflow';
 import { colors, radius, spacing } from '../../theme/tokens';
 import type { TreeFilter } from '../../domain/mobileWorkflow';
 import type { Tree } from '../../types';
@@ -26,25 +25,25 @@ export function ManagerTrees(props: ManagerAreaProps) {
       ListHeaderComponent={
         <View style={styles.headerContainer}>
           <Header title="Hồ sơ cây xanh" subtitle="Danh mục bồn cây thuộc phân khu quản lý" />
-      <Card tone="warm">
-        <View style={styles.heroContentRow}>
-          <View style={styles.flex}>
-            <Text style={styles.lightHeroTitle}>Bản đồ danh mục cây</Text>
-            <Text style={styles.lightHeroBody}>
-              Theo dõi {props.trees.length} cây, tình trạng sức khỏe, mã QR và lịch sử chăm sóc gần nhất.
-            </Text>
-          </View>
-          <TreeIdentityVisual tree={props.trees[0] ?? fallbackTree} compact />
-        </View>
-      </Card>
-      <TreeSearchFilters
-        query={managerTreeQuery}
-        onQueryChange={setManagerTreeQuery}
-        activeFilter={managerTreeFilter}
-        onFilterChange={setManagerTreeFilter}
-        resultCount={visibleTrees.length}
-        totalCount={props.trees.length}
-      />
+          <Card tone="warm">
+            <View style={styles.heroContentRow}>
+              <View style={styles.flex}>
+                <Text style={styles.lightHeroTitle}>Bản đồ danh mục cây</Text>
+                <Text style={styles.lightHeroBody}>
+                  Theo dõi {props.trees.length} cây, tình trạng sức khỏe, mã QR và lịch sử chăm sóc gần nhất.
+                </Text>
+              </View>
+              <TreeIdentityVisual tree={props.trees[0] ?? fallbackTree} compact />
+            </View>
+          </Card>
+          <TreeSearchFilters
+            query={managerTreeQuery}
+            onQueryChange={setManagerTreeQuery}
+            activeFilter={managerTreeFilter}
+            onFilterChange={setManagerTreeFilter}
+            resultCount={visibleTrees.length}
+            totalCount={props.trees.length}
+          />
           {visibleTrees.length === 0 ? (
             <EmptyState
               icon="search-outline"
@@ -63,15 +62,18 @@ export function ManagerTrees(props: ManagerAreaProps) {
             task={pendingTask}
             careHistory={props.getCareHistoryByTree(tree.id)}
             loadCareHistory={props.loadCareHistoryByTree}
-            onOpenTask={pendingTask ? () => {
-              props.setReviewTask(pendingTask);
-              props.setActiveStep('REVIEW_DETAIL');
-            } : undefined}
+            onOpenTask={
+              pendingTask
+                ? () => {
+                    props.setReviewTask(pendingTask);
+                    props.setActiveStep('REVIEW_DETAIL');
+                  }
+                : undefined
+            }
           />
         );
       }}
     />
-
   );
 }
 
@@ -87,15 +89,6 @@ const fallbackTree: Tree = {
   riskStatus: 'healthy',
   ageYears: 1,
 };
-
-function MetaBox({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.treeMetaBox}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.treeMetaValue}>{value}</Text>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
