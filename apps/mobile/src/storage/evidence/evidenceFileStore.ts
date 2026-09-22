@@ -1,4 +1,5 @@
 import { getDefaultEvidenceHasher, type IEvidenceHasher } from './evidenceHasher';
+import { generateSecureUuid } from '../utils/uuid';
 
 export type EvidenceStage = 'BEFORE' | 'AFTER' | 'COMPLETION' | 'CONDITION' | 'EXCEPTION';
 
@@ -57,17 +58,6 @@ export function canSafelyDeleteEvidence(params: RetentionCheckParams): boolean {
   return params.syncStatus === 'SYNCED';
 }
 
-function generateUuid(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 /**
  * Expo Native File Store implementation.
  */
@@ -81,9 +71,13 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
   async persistEvidence(input: SaveEvidenceInput): Promise<PersistedEvidenceFile> {
     const FileSystem = await import('expo-file-system/legacy');
 
-    const id = input.id ?? generateUuid();
+    const docDir = FileSystem.documentDirectory;
+    if (!docDir) {
+      throw new Error('Storage infrastructure error: documentDirectory is unavailable on this device/runtime');
+    }
+
+    const id = input.id ?? generateSecureUuid();
     const fileName = input.fileName ?? `${input.stage.toLowerCase()}_${Date.now()}.jpg`;
-    const docDir = FileSystem.documentDirectory ?? 'file:///data/user/0/com.novyx.greenops/files/';
     const targetDir = `${docDir}evidence/${input.taskId}/`;
 
     // Ensure target directory exists in application sandbox
@@ -150,7 +144,7 @@ export class InMemoryEvidenceFileStore implements IEvidenceFileStore {
   }
 
   async persistEvidence(input: SaveEvidenceInput): Promise<PersistedEvidenceFile> {
-    const id = input.id ?? generateUuid();
+    const id = input.id ?? generateSecureUuid();
     const fileName = input.fileName ?? `${input.stage.toLowerCase()}_${Date.now()}.jpg`;
     const sandboxUri = `file:///sandbox/evidence/${input.taskId}/${fileName}`;
 

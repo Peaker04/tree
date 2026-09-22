@@ -12,7 +12,7 @@ Wave 5A establishes the durable client-side reliability foundation required by:
 
 ### Authorized Entry Gate
 - **Entry HEAD**: `634edff8a6f8c147b60043ce73a3bdf6675d8f99`
-- **Entry TREE**: `de3753a9aac9a1c07b82ea3c70e8a8abb50fd5af`
+- **Integrity Correction HEAD**: `613e97fc0958768004dcd8f542e4278c88cec491`
 - **Branch**: `base-setup`
 - **Working Tree**: Clean at entry.
 
@@ -29,7 +29,7 @@ In alignment with Section 5 (Dependency Policy) and Expo SDK 57:
 - `@react-native-community/netinfo`: `~12.0.1` (network state observation)
 
 ### Root `package.json` (devDependencies only)
-- `better-sqlite3`: `^13.0.3` (deterministic in-memory SQLite execution for Node/Vitest test runner)
+- `better-sqlite3`: `^13.0.3` (deterministic SQLite execution on memory and disk files for Node/Vitest test runner)
 - `@types/better-sqlite3`: `^9.6.0`
 
 ---
@@ -39,104 +39,40 @@ In alignment with Section 5 (Dependency Policy) and Expo SDK 57:
 ### Version Tracking
 - Utilizes SQLite's native `PRAGMA user_version` coupled with a `schema_migrations` ledger.
 - Deterministic, sequentially ordered migrations without destructive drops or resets.
-- Current Schema Version: `1` (`LATEST_SCHEMA_VERSION = 1`).
+- Current Schema Version: `2` (`LATEST_SCHEMA_VERSION = 2`).
 
-### Schema Tables (`apps/mobile/src/storage/database/migrations.ts`)
+### Schema Migrations (`apps/mobile/src/storage/database/migrations.ts`)
 
-1. **`schema_migrations`**:
-   - `version INTEGER PRIMARY KEY`
-   - `name TEXT NOT NULL`
-   - `applied_at TEXT NOT NULL`
-
-2. **`cached_tasks`** (Server task projection):
-   - `id TEXT PRIMARY KEY` (taskId)
-   - `tree_id TEXT`
-   - `task_type_id TEXT`
-   - `task_type_name TEXT`
-   - `status TEXT NOT NULL` (CanonicalTaskStatus: PENDING, IN_PROGRESS, BLOCKED, WAITING_REVIEW, REWORK_REQUIRED, COMPLETED, CANCELLED)
-   - `assigned_staff_id TEXT`
-   - `assigned_staff_name TEXT`
-   - `deadline TEXT`
-   - `version INTEGER NOT NULL DEFAULT 0`
-   - `proof_profile TEXT`
-   - `title TEXT`
-   - `description TEXT`
-   - `priority TEXT`
-   - `raw_json TEXT` (Faithful JSON snapshot of TaskDto)
-   - `updated_at TEXT NOT NULL`
-
-3. **`local_drafts`** (Client-side draft metadata):
-   - `task_id TEXT PRIMARY KEY REFERENCES cached_tasks(id) ON DELETE CASCADE`
-   - `submission_status TEXT NOT NULL DEFAULT 'IDLE'` ('IDLE' | 'SAVED_DRAFT' | 'PENDING_SYNC')
-   - `gps_lat REAL`, `gps_lng REAL`, `gps_distance_meters REAL`
-   - `gps_verified INTEGER NOT NULL DEFAULT 0`
-   - `gps_timestamp TEXT`
-   - `qr_scanned_code TEXT`
-   - `qr_verified INTEGER NOT NULL DEFAULT 0`
-   - `qr_timestamp TEXT`
-   - `location_exception_json TEXT`, `identity_exception_json TEXT`
-   - `checklist_json TEXT`, `findings_json TEXT`, `notes TEXT`
-   - `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL`
-
-4. **`local_evidence`** (Evidence file metadata):
-   - `id TEXT PRIMARY KEY`
-   - `task_id TEXT NOT NULL REFERENCES cached_tasks(id) ON DELETE CASCADE`
-   - `stage TEXT NOT NULL` ('BEFORE' | 'AFTER' | 'COMPLETION' | 'CONDITION' | 'EXCEPTION')
-   - `local_file_uri TEXT NOT NULL` (Persistent sandboxed URI)
-   - `file_name TEXT NOT NULL`
-   - `content_type TEXT NOT NULL`
-   - `size_bytes INTEGER NOT NULL`
-   - `sha256 TEXT NOT NULL` (Canonical 64-character lowercase hexadecimal hash)
-   - `captured_at TEXT NOT NULL`
-   - `is_persisted_in_sandbox INTEGER NOT NULL DEFAULT 1`
-   - `sync_status TEXT NOT NULL DEFAULT 'IDLE'`
-   - `created_at TEXT NOT NULL`
-
-5. **`outbox_items`** (Durable FIFO queue):
-   - `id TEXT PRIMARY KEY` (UUID)
-   - `task_id TEXT NOT NULL REFERENCES cached_tasks(id) ON DELETE CASCADE`
-   - `command_type TEXT NOT NULL` ('SubmitEvidence')
-   - `payload_json TEXT NOT NULL` (Reconstructable SubmitEvidenceRequest JSON)
-   - `idempotency_key TEXT NOT NULL` (UUIDv4)
-   - `attempt_count INTEGER NOT NULL DEFAULT 0`
-   - `sync_status TEXT NOT NULL DEFAULT 'IDLE'` ('IDLE' | 'SYNCING' | 'SYNCED' | 'SYNC_FAILED')
-   - `last_error TEXT`
-   - `error_classification TEXT` ('NETWORK' | 'SERVER_5XX' | 'VALIDATION' | 'CONFLICT' | 'FORBIDDEN' | 'AUTH')
-   - `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL`
-
-6. **Indexes**:
-   - `idx_outbox_fifo ON outbox_items (created_at ASC)`
-   - `idx_outbox_sync ON outbox_items (sync_status)`
-   - `idx_local_evidence_task ON local_evidence (task_id)`
+- **Migration 1 (`initial_offline_schema`)**:
+  - `schema_migrations`: tracks applied versions and timestamps.
+  - `cached_tasks`: projection of server task state.
+  - `local_drafts`: client draft state referencing `cached_tasks` via `ON DELETE RESTRICT`.
+  - `local_evidence`: metadata referencing `cached_tasks` via `ON DELETE RESTRICT`.
+  - `outbox_items`: outbox records referencing `cached_tasks` via `ON DELETE RESTRICT`.
+  - Indexes: `idx_outbox_fifo`, `idx_outbox_sync`, `idx_local_evidence_task`.
+- **Migration 2 (`remove_destructive_cascade_fk`)**:
+  - Eliminates any lingering `ON DELETE CASCADE` path by migrating `local_drafts`, `local_evidence`, and `outbox_items` to `ON DELETE RESTRICT`.
+  - Guarantees that cache maintenance or task purging can never silently delete unsynchronized evidence, drafts, or outbox records at the database engine level.
 
 ---
 
-## 4. Persistent Sandbox Evidence File Topology
+## 4. Exact-Byte SHA-256 & Persistent Sandbox Storage
 
-### Sandboxed Storage Path
-- Files reside under the OS application sandbox:
-  `${FileSystem.documentDirectory}/evidence/${taskId}/${fileName}`
-- Immediately moved or copied out of volatile camera cache (`cacheDirectory`) into sandbox storage when captured.
-- Survives application process termination and device restarts.
-
-### Content SHA-256 Invariant
+### Exact-Byte Content Hash Contract
 - Canonical representation: 64-character lowercase hexadecimal SHA-256 (`/^[0-9a-f]{64}$/`).
-- Calculated directly on file content bytes via `IEvidenceHasher` (Node test implementation and Expo native `expo-crypto` implementation).
-- File names, timestamps, URIs, or asset IDs are NEVER used as hash values.
+- Invariant: `client SHA-256 == SHA-256 of exact persisted local file bytes == server SHA-256 after upload`.
+- Pure byte decoding: `base64ToUint8Array` decodes Base64 payloads into exact `Uint8Array` bytes without using `atob()` or JavaScript binary strings.
+- Native hashing: `ExpoEvidenceHasher` passes the raw `Uint8Array` buffer to `Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, bufferSource)`.
+- Test vector validation: Verified using byte sequence `00 01 7f 80 ff 10 c3 a9` (containing bytes $\ge \text{0x80}$), producing reference digest `7e34c09ae4313a57257abb2ebe1276c47d9ad0f2e34f0d52d0fb199ed161817f` identical in both Node and conversion path.
 
-### Non-Destructive Retention Invariant
-- Evidence photos and local metadata are NEVER prematurely deleted.
-- Retention check function `canSafelyDeleteEvidence` returns `false` if:
-  - `syncStatus === 'PENDING_SYNC' | 'SYNCING' | 'SYNC_FAILED'`
-  - `localSubmissionStatus === 'PENDING_SYNC'`
-  - Conflict or validation failure requires manual user action.
-- Only terminal `SYNCED` items confirmed by authoritative server receipt may qualify for future garbage collection.
+### Platform-Neutral Sandbox Storage
+- Files reside under the OS application sandbox: `${FileSystem.documentDirectory}/evidence/${taskId}/${fileName}`.
+- If `documentDirectory` is unavailable, an explicit infrastructure error is thrown. No hardcoded Android `/data/user/0/` or iOS paths exist.
+- Non-destructive retention rule (`canSafelyDeleteEvidence` invariant): Local evidence is never deleted if status is `PENDING_SYNC`, `SYNCING`, `SYNC_FAILED`, or if in conflict.
 
 ---
 
-## 5. Strict Three-Dimension State Separation
-
-The architecture enforces strict orthogonality across state dimensions:
+## 5. Strict State Dimension Separation
 
 | Dimension | Domain Authority | Allowed Values |
 |---|---|---|
@@ -144,57 +80,47 @@ The architecture enforces strict orthogonality across state dimensions:
 | `LocalSubmissionStatus` | Client Local | `IDLE`, `SAVED_DRAFT`, `PENDING_SYNC` |
 | `SyncStatus` | HTTP Transport | `IDLE`, `SYNCING`, `SYNCED`, `SYNC_FAILED` |
 
-### Critical Invariants:
-- `PENDING_SYNC` is NEVER assigned to `TaskStatus`.
-- `SYNCING` and `SYNC_FAILED` are NEVER assigned to `TaskStatus`.
-- Offline submit sets `LocalSubmissionStatus = PENDING_SYNC`. Server `TaskStatus` remains `IN_PROGRESS` until the backend accepts evidence.
-- Only authoritative server acceptance can transition `TaskStatus` to `WAITING_REVIEW`.
+- `PENDING_SYNC`, `SYNCING`, and `SYNC_FAILED` are strictly client/transport states and NEVER appear in `TaskStatus`.
+- Offline submit sets `LocalSubmissionStatus = PENDING_SYNC`. Authoritative server `TaskStatus` remains `IN_PROGRESS` until the server accepts `SubmitEvidence`.
 
 ---
 
-## 6. Durable FIFO Outbox & Idempotency Model
+## 6. Durable Outbox, Crash Recovery, & Retry Policy
 
-### Transactional Enqueue
-`SqliteOutboxRepository.enqueueTransactional` executes inside an atomic SQLite transaction:
-1. Validates that `Idempotency-Key` is NOT in the payload body.
-2. Updates `local_drafts.submission_status = 'PENDING_SYNC'`.
-3. Inserts a row into `outbox_items` with a freshly generated UUIDv4 `idempotencyKey`.
-4. Leaves `cached_tasks.status` strictly unchanged.
+### Atomic Transactional Enqueue
+`executeOfflineSubmission` orchestrates offline intent:
+1. Copies/moves binary files to sandbox storage and computes exact-byte SHA-256.
+2. In ONE atomic SQLite transaction on `db.withTransactionAsync`:
+   - Updates `local_drafts.submission_status = 'PENDING_SYNC'`.
+   - Inserts `local_evidence` metadata rows with sandbox URIs and SHA-256 checksums.
+   - Inserts `outbox_items` row with stable UUIDv4 `idempotencyKey`.
+3. If the SQLite transaction fails, sandbox files remain safely as orphans and are NEVER deleted.
 
-### Idempotency Key Stability
-- The `idempotencyKey` (UUIDv4) is generated ONCE at initial enqueue.
-- Retries of the same outbox item reuse the exact same persisted key.
-- Two distinct logical submissions receive different keys.
-- Sent strictly via HTTP header `Idempotency-Key: <key>`, never in the JSON body.
+### Crash Recovery from SYNCING
+- `recoverInterruptedSyncs()`: Invoked automatically during database initialization (`openAppDatabase`).
+- Atomically converts interrupted in-flight `SYNCING` records to `SYNC_FAILED` with `error_classification = 'NETWORK'` and `last_error = 'INTERRUPTED_SYNC_RECOVERY'`.
+- Preserves outbox ID, exact Idempotency-Key, payload, draft, and evidence files.
 
-### Serialized FIFO Execution
-`OutboxCoordinator`:
-- Mutual-exclusion lock ensures only one worker processes an outbox item at a time.
-- Queries oldest eligible items first (`sync_status IN ('IDLE', 'SYNC_FAILED') ORDER BY created_at ASC LIMIT 1`).
-- Transitions item through `SYNCING` -> `SYNCED` or `SYNC_FAILED`.
+### Non-Retryable Error Exclusion
+- `getNextEligibleItem()` selects only items that are `IDLE` or `SYNC_FAILED` with retryable classifications: `NETWORK` or `SERVER_5XX`.
+- Non-retryable failure classes (`VALIDATION`, `CONFLICT`, `FORBIDDEN`, `AUTH`) remain durably stored for user resolution and are NOT auto-picked, preventing infinite retry loops.
 
-### Error Classification & Retry Policy
-- `NETWORK` / `SERVER_5XX`: Retryable transport failures; worker retries upon reconnection.
-- `VALIDATION` / `CONFLICT` / `FORBIDDEN` / `AUTH`: Non-retryable client/security failures; worker halts retries to prevent spinning and preserves evidence.
+### CSPRNG UUID Generation
+- Uses `generateSecureUuid()` from `apps/mobile/src/storage/utils/uuid.ts` backed by `crypto.randomUUID()` / `expo-crypto.randomUUID()`.
+- Zero `Math.random()` fallbacks.
 
 ---
 
-## 7. Device / Process-Kill Acceptance Procedure
+## 7. Device & Process-Kill Verification Strategy
 
-The following procedure specifies manual verification on a physical device or emulator:
-
-1. **Start Task**: Open mobile app, select assigned task, verify status `IN_PROGRESS`.
-2. **Capture Evidence**: Capture before photo and scan tree QR code.
-3. **Persist into Sandbox**: File is copied into `${FileSystem.documentDirectory}/evidence/${taskId}/before.jpg` and SHA-256 is computed.
-4. **Offline Enqueue**: Disconnect device network (Airplane mode) and tap "Gửi duyệt".
-5. **Verify Local State**: UI indicates `LocalSubmissionStatus = PENDING_SYNC`; server `TaskStatus` remains `IN_PROGRESS`.
-6. **Simulate OS Kill**: Force-kill application process via Android Recents / App Settings.
-7. **Relaunch**: Open application while still in Airplane mode.
-8. **Verify Survival**: Draft state, local evidence photos, and outbox queue item survive intact.
-9. **Restore Connectivity**: Disable Airplane mode; background worker triggers sequential dispatch.
-10. **Reconciliation**: Server receives payload with stable `Idempotency-Key`, returns HTTP 201 with `TaskStatus = WAITING_REVIEW`; client updates task status to `WAITING_REVIEW` and marks outbox item `SYNCED`.
-
-> **Status for Wave 5A**: Marked **NOT_RUN** on physical device in this wave. Verified deterministically in automated unit/integration tests (`tests/mobile/offline-durable-foundation.spec.ts`).
+### Distinction of Verification Environments:
+- **`NODE_SQLITE_REOPEN_CHARACTERIZATION`**: **PASS**
+  - Verified on disk using a temporary SQLite file via `createDiskTestDatabase`.
+  - Data was written, process crash was simulated by closing connection, new connection was opened to the same file, `recoverInterruptedSyncs()` ran, and all rows and Idempotency-Keys were recovered intact.
+- **`NATIVE_DEVICE_PROCESS_KILL`**: **NOT_RUN**
+  - Physical Android/iOS process-kill and relaunch requires physical device/emulator testing and remains scheduled for physical device test suites.
+- **`NATIVE_EXPO_SHA256_RUNTIME`**: **NOT_RUN**
+  - Verified in Node via byte conversion and reference digest tests; native device execution remains marked NOT_RUN.
 
 ---
 
@@ -203,31 +129,31 @@ The following procedure specifies manual verification on a physical device or em
 ### Local Gate Results
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Prettier Code Style | `npm run format:check` | **PASS** | All matched files formatted |
+| Prettier Code Style | `npm run format:check` | **PASS** | 100% matched files compliant |
 | ESLint | `npm run lint` | **PASS** | 0 errors, 0 warnings |
 | Workspace Typecheck | `npm run typecheck` | **PASS** | 0 type errors across all 6 workspaces |
 | Mobile Typecheck | `npm run typecheck --workspace @novyx/mobile` | **PASS** | 0 type errors in `@novyx/mobile` |
-| Full Test Suite | `npm test` | **PASS** | 212 tests passed, 21 skipped |
+| Full Test Suite | `npm test` | **PASS** | 220 passed, 21 skipped |
 | Git Diff Check | `git diff --check` | **PASS** | Clean diff |
-| Android Bundle Sanity | `npm run mobile:export:android` | **PASS** | 852 modules bundled cleanly in 11.1s |
-| npm Audit | `npm audit --omit=dev` | **WARN** | 24 upstream vulnerabilities in transitive Expo packages (known baseline) |
+| Android Bundle Sanity | `npm run mobile:export:android` | **PASS** | 854 modules bundled cleanly in 11.6s |
+| npm Audit | `npm audit --omit=dev` | **WARN** | 24 upstream vulnerabilities in transitive packages (baseline) |
 
-### Test Matrix (`tests/mobile/offline-durable-foundation.spec.ts`)
-- **Assertion A**: `PENDING_SYNC` never appears in `TaskStatus` (P13W5A-N02) — **PASS**
-- **Assertion B**: `SYNCING` / `SYNC_FAILED` never appear in `TaskStatus` (P13W5A-N03) — **PASS**
-- **Assertion C**: Enqueue creates exactly one stable UUIDv4 idempotency key (P13W5A-P06) — **PASS**
-- **Assertion D**: Retry of the same outbox item retains the same key (P13W5A-N05) — **PASS**
-- **Assertion E**: Two separate logical submissions receive different keys — **PASS**
-- **Assertion F**: `Idempotency-Key` is absent from `SubmitEvidenceRequest` body (P13W5A-N04) — **PASS**
-- **Assertion G**: FIFO ordering is deterministic (`ORDER BY created_at ASC`) (P13W5A-P05) — **PASS**
-- **Assertion H**: Failed/retryable item remains durable with classified error — **PASS**
-- **Section 15**: Error classification accurately identifies retryable vs non-retryable errors — **PASS**
-- **Assertion I**: Conflict/failure does NOT delete local evidence metadata or files (P13W5A-N09) — **PASS**
-- **Assertion J**: Offline enqueue produces `PENDING_SYNC` without changing server `TaskStatus` (P13W5A-N10, P13W5A-P08) — **PASS**
-- **Assertion K**: Migration runner is deterministic and version-aware (`PRAGMA user_version`) (P13W5A-P02) — **PASS**
-- **Assertion L**: Auth credentials are NOT persisted in SQLite/outbox schema (P13W5A-N08, P13W5A-P10) — **PASS**
-- **Assertion M**: Binary image data/Base64 is NOT persisted in SQLite payload fields (P13W5A-N06) — **PASS**
-- **Recovery**: Simulates process restart: draft state, outbox, and evidence metadata survive — **PASS**
+### Integrity Correction Test Matrix (`tests/mobile/offline-durable-foundation.spec.ts`)
+- **W5A-F01**: Exact-byte SHA-256 test vector includes bytes $\ge \text{0x80}$ — **PASS**
+- **W5A-F02**: Same byte vector produces Node reference digest and identical decoded bytes — **PASS**
+- **W5A-F03**: No `digestStringAsync` binary-string hashing in evidenceHasher — **PASS**
+- **W5A-F04**: Persisted `SYNCING` item recovered after real DB disk close/reopen — **PASS**
+- **W5A-F05**: Recovered item preserves Idempotency-Key across close/reopen — **PASS**
+- **W5A-F06**: `NETWORK` failure is auto-eligible for retry — **PASS**
+- **W5A-F07**: `SERVER_5XX` failure is auto-eligible for retry — **PASS**
+- **W5A-F08**: `VALIDATION` failure is NOT auto-eligible — **PASS**
+- **W5A-F09**: `CONFLICT` failure is NOT auto-eligible — **PASS**
+- **W5A-F10**: `FORBIDDEN` failure is NOT auto-eligible — **PASS**
+- **W5A-F11**: `AUTH` failure is NOT auto-eligible — **PASS**
+- **W5A-F12**: Offline submission transaction rolls back draft + evidence + outbox on failure — **PASS**
+- **W5A-F13**: Cached task deletion cannot cascade-delete pending evidence/outbox (`ON DELETE RESTRICT`) — **PASS**
+- **W5A-F14**: Source contains no hardcoded Android `/data/user/0/` fallback — **PASS**
+- **W5A-F15**: UUID generation uses CSPRNG and remains stable on retry — **PASS**
 
 ---
 
@@ -267,35 +193,18 @@ The following procedure specifies manual verification on a physical device or em
 
 ---
 
-## 10. Changed File Inventory
+## 10. Changed File Inventory (Wave 5A Correction)
 
 | File | Status | Description |
 |---|---|---|
-| `apps/mobile/package.json` | MODIFIED | Added `expo-sqlite`, `expo-file-system`, `expo-crypto`, `@react-native-community/netinfo` |
-| `package.json` | MODIFIED | Added `better-sqlite3`, `@types/better-sqlite3` devDependencies |
-| `package-lock.json` | MODIFIED | Lockfile updated |
-| `apps/mobile/src/storage/database/types.ts` | NEW | Interfaces for `IDatabaseConnection`, `RunResult`, `MigrationStep` |
-| `apps/mobile/src/storage/database/migrations.ts` | NEW | Version 1 migrations with `PRAGMA user_version` |
-| `apps/mobile/src/storage/database/sqliteDatabase.ts` | NEW | `ExpoSqliteAdapter` and `BetterSqliteAdapter` |
-| `apps/mobile/src/storage/evidence/evidenceHasher.ts` | NEW | SHA-256 byte hashing port (`NodeEvidenceHasher`, `ExpoEvidenceHasher`) |
-| `apps/mobile/src/storage/evidence/evidenceFileStore.ts` | NEW | Persistent sandbox evidence store with non-destructive retention |
-| `apps/mobile/src/storage/outbox/types.ts` | NEW | Orthogonal state dimension types, outbox types, error classifications |
-| `apps/mobile/src/storage/outbox/stateSeparation.ts` | NEW | Assertions and dimension validator |
-| `apps/mobile/src/storage/outbox/outboxRepository.ts` | NEW | `SqliteOutboxRepository` with transactional enqueue and FIFO ordering |
-| `apps/mobile/src/storage/outbox/outboxCoordinator.ts` | NEW | Single-executor FIFO coordinator with mutex lock and retry classification |
-| `apps/mobile/src/storage/task/mobileTaskRepository.ts` | NEW | SQLite-backed task caching, draft management, and session recovery |
-| `apps/mobile/src/storage/index.ts` | NEW | Storage module barrel exports |
-| `tests/mobile/offline-durable-foundation.spec.ts` | NEW | Automated test suite verifying assertions A through M |
-| `docs/PHASE13-WAVE5A-OFFLINE-FOUNDATION.md` | NEW | Wave 5A documentation record |
-
----
-
-## 11. Known Remaining Work for Wave 5B
-
-Wave 5A established the durable persistence layer, file sandbox, outbox, and state machine foundation.
-The following items remain strictly reserved for Wave 5B:
-1. Production REST cutover for mobile networking (`EXPO_PUBLIC_DATA_SOURCE=rest`).
-2. S3 / MinIO presigned URL upload pipeline for binary photos from sandbox.
-3. Network observer integration (`NetInfo.addEventListener`) triggering `OutboxCoordinator.processAll()`.
-4. Transitional facade gradual refactoring in `greenOpsService.ts`.
-5. Role-based navigation correction and ProofProfile UI integration.
+| `apps/mobile/src/storage/utils/uuid.ts` | NEW | CSPRNG UUIDv4 generator without Math.random fallback |
+| `apps/mobile/src/storage/outbox/submissionService.ts` | NEW | Atomic offline submission service covering draft, evidence metadata, outbox |
+| `apps/mobile/src/storage/evidence/evidenceHasher.ts` | MODIFIED | Exact-byte SHA-256 via Crypto.digest and byte-level Base64 decoding |
+| `apps/mobile/src/storage/evidence/evidenceFileStore.ts` | MODIFIED | Removed Android fallback path; uses CSPRNG UUID |
+| `apps/mobile/src/storage/database/migrations.ts` | MODIFIED | Added Migration 2 (schema version 2) with ON DELETE RESTRICT |
+| `apps/mobile/src/storage/database/sqliteDatabase.ts` | MODIFIED | Added createDiskTestDatabase and recoverInterruptedSyncs on startup |
+| `apps/mobile/src/storage/outbox/outboxRepository.ts` | MODIFIED | Added recoverInterruptedSyncs, filtered out non-retryable auto-retries |
+| `apps/mobile/src/storage/outbox/types.ts` | MODIFIED | Added evidenceFiles to EnqueueSubmitEvidenceParams |
+| `apps/mobile/src/storage/index.ts` | MODIFIED | Exported submissionService and uuid |
+| `tests/mobile/offline-durable-foundation.spec.ts` | MODIFIED | Added tests W5A-F01 through W5A-F15 |
+| `docs/PHASE13-WAVE5A-OFFLINE-FOUNDATION.md` | MODIFIED | Updated documentation record |

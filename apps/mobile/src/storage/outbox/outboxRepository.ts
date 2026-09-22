@@ -1,6 +1,7 @@
 import type { IDatabaseConnection } from '../database/types';
 import type { EnqueueSubmitEvidenceParams, ErrorClassification, OutboxItem, SyncStatus } from './types';
 import { assertNoIdempotencyKeyInBody } from './stateSeparation';
+import { generateSecureUuid } from '../utils/uuid';
 
 export interface IDurableOutboxRepository {
   enqueueTransactional(params: EnqueueSubmitEvidenceParams): Promise<OutboxItem>;
@@ -15,17 +16,7 @@ export interface IDurableOutboxRepository {
   markCompleted(id: string): Promise<void>;
   listItems(): Promise<OutboxItem[]>;
   listPendingItems(): Promise<OutboxItem[]>;
-}
-
-function generateUuid(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  recoverInterruptedSyncs(): Promise<number>;
 }
 
 export class SqliteOutboxRepository implements IDurableOutboxRepository {
@@ -39,13 +30,16 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
     // P13W5A-N04: Ensure Idempotency-Key is NEVER in payload body
     assertNoIdempotencyKeyInBody(params.request);
 
-    const outboxId = generateUuid();
+    const outboxId = generateSecureUuid();
     // P13W5A-P06: Stable UUIDv4 idempotency key generated once
-    const idempotencyKey = params.idempotencyKey ?? generateUuid();
+    const idempotencyKey = params.idempotencyKey ?? generateSecureUuid();
     const now = new Date().toISOString();
     const payloadJson = JSON.stringify(params.request);
 
-    // Section 13: Transactional Enqueue
+    // Section 13 & Correction D: One SQLite transaction covers:
+    // 1. Local draft transition (LocalSubmissionStatus = PENDING_SYNC)
+    // 2. Local evidence metadata rows
+    // 3. Outbox intent row
     return await this.db.withTransactionAsync(async () => {
       // 1. Update local draft submission status to PENDING_SYNC
       // Note: Authoritative cached_tasks.status remains unchanged (IN_PROGRESS)
@@ -64,7 +58,46 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
         [params.taskId, params.notes ?? null, now, now],
       );
 
-      // 2. Insert outbox row
+      // 2. Atomically persist local evidence metadata rows if provided
+      if (params.evidenceFiles && params.evidenceFiles.length > 0) {
+        for (const ev of params.evidenceFiles) {
+          await this.db.runAsync(
+            `INSERT INTO local_evidence (
+              id,
+              task_id,
+              stage,
+              local_file_uri,
+              file_name,
+              content_type,
+              size_bytes,
+              sha256,
+              captured_at,
+              is_persisted_in_sandbox,
+              sync_status,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'IDLE', ?)
+            ON CONFLICT(id) DO UPDATE SET
+              local_file_uri = excluded.local_file_uri,
+              size_bytes = excluded.size_bytes,
+              sha256 = excluded.sha256,
+              is_persisted_in_sandbox = excluded.is_persisted_in_sandbox;`,
+            [
+              ev.id,
+              params.taskId,
+              ev.stage,
+              ev.sandboxFileUri,
+              ev.fileName,
+              ev.contentType,
+              ev.sizeBytes,
+              ev.sha256,
+              ev.capturedAt,
+              now,
+            ],
+          );
+        }
+      }
+
+      // 3. Insert outbox row
       await this.db.runAsync(
         `INSERT INTO outbox_items (
           id,
@@ -99,7 +132,10 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
   }
 
   async getNextEligibleItem(): Promise<OutboxItem | null> {
-    // Section 14: FIFO Ordering (created_at ASC)
+    // Section 14 & Correction C:
+    // Only pick items that are IDLE, or retryable failures (NETWORK, SERVER_5XX).
+    // Non-retryable failures (VALIDATION, CONFLICT, FORBIDDEN, AUTH) or null classifications
+    // are NEVER auto-picked.
     const row = await this.db.getFirstAsync<{
       id: string;
       task_id: string;
@@ -114,7 +150,8 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
       updated_at: string;
     }>(
       `SELECT * FROM outbox_items
-       WHERE sync_status IN ('IDLE', 'SYNC_FAILED')
+       WHERE sync_status = 'IDLE'
+          OR (sync_status = 'SYNC_FAILED' AND error_classification IN ('NETWORK', 'SERVER_5XX'))
        ORDER BY created_at ASC
        LIMIT 1;`,
     );
@@ -267,5 +304,26 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
+  }
+
+  /**
+   * Correction B: Interrupted Sync Recovery.
+   * On application restart, any item that was mid-flight ('SYNCING') when the process died
+   * is atomically reset to 'SYNC_FAILED' with error_classification = 'NETWORK'
+   * and last_error = 'INTERRUPTED_SYNC_RECOVERY'.
+   * Preserves outbox ID, Idempotency-Key, and payload.
+   */
+  async recoverInterruptedSyncs(): Promise<number> {
+    const now = new Date().toISOString();
+    const result = await this.db.runAsync(
+      `UPDATE outbox_items SET
+        sync_status = 'SYNC_FAILED',
+        error_classification = 'NETWORK',
+        last_error = 'INTERRUPTED_SYNC_RECOVERY',
+        updated_at = ?
+       WHERE sync_status = 'SYNCING';`,
+      [now],
+    );
+    return result.rowsAffected;
   }
 }

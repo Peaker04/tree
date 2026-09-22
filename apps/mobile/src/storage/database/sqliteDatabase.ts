@@ -94,6 +94,10 @@ export async function openAppDatabase(dbName = 'novyx_greenops_v1.db'): Promise<
   const db = await SQLite.openDatabaseAsync(dbName);
   const adapter = new ExpoSqliteAdapter(db);
   await runMigrations(adapter);
+  // Correction B: Automatically recover any interrupted SYNCING items on startup
+  const { SqliteOutboxRepository } = await import('../outbox/outboxRepository');
+  const outboxRepo = new SqliteOutboxRepository(adapter);
+  await outboxRepo.recoverInterruptedSyncs();
   return adapter;
 }
 
@@ -101,6 +105,15 @@ export async function createInMemoryTestDatabase(): Promise<IDatabaseConnection>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Database = require('better-sqlite3');
   const db = new Database(':memory:');
+  const adapter = new BetterSqliteAdapter(db);
+  await runMigrations(adapter);
+  return adapter;
+}
+
+export async function createDiskTestDatabase(filePath: string): Promise<IDatabaseConnection> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Database = require('better-sqlite3');
+  const db = new Database(filePath);
   const adapter = new BetterSqliteAdapter(db);
   await runMigrations(adapter);
   return adapter;

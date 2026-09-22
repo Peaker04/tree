@@ -22,9 +22,12 @@ export interface OutboxItem {
   updatedAt: string;
 }
 
+import type { PersistedEvidenceFile } from '../evidence/evidenceFileStore';
+
 export interface EnqueueSubmitEvidenceParams {
   taskId: string;
   request: SubmitEvidenceRequest;
+  evidenceFiles?: PersistedEvidenceFile[];
   idempotencyKey?: string; // Auto-generated UUIDv4 if omitted
   notes?: string;
 }

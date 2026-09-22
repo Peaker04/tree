@@ -1,6 +1,6 @@
 import type { IDatabaseConnection, MigrationStep } from './types';
 
-export const LATEST_SCHEMA_VERSION = 1;
+export const LATEST_SCHEMA_VERSION = 2;
 
 export const migrations: MigrationStep[] = [
   {
@@ -37,7 +37,7 @@ export const migrations: MigrationStep[] = [
         );
       `);
 
-      // 3. Local draft state for tasks
+      // 3. Local draft state for tasks (ON DELETE RESTRICT protects drafts from cache task pruning)
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS local_drafts (
           task_id TEXT PRIMARY KEY,
@@ -57,11 +57,11 @@ export const migrations: MigrationStep[] = [
           notes TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE CASCADE
+          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE RESTRICT
         );
       `);
 
-      // 4. Local evidence file metadata
+      // 4. Local evidence file metadata (ON DELETE RESTRICT protects local evidence from cache pruning)
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS local_evidence (
           id TEXT PRIMARY KEY,
@@ -76,11 +76,11 @@ export const migrations: MigrationStep[] = [
           is_persisted_in_sandbox INTEGER NOT NULL DEFAULT 1,
           sync_status TEXT NOT NULL DEFAULT 'IDLE',
           created_at TEXT NOT NULL,
-          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE CASCADE
+          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE RESTRICT
         );
       `);
 
-      // 5. Durable FIFO outbox queue
+      // 5. Durable FIFO outbox queue (ON DELETE RESTRICT protects outbox from cache pruning)
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS outbox_items (
           id TEXT PRIMARY KEY,
@@ -94,7 +94,7 @@ export const migrations: MigrationStep[] = [
           error_classification TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE CASCADE
+          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE RESTRICT
         );
       `);
 
@@ -104,6 +104,89 @@ export const migrations: MigrationStep[] = [
         CREATE INDEX IF NOT EXISTS idx_outbox_sync ON outbox_items (sync_status);
         CREATE INDEX IF NOT EXISTS idx_local_evidence_task ON local_evidence (task_id);
       `);
+    },
+  },
+  {
+    version: 2,
+    name: 'remove_destructive_cascade_fk',
+    up: async (db: IDatabaseConnection) => {
+      // Temporarily disable foreign key checks during table schema alteration
+      await db.execAsync('PRAGMA foreign_keys = OFF;');
+
+      // Migrate local_drafts to ON DELETE RESTRICT
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS local_drafts_v2 (
+          task_id TEXT PRIMARY KEY,
+          submission_status TEXT NOT NULL DEFAULT 'IDLE',
+          gps_lat REAL,
+          gps_lng REAL,
+          gps_distance_meters REAL,
+          gps_verified INTEGER NOT NULL DEFAULT 0,
+          gps_timestamp TEXT,
+          qr_scanned_code TEXT,
+          qr_verified INTEGER NOT NULL DEFAULT 0,
+          qr_timestamp TEXT,
+          location_exception_json TEXT,
+          identity_exception_json TEXT,
+          checklist_json TEXT,
+          findings_json TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE RESTRICT
+        );
+        INSERT INTO local_drafts_v2 SELECT * FROM local_drafts;
+        DROP TABLE local_drafts;
+        ALTER TABLE local_drafts_v2 RENAME TO local_drafts;
+      `);
+
+      // Migrate local_evidence to ON DELETE RESTRICT
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS local_evidence_v2 (
+          id TEXT PRIMARY KEY,
+          task_id TEXT NOT NULL,
+          stage TEXT NOT NULL,
+          local_file_uri TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          content_type TEXT NOT NULL,
+          size_bytes INTEGER NOT NULL,
+          sha256 TEXT NOT NULL,
+          captured_at TEXT NOT NULL,
+          is_persisted_in_sandbox INTEGER NOT NULL DEFAULT 1,
+          sync_status TEXT NOT NULL DEFAULT 'IDLE',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE RESTRICT
+        );
+        INSERT INTO local_evidence_v2 SELECT * FROM local_evidence;
+        DROP TABLE local_evidence;
+        ALTER TABLE local_evidence_v2 RENAME TO local_evidence;
+        CREATE INDEX IF NOT EXISTS idx_local_evidence_task ON local_evidence (task_id);
+      `);
+
+      // Migrate outbox_items to ON DELETE RESTRICT
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS outbox_items_v2 (
+          id TEXT PRIMARY KEY,
+          task_id TEXT NOT NULL,
+          command_type TEXT NOT NULL,
+          payload_json TEXT NOT NULL,
+          idempotency_key TEXT NOT NULL,
+          attempt_count INTEGER NOT NULL DEFAULT 0,
+          sync_status TEXT NOT NULL DEFAULT 'IDLE',
+          last_error TEXT,
+          error_classification TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES cached_tasks(id) ON DELETE RESTRICT
+        );
+        INSERT INTO outbox_items_v2 SELECT * FROM outbox_items;
+        DROP TABLE outbox_items;
+        ALTER TABLE outbox_items_v2 RENAME TO outbox_items;
+        CREATE INDEX IF NOT EXISTS idx_outbox_fifo ON outbox_items (created_at ASC);
+        CREATE INDEX IF NOT EXISTS idx_outbox_sync ON outbox_items (sync_status);
+      `);
+
+      await db.execAsync('PRAGMA foreign_keys = ON;');
     },
   },
 ];
