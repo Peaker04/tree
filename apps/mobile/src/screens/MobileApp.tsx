@@ -45,7 +45,7 @@ export default function MobileApp() {
   const greenOpsService = runtime.greenOpsService;
   const [data, setData] = useState(() => greenOpsService.getSnapshot());
   const [careHistoryByTree, setCareHistoryByTree] = useState<Record<string, CareHistory[]>>({});
-  const [dataSource, setDataSource] = useState<DataSourceState>({ source: 'mock', loading: true });
+  const [dataSource, setDataSource] = useState<DataSourceState>({ source: 'rest', loading: true });
   const [, setAuthSource] = useState<AuthSourceState>({ source: 'none' });
   const [screen, setScreen] = useState<Screen>('Login');
   const [role, setRole] = useState<Role | null>(null);
@@ -66,7 +66,7 @@ export default function MobileApp() {
     setData(greenOpsService.replaceNotifications(notifications));
   const applyMutationSource = useCallback((source: DataSourceStatus, message?: string) => {
     setDataSource((current) => ({
-      source: source === 'mock' ? current.source : source,
+      source: source === 'rest' ? current.source : source,
       loading: false,
       ...(message ? { message } : {}),
     }));

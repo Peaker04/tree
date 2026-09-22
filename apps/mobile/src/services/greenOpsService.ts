@@ -320,101 +320,6 @@ const buildFallbackNotification = (request: CreateNotificationRequest): AppNotif
   ...(request.taskId ? { taskId: request.taskId } : {}),
 });
 
-export function createMockGreenOpsService(seed: AppData = createInitialData()): GreenOpsService {
-  let snapshot = cloneData(seed);
-
-  return {
-    getSnapshot: () => cloneData(snapshot),
-    login: async (_request, fallbackRole) => ({
-      role: fallbackRole,
-      source: 'mock',
-    }),
-    restoreSession: (session) => ({
-      role: mapSessionRole(session),
-      source: 'mock',
-      session,
-    }),
-    logout: () => undefined,
-    loadSnapshot: async () => ({ data: cloneData(snapshot), source: 'mock' }),
-    listCareHistoryByTree: (treeId) => cloneCareHistory(buildCareHistory(snapshot.tasks, treeId)),
-    loadCareHistoryByTree: async (treeId) => ({
-      data: cloneCareHistory(buildCareHistory(snapshot.tasks, treeId)),
-      source: 'mock',
-    }),
-    lookupTreeByQr: async (payload) => ({
-      data: findTreeInSnapshot(snapshot, payload),
-      source: 'mock',
-    }),
-    createTask: async (_request, fallbackTask) => {
-      snapshot = {
-        ...snapshot,
-        tasks: upsertTask(snapshot.tasks, fallbackTask),
-      };
-      return {
-        data: { ...fallbackTask, checklist: fallbackTask.checklist.map((item) => ({ ...item })) },
-        source: 'mock',
-      };
-    },
-    updateTaskProgress: async (task) => {
-      snapshot = {
-        ...snapshot,
-        tasks: upsertTask(snapshot.tasks, task),
-      };
-      return { data: cloneTasks([task])[0], source: 'mock' };
-    },
-    submitTaskEvidence: async (task) => {
-      snapshot = {
-        ...snapshot,
-        tasks: upsertTask(snapshot.tasks, task),
-      };
-      return { data: cloneTasks([task])[0], source: 'mock' };
-    },
-    reviewTask: async (_request, fallbackTask) => {
-      snapshot = {
-        ...snapshot,
-        tasks: upsertTask(snapshot.tasks, fallbackTask),
-      };
-      return { data: cloneTasks([fallbackTask])[0], source: 'mock' };
-    },
-    createNotification: async (request) => {
-      const notification = buildFallbackNotification(request);
-      snapshot = {
-        ...snapshot,
-        notifications: [notification, ...snapshot.notifications],
-      };
-      return { data: { ...notification }, source: 'mock' };
-    },
-    markNotificationsRead: async (_notificationIds, fallbackNotifications) => {
-      snapshot = {
-        ...snapshot,
-        notifications: fallbackNotifications.map((notification) => ({ ...notification })),
-      };
-      return {
-        data: snapshot.notifications.map((notification) => ({ ...notification })),
-        source: 'mock',
-      };
-    },
-    replaceTasks: (tasks) => {
-      snapshot = {
-        ...snapshot,
-        tasks: cloneTasks(tasks),
-      };
-      return cloneData(snapshot);
-    },
-    replaceNotifications: (notifications) => {
-      snapshot = {
-        ...snapshot,
-        notifications: notifications.map((notification) => ({ ...notification })),
-      };
-      return cloneData(snapshot);
-    },
-    reset: () => {
-      snapshot = createInitialData();
-      return cloneData(snapshot);
-    },
-  };
-}
-
 export function createHybridGreenOpsService(
   seed: AppData = createInitialData(),
   envSource: Record<string, string | undefined> = defaultPublicEnvSource,
@@ -423,30 +328,20 @@ export function createHybridGreenOpsService(
 ): GreenOpsService {
   const config = readPublicRuntimeConfig(envSource);
   // Section 5 & 33: Explicit data source selection. In mock mode, use mock intentionally.
-  if (config.dataSource === 'mock') {
-    return createMockGreenOpsService(seed);
-  }
+  
 
   let snapshot = cloneData(seed);
   const restService = createGreenOpsRestService(envSource, sessionManager, apiClient);
 
   return {
     getSnapshot: () => cloneData(snapshot),
-    login: async (request, fallbackRole) => {
-      try {
-        const response = await restService.login(request);
-        return {
-          role: mapSessionRole(response.session),
-          source: 'rest',
-          session: response.session,
-        };
-      } catch (error) {
-        return {
-          role: fallbackRole,
-          source: 'fallback',
-          message: toLoadFailureMessage(error),
-        };
-      }
+    login: async (request, _fallbackRole) => {
+      const response = await restService.login(request);
+      return {
+        role: mapSessionRole(response.session),
+        source: 'rest',
+        session: response.session,
+      };
     },
     restoreSession: (session) => {
       restService.restoreSession(session);

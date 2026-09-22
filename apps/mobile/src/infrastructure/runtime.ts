@@ -55,23 +55,13 @@ export class MobileSyncRuntime {
     this.storage = options?.storage;
     this.binaryReader = options?.binaryReader ?? new DefaultEvidenceBinaryReader();
 
-    let apiBaseUrl = 'http://localhost:3000/v1';
-    let safeEnvSource = this.envSource;
-    try {
-      const config = readPublicRuntimeConfig(this.envSource);
-      apiBaseUrl = config.apiBaseUrl;
-    } catch {
-      safeEnvSource = {
-        EXPO_PUBLIC_APP_ENV: this.envSource.EXPO_PUBLIC_APP_ENV ?? 'development',
-        EXPO_PUBLIC_API_BASE_URL: this.envSource.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/v1',
-        EXPO_PUBLIC_DATA_SOURCE: this.envSource.EXPO_PUBLIC_DATA_SOURCE ?? 'mock',
-      };
-    }
+    const config = readPublicRuntimeConfig(this.envSource);
+    const apiBaseUrl = config.apiBaseUrl;
 
     this.sessionManager = new AuthSessionManager(apiBaseUrl, this.storage);
     this.apiClient = new MobileApiClient(apiBaseUrl, this.sessionManager);
     this.uploadClient = new EvidenceUploadClient(this.apiClient, this.binaryReader);
-    this.greenOpsService = createHybridGreenOpsService(undefined, safeEnvSource, this.sessionManager, this.apiClient);
+    this.greenOpsService = createHybridGreenOpsService(undefined, this.envSource, this.sessionManager, this.apiClient);
 
     if (options?.db) {
       this.setupWithDatabase(options.db);

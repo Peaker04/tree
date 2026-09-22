@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, Button, Card, EmptyState, Field, GradientCard, SectionTitle } from '../../components/AppPrimitives';
+import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { ChecklistLine, Header, PhotoPair, ProofChainCard, TaskCard } from '../../components/presentation/TaskSurfaces';
 import { getTaskProofCount, getTaskProofGaps, matchesTaskQuery } from '../../domain/mobileWorkflow';
 import { colors, radius, spacing } from '../../theme/tokens';
@@ -52,7 +52,7 @@ export function ManagerReview(props: ManagerAreaProps) {
       ListHeaderComponent={
         <View style={styles.headerContainer}>
           <Header title="Danh sách chờ duyệt" subtitle="Các báo cáo nghiệm thu hiện trường" />
-      <GradientCard variant="review">
+      <Card tone="warm">
         <View style={styles.rowBetween}>
           <View style={styles.flex}>
             <Text style={styles.lightHeroTitle}>Kiểm tra bằng chứng</Text>
@@ -65,7 +65,7 @@ export function ManagerReview(props: ManagerAreaProps) {
             <Text style={styles.reviewHeroLabel}>chờ duyệt</Text>
           </View>
         </View>
-      </GradientCard>
+      </Card>
       <Card style={styles.taskFilterPanel}>
         <Field
           label="Tìm báo cáo"

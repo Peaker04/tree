@@ -15,7 +15,6 @@
     "mobile:prebuild:android": "node scripts/expo-mobile.cjs prebuild --platform android --clean --no-install",
     "mobile:export:android": "npm run export:android --workspace @novyx/mobile",
     "mobile:smoke:check": "node scripts/mobile-smoke-check.cjs",
-    "api:dev": "node scripts/greenops-dev-api.cjs",
     "qr:demo": "node scripts/generate-qr-demo.cjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
