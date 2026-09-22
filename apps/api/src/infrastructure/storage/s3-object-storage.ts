@@ -7,11 +7,12 @@ import {
   type S3ClientConfig,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import type {
   IObjectStoragePort,
   PresignedUploadResult,
   ObjectMetadata,
+  ObjectIntegrity,
 } from '../../modules/work-management/application/ports/object-storage.port';
 import type { StorageConfig } from '../../config/env';
 
@@ -95,7 +96,6 @@ export class S3ObjectStorageAdapter implements IObjectStoragePort {
       };
       if (etag !== undefined) {
         meta.etag = etag;
-        meta.contentHash = etag;
       }
       if (response.Metadata) {
         meta.taskId = response.Metadata['taskid'] ?? response.Metadata['taskId'];
@@ -105,6 +105,49 @@ export class S3ObjectStorageAdapter implements IObjectStoragePort {
     } catch (err: unknown) {
       const awsErr = err as { name?: string; $metadata?: { httpStatusCode?: number } };
       if (awsErr.name === 'NotFound' || awsErr.$metadata?.httpStatusCode === 404) {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async getObjectIntegrity(objectKey: string): Promise<ObjectIntegrity | null> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+      });
+      const response = await this.client.send(command);
+      if (!response.Body) {
+        return null;
+      }
+
+      const hash = createHash('sha256');
+      let byteLength = 0;
+      for await (const chunk of response.Body as AsyncIterable<Buffer | Uint8Array>) {
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        byteLength += buf.length;
+        hash.update(buf);
+      }
+      const sha256 = hash.digest('hex');
+      const etag = response.ETag?.replace(/"/g, '');
+
+      const out: ObjectIntegrity = {
+        sizeBytes: response.ContentLength ?? byteLength,
+        contentType: response.ContentType ?? 'application/octet-stream',
+        sha256,
+      };
+      if (etag !== undefined) {
+        out.etag = etag;
+      }
+      if (response.Metadata) {
+        out.taskId = response.Metadata['taskid'] ?? response.Metadata['taskId'];
+        out.uploadedBy = response.Metadata['uploadedby'] ?? response.Metadata['uploadedBy'];
+      }
+      return out;
+    } catch (err: unknown) {
+      const awsErr = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (awsErr.name === 'NoSuchKey' || awsErr.name === 'NotFound' || awsErr.$metadata?.httpStatusCode === 404) {
         return null;
       }
       throw err;
@@ -129,7 +172,7 @@ export class S3ObjectStorageAdapter implements IObjectStoragePort {
           uploadedBy?: string | undefined;
         }
       | undefined;
-  }): Promise<{ contentHash?: string; etag?: string }> {
+  }): Promise<{ sha256: string; etag?: string }> {
     const s3Metadata: Record<string, string> = {};
     if (params.metadata?.taskId) s3Metadata.taskid = params.metadata.taskId;
     if (params.metadata?.uploadedBy) s3Metadata.uploadedby = params.metadata.uploadedBy;
@@ -143,10 +186,10 @@ export class S3ObjectStorageAdapter implements IObjectStoragePort {
     });
     const result = await this.client.send(command);
     const etag = result.ETag?.replace(/"/g, '');
-    const out: { contentHash?: string; etag?: string } = {};
+    const sha256 = createHash('sha256').update(params.data).digest('hex');
+    const out: { sha256: string; etag?: string } = { sha256 };
     if (etag !== undefined) {
       out.etag = etag;
-      out.contentHash = etag;
     }
     return out;
   }

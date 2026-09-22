@@ -1,8 +1,16 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { IIdempotencyRepository } from '../../../modules/work-management/application/ports/idempotency-repository.port';
+import type { IOperationalUnitOfWork } from '../../../modules/work-management/application/ports/operational-unit-of-work.port';
 import { ConflictError, ValidationError } from '../../../core/errors';
 import { UUIDV4_REGEX } from '@novyx/contracts';
+
+class ConcurrentClaimError extends Error {
+  constructor() {
+    super('Concurrent idempotency claim detected');
+    this.name = 'ConcurrentClaimError';
+  }
+}
 
 /**
  * Deterministically stringifies any object with alphabetically sorted keys.
@@ -21,8 +29,9 @@ function canonicalJson(value: unknown): string {
 }
 
 /**
- * Executes a state-mutating operation with PostgreSQL-backed idempotency protection (ADR 0009 / W4-C02).
+ * Executes a state-mutating operation with PostgreSQL-backed idempotency protection (ADR 0009 / W4-C02 / W4-F02).
  * Idempotency key is read from HTTP header (Idempotency-Key or idempotency-key).
+ * When uow is provided, executes claim, business mutation, and completion in ONE crash-safe atomic PostgreSQL transaction.
  * Replays identical requests, rejects conflicting payload hashes with 409 CONFLICT.
  */
 export async function executeWithIdempotency<T>(
@@ -30,6 +39,7 @@ export async function executeWithIdempotency<T>(
   reply: FastifyReply,
   idempotencyRepo: IIdempotencyRepository,
   fn: () => Promise<{ status: number; data: T }>,
+  uow?: IOperationalUnitOfWork | undefined,
 ): Promise<void> {
   const rawKey = (request.headers['idempotency-key'] || request.headers['Idempotency-Key']) as string | undefined;
 
@@ -51,7 +61,101 @@ export async function executeWithIdempotency<T>(
     .update(`${actorId}:${requestRoute}:${canonicalJson(request.body ?? {})}`)
     .digest('hex');
 
-  // Attempt database-level unique claim for (actorId, idempotencyKey)
+  // Check if a completed or in-flight idempotency record already exists
+  const existing = await idempotencyRepo.findByKey(actorId, idempotencyKey);
+  if (existing) {
+    if (existing.requestHash !== requestHash || existing.requestRoute !== requestRoute) {
+      throw new ConflictError('Idempotency key reused with different request payload or route', {
+        subtype: 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD',
+      });
+    }
+
+    if (existing.status === 'COMPLETED' && existing.responseStatus !== null && existing.responseStatus !== undefined) {
+      const cachedBody = existing.responseBody ? JSON.parse(existing.responseBody) : {};
+      reply.status(existing.responseStatus).send(cachedBody);
+      return;
+    }
+
+    // In flight by concurrent request (PROCESSING): wait for completion and replay
+    for (let i = 0; i < 60; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const polled = await idempotencyRepo.findByKey(actorId, idempotencyKey);
+      if (
+        polled &&
+        polled.status === 'COMPLETED' &&
+        polled.responseStatus !== null &&
+        polled.responseStatus !== undefined
+      ) {
+        const cachedBody = polled.responseBody ? JSON.parse(polled.responseBody) : {};
+        reply.status(polled.responseStatus).send(cachedBody);
+        return;
+      }
+    }
+
+    throw new ConflictError('Concurrent request with this Idempotency-Key is currently being processed');
+  }
+
+  // W4-F02: Atomic PostgreSQL transaction covering idempotency claim, business mutation, and completion
+  if (uow) {
+    try {
+      const result = await uow.execute(async (tx) => {
+        const claimId = randomUUID();
+        const claimed = await tx.idempotencyRepo.claim({
+          id: claimId,
+          idempotencyKey,
+          actorId,
+          requestRoute,
+          requestHash,
+        });
+
+        if (!claimed) {
+          throw new ConcurrentClaimError();
+        }
+
+        const fnResult = await fn();
+
+        await tx.idempotencyRepo.complete({
+          actorId,
+          idempotencyKey,
+          responseStatus: fnResult.status,
+          responseBody: JSON.stringify(fnResult.data),
+        });
+
+        return fnResult;
+      });
+
+      reply.status(result.status).send(result.data);
+      return;
+    } catch (err: unknown) {
+      const isPgUniqueConflict = (err as { code?: string })?.code === '23505';
+      if (err instanceof ConcurrentClaimError || isPgUniqueConflict) {
+        // Concurrent transaction claimed or completed: wait and replay committed response
+        for (let i = 0; i < 60; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          const polled = await idempotencyRepo.findByKey(actorId, idempotencyKey);
+          if (
+            polled &&
+            polled.status === 'COMPLETED' &&
+            polled.responseStatus !== null &&
+            polled.responseStatus !== undefined
+          ) {
+            if (polled.requestHash !== requestHash || polled.requestRoute !== requestRoute) {
+              throw new ConflictError('Idempotency key reused with different request payload or route', {
+                subtype: 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD',
+              });
+            }
+            const cachedBody = polled.responseBody ? JSON.parse(polled.responseBody) : {};
+            reply.status(polled.responseStatus).send(cachedBody);
+            return;
+          }
+        }
+        throw new ConflictError('Concurrent request with this Idempotency-Key is currently being processed');
+      }
+      throw err;
+    }
+  }
+
+  // Fallback if no UoW is provided (e.g. in-memory test doubles without DB)
   const claimId = randomUUID();
   const claimed = await idempotencyRepo.claim({
     id: claimId,
@@ -62,46 +166,27 @@ export async function executeWithIdempotency<T>(
   });
 
   if (!claimed) {
-    // Record already exists for this actor and key
-    const existing = await idempotencyRepo.findByKey(actorId, idempotencyKey);
-    if (existing) {
-      if (existing.requestHash !== requestHash || existing.requestRoute !== requestRoute) {
+    const existingFallback = await idempotencyRepo.findByKey(actorId, idempotencyKey);
+    if (existingFallback) {
+      if (existingFallback.requestHash !== requestHash || existingFallback.requestRoute !== requestRoute) {
         throw new ConflictError('Idempotency key reused with different request payload or route', {
           subtype: 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD',
         });
       }
 
       if (
-        existing.status === 'COMPLETED' &&
-        existing.responseStatus !== null &&
-        existing.responseStatus !== undefined
+        existingFallback.status === 'COMPLETED' &&
+        existingFallback.responseStatus !== null &&
+        existingFallback.responseStatus !== undefined
       ) {
-        const cachedBody = existing.responseBody ? JSON.parse(existing.responseBody) : {};
-        reply.status(existing.responseStatus).send(cachedBody);
+        const cachedBody = existingFallback.responseBody ? JSON.parse(existingFallback.responseBody) : {};
+        reply.status(existingFallback.responseStatus).send(cachedBody);
         return;
       }
-
-      // In flight by concurrent request (PROCESSING): wait for completion and replay
-      for (let i = 0; i < 60; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        const polled = await idempotencyRepo.findByKey(actorId, idempotencyKey);
-        if (
-          polled &&
-          polled.status === 'COMPLETED' &&
-          polled.responseStatus !== null &&
-          polled.responseStatus !== undefined
-        ) {
-          const cachedBody = polled.responseBody ? JSON.parse(polled.responseBody) : {};
-          reply.status(polled.responseStatus).send(cachedBody);
-          return;
-        }
-      }
-
-      throw new ConflictError('Concurrent request with this Idempotency-Key is currently being processed');
     }
+    throw new ConflictError('Concurrent request with this Idempotency-Key is currently being processed');
   }
 
-  // Current request holds the PROCESSING claim
   try {
     const result = await fn();
     await idempotencyRepo.complete({
@@ -112,11 +197,10 @@ export async function executeWithIdempotency<T>(
     });
     reply.status(result.status).send(result.data);
   } catch (err) {
-    // Mutation failed/rolled back: clean up PROCESSING claim so client may retry
     try {
       await idempotencyRepo.delete(actorId, idempotencyKey);
     } catch {
-      // Best-effort cleanup
+      // Best-effort cleanup for non-transactional fallback
     }
     throw err;
   }

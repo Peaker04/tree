@@ -1,15 +1,15 @@
 # PHASE 13 — WAVE 4 OPERATIONAL DOMAIN EVIDENCE
 
 **Document Purpose**: Authoritative factual evidence record for Wave 4 implementation of NOVYX GreenOps.
-**Status**: COMPLETED & VERIFIED (100% Green CI on Real PostgreSQL 18.x + MinIO S3)
+**Status**: FINAL_REMOTE_CI = NOT_RUN (AWAITING INDEPENDENT VERIFICATION)
 **Wave 5**: LOCKED (DO NOT START)
 
 ---
 
 ## 1. ENTRY GATES & REPOSITORY BASELINE
 
-- **Wave 4 Correction Entry Commit**: `fa642ac9efa2f73cd400dc22d5fe9459fb86f4ad`
-- **Wave 4 Correction Entry Tree**: `59d5864dd206d03f4b02083556ce554282da81b3`
+- **Wave 4 Correction Entry Commit**: `933b8feb764b1f73d32e34ba5638d37e57a1b63e`
+- **Wave 4 Correction Entry Tree**: `fa0dc6c185cb6769318faa2f083a2bb9d7b39afe`
 - **Branch**: `base-setup`
 - **Node Version**: v22.14.0
 - **NPM Version**: 10.9.2
@@ -43,24 +43,23 @@ Exactly five logical bounded contexts are active inside `apps/api/src/modules/`:
 - **Applied On Top Of**: `0000_init.sql`, `0001_iam_security_foundation.sql` (strictly additive, non-destructive).
 - **Total Tables Provisioned** (18 tables):
   1. `users`: IAM user credentials and role.
-  2. `sessions`: Active bearer token sessions.
-  3. `spent_refresh_tokens`: Refresh token replay prevention.
-  4. `credential_setup_tokens`: Single-use invitation tokens.
-  5. `audit_events`: Append-only audit events table.
-  6. `trees`: Master tree registry with OCC `version`, unique `qr_code`, coordinates, retirement metadata.
-  7. `task_types`: Catalog of operational task types with active status.
-  8. `proof_policy_versions`: Immutable versioned proof profile mappings per task type.
-  9. `checklist_template_versions`: Centrally governed checklist templates per task type.
-  10. `manager_operational_scopes`: PostgreSQL-backed scope mapping for Operations Managers (`AUTHORIZED_OPERATIONAL_SCOPE`).
-  11. `tasks`: 7-state task aggregate with immutable `tree_id`, OCC `version`, policy snapshotting.
-  12. `evidence_objects`: Metadata linking S3-compatible binary objects with task and uploader identity.
-  13. `evidence_attempts`: Multi-version submission history preserving historical authorship.
-  14. `field_issues`: Origin record for BLOCKED task status with photo reference.
-  15. `rework_requests`: Targeted rework item feedback.
-  16. `task_reviews`: Review outcome records preserving reviewer, decision, exception, and targeted rework details.
-  17. `care_histories`: Read-only derived projection populated ONLY for COMPLETED tasks.
-  18. `evidence_upload_reservations`: Pre-upload reservations for proof objects with expected hash/size to prevent unissued adoption.
-  - Plus `idempotency_records`: Actor-scoped HTTP mutation response cache with `status: 'PROCESSING' | 'COMPLETED'` supporting atomic DB-level claims and concurrent race prevention.
+  2. `audit_events`: Append-only audit events table.
+  3. `sessions`: Active bearer token sessions.
+  4. `spent_refresh_tokens`: Refresh token replay prevention.
+  5. `credential_setup_tokens`: Single-use invitation tokens.
+  6. `care_histories`: Read-only derived projection populated ONLY for COMPLETED tasks.
+  7. `idempotency_records`: Actor-scoped HTTP mutation response cache with atomic DB-level claims, single-transaction commit, and concurrent race prevention.
+  8. `task_types`: Catalog of operational task types with active status.
+  9. `proof_policy_versions`: Immutable versioned proof profile mappings per task type.
+  10. `checklist_template_versions`: Centrally governed checklist templates per task type.
+  11. `manager_operational_scopes`: PostgreSQL-backed scope mapping for Operations Managers (`AUTHORIZED_OPERATIONAL_SCOPE`).
+  12. `tasks`: 7-state task aggregate with immutable `tree_id`, OCC `version`, policy snapshotting.
+  13. `trees`: Master tree registry with OCC `version`, unique `qr_code`, coordinates, retirement metadata.
+  14. `evidence_objects`: Metadata linking S3-compatible binary objects with task and uploader identity (canonical 64-character lowercase hex SHA-256 integrity).
+  15. `evidence_attempts`: Multi-version submission history preserving historical authorship.
+  16. `field_issues`: Origin record for BLOCKED task status with photo reference.
+  17. `task_reviews`: Review outcome records preserving reviewer, decision, exception, and targeted rework details (targeted rework persists through review and attempt structures; no separate `rework_requests` table exists).
+  18. `evidence_upload_reservations`: Pre-upload reservations for proof objects with expected SHA-256 hash and size to prevent unissued adoption.
 - **Rollback Strategy**:
   - Additive non-destructive migration.
   - Recovery: Forward-only non-destructive migrations. Drop Wave-4 tables if rollback is mandated without affecting Wave 0–3 IAM or audit tables.
@@ -113,22 +112,30 @@ No `DRAFT`, `ASSIGNED`, `SUBMITTED`, `APPROVED`, `REJECTED`.
 
 ## 6. TRANSACTIONAL INTEGRITY, OCC & IDEMPOTENCY (W4-C01 to W4-C06)
 
-### 6.1 Transactional Operational Domain & Unit of Work (W4-C01)
+### 6.1 Transactional Operational Domain & Unit of Work (W4-C01, W4-F02)
 - All 19 mutating operational use cases operate within an atomic PostgreSQL transaction boundary via `IOperationalUnitOfWork`.
-- `SubmitEvidenceUseCase`: Upload verification and preparation occur outside, followed by atomic OCC state transition, evidence object metadata creation, evidence attempt record creation, append-only audit event emission, and idempotency completion in ONE transaction. Failure rolls back all DB changes atomically.
-- `ReviewTaskUseCase`: Review evaluation, OCC version verification, CareHistory projection append (on APPROVE), audit event emission, and idempotency completion occur in ONE atomic transaction.
+- `executeWithIdempotency` wraps the idempotency claim, the use-case business mutation, related history projections, SUCCESS audit event, and idempotency completion within ONE single atomic PostgreSQL transaction boundary.
+- If any business logic, audit write, or commit fails, the entire transaction rolls back cleanly: no partial state changes, no orphaned SUCCESS audit, no COMPLETED idempotency record, and NO permanent PROCESSING poison record.
+- Same-key retries following a rolled-back transaction execute successfully.
 
-### 6.2 Concurrent Idempotency Hardening (W4-C02)
+### 6.2 Concurrent Idempotency Hardening (W4-C02, W4-F02)
 - State-changing commands strictly require `Idempotency-Key` header with valid RFC 4122 UUIDv4 format. Missing or invalid keys return deterministic 400 `ValidationError` (`VALIDATION_FAILED`).
 - Request fingerprinting uses canonical deterministic JSON serialization (keys sorted recursively).
-- Atomic DB-level claim using `status: 'PROCESSING' | 'COMPLETED'` in `idempotency_records`.
-- Concurrent duplicate requests receive `{ state: 'PROCESSING' }` and enter an active polling loop; once completed, they replay the committed response with identical HTTP status and body without executing side effects.
+- Atomic DB-level claim using `status: 'PROCESSING' | 'COMPLETED'` in `idempotency_records` within the business transaction.
+- Concurrent duplicate requests serialize on PostgreSQL's unique constraint: the non-executing request catches `23505`, rolls back its aborted transaction, polls for the primary transaction's completion, and replays the committed response with identical HTTP status and body without re-executing business logic.
 - Different request payload with the same key returns deterministic 409 `ConflictError`.
 
-### 6.3 Evidence Ownership & Integrity (W4-C03)
+### 6.3 True SHA-256 Evidence Integrity & Authoritative Reservation (W4-C03, W4-F01)
 - HTTP/HTTPS temporary presigned URLs are strictly rejected as durable evidence identity; submissions must use server-issued `objectKey` or `storageRef`.
-- Evidence object ownership is verified via `evidence_upload_reservations` and S3 object metadata (`taskId` and `uploadedBy`). Cross-task or cross-staff evidence adoption is rejected with 403 `ForbiddenError`.
-- Real checksum verification prevents tampered or corrupted evidence objects from entering the operational audit record.
+- S3 ETag is never treated or stored as content SHA-256 checksum.
+- Canonical content hash is defined as 64-character lowercase hex SHA-256 computed from the exact object bytes streamed from storage.
+- Authoritative server-created `evidence_upload_reservations` row must exist before evidence can be submitted:
+  - Reservation task ownership enforced (`reservation.taskId === task.id`).
+  - Reservation actor ownership enforced (`reservation.actorId === authenticated Staff`).
+  - Content-type integrity enforced (`expectedContentType === actual contentType`).
+  - Size integrity enforced (`expectedSizeBytes === actual sizeBytes`).
+  - True SHA-256 integrity enforced (`expectedContentHash === actual SHA-256`).
+- Any violation rejects submission with `ForbiddenError` (403) or `ValidationError` (400), and `TaskStatus` remains unchanged.
 
 ### 6.4 Policy Governance & Fallback Removal (W4-C04)
 - `ResolveTaskTypePolicyUseCase` strictly enforces published policies:
@@ -220,21 +227,11 @@ No `DRAFT`, `ASSIGNED`, `SUBMITTED`, `APPROVED`, `REJECTED`.
 
 ### 8.2 Remote GitHub Actions CI Verification
 
-- **Status**: PASS (100% Green across all steps and 16 test suites)
+- **FINAL_REMOTE_CI**: NOT_RUN
+- **Status**: AWAITING INDEPENDENT VERIFICATION
 - **Workflow**: `.github/workflows/ci.yml` (`base-setup CI`)
-- **Run ID**: `35596874885`
-- **Run URL**: `https://github.com/Peaker04/tree/actions/runs/35596874885`
-- **Job ID**: `106323612966`
-- **Head Commit**: `dad104e46ea80e81ec6632fa9a7ffcbece91b650`
-- **Duration**: 1m 55s
-- **PostgreSQL Service**: `postgres:18-alpine` (PostgreSQL 18.x verified)
-- **Object Storage Service**: `quay.io/minio/minio` (Disposable S3 container verified)
-- **Test Execution**: 16 test files passed (16/16), 216 tests passed, 1 test skipped (negative unmigrated DB check)
-  - `tests/api/operational-real-e2e.spec.ts`: 3/3 passed (real end-to-end flows with PostgreSQL + MinIO)
-  - `tests/api/operational-postgres-integration.spec.ts`: 8/8 passed (real OCC, UoW, concurrency, idempotency, S3 ownership/checksum)
-  - `tests/api/iam-postgres-integration.spec.ts`: 5/5 passed (real IAM session, credential setup, audit trigger)
-  - `tests/api/db-integration.spec.ts`: 4/4 passed (1 skipped)
-  - Unit / Domain / Architecture / Contract suites: 100% passed
+- **Target Services**: `postgres:18-alpine` (PostgreSQL 18.x), `quay.io/minio/minio` (Disposable S3 container)
+- **CI Policy**: This commit records `FINAL_REMOTE_CI = NOT_RUN` / `AWAITING INDEPENDENT VERIFICATION`. No follow-up docs-only commit will be created; independent reviewer verifies CI externally and freezes Wave 4.
 
 ---
 

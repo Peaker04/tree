@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import type {
   ITreeRepository,
   ListTreesParams,
@@ -33,6 +33,7 @@ import type {
   IObjectStoragePort,
   PresignedUploadResult,
   ObjectMetadata,
+  ObjectIntegrity,
 } from '../../apps/api/src/modules/work-management/application/ports/object-storage.port';
 import type { Tree } from '../../apps/api/src/modules/tree-asset-registry/domain/tree.entity';
 import type { CareHistoryRecord } from '../../apps/api/src/modules/tree-asset-registry/domain/care-history.entity';
@@ -424,6 +425,23 @@ export class InMemoryObjectStorageAdapter implements IObjectStoragePort {
     return obj ? obj.metadata : null;
   }
 
+  async getObjectIntegrity(objectKey: string): Promise<ObjectIntegrity | null> {
+    const obj = this.storedObjects.get(objectKey);
+    if (!obj) return null;
+    const sha256 = createHash('sha256').update(obj.data).digest('hex');
+    const presigned = this.presignedMetadata.get(objectKey);
+    const taskId = obj.metadata.taskId ?? presigned?.taskId;
+    const uploadedBy = obj.metadata.uploadedBy ?? presigned?.actorId;
+    return {
+      sizeBytes: obj.data.length,
+      contentType: obj.contentType,
+      sha256,
+      taskId,
+      uploadedBy,
+      etag: obj.metadata.etag,
+    };
+  }
+
   async deleteObject(objectKey: string): Promise<void> {
     this.storedObjects.delete(objectKey);
     this.presignedMetadata.delete(objectKey);
@@ -439,11 +457,12 @@ export class InMemoryObjectStorageAdapter implements IObjectStoragePort {
           uploadedBy?: string | undefined;
         }
       | undefined;
-  }): Promise<{ contentHash?: string; etag?: string }> {
+  }): Promise<{ sha256?: string; etag?: string }> {
     const presigned = this.presignedMetadata.get(params.objectKey);
     const taskId = params.metadata?.taskId ?? presigned?.taskId;
     const uploadedBy = params.metadata?.uploadedBy ?? presigned?.actorId;
-    const etag = 'mock-md5-hash-123';
+    const etag = 'mock-etag-123';
+    const sha256 = createHash('sha256').update(params.data).digest('hex');
     this.storedObjects.set(params.objectKey, {
       data: params.data,
       contentType: params.contentType,
@@ -451,11 +470,11 @@ export class InMemoryObjectStorageAdapter implements IObjectStoragePort {
         sizeBytes: params.data.length,
         contentType: params.contentType,
         etag,
-        contentHash: etag,
+        sha256,
         taskId,
         uploadedBy,
       },
     });
-    return { etag, contentHash: etag };
+    return { etag, sha256 };
   }
 }

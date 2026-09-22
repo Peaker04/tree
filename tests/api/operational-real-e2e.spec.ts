@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type { FastifyInstance } from 'fastify';
@@ -223,6 +223,11 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       expect(startedTask.status).toBe('IN_PROGRESS');
 
       // 8. Staff presigns evidence upload
+      const beforeData = Buffer.from('REAL-E2E-BEFORE-PHOTO-DATA');
+      const afterData = Buffer.from('REAL-E2E-AFTER-PHOTO-DATA');
+      const beforeHash = createHash('sha256').update(beforeData).digest('hex');
+      const afterHash = createHash('sha256').update(afterData).digest('hex');
+
       const presignBeforeRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/evidence/presign`,
@@ -233,6 +238,8 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
         payload: {
           fileName: 'before.jpg',
           contentType: 'image/jpeg',
+          sizeBytes: beforeData.length,
+          contentHash: beforeHash,
         },
       });
       expect(presignBeforeRes.statusCode).toBe(200);
@@ -248,6 +255,8 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
         payload: {
           fileName: 'after.jpg',
           contentType: 'image/jpeg',
+          sizeBytes: afterData.length,
+          contentHash: afterHash,
         },
       });
       expect(presignAfterRes.statusCode).toBe(200);
@@ -256,7 +265,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       // 9. Upload real binary data to MinIO S3
       await storageAdapter.putObjectDirect({
         objectKey: beforeEvidence.objectKey,
-        data: Buffer.from('REAL-E2E-BEFORE-PHOTO-DATA'),
+        data: beforeData,
         contentType: 'image/jpeg',
         metadata: {
           taskId: task.id,
@@ -266,7 +275,7 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
 
       await storageAdapter.putObjectDirect({
         objectKey: afterEvidence.objectKey,
-        data: Buffer.from('REAL-E2E-AFTER-PHOTO-DATA'),
+        data: afterData,
         contentType: 'image/jpeg',
         metadata: {
           taskId: task.id,
@@ -430,18 +439,25 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       const startedTask = startRes.json().data;
 
       // Staff presigns and uploads photo
+      const photo1Data = Buffer.from('PHOTO-1-DATA');
+      const photo1Hash = createHash('sha256').update(photo1Data).digest('hex');
       const presignRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/evidence/presign`,
         headers: { authorization: `Bearer ${staff.token}`, 'idempotency-key': randomUUID() },
-        payload: { fileName: 'soil.jpg', contentType: 'image/jpeg' },
+        payload: {
+          fileName: 'soil.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: photo1Data.length,
+          contentHash: photo1Hash,
+        },
       });
       expect(presignRes.statusCode).toBe(200);
       const photo1 = presignRes.json().data;
 
       await storageAdapter.putObjectDirect({
         objectKey: photo1.objectKey,
-        data: Buffer.from('PHOTO-1-DATA'),
+        data: photo1Data,
         contentType: 'image/jpeg',
         metadata: { taskId: task.id, uploadedBy: staff.userId },
       });
@@ -487,18 +503,25 @@ describe('Phase 13 Wave 4: Real Infrastructure End-to-End Tests (Sections 63, 64
       expect(reworkTask.status).toBe('REWORK_REQUIRED');
 
       // Staff presigns and uploads rework photo
+      const photo2Data = Buffer.from('PHOTO-2-DATA');
+      const photo2Hash = createHash('sha256').update(photo2Data).digest('hex');
       const presign2Res = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/evidence/presign`,
         headers: { authorization: `Bearer ${staff.token}`, 'idempotency-key': randomUUID() },
-        payload: { fileName: 'soil-rework.jpg', contentType: 'image/jpeg' },
+        payload: {
+          fileName: 'soil-rework.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: photo2Data.length,
+          contentHash: photo2Hash,
+        },
       });
       expect(presign2Res.statusCode).toBe(200);
       const photo2 = presign2Res.json().data;
 
       await storageAdapter.putObjectDirect({
         objectKey: photo2.objectKey,
-        data: Buffer.from('PHOTO-2-DATA'),
+        data: photo2Data,
         contentType: 'image/jpeg',
         metadata: { taskId: task.id, uploadedBy: staff.userId },
       });

@@ -40,6 +40,7 @@ import type { ReviewTaskUseCase } from '../../../modules/work-management/applica
 import type { GetTaskUseCase } from '../../../modules/work-management/application/use-cases/get-task.use-case';
 import type { ListTasksUseCase } from '../../../modules/work-management/application/use-cases/list-tasks.use-case';
 import type { IIdempotencyRepository } from '../../../modules/work-management/application/ports/idempotency-repository.port';
+import type { IOperationalUnitOfWork } from '../../../modules/work-management/application/ports/operational-unit-of-work.port';
 import { executeWithIdempotency } from '../middleware/idempotency';
 import type { Task } from '../../../modules/work-management/domain/task.entity';
 import { ValidationError } from '../../../core/errors';
@@ -58,6 +59,7 @@ export interface TaskRouteOptions {
   getTaskUseCase: GetTaskUseCase;
   listTasksUseCase: ListTasksUseCase;
   idempotencyRepo: IIdempotencyRepository;
+  uow?: IOperationalUnitOfWork | undefined;
   authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   requireRoles: (
     ...roles: ('staff' | 'manager' | 'admin')[]
@@ -107,13 +109,19 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
     },
     async (request, reply) => {
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.createTaskUseCase.execute(request.body, actor);
-        return {
-          status: 201,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.createTaskUseCase.execute(request.body, actor);
+          return {
+            status: 201,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -173,13 +181,19 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.startTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.startTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -200,16 +214,22 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.reportFieldIssueUseCase.execute(
-          { ...request.body, taskId: request.params.id },
-          actor,
-        );
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.reportFieldIssueUseCase.execute(
+            { ...request.body, taskId: request.params.id },
+            actor,
+          );
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -230,16 +250,22 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.resumeBlockedTaskUseCase.execute(
-          { ...request.body, taskId: request.params.id },
-          actor,
-        );
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.resumeBlockedTaskUseCase.execute(
+            { ...request.body, taskId: request.params.id },
+            actor,
+          );
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -260,13 +286,19 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.reassignTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.reassignTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -287,13 +319,19 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.cancelTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.cancelTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -338,13 +376,22 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.submitEvidenceUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.submitEvidenceUseCase.execute(
+            { ...request.body, taskId: request.params.id },
+            actor,
+          );
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -365,13 +412,22 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.resubmitReworkUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.resubmitReworkUseCase.execute(
+            { ...request.body, taskId: request.params.id },
+            actor,
+          );
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 
@@ -395,13 +451,19 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         );
       }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      await executeWithIdempotency(request, reply, options.idempotencyRepo, async () => {
-        const task = await options.reviewTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
-        return {
-          status: 200,
-          data: { data: toTaskDto(task) },
-        };
-      });
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const task = await options.reviewTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          return {
+            status: 200,
+            data: { data: toTaskDto(task) },
+          };
+        },
+        options.uow,
+      );
     },
   );
 };

@@ -12,10 +12,19 @@ export interface PresignedUploadResult {
 export interface ObjectMetadata {
   sizeBytes: number;
   contentType: string;
-  contentHash?: string | undefined;
+  sha256?: string | undefined;
   etag?: string | undefined;
   taskId?: string | undefined;
   uploadedBy?: string | undefined;
+}
+
+export interface ObjectIntegrity {
+  sizeBytes: number;
+  contentType: string;
+  sha256: string;
+  taskId?: string | undefined;
+  uploadedBy?: string | undefined;
+  etag?: string | undefined;
 }
 
 export interface IObjectStoragePort {
@@ -31,6 +40,8 @@ export interface IObjectStoragePort {
 
   getObjectMetadata(objectKey: string): Promise<ObjectMetadata | null>;
 
+  getObjectIntegrity(objectKey: string): Promise<ObjectIntegrity | null>;
+
   deleteObject(objectKey: string): Promise<void>;
 
   putObjectDirect?(params: {
@@ -43,5 +54,5 @@ export interface IObjectStoragePort {
           uploadedBy?: string | undefined;
         }
       | undefined;
-  }): Promise<{ contentHash?: string; etag?: string }>;
+  }): Promise<{ sha256?: string; etag?: string }>;
 }

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type {
   IOperationalUnitOfWork,
@@ -15,9 +16,21 @@ import { AuditService } from '../../../modules/audit-compliance/application/serv
 import * as schema from '../schema';
 
 export class DrizzleOperationalUnitOfWork implements IOperationalUnitOfWork {
+  private static readonly activeTxStorage = new AsyncLocalStorage<IOperationalTransactionContext>();
+  private beforeCommitHook?: (() => Promise<void> | void) | undefined;
+
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
+  setBeforeCommitHook(hook?: (() => Promise<void> | void) | undefined): void {
+    this.beforeCommitHook = hook;
+  }
+
   async execute<T>(work: (tx: IOperationalTransactionContext) => Promise<T>): Promise<T> {
+    const existing = DrizzleOperationalUnitOfWork.activeTxStorage.getStore();
+    if (existing) {
+      return await work(existing);
+    }
+
     return await this.db.transaction(async (tx) => {
       const txDb = tx as unknown as NodePgDatabase<typeof schema>;
       const taskRepo = new DrizzleTaskRepository(txDb);
@@ -30,7 +43,7 @@ export class DrizzleOperationalUnitOfWork implements IOperationalUnitOfWork {
       const auditService = new AuditService(auditWriter);
       const idempotencyRepo = new DrizzleIdempotencyRepository(txDb);
 
-      return await work({
+      const context: IOperationalTransactionContext = {
         taskRepo,
         evidenceRepo,
         careHistoryRepo,
@@ -39,6 +52,14 @@ export class DrizzleOperationalUnitOfWork implements IOperationalUnitOfWork {
         policyRepo,
         auditService,
         idempotencyRepo,
+      };
+
+      return await DrizzleOperationalUnitOfWork.activeTxStorage.run(context, async () => {
+        const result = await work(context);
+        if (this.beforeCommitHook) {
+          await this.beforeCommitHook();
+        }
+        return result;
       });
     });
   }

@@ -121,7 +121,11 @@ export const PresignedUploadRequestSchema = z.object({
   fileName: z.string().min(1),
   contentType: z.string().min(1),
   sizeBytes: z.number().int().positive().optional(),
-  contentHash: z.string().optional(),
+  contentHash: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, 'Expected 64-character hex SHA-256')
+    .transform((h) => h.toLowerCase())
+    .optional(),
 });
 export type PresignedUploadRequest = z.infer<typeof PresignedUploadRequestSchema>;
 

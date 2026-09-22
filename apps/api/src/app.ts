@@ -333,6 +333,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       getTaskUseCase,
       listTasksUseCase,
       idempotencyRepo,
+      uow: operationalUow,
       authenticate,
       requireRoles,
     });

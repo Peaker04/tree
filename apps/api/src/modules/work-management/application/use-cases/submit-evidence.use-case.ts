@@ -141,65 +141,93 @@ export class SubmitEvidenceUseCase {
       photoUrisToVerify.push(request.identityException.damagedQrPhotoUri);
     }
 
-    // 6. Read-Only Object Storage & Provenance Verification (W4-C03, Sections 13, 14, 15, 16)
+    // 6. Read-Only Object Storage & Authoritative Reservation Verification (W4-F01, Sections 7, 8, 9)
     const verifiedObjects: EvidenceObjectRecord[] = [];
 
     for (const uri of photoUrisToVerify) {
       // W4-C03: Strictly reject temporary presigned HTTP/HTTPS URLs
       const objectKey = this.extractObjectKey(uri);
 
-      const metadata = await this.storagePort.getObjectMetadata(objectKey);
-      if (!metadata) {
+      // Section 8: Authoritative server-created reservation MUST exist
+      const reservation = await this.evidenceRepo.findReservationByKey(objectKey);
+      if (!reservation) {
+        throw new ForbiddenError(
+          `Evidence object "${objectKey}" does not have an authorized upload reservation for task ${task.id}`,
+        );
+      }
+
+      // Cross-task: DENY
+      if (reservation.taskId !== task.id) {
+        throw new ForbiddenError(
+          `Evidence object "${objectKey}" belongs to task ${reservation.taskId}, cannot be submitted for task ${task.id}`,
+        );
+      }
+
+      // Cross-actor: DENY
+      if (reservation.actorId !== context.actorId) {
+        throw new ForbiddenError(
+          `Evidence object "${objectKey}" was uploaded by another user, cannot be claimed by ${context.actorId}`,
+        );
+      }
+
+      // Reservation expiry check
+      if (reservation.expiresAt < new Date()) {
+        throw new ValidationError(`Evidence upload reservation for object "${objectKey}" has expired`);
+      }
+
+      // Query actual object integrity from storage port (streaming SHA-256)
+      const integrity = await this.storagePort.getObjectIntegrity(objectKey);
+      if (!integrity) {
         throw new ValidationError(`Evidence photo object "${objectKey}" was not found in object storage`);
       }
 
-      // Check reservation provenance if tracked in DB
-      const reservation = await this.evidenceRepo.findReservationByKey(objectKey);
-      if (reservation) {
-        if (reservation.taskId !== task.id) {
-          throw new ForbiddenError(
-            `Evidence object "${objectKey}" belongs to task ${reservation.taskId}, cannot be submitted for task ${task.id}`,
-          );
-        }
-        if (reservation.actorId !== context.actorId) {
-          throw new ForbiddenError(
-            `Evidence object "${objectKey}" was uploaded by another user, cannot be claimed by ${context.actorId}`,
-          );
-        }
-        if (
-          reservation.expectedContentHash &&
-          metadata.contentHash &&
-          metadata.contentHash !== reservation.expectedContentHash
-        ) {
-          throw new ValidationError(
-            `Checksum mismatch for evidence object "${objectKey}": expected ${reservation.expectedContentHash}, got ${metadata.contentHash}`,
-          );
-        }
-      } else {
-        // Verify via object storage custom metadata
-        if (metadata.taskId && metadata.taskId !== task.id) {
-          throw new ForbiddenError(
-            `Evidence object "${objectKey}" belongs to task ${metadata.taskId}, cannot be submitted for task ${task.id}`,
-          );
-        }
-        if (metadata.uploadedBy && metadata.uploadedBy !== context.actorId) {
-          throw new ForbiddenError(
-            `Evidence object "${objectKey}" was uploaded by another user, cannot be claimed by ${context.actorId}`,
-          );
-        }
-        // Reject random unissued object adopting
-        if (!metadata.taskId && !metadata.uploadedBy && !objectKey.startsWith(`tasks/${task.id}/evidence/`)) {
-          throw new ForbiddenError(
-            `Evidence object "${objectKey}" was not issued through the authorized evidence boundary for task ${task.id}`,
-          );
-        }
+      // Storage metadata cross-checks if present
+      if (integrity.taskId && integrity.taskId !== task.id) {
+        throw new ForbiddenError(
+          `Evidence object "${objectKey}" belongs to task ${integrity.taskId}, cannot be submitted for task ${task.id}`,
+        );
+      }
+      if (integrity.uploadedBy && integrity.uploadedBy !== context.actorId) {
+        throw new ForbiddenError(
+          `Evidence object "${objectKey}" was uploaded by another user, cannot be claimed by ${context.actorId}`,
+        );
       }
 
-      // Real integrity verification (W4-C03 / Section 15): do not use literal "hash-verified"
-      const contentHash = metadata.contentHash || metadata.etag;
-      if (!contentHash || contentHash === 'hash-verified') {
+      // Content-type mismatch: DENY
+      if (
+        reservation.expectedContentType &&
+        integrity.contentType &&
+        reservation.expectedContentType.toLowerCase() !== integrity.contentType.toLowerCase()
+      ) {
         throw new ValidationError(
-          `Object integrity verification failed for "${objectKey}": valid checksum could not be verified`,
+          `Content-type mismatch for evidence object "${objectKey}": expected ${reservation.expectedContentType}, got ${integrity.contentType}`,
+        );
+      }
+
+      // Size mismatch: DENY (when provided/required)
+      if (
+        reservation.expectedSizeBytes !== undefined &&
+        reservation.expectedSizeBytes !== null &&
+        integrity.sizeBytes !== reservation.expectedSizeBytes
+      ) {
+        throw new ValidationError(
+          `Size mismatch for evidence object "${objectKey}": expected ${reservation.expectedSizeBytes} bytes, got ${integrity.sizeBytes} bytes`,
+        );
+      }
+
+      // Checksum mismatch: DENY
+      if (!reservation.expectedContentHash) {
+        throw new ValidationError(
+          `Evidence upload reservation for object "${objectKey}" is missing expected SHA-256 checksum`,
+        );
+      }
+
+      const expectedSha256 = reservation.expectedContentHash.toLowerCase();
+      const actualSha256 = integrity.sha256.toLowerCase();
+
+      if (expectedSha256 !== actualSha256) {
+        throw new ValidationError(
+          `Checksum mismatch for evidence object "${objectKey}": expected ${expectedSha256}, got ${actualSha256}`,
         );
       }
 
@@ -208,9 +236,9 @@ export class SubmitEvidenceUseCase {
         taskId: task.id,
         objectKey,
         storageRef: uri.startsWith('s3://') ? uri : `storage://${objectKey}`,
-        contentHash,
-        contentType: metadata.contentType || 'image/jpeg',
-        sizeBytes: metadata.sizeBytes,
+        contentHash: actualSha256,
+        contentType: integrity.contentType || 'image/jpeg',
+        sizeBytes: integrity.sizeBytes,
         uploadedByUserId: context.actorId,
         createdAt: new Date(),
       });

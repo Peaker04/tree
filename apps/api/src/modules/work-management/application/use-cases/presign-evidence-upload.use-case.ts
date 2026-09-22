@@ -55,7 +55,7 @@ export class PresignEvidenceUploadUseCase {
         storageRef: presigned.storageRef,
         expectedContentType: request.contentType,
         expectedSizeBytes: request.sizeBytes,
-        expectedContentHash: request.contentHash,
+        expectedContentHash: request.contentHash ? request.contentHash.toLowerCase() : undefined,
         createdAt: new Date(),
         expiresAt: presigned.expiresAt,
       });

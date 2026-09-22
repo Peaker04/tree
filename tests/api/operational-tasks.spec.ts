@@ -19,7 +19,7 @@ import {
   InMemoryObjectStorageAdapter,
 } from './operational-test-doubles';
 import { CryptoTokenService } from '../../apps/api/src/infrastructure/security/crypto-token-service';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 
 describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63, 64, 65, 66)', () => {
   let app: FastifyInstance;
@@ -303,6 +303,11 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       expect(startedTask.version).toBe(task.version + 1);
 
       // 9. Staff requests presigned upload URLs for evidence photos
+      const beforeData = Buffer.from('simulated-before-image-bytes');
+      const afterData = Buffer.from('simulated-after-image-bytes');
+      const beforeHash = createHash('sha256').update(beforeData).digest('hex');
+      const afterHash = createHash('sha256').update(afterData).digest('hex');
+
       const presignBeforeRes = await app.inject({
         method: 'POST',
         url: `/v1/tasks/${task.id}/evidence/presign`,
@@ -310,6 +315,8 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
         payload: {
           fileName: 'before.jpg',
           contentType: 'image/jpeg',
+          sizeBytes: beforeData.length,
+          contentHash: beforeHash,
         },
       });
       expect(presignBeforeRes.statusCode).toBe(200);
@@ -323,6 +330,8 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
         payload: {
           fileName: 'after.jpg',
           contentType: 'image/jpeg',
+          sizeBytes: afterData.length,
+          contentHash: afterHash,
         },
       });
       expect(presignAfterRes.statusCode).toBe(200);
@@ -331,12 +340,12 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       // Simulate direct binary upload into storage
       await storagePort.putObjectDirect({
         objectKey: beforeUpload.objectKey,
-        data: Buffer.from('simulated-before-image-bytes'),
+        data: beforeData,
         contentType: 'image/jpeg',
       });
       await storagePort.putObjectDirect({
         objectKey: afterUpload.objectKey,
-        data: Buffer.from('simulated-after-image-bytes'),
+        data: afterData,
         contentType: 'image/jpeg',
       });
 
@@ -529,11 +538,26 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       });
       const started = startRes.json().data;
 
-      // Setup simulated upload in storage
-      const photoKey = `tasks/${task.id}/evidence/completion.jpg`;
+      // Setup simulated upload in storage with valid reservation
+      const completionData = Buffer.from('completion-photo-1');
+      const completionHash = createHash('sha256').update(completionData).digest('hex');
+      const presignRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${task.id}/evidence/presign`,
+        headers: { authorization: `Bearer ${staff1Token}` },
+        payload: {
+          fileName: 'completion.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: completionData.length,
+          contentHash: completionHash,
+        },
+      });
+      expect(presignRes.statusCode).toBe(200);
+      const photoKey = presignRes.json().data.objectKey;
+
       await storagePort.putObjectDirect({
         objectKey: photoKey,
-        data: Buffer.from('completion-photo-1'),
+        data: completionData,
         contentType: 'image/jpeg',
         metadata: { taskId: task.id, uploadedBy: staff1Id },
       });
@@ -1518,14 +1542,28 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
 
       // Object issued for Task B
       const objectKeyForTaskB = 'tasks/TASK-OWN-B/evidence/proof.jpg';
+      const bData = Buffer.from('data-b');
+      const bHash = createHash('sha256').update(bData).digest('hex');
       await storagePort.putObjectDirect({
         objectKey: objectKeyForTaskB,
-        data: Buffer.from('data-b'),
+        data: bData,
         contentType: 'image/jpeg',
         metadata: {
           taskId: 'TASK-OWN-B',
           uploadedBy: staff1Id,
         },
+      });
+      await evidenceRepo.saveReservation({
+        id: randomUUID(),
+        taskId: 'TASK-OWN-B',
+        actorId: staff1Id,
+        objectKey: objectKeyForTaskB,
+        storageRef: `storage://${objectKeyForTaskB}`,
+        expectedContentType: 'image/jpeg',
+        expectedSizeBytes: bData.length,
+        expectedContentHash: bHash,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 900000),
       });
 
       // Staff 1 tries to submit object issued for Task B to Task A
@@ -1557,14 +1595,28 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
 
       // Object issued for Task A but uploaded by Staff 2
       const objectKeyForStaff2 = 'tasks/TASK-OWN-A/evidence/staff2-proof.jpg';
+      const staff2Data = Buffer.from('data-staff2');
+      const staff2Hash = createHash('sha256').update(staff2Data).digest('hex');
       await storagePort.putObjectDirect({
         objectKey: objectKeyForStaff2,
-        data: Buffer.from('data-staff2'),
+        data: staff2Data,
         contentType: 'image/jpeg',
         metadata: {
           taskId: taskA.id,
           uploadedBy: staff2Id,
         },
+      });
+      await evidenceRepo.saveReservation({
+        id: randomUUID(),
+        taskId: taskA.id,
+        actorId: staff2Id,
+        objectKey: objectKeyForStaff2,
+        storageRef: `storage://${objectKeyForStaff2}`,
+        expectedContentType: 'image/jpeg',
+        expectedSizeBytes: staff2Data.length,
+        expectedContentHash: staff2Hash,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 900000),
       });
 
       // Staff 1 tries to claim evidence uploaded by Staff 2
@@ -1629,9 +1681,10 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       await taskRepo.save(task);
 
       const objectKey = `tasks/${task.id}/evidence/csum-proof.jpg`;
+      const actualData = Buffer.from('actual-data-bytes');
       await storagePort.putObjectDirect({
         objectKey,
-        data: Buffer.from('actual-data-bytes'),
+        data: actualData,
         contentType: 'image/jpeg',
         metadata: {
           taskId: task.id,
@@ -1639,7 +1692,7 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
         },
       });
 
-      // Save upload reservation with an expected checksum
+      // Save upload reservation with matching size but mismatched checksum
       await evidenceRepo.saveReservation({
         id: randomUUID(),
         taskId: task.id,
@@ -1647,8 +1700,8 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
         objectKey,
         storageRef: `s3://mock-bucket/${objectKey}`,
         expectedContentType: 'image/jpeg',
-        expectedSizeBytes: 100,
-        expectedContentHash: 'expected-sha256-that-does-not-match',
+        expectedSizeBytes: actualData.length,
+        expectedContentHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 900000),
       });
