@@ -6,11 +6,18 @@ import { DataSourceStatus } from '../services/greenOpsService';
 import { getSharedMobileRuntime } from '../infrastructure/runtime';
 import { AppNotification, CareHistory, Role, Task } from '../types';
 import { colors } from '../theme/tokens';
+import { executeOfflineSubmission } from '../storage/outbox/submissionService';
+import { ExpoEvidenceFileStore } from '../storage/evidence/evidenceFileStore';
+import type { SaveEvidenceInput } from '../storage/evidence/evidenceFileStore';
 import type {
+  SubmitEvidenceRequest,
+  ReportFieldIssueRequest,
+  ResumeBlockedTaskRequest,
+  CancelTaskRequest,
+  ReviewTaskRequest,
   CreateNotificationRequest,
   CreateTaskRequest,
   LoginRequest,
-  ReviewDecisionRequest,
 } from '@novyx/contracts';
 import { NotchedBottomNav } from '../components/NotchedBottomNav';
 import {
@@ -110,9 +117,101 @@ export default function MobileApp() {
     },
     [applyMutationSource, greenOpsService],
   );
+  const refreshData = useCallback(async () => {
+    setDataSource((current) => ({ ...current, loading: true }));
+    const result = await greenOpsService.loadSnapshot();
+    setData(result.data);
+    setDataSource({
+      source: result.source,
+      loading: false,
+      ...(result.message ? { message: result.message } : {}),
+    });
+  }, [greenOpsService]);
+
   const submitTaskEvidence = useCallback(
     async (task: Task) => {
-      const result = await greenOpsService.submitTaskEvidence(task);
+      // @ts-expect-error fallback
+      if (task.proofProfile !== 'CHANGE_PROOF') {
+        applyMutationSource('rest', 'Chỉ hỗ trợ biên bản CHANGE_PROOF trong phiên bản này.');
+        throw new Error('UNSUPPORTED_PROFILE');
+      }
+
+      if (runtime.outboxRepo && runtime.taskRepo) {
+        const fileStore = new ExpoEvidenceFileStore();
+        const evidenceInputs: SaveEvidenceInput[] = [];
+
+        if (task.beforePhoto) {
+          evidenceInputs.push({
+            taskId: task.id,
+            stage: 'BEFORE',
+            sourceUri: task.beforePhoto,
+            fileName: 'before_photo.jpg',
+            contentType: 'image/jpeg',
+          });
+        }
+        if (task.afterPhoto) {
+          evidenceInputs.push({
+            taskId: task.id,
+            stage: 'AFTER',
+            sourceUri: task.afterPhoto,
+            fileName: 'after_photo.jpg',
+            contentType: 'image/jpeg',
+          });
+        }
+
+        const request: SubmitEvidenceRequest = {
+          taskId: task.id,
+          expectedVersion: task.version ?? 0,
+          siteVerification: {
+            gpsCheck: task.gpsCheck ?? {
+              verified: false,
+              distance: 999,
+              timestamp: new Date().toISOString(),
+              lat: 0,
+              lng: 0,
+            },
+            qrCheck: task.qrCheck ?? {
+              verified: false,
+              scannedCode: '',
+              timestamp: new Date().toISOString(),
+            },
+          },
+          proof: {
+            proofProfile: 'CHANGE_PROOF',
+            beforePhotoUri: task.beforePhoto ?? '',
+            afterPhotoUri: task.afterPhoto ?? '',
+            checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: true })),
+          },
+          notes: task.notes,
+        };
+
+        await executeOfflineSubmission(fileStore, runtime.outboxRepo, {
+          taskId: task.id,
+          request,
+          evidenceInputs,
+          notes: task.notes,
+        });
+
+        void runtime.triggerSync().then(() => {
+          void refreshData();
+        });
+
+        setData(greenOpsService.getSnapshot());
+        return task;
+      } else {
+        const result = await greenOpsService.submitTaskEvidence(task);
+        setCareHistoryByTree({});
+        setData(greenOpsService.getSnapshot());
+        applyMutationSource(result.source, result.message);
+        return result.data;
+      }
+    },
+    [applyMutationSource, greenOpsService, runtime, refreshData],
+  );
+
+  const startTask = useCallback(
+    async (task: Task) => {
+      const result = await greenOpsService.startTask({ taskId: task.id, expectedVersion: task.version ?? 0 });
       setCareHistoryByTree({});
       setData(greenOpsService.getSnapshot());
       applyMutationSource(result.source, result.message);
@@ -120,6 +219,40 @@ export default function MobileApp() {
     },
     [applyMutationSource, greenOpsService],
   );
+
+  const reportFieldIssue = useCallback(
+    async (request: ReportFieldIssueRequest) => {
+      const result = await greenOpsService.reportFieldIssue(request);
+      setCareHistoryByTree({});
+      setData(greenOpsService.getSnapshot());
+      applyMutationSource(result.source, result.message);
+      return result.data;
+    },
+    [applyMutationSource, greenOpsService],
+  );
+
+  const resumeBlockedTask = useCallback(
+    async (request: ResumeBlockedTaskRequest) => {
+      const result = await greenOpsService.resumeBlockedTask(request);
+      setCareHistoryByTree({});
+      setData(greenOpsService.getSnapshot());
+      applyMutationSource(result.source, result.message);
+      return result.data;
+    },
+    [applyMutationSource, greenOpsService],
+  );
+
+  const cancelTask = useCallback(
+    async (request: CancelTaskRequest) => {
+      const result = await greenOpsService.cancelTask(request);
+      setCareHistoryByTree({});
+      setData(greenOpsService.getSnapshot());
+      applyMutationSource(result.source, result.message);
+      return result.data;
+    },
+    [applyMutationSource, greenOpsService],
+  );
+
   const createNotification = useCallback(
     async (request: CreateNotificationRequest) => {
       const result = await greenOpsService.createNotification(request);
@@ -139,7 +272,7 @@ export default function MobileApp() {
     [applyMutationSource, greenOpsService],
   );
   const reviewTaskDecision = useCallback(
-    async (request: ReviewDecisionRequest, fallbackTask: Task) => {
+    async (request: ReviewTaskRequest, fallbackTask: Task) => {
       const result = await greenOpsService.reviewTask(request, fallbackTask);
       setCareHistoryByTree({});
       setData(greenOpsService.getSnapshot());
@@ -148,17 +281,6 @@ export default function MobileApp() {
     },
     [applyMutationSource, greenOpsService],
   );
-
-  const refreshData = useCallback(async () => {
-    setDataSource((current) => ({ ...current, loading: true }));
-    const result = await greenOpsService.loadSnapshot();
-    setData(result.data);
-    setDataSource({
-      source: result.source,
-      loading: false,
-      ...(result.message ? { message: result.message } : {}),
-    });
-  }, [greenOpsService]);
 
   useEffect(() => {
     void refreshData();
@@ -316,7 +438,9 @@ export default function MobileApp() {
             loadCareHistoryByTree={loadCareHistoryByTree}
             lookupTreeByQr={lookupTreeByQr}
             syncTaskProgress={syncTaskProgress}
+            startTask={startTask}
             submitTaskEvidence={submitTaskEvidence}
+            reportFieldIssue={reportFieldIssue}
             createNotification={createNotification}
             markNotificationsRead={markNotificationsRead}
             dataSource={dataSource}
@@ -339,6 +463,8 @@ export default function MobileApp() {
             createTask={createTask}
             createNotification={createNotification}
             reviewTaskDecision={reviewTaskDecision}
+            resumeBlockedTask={resumeBlockedTask}
+            cancelTask={cancelTask}
             onLogout={logout}
           />
         )}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, BrandMark, Button, Card, SectionTitle } from '../../components/AppPrimitives';
@@ -11,6 +11,7 @@ import type { ManagerAreaProps } from './ManagerArea';
 import { mockTreeLandscapePhoto } from '../../assets/mockEvidenceAssets';
 
 export function ManagerDashboard(props: ManagerAreaProps) {
+  const [managingTaskId, setManagingTaskId] = useState<string | null>(null);
   const total = props.tasks.length;
   const completed = props.tasks.filter((task) => task.status === TaskStatus.COMPLETED).length;
   const pendingReview = props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW);
@@ -83,6 +84,61 @@ export function ManagerDashboard(props: ManagerAreaProps) {
           Hồ sơ cây
         </Button>
       </Card>
+
+      {/* Blocked Tasks Section */}
+      {props.tasks.some((t) => t.status === 'BLOCKED') ? (
+        <Card tone="danger" style={styles.quickActionPanel}>
+          <SectionTitle icon="warning-outline">Sự cố hiện trường</SectionTitle>
+          {props.tasks
+            .filter((t) => t.status === 'BLOCKED')
+            .map((task) => (
+              <View key={task.id} style={{ gap: 8, marginBottom: 8 }}>
+                <TaskCard task={task} compact />
+                <View style={styles.twoCols}>
+                  <Button
+                    disabled={managingTaskId !== null}
+                    size="compact"
+                    icon="play-outline"
+                    onPress={async () => {
+                      setManagingTaskId(task.id);
+                      try {
+                        await props.resumeBlockedTask?.({
+                          taskId: task.id,
+                          expectedVersion: task.version ?? 0,
+                          resolutionNotes: 'Quản lý cho phép tiếp tục công việc',
+                        });
+                      } finally {
+                        setManagingTaskId(null);
+                      }
+                    }}
+                  >
+                    Khôi phục
+                  </Button>
+                  <Button
+                    disabled={managingTaskId !== null}
+                    variant="danger"
+                    size="compact"
+                    icon="close-outline"
+                    onPress={async () => {
+                      setManagingTaskId(task.id);
+                      try {
+                        await props.cancelTask?.({
+                          taskId: task.id,
+                          expectedVersion: task.version ?? 0,
+                          cancelReason: 'Quản lý hủy công việc do sự cố',
+                        });
+                      } finally {
+                        setManagingTaskId(null);
+                      }
+                    }}
+                  >
+                    Hủy task
+                  </Button>
+                </View>
+              </View>
+            ))}
+        </Card>
+      ) : null}
 
       <Card
         tone="flat"

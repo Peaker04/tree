@@ -13,14 +13,19 @@ import type {
   ListTreesQuery,
   NotificationDto,
   QrCheckDto,
-  ReviewDecisionRequest,
+  ReviewTaskRequest,
   SubmitTaskEvidenceRequest,
   TaskEvidenceDto,
   TaskDto,
   TreeDto,
   UpdateTaskProgressRequest,
+  CancelTaskRequest,
+  ReportFieldIssueRequest,
+  ResumeBlockedTaskRequest,
+  ReassignTaskRequest,
+  ResubmitReworkRequest,
+  StartTaskRequest,
   CanonicalTaskDto,
-  ReviewTaskBody,
 } from '@novyx/contracts';
 import { readPublicRuntimeConfig } from '@novyx/config';
 import type { IAuthSessionManager } from './authSessionManager';
@@ -43,9 +48,15 @@ export interface GreenOpsService {
   loadCareHistoryByTree: (treeId: string) => Promise<CareHistoryLoadResult>;
   lookupTreeByQr: (payload: string) => Promise<TreeLookupResult>;
   createTask: (request: CreateTaskRequest, fallbackTask: Task) => Promise<TaskMutationResult>;
+  startTask: (request: StartTaskRequest) => Promise<TaskMutationResult>;
+  reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<TaskMutationResult>;
+  resumeBlockedTask: (request: ResumeBlockedTaskRequest) => Promise<TaskMutationResult>;
+  reassignTask: (request: ReassignTaskRequest) => Promise<TaskMutationResult>;
+  cancelTask: (request: CancelTaskRequest) => Promise<TaskMutationResult>;
+  resubmitRework: (request: ResubmitReworkRequest) => Promise<TaskMutationResult>;
   updateTaskProgress: (task: Task) => Promise<TaskMutationResult>;
   submitTaskEvidence: (task: Task) => Promise<TaskMutationResult>;
-  reviewTask: (request: ReviewDecisionRequest, fallbackTask: Task) => Promise<TaskMutationResult>;
+  reviewTask: (request: ReviewTaskRequest, fallbackTask: Task) => Promise<TaskMutationResult>;
   createNotification: (request: CreateNotificationRequest) => Promise<NotificationMutationResult>;
   markNotificationsRead: (
     notificationIds: string[],
@@ -109,9 +120,15 @@ export interface GreenOpsRestService {
   listTrees: (query?: ListTreesQuery) => Promise<TreeDto[]>;
   listCareHistoryByTree: (treeId: string) => Promise<CareHistoryDto[]>;
   createTask: (request: CreateTaskRequest) => Promise<TaskDto>;
+  startTask: (request: StartTaskRequest) => Promise<TaskDto>;
+  reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<TaskDto>;
+  resumeBlockedTask: (request: ResumeBlockedTaskRequest) => Promise<TaskDto>;
+  reassignTask: (request: ReassignTaskRequest) => Promise<TaskDto>;
+  cancelTask: (request: CancelTaskRequest) => Promise<TaskDto>;
+  resubmitRework: (request: ResubmitReworkRequest) => Promise<TaskDto>;
   updateTaskProgress: (request: UpdateTaskProgressRequest) => Promise<TaskDto>;
   submitTaskEvidence: (request: SubmitTaskEvidenceRequest) => Promise<TaskDto>;
-  reviewTask: (request: ReviewDecisionRequest) => Promise<TaskDto>;
+  reviewTask: (request: ReviewTaskRequest) => Promise<TaskDto>;
   listNotifications: () => Promise<NotificationDto[]>;
   createNotification: (request: CreateNotificationRequest) => Promise<NotificationDto>;
   markNotificationRead: (notificationId: string) => Promise<NotificationDto>;
@@ -429,6 +446,36 @@ export function createHybridGreenOpsService(
       };
       return { data: cloneTasks([task])[0], source: 'rest' };
     },
+    startTask: async (request) => {
+      const task = await restService.startTask(request);
+      snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
+      return { data: cloneTasks([task])[0], source: 'rest' };
+    },
+    reportFieldIssue: async (request) => {
+      const task = await restService.reportFieldIssue(request);
+      snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
+      return { data: cloneTasks([task])[0], source: 'rest' };
+    },
+    resumeBlockedTask: async (request) => {
+      const task = await restService.resumeBlockedTask(request);
+      snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
+      return { data: cloneTasks([task])[0], source: 'rest' };
+    },
+    reassignTask: async (request) => {
+      const task = await restService.reassignTask(request);
+      snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
+      return { data: cloneTasks([task])[0], source: 'rest' };
+    },
+    cancelTask: async (request) => {
+      const task = await restService.cancelTask(request);
+      snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
+      return { data: cloneTasks([task])[0], source: 'rest' };
+    },
+    resubmitRework: async (request) => {
+      const task = await restService.resubmitRework(request);
+      snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
+      return { data: cloneTasks([task])[0], source: 'rest' };
+    },
     updateTaskProgress: async (task) => {
       const nextTask = await restService.updateTaskProgress(buildTaskProgressRequest(task));
       snapshot = {
@@ -553,6 +600,30 @@ export function createGreenOpsRestService(
       };
       return await client.post<TaskDto>('/v1/tasks', payload);
     },
+    startTask: async (request) => {
+      const { taskId, ...body } = request;
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/start`, body);
+    },
+    reportFieldIssue: async (request) => {
+      const { taskId, ...body } = request;
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/field-issue`, body);
+    },
+    resumeBlockedTask: async (request) => {
+      const { taskId, ...body } = request;
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/resume`, body);
+    },
+    reassignTask: async (request) => {
+      const { taskId, ...body } = request;
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/reassign`, body);
+    },
+    cancelTask: async (request) => {
+      const { taskId, ...body } = request;
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/cancel`, body);
+    },
+    resubmitRework: async (request) => {
+      const { taskId, ...body } = request;
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/rework/resubmit`, body);
+    },
     updateTaskProgress: async () => {
       throw new Error('UNSUPPORTED_IN_REST_MODE: /tasks/:id/progress does not exist on backend.');
     },
@@ -560,28 +631,8 @@ export function createGreenOpsRestService(
       throw new Error('NOT_CUT_OVER: submitTaskEvidence direct REST call is deprecated. Use durable Outbox pipeline.');
     },
     reviewTask: async (request) => {
-      if (request.expectedVersion === undefined) {
-        throw new Error('NOT_CUT_OVER: Review in REST mode requires expectedVersion.');
-      }
-      const decisionMap: Record<string, 'APPROVE' | 'REQUEST_REWORK' | 'APPROVE_WITH_EXCEPTION' | 'CANCEL'> = {
-        approve: 'APPROVE',
-        request_rework: 'REQUEST_REWORK',
-        APPROVE: 'APPROVE',
-        REQUEST_REWORK: 'REQUEST_REWORK',
-        APPROVE_WITH_EXCEPTION: 'APPROVE_WITH_EXCEPTION',
-        CANCEL: 'CANCEL',
-      };
-      const canonicalDecision = decisionMap[request.decision];
-      if (!canonicalDecision) {
-        throw new Error(`NOT_CUT_OVER: Unsupported review decision "${request.decision}"`);
-      }
-      const body: ReviewTaskBody = {
-        expectedVersion: request.expectedVersion,
-        decision: canonicalDecision,
-        ...(request.reason ? { notes: request.reason } : {}),
-        ...((request.rejectReason ?? request.reason) ? { reworkReason: request.rejectReason ?? request.reason } : {}),
-      };
-      const result = await client.post<CanonicalTaskDto>(`/v1/tasks/${request.taskId}/review`, body);
+      const { taskId, ...body } = request;
+      const result = await client.post<CanonicalTaskDto>(`/v1/tasks/${taskId}/review`, body);
       return result as unknown as TaskDto;
     },
     listNotifications: async () => {

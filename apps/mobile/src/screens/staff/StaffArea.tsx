@@ -14,7 +14,7 @@ import {
 } from '../../domain/mobileWorkflow';
 import { colors, radius } from '../../theme/tokens';
 import { AppNotification, CareHistory, Task, TaskStatus, Tree } from '../../types';
-import type { CreateNotificationRequest } from '@novyx/contracts';
+import type { CreateNotificationRequest, ReportFieldIssueRequest } from '@novyx/contracts';
 import { StaffAccount } from './StaffAccount';
 import { StaffHome } from './StaffHome';
 import { StaffProofFlow } from './StaffProofFlow';
@@ -39,6 +39,8 @@ export function StaffArea(props: {
   loadCareHistoryByTree: (treeId: string) => Promise<CareHistory[]>;
   lookupTreeByQr: (payload: string) => Promise<Tree | null>;
   syncTaskProgress: (task: Task) => Promise<Task>;
+  startTask: (task: Task) => Promise<Task>;
+  reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<Task>;
   submitTaskEvidence: (task: Task) => Promise<Task>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
   markNotificationsRead: (
@@ -295,6 +297,8 @@ export function StaffArea(props: {
       lookupTreeByQr={props.lookupTreeByQr}
       syncTaskProgress={props.syncTaskProgress}
       submitTaskEvidence={props.submitTaskEvidence}
+      startTask={props.startTask}
+      reportFieldIssue={props.reportFieldIssue}
       createNotification={props.createNotification}
     />
   );

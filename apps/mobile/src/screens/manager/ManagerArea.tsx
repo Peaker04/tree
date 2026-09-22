@@ -1,6 +1,12 @@
 import React from 'react';
 import { AppNotification, CareHistory, Staff, Task, Tree } from '../../types';
-import type { CreateNotificationRequest, CreateTaskRequest, ReviewDecisionRequest } from '@novyx/contracts';
+import type {
+  CancelTaskRequest,
+  CreateNotificationRequest,
+  CreateTaskRequest,
+  ResumeBlockedTaskRequest,
+  ReviewTaskRequest,
+} from '@novyx/contracts';
 import { ManagerAccount } from './ManagerAccount';
 import { ManagerCreateTask } from './ManagerCreateTask';
 import { ManagerDashboard } from './ManagerDashboard';
@@ -36,7 +42,9 @@ export type ManagerAreaProps = {
   lookupTreeByQr: (payload: string) => Promise<Tree | null>;
   createTask: (request: CreateTaskRequest, fallbackTask: Task) => Promise<Task>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
-  reviewTaskDecision: (request: ReviewDecisionRequest, fallbackTask: Task) => Promise<Task>;
+  reviewTaskDecision: (request: ReviewTaskRequest, fallbackTask: Task) => Promise<Task>;
+  resumeBlockedTask?: (request: ResumeBlockedTaskRequest) => Promise<Task>;
+  cancelTask?: (request: CancelTaskRequest) => Promise<Task>;
   onLogout: () => void;
 };
 

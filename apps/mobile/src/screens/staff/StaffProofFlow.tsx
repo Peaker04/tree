@@ -12,7 +12,7 @@ import { openDeviceSettings, type DevicePermissionPurpose } from '../../services
 import { colors, radius } from '../../theme/tokens';
 import { AppNotification, CareHistory, Task, TaskStatus, Tree } from '../../types';
 import { getMockPhotoSource, mockAfterPhotoUri, mockBeforePhotoUri } from '../../assets/mockEvidenceAssets';
-import type { CreateNotificationRequest } from '@novyx/contracts';
+import type { CreateNotificationRequest, ReportFieldIssueRequest } from '@novyx/contracts';
 import {
   StaffStep,
   getEvidenceTransportMeta,
@@ -47,6 +47,8 @@ export function StaffProofFlow(props: {
   loadCareHistoryByTree: (treeId: string) => Promise<CareHistory[]>;
   lookupTreeByQr: (payload: string) => Promise<Tree | null>;
   syncTaskProgress: (task: Task) => Promise<Task>;
+  startTask: (task: Task) => Promise<Task>;
+  reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<Task>;
   submitTaskEvidence: (task: Task) => Promise<Task>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
 }) {
@@ -64,6 +66,7 @@ export function StaffProofFlow(props: {
   const [cameraRuntimeMessage, setCameraRuntimeMessage] = useState('');
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
   const [gpsPermissionVisible, setGpsPermissionVisible] = useState(false);
+  const [startingTask, setStartingTask] = useState(false);
   const cameraRef = useRef<DeviceCameraViewHandle | null>(null);
   const qrScanLockRef = useRef(0);
   const {
@@ -148,11 +151,6 @@ export function StaffProofFlow(props: {
     if (props.activeTask?.id === nextTask.id || selectedMapTask?.id === nextTask.id) {
       props.setActiveTask(nextTask);
     }
-    void props.syncTaskProgress(nextTask).then((savedTask) => {
-      if (props.activeTask?.id === savedTask.id || selectedMapTask?.id === savedTask.id) {
-        props.setActiveTask(savedTask);
-      }
-    });
     return nextTask;
   };
 
@@ -244,7 +242,6 @@ export function StaffProofFlow(props: {
   const checkInTask = (task: Task, tree: Tree, nextStep: StaffStep = 'QR') => {
     const nextDistance = getDistanceMeters(props.userLat, props.userLng, tree.lat, tree.lng);
     patchTask(task, {
-      status: TaskStatus.IN_PROGRESS,
       gpsCheck: {
         verified: nextDistance < 10,
         distance: nextDistance,
@@ -377,6 +374,33 @@ export function StaffProofFlow(props: {
           ) : null}
         </Card>
 
+        {props.activeTask.status === 'IN_PROGRESS' && (
+          <Button
+            variant="danger"
+            size="field"
+            icon="warning-outline"
+            disabled={startingTask}
+            onPress={async () => {
+              if (!props.activeTask) return;
+              setStartingTask(true);
+              try {
+                const blocked = await props.reportFieldIssue({
+                  taskId: props.activeTask.id,
+                  expectedVersion: props.activeTask.version ?? 0,
+                  issueDescription: 'Sự cố tại hiện trường cần quản lý hỗ trợ',
+                  issuePhotoUri: props.activeTask.beforePhoto || 'no-photo',
+                });
+                props.setActiveTask(blocked);
+                props.setStep('WORK');
+              } finally {
+                setStartingTask(false);
+              }
+            }}
+          >
+            Báo cáo sự cố hiện trường
+          </Button>
+        )}
+
         <Button
           variant="forest"
           pill
@@ -388,22 +412,32 @@ export function StaffProofFlow(props: {
                 ? 'play-outline'
                 : 'checkmark-circle-outline'
           }
-          disabled={wState.isSubmittedOrCompleted}
-          onPress={() => {
+          disabled={wState.isSubmittedOrCompleted || startingTask}
+          loading={startingTask}
+          onPress={async () => {
             resetQrError();
             if (props.activeTask) {
-              props.setActiveTask({
-                ...props.activeTask,
-                status: TaskStatus.IN_PROGRESS,
-                rejectReason:
-                  props.activeTask?.status === TaskStatus.REWORK_REQUIRED ? props.activeTask.rejectReason : undefined,
-              });
+              if (props.activeTask.status === 'PENDING') {
+                setStartingTask(true);
+                try {
+                  const started = await props.startTask(props.activeTask);
+                  props.setActiveTask(started);
+                  props.setStep(wState.nextStep ?? 'WORK');
+                } catch {
+                  // Wait, error banner should be shown. For now, stay on DETAIL.
+                } finally {
+                  setStartingTask(false);
+                }
+              } else {
+                props.setStep(wState.nextStep ?? 'WORK');
+              }
             }
-            props.setStep(wState.nextStep ?? 'WORK');
           }}
         >
-          {wState.activeActionText ||
-            (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
+          {startingTask
+            ? 'Đang thực hiện...'
+            : wState.activeActionText ||
+              (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
         </Button>
       </ScrollView>
     );
@@ -910,22 +944,21 @@ export function StaffProofFlow(props: {
               return;
             }
             setSubmittingEvidence(true);
-            const submittedTask = {
-              ...task,
-              status: TaskStatus.WAITING_REVIEW,
-              rejectReason: undefined,
-              updatedAt: new Date().toISOString(),
-            };
-            const savedTask = await props.submitTaskEvidence(submittedTask);
-            props.setActiveTask(savedTask);
-            await props.createNotification({
-              title: 'Báo cáo nghiệm thu mới',
-              body: `Nhân viên Nguyễn Văn Hùng đã gửi báo cáo "${task.title}" chờ duyệt.`,
-              type: 'success',
-              taskId: task.id,
-            });
-            setSubmittingEvidence(false);
-            props.setStep('SUCCESS');
+            try {
+              const savedTask = await props.submitTaskEvidence(task);
+              props.setActiveTask(savedTask);
+              await props.createNotification({
+                title: 'Báo cáo nghiệm thu đã đóng gói',
+                body: `Báo cáo "${task.title}" đã được đưa vào hàng đợi gửi.`,
+                type: 'success',
+                taskId: task.id,
+              });
+              props.setStep('SUCCESS');
+            } catch {
+              // Stay on current step if unsupported or error
+            } finally {
+              setSubmittingEvidence(false);
+            }
           }}
         >
           {submittingEvidence
@@ -944,9 +977,10 @@ export function StaffProofFlow(props: {
         <View style={styles.successCircle}>
           <Ionicons name="checkmark-outline" size={60} color={colors.primary} />
         </View>
-        <Text style={styles.bigTitle}>Báo cáo đã gửi</Text>
+        <Text style={styles.bigTitle}>Báo cáo đang chờ đồng bộ</Text>
         <Text style={styles.bodyText}>
-          Công việc "{props.activeTask.title}" đã chuyển sang trạng thái chờ quản lý duyệt.
+          Bằng chứng cho công việc "{props.activeTask.title}" đã được lưu về hàng đợi máy chủ. Trạng thái sẽ cập nhật
+          thành Chờ duyệt sau khi tải lên thành công.
         </Text>
         <Button
           onPress={() => {

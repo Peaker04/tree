@@ -142,8 +142,8 @@ function ManagerReviewDetail({
     await props.reviewTaskDecision(
       {
         taskId: reviewTask.id,
-        decision: 'approve',
-        reviewerId: 'MGR-01',
+        expectedVersion: reviewTask.version ?? 0,
+        decision: 'APPROVE',
       },
       fallbackTask,
     );
@@ -173,11 +173,9 @@ function ManagerReviewDetail({
     await props.reviewTaskDecision(
       {
         taskId: reviewTask.id,
-        decision: 'request_rework',
-        reviewerId: 'MGR-01',
-        reason: cleanRejectReason,
-        rejectReason: cleanRejectReason,
-        reasonChips: selectedRejectChip ? [selectedRejectChip] : [],
+        expectedVersion: reviewTask.version ?? 0,
+        decision: 'REQUEST_REWORK',
+        reworkReason: cleanRejectReason,
       },
       fallbackTask,
     );
