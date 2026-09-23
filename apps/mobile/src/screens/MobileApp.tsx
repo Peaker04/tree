@@ -13,8 +13,10 @@ import type {
   SubmitEvidenceRequest,
   ReportFieldIssueRequest,
   ResumeBlockedTaskRequest,
+  ReassignTaskRequest,
   CancelTaskRequest,
   ReviewTaskRequest,
+  ResubmitReworkRequest,
   CreateNotificationRequest,
   CreateTaskRequest,
   LoginRequest,
@@ -107,16 +109,6 @@ export default function MobileApp() {
     },
     [applyMutationSource, greenOpsService],
   );
-  const syncTaskProgress = useCallback(
-    async (task: Task) => {
-      const result = await greenOpsService.updateTaskProgress(task);
-      setCareHistoryByTree({});
-      setData(greenOpsService.getSnapshot());
-      applyMutationSource(result.source, result.message);
-      return result.data;
-    },
-    [applyMutationSource, greenOpsService],
-  );
   const refreshData = useCallback(async () => {
     setDataSource((current) => ({ ...current, loading: true }));
     const result = await greenOpsService.loadSnapshot();
@@ -136,51 +128,51 @@ export default function MobileApp() {
         throw new Error('UNSUPPORTED_PROFILE');
       }
 
+      if (
+        !task.gpsCheck?.verified ||
+        !task.qrCheck?.verified ||
+        !task.beforePhoto ||
+        !task.afterPhoto ||
+        task.checklist.some((c) => !c.done)
+      ) {
+        applyMutationSource(
+          'rest',
+          'Bằng chứng chưa đầy đủ hoặc không hợp lệ. Vui lòng kiểm tra lại GPS, QR, ảnh và checklist.',
+        );
+        throw new Error('INCOMPLETE_PROOF');
+      }
+
       if (runtime.outboxRepo && runtime.taskRepo) {
         const fileStore = new ExpoEvidenceFileStore();
-        const evidenceInputs: SaveEvidenceInput[] = [];
-
-        if (task.beforePhoto) {
-          evidenceInputs.push({
+        const evidenceInputs: SaveEvidenceInput[] = [
+          {
             taskId: task.id,
             stage: 'BEFORE',
             sourceUri: task.beforePhoto,
             fileName: 'before_photo.jpg',
             contentType: 'image/jpeg',
-          });
-        }
-        if (task.afterPhoto) {
-          evidenceInputs.push({
+          },
+          {
             taskId: task.id,
             stage: 'AFTER',
             sourceUri: task.afterPhoto,
             fileName: 'after_photo.jpg',
             contentType: 'image/jpeg',
-          });
-        }
+          },
+        ];
 
         const request: SubmitEvidenceRequest = {
           taskId: task.id,
           expectedVersion: task.version ?? 0,
           siteVerification: {
-            gpsCheck: task.gpsCheck ?? {
-              verified: false,
-              distance: 999,
-              timestamp: new Date().toISOString(),
-              lat: 0,
-              lng: 0,
-            },
-            qrCheck: task.qrCheck ?? {
-              verified: false,
-              scannedCode: '',
-              timestamp: new Date().toISOString(),
-            },
+            gpsCheck: task.gpsCheck,
+            qrCheck: task.qrCheck,
           },
           proof: {
             proofProfile: 'CHANGE_PROOF',
-            beforePhotoUri: task.beforePhoto ?? '',
-            afterPhotoUri: task.afterPhoto ?? '',
-            checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: true })),
+            beforePhotoUri: task.beforePhoto,
+            afterPhotoUri: task.afterPhoto,
+            checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: c.done as true })),
           },
           notes: task.notes,
         };
@@ -242,9 +234,31 @@ export default function MobileApp() {
     [applyMutationSource, greenOpsService],
   );
 
+  const reassignTask = useCallback(
+    async (request: ReassignTaskRequest) => {
+      const result = await greenOpsService.reassignTask(request);
+      setCareHistoryByTree({});
+      setData(greenOpsService.getSnapshot());
+      applyMutationSource(result.source, result.message);
+      return result.data;
+    },
+    [applyMutationSource, greenOpsService],
+  );
+
   const cancelTask = useCallback(
     async (request: CancelTaskRequest) => {
       const result = await greenOpsService.cancelTask(request);
+      setCareHistoryByTree({});
+      setData(greenOpsService.getSnapshot());
+      applyMutationSource(result.source, result.message);
+      return result.data;
+    },
+    [applyMutationSource, greenOpsService],
+  );
+
+  const resubmitRework = useCallback(
+    async (request: ResubmitReworkRequest) => {
+      const result = await greenOpsService.resubmitRework(request);
       setCareHistoryByTree({});
       setData(greenOpsService.getSnapshot());
       applyMutationSource(result.source, result.message);
@@ -437,11 +451,12 @@ export default function MobileApp() {
             getCareHistoryByTree={getCareHistoryByTree}
             loadCareHistoryByTree={loadCareHistoryByTree}
             lookupTreeByQr={lookupTreeByQr}
-            syncTaskProgress={syncTaskProgress}
             startTask={startTask}
             submitTaskEvidence={submitTaskEvidence}
             reportFieldIssue={reportFieldIssue}
+            resubmitRework={resubmitRework}
             createNotification={createNotification}
+            isRestMode={runtime.dataSource === 'rest'}
             markNotificationsRead={markNotificationsRead}
             dataSource={dataSource}
             onRefreshData={refreshData}
@@ -464,6 +479,7 @@ export default function MobileApp() {
             createNotification={createNotification}
             reviewTaskDecision={reviewTaskDecision}
             resumeBlockedTask={resumeBlockedTask}
+            reassignTask={reassignTask}
             cancelTask={cancelTask}
             onLogout={logout}
           />

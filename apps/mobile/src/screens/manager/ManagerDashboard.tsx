@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, BrandMark, Button, Card, SectionTitle } from '../../components/AppPrimitives';
+import { Badge, BrandMark, Button, Card, Field, SectionTitle } from '../../components/AppPrimitives';
 import { Metric, TaskCard } from '../../components/presentation/TaskSurfaces';
 import { TreeIdentityVisual } from '../../components/presentation/TreeIdentityVisual';
 import { getTaskProofGaps, getTreeRiskStatus, isTaskOverdue } from '../../domain/mobileWorkflow';
@@ -12,6 +12,9 @@ import { mockTreeLandscapePhoto } from '../../assets/mockEvidenceAssets';
 
 export function ManagerDashboard(props: ManagerAreaProps) {
   const [managingTaskId, setManagingTaskId] = useState<string | null>(null);
+  const [reassigningTaskId, setReassigningTaskId] = useState<string | null>(null);
+  const [reassignReason, setReassignReason] = useState('');
+  const [reassignStaffId, setReassignStaffId] = useState<string | null>(null);
   const total = props.tasks.length;
   const completed = props.tasks.filter((task) => task.status === TaskStatus.COMPLETED).length;
   const pendingReview = props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW);
@@ -96,7 +99,7 @@ export function ManagerDashboard(props: ManagerAreaProps) {
                 <TaskCard task={task} compact />
                 <View style={styles.twoCols}>
                   <Button
-                    disabled={managingTaskId !== null}
+                    disabled={managingTaskId !== null || reassigningTaskId !== null}
                     size="compact"
                     icon="play-outline"
                     onPress={async () => {
@@ -115,7 +118,20 @@ export function ManagerDashboard(props: ManagerAreaProps) {
                     Khôi phục
                   </Button>
                   <Button
-                    disabled={managingTaskId !== null}
+                    disabled={managingTaskId !== null || reassigningTaskId !== null}
+                    variant="outline"
+                    size="compact"
+                    icon="people-outline"
+                    onPress={() => {
+                      setReassigningTaskId(reassigningTaskId === task.id ? null : task.id);
+                      setReassignReason('');
+                      setReassignStaffId(null);
+                    }}
+                  >
+                    Đổi người
+                  </Button>
+                  <Button
+                    disabled={managingTaskId !== null || reassigningTaskId !== null}
                     variant="danger"
                     size="compact"
                     icon="close-outline"
@@ -132,9 +148,55 @@ export function ManagerDashboard(props: ManagerAreaProps) {
                       }
                     }}
                   >
-                    Hủy task
+                    Hủy
                   </Button>
                 </View>
+                {reassigningTaskId === task.id ? (
+                  <View style={{ gap: 8, padding: 8, backgroundColor: colors.backgroundAlt, borderRadius: radius.md }}>
+                    <Field
+                      label="Lý do đổi người"
+                      value={reassignReason}
+                      onChangeText={setReassignReason}
+                      placeholder="Thiếu dụng cụ..."
+                    />
+                    <Text style={styles.metricLabel}>Chọn nhân viên:</Text>
+                    {props.staff.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => setReassignStaffId(s.id)}
+                        style={{
+                          padding: 8,
+                          backgroundColor: reassignStaffId === s.id ? colors.primarySoft : colors.card,
+                          borderWidth: 1,
+                          borderColor: reassignStaffId === s.id ? colors.primary : colors.border,
+                          borderRadius: radius.md,
+                        }}
+                      >
+                        <Text style={styles.bodyText}>{s.name}</Text>
+                      </Pressable>
+                    ))}
+                    <Button
+                      disabled={!reassignReason.trim() || !reassignStaffId || managingTaskId !== null}
+                      loading={managingTaskId !== null}
+                      onPress={async () => {
+                        setManagingTaskId(task.id);
+                        try {
+                          await props.reassignTask?.({
+                            taskId: task.id,
+                            expectedVersion: task.version ?? 0,
+                            newStaffId: reassignStaffId!,
+                            reason: reassignReason.trim(),
+                          });
+                          setReassigningTaskId(null);
+                        } finally {
+                          setManagingTaskId(null);
+                        }
+                      }}
+                    >
+                      Xác nhận
+                    </Button>
+                  </View>
+                ) : null}
               </View>
             ))}
         </Card>
@@ -461,4 +523,5 @@ const styles = StyleSheet.create({
   metricAmber: { color: colors.amber },
   metricSky: { color: colors.sky },
   metricDanger: { color: colors.danger },
+  metricLabel: { color: colors.mutedForeground, fontSize: 10, fontWeight: '500' },
 });

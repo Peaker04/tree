@@ -4,6 +4,7 @@ import type {
   CancelTaskRequest,
   CreateNotificationRequest,
   CreateTaskRequest,
+  ReassignTaskRequest,
   ResumeBlockedTaskRequest,
   ReviewTaskRequest,
 } from '@novyx/contracts';
@@ -44,6 +45,7 @@ export type ManagerAreaProps = {
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
   reviewTaskDecision: (request: ReviewTaskRequest, fallbackTask: Task) => Promise<Task>;
   resumeBlockedTask?: (request: ResumeBlockedTaskRequest) => Promise<Task>;
+  reassignTask?: (request: ReassignTaskRequest) => Promise<Task>;
   cancelTask?: (request: CancelTaskRequest) => Promise<Task>;
   onLogout: () => void;
 };

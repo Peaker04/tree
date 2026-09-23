@@ -12,7 +12,7 @@ import { openDeviceSettings, type DevicePermissionPurpose } from '../../services
 import { colors, radius } from '../../theme/tokens';
 import { AppNotification, CareHistory, Task, TaskStatus, Tree } from '../../types';
 import { getMockPhotoSource, mockAfterPhotoUri, mockBeforePhotoUri } from '../../assets/mockEvidenceAssets';
-import type { CreateNotificationRequest, ReportFieldIssueRequest } from '@novyx/contracts';
+import type { CreateNotificationRequest, ReportFieldIssueRequest, ResubmitReworkRequest } from '@novyx/contracts';
 import {
   StaffStep,
   getEvidenceTransportMeta,
@@ -46,11 +46,12 @@ export function StaffProofFlow(props: {
   getCareHistoryByTree: (treeId: string) => CareHistory[];
   loadCareHistoryByTree: (treeId: string) => Promise<CareHistory[]>;
   lookupTreeByQr: (payload: string) => Promise<Tree | null>;
-  syncTaskProgress: (task: Task) => Promise<Task>;
   startTask: (task: Task) => Promise<Task>;
   reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<Task>;
   submitTaskEvidence: (task: Task) => Promise<Task>;
+  resubmitRework: (request: ResubmitReworkRequest) => Promise<Task>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
+  isRestMode?: boolean;
 }) {
   const { height: windowHeight } = useWindowDimensions();
   const [locating, setLocating] = useState(false);
@@ -61,12 +62,14 @@ export function StaffProofFlow(props: {
   const [scannedTree, setScannedTree] = useState<Tree | null>(null);
   const [qrLookupLoading, setQrLookupLoading] = useState(false);
   const [qrLookupMessage, setQrLookupMessage] = useState('');
-  const [cameraMode, setCameraMode] = useState<CameraRuntimeMode>('mock');
+  const [cameraMode, setCameraMode] = useState<CameraRuntimeMode>(props.isRestMode ? 'native' : 'mock');
   const [cameraModule, setCameraModule] = useState<CameraModule | null>(null);
   const [cameraRuntimeMessage, setCameraRuntimeMessage] = useState('');
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
   const [gpsPermissionVisible, setGpsPermissionVisible] = useState(false);
   const [startingTask, setStartingTask] = useState(false);
+  const [reportingIssue, setReportingIssue] = useState(false);
+  const [issueDesc, setIssueDesc] = useState('');
   const cameraRef = useRef<DeviceCameraViewHandle | null>(null);
   const qrScanLockRef = useRef(0);
   const {
@@ -374,32 +377,71 @@ export function StaffProofFlow(props: {
           ) : null}
         </Card>
 
-        {props.activeTask.status === 'IN_PROGRESS' && (
+        {props.activeTask.status === 'IN_PROGRESS' && !reportingIssue ? (
           <Button
             variant="danger"
             size="field"
             icon="warning-outline"
             disabled={startingTask}
-            onPress={async () => {
-              if (!props.activeTask) return;
-              setStartingTask(true);
-              try {
-                const blocked = await props.reportFieldIssue({
-                  taskId: props.activeTask.id,
-                  expectedVersion: props.activeTask.version ?? 0,
-                  issueDescription: 'Sự cố tại hiện trường cần quản lý hỗ trợ',
-                  issuePhotoUri: props.activeTask.beforePhoto || 'no-photo',
-                });
-                props.setActiveTask(blocked);
-                props.setStep('WORK');
-              } finally {
-                setStartingTask(false);
-              }
-            }}
+            onPress={() => setReportingIssue(true)}
           >
             Báo cáo sự cố hiện trường
           </Button>
-        )}
+        ) : props.activeTask.status === 'IN_PROGRESS' && reportingIssue ? (
+          <Card tone="danger">
+            <SectionTitle icon="warning-outline">Cung cấp thông tin sự cố</SectionTitle>
+            <Field
+              label="Mô tả sự cố (ít nhất 5 ký tự)"
+              placeholder="Cây bị ngã đổ, khu vực ngập lụt..."
+              value={issueDesc}
+              onChangeText={setIssueDesc}
+              multiline
+            />
+            {!props.activeTask.beforePhoto && (
+              <Text style={[styles.bodyText, { marginTop: 8, color: colors.danger, fontWeight: '700' }]}>
+                * Cần có ảnh Before trước khi báo cáo sự cố. Vui lòng quay lại chụp ảnh Before.
+              </Text>
+            )}
+            <View style={[styles.twoCols, { marginTop: 12 }]}>
+              <Button
+                variant="outline"
+                size="compact"
+                onPress={() => {
+                  setReportingIssue(false);
+                  setIssueDesc('');
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="danger"
+                size="compact"
+                disabled={startingTask || issueDesc.trim().length < 5 || !props.activeTask.beforePhoto}
+                loading={startingTask}
+                onPress={async () => {
+                  if (!props.activeTask || !props.activeTask.beforePhoto) return;
+                  setStartingTask(true);
+                  try {
+                    const blocked = await props.reportFieldIssue({
+                      taskId: props.activeTask.id,
+                      expectedVersion: props.activeTask.version ?? 0,
+                      issueDescription: issueDesc.trim(),
+                      issuePhotoUri: props.activeTask.beforePhoto,
+                    });
+                    props.setActiveTask(blocked);
+                    setReportingIssue(false);
+                    setIssueDesc('');
+                    props.setStep('WORK');
+                  } finally {
+                    setStartingTask(false);
+                  }
+                }}
+              >
+                Gửi quản lý
+              </Button>
+            </View>
+          </Card>
+        ) : null}
 
         <Button
           variant="forest"
@@ -465,7 +507,7 @@ export function StaffProofFlow(props: {
         ) : null}
         <Button
           icon="scan-outline"
-          disabled={!verified}
+          disabled={!verified || (props.isRestMode && !locationCapturedAt)}
           onPress={() => {
             if (activeTree) {
               resetQrError();
@@ -525,23 +567,29 @@ export function StaffProofFlow(props: {
           qrLookupMessage,
         })}
         <View style={styles.qrActions}>
-          <Button
-            variant="outline"
-            icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
-            onPress={() => {
-              resetQrError();
-              setCameraMode(cameraMode === 'native' ? 'mock' : 'native');
-            }}
-          >
-            {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
-          </Button>
-          <Button
-            icon="qr-code-outline"
-            loading={qrLookupLoading}
-            onPress={() => void lookupTreeByQr(assignedTrees[0]?.qrCode ?? props.trees[0]?.qrCode ?? 'NOVYX-TRE-0824')}
-          >
-            Mô phỏng quét cây
-          </Button>
+          {!props.isRestMode && (
+            <>
+              <Button
+                variant="outline"
+                icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
+                onPress={() => {
+                  resetQrError();
+                  setCameraMode(cameraMode === 'native' ? 'mock' : 'native');
+                }}
+              >
+                {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
+              </Button>
+              <Button
+                icon="qr-code-outline"
+                loading={qrLookupLoading}
+                onPress={() =>
+                  void lookupTreeByQr(assignedTrees[0]?.qrCode ?? props.trees[0]?.qrCode ?? 'NOVYX-TRE-0824')
+                }
+              >
+                Quét cây mẫu
+              </Button>
+            </>
+          )}
         </View>
         {scannedTree ? (
           <TreeLookupResult
@@ -624,40 +672,44 @@ export function StaffProofFlow(props: {
         })}
         {renderQrState({ cameraMode, cameraModule, cameraRuntimeMessage, qrErrorMessage })}
         <View style={styles.qrActions}>
-          <Button
-            variant="outline"
-            icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
-            onPress={() => {
-              resetQrError();
-              setCameraMode(cameraMode === 'native' ? 'mock' : 'native');
-            }}
-          >
-            {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
-          </Button>
-          <Button
-            icon="checkmark-outline"
-            onPress={() => {
-              resetQrError();
-              patchActiveTask({
-                qrCheck: { verified: true, scannedCode: expectedQr, timestamp: new Date().toISOString() },
-              });
-              props.setStep('BEFORE');
-            }}
-          >
-            Mô phỏng quét thành công
-          </Button>
-          <Button
-            variant="outline"
-            icon="close-circle-outline"
-            onPress={() => {
-              patchActiveTask({
-                qrCheck: { verified: false, scannedCode: 'NOVYX-WRONG-TREE', timestamp: new Date().toISOString() },
-              });
-              setQrErrorMessage('QR vừa quét không khớp cây của nhiệm vụ. Hãy quét lại đúng mã trên thân cây.');
-            }}
-          >
-            Mô phỏng sai mã
-          </Button>
+          {!props.isRestMode && (
+            <>
+              <Button
+                variant="outline"
+                icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
+                onPress={() => {
+                  resetQrError();
+                  setCameraMode(cameraMode === 'native' ? 'mock' : 'native');
+                }}
+              >
+                {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
+              </Button>
+              <Button
+                icon="checkmark-outline"
+                onPress={() => {
+                  resetQrError();
+                  patchActiveTask({
+                    qrCheck: { verified: true, scannedCode: expectedQr, timestamp: new Date().toISOString() },
+                  });
+                  props.setStep('BEFORE');
+                }}
+              >
+                Mô phỏng quét thành công
+              </Button>
+              <Button
+                variant="outline"
+                icon="close-circle-outline"
+                onPress={() => {
+                  patchActiveTask({
+                    qrCheck: { verified: false, scannedCode: 'NOVYX-WRONG-TREE', timestamp: new Date().toISOString() },
+                  });
+                  setQrErrorMessage('QR vừa quét không khớp cây của nhiệm vụ. Hãy quét lại đúng mã trên thân cây.');
+                }}
+              >
+                Mô phỏng sai mã
+              </Button>
+            </>
+          )}
           <Button
             variant="outline"
             icon="alert-circle-outline"
@@ -700,8 +752,15 @@ export function StaffProofFlow(props: {
           uri = (await cameraRef.current.takePictureAsync({ quality: 0.72 })).uri;
           setCameraRuntimeMessage('Ảnh thật đã được ghi nhận từ camera thiết bị.');
         } catch {
+          if (props.isRestMode) {
+            setCameraRuntimeMessage('Lỗi thiết bị: Không thể chụp ảnh. Vui lòng thử lại.');
+            return; // Do not fallback to mock
+          }
           setCameraRuntimeMessage('Không chụp được ảnh thật trong runtime này. Đang dùng ảnh mẫu để tiếp tục smoke.');
         }
+      } else if (props.isRestMode) {
+        setCameraRuntimeMessage('Lỗi: native camera không sẵn sàng. Không thể dùng ảnh mẫu.');
+        return;
       }
 
       patchActiveTask({
@@ -781,14 +840,20 @@ export function StaffProofFlow(props: {
             </>
           ) : (
             <>
+              {!props.isRestMode && (
+                <Button
+                  variant="outline"
+                  icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
+                  onPress={() => setCameraMode(cameraMode === 'native' ? 'mock' : 'native')}
+                >
+                  {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
+                </Button>
+              )}
               <Button
-                variant="outline"
-                icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
-                onPress={() => setCameraMode(cameraMode === 'native' ? 'mock' : 'native')}
+                icon="radio-button-on-outline"
+                onPress={captureEvidencePhoto}
+                disabled={props.isRestMode && cameraMode !== 'native' && !cameraRef.current}
               >
-                {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
-              </Button>
-              <Button icon="radio-button-on-outline" onPress={captureEvidencePhoto}>
                 Chụp ảnh
               </Button>
             </>
@@ -945,15 +1010,37 @@ export function StaffProofFlow(props: {
             }
             setSubmittingEvidence(true);
             try {
-              const savedTask = await props.submitTaskEvidence(task);
-              props.setActiveTask(savedTask);
-              await props.createNotification({
-                title: 'Báo cáo nghiệm thu đã đóng gói',
-                body: `Báo cáo "${task.title}" đã được đưa vào hàng đợi gửi.`,
-                type: 'success',
-                taskId: task.id,
-              });
-              props.setStep('SUCCESS');
+              if (task.status === 'REWORK_REQUIRED') {
+                const savedTask = await props.resubmitRework({
+                  taskId: task.id,
+                  expectedVersion: task.version ?? 0,
+                  reworkedProof: {
+                    proofProfile: 'CHANGE_PROOF',
+                    beforePhotoUri: task.beforePhoto!,
+                    afterPhotoUri: task.afterPhoto!,
+                    checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: c.done as true })),
+                  },
+                  reworkNotes: task.notes ?? undefined,
+                });
+                props.setActiveTask(savedTask);
+                await props.createNotification({
+                  title: 'Báo cáo đã nộp lại',
+                  body: `Báo cáo "${task.title}" đã nộp lại chờ quản lý duyệt.`,
+                  type: 'success',
+                  taskId: task.id,
+                });
+                props.setStep('SUCCESS');
+              } else {
+                const savedTask = await props.submitTaskEvidence(task);
+                props.setActiveTask(savedTask);
+                await props.createNotification({
+                  title: 'Báo cáo nghiệm thu đã đóng gói',
+                  body: `Báo cáo "${task.title}" đã được đưa vào hàng đợi gửi.`,
+                  type: 'success',
+                  taskId: task.id,
+                });
+                props.setStep('SUCCESS');
+              }
             } catch {
               // Stay on current step if unsupported or error
             } finally {
