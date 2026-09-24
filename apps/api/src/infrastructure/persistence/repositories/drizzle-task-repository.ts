@@ -8,6 +8,19 @@ import type {
 } from '../../../modules/work-management/application/ports/task-repository.port';
 import * as schema from '../schema';
 
+type StoredChecklistItem = Partial<ChecklistItem> & { label?: unknown; required?: unknown };
+
+const normalizeChecklistSnapshot = (value: unknown): ChecklistItem[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  return value.flatMap((item, index) => {
+    if (!item || typeof item !== 'object') return [];
+    const stored = item as StoredChecklistItem;
+    const text = typeof stored.text === 'string' ? stored.text : typeof stored.label === 'string' ? stored.label : '';
+    if (!text) return [];
+    return [{ id: typeof stored.id === 'string' ? stored.id : `chk-${index + 1}`, text, done: stored.done === true }];
+  });
+};
+
 export class DrizzleTaskRepository implements ITaskRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
@@ -29,7 +42,7 @@ export class DrizzleTaskRepository implements ITaskRepository {
       assignedStaffName: row.assignedStaffName,
       deadline: row.deadline,
       status: row.status as TaskStatus,
-      checklistSnapshot: (row.checklistSnapshot as ChecklistItem[]) ?? undefined,
+      checklistSnapshot: normalizeChecklistSnapshot(row.checklistSnapshot),
       cancellationReason: row.cancellationReason ?? undefined,
       cancelledBy: row.cancelledBy ?? undefined,
       cancelledAt: row.cancelledAt ?? undefined,

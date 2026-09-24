@@ -7,3 +7,4 @@ export * from './field-issue';
 export * from './evidence';
 export * from './operational-tasks';
 export * from './care-history';
+export * from './operational-catalogs';

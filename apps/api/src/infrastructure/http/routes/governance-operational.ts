@@ -63,6 +63,9 @@ export interface GovernanceOperationalRouteOptions {
   taskTypeRepo: ITaskTypeRepository;
   authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   requireAdmin: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  requireRoles: (
+    ...roles: ('staff' | 'manager' | 'admin')[]
+  ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 }
 
 function toTreeDto(tree: Tree): CanonicalTreeDto {
@@ -124,6 +127,7 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
   options: GovernanceOperationalRouteOptions,
 ) => {
   const adminPreHandlers = [options.authenticate, options.requireAdmin];
+  const treeCreatePreHandlers = [options.authenticate, options.requireRoles('manager', 'admin')];
 
   // Tree Governance
   fastify.post<{ Body: CreateTreeRequest }>(
@@ -133,7 +137,7 @@ export const governanceOperationalRoutes: FastifyPluginAsync<GovernanceOperation
         body: CreateTreeRequestSchema,
         response: { 201: TreeResponseSchema },
       },
-      preHandler: adminPreHandlers,
+      preHandler: treeCreatePreHandlers,
     },
     async (request, reply) => {
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };

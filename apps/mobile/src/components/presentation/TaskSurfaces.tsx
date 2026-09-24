@@ -1,10 +1,9 @@
-import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Card, SectionTitle } from '../AppPrimitives';
 import { colors, radius } from '../../theme/tokens';
 import { ChecklistItem, Task, TaskStatus, Tree } from '../../types';
-import { getMockEvidenceSource, mockAfterPhotoUri, mockBeforePhotoUri } from '../../assets/mockEvidenceAssets';
 import {
   formatTaskDate,
   formatTaskDateTime,
@@ -29,7 +28,7 @@ export function Header({
     <View style={styles.header}>
       {onBack ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" onPress={onBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color={dark ? '#fff' : colors.foreground} />
+          <Ionicons name="chevron-back" size={22} color={colors.foreground} />
         </Pressable>
       ) : null}
       <View style={styles.flex}>
@@ -157,7 +156,7 @@ export function ProofChainCard({ task }: { task: Task }) {
     {
       id: 'qr',
       label: 'QR',
-      body: task.qrCheck?.verified ? task.qrCheck.scannedCode : 'Chưa quét đúng mã cây',
+      body: task.qrCheck?.verified ? 'Đã quét đúng cây được giao' : 'Chưa quét đúng mã cây',
       done: Boolean(task.qrCheck?.verified),
       icon: 'qr-code-outline' as const,
     },
@@ -222,41 +221,122 @@ export function ChecklistLine({ item, index }: { item: ChecklistItem; index: num
 }
 
 export function PhotoPair({ task }: { task: Task }) {
+  const [preview, setPreview] = useState<'before' | 'after' | null>(null);
   const beforeEvidence = task.evidence?.find((item) => item.stage === 'before');
   const afterEvidence = task.evidence?.find((item) => item.stage === 'after');
+  const canRenderImage = (uri?: string) => Boolean(uri && /^(https?:|file:|content:|data:)/i.test(uri));
+  const beforePhotoUri = task.beforePhotoDisplayUrl ?? task.beforePhoto;
+  const afterPhotoUri = task.afterPhotoDisplayUrl ?? task.afterPhoto;
+  const beforeRenderable = canRenderImage(beforePhotoUri);
+  const afterRenderable = canRenderImage(afterPhotoUri);
 
   return (
     <Card>
-      <SectionTitle icon="images-outline">Ảnh minh chứng hiện trường</SectionTitle>
+      <SectionTitle icon="images-outline">Ảnh trước và sau</SectionTitle>
       <View style={styles.photoRow}>
         <View style={styles.photoCol}>
           <Text style={styles.photoLabelBefore}>Trước</Text>
-          <Image
-            source={getMockEvidenceSource(task.beforePhoto ?? mockBeforePhotoUri, 'before')}
-            style={styles.photo}
-          />
-          <Text style={styles.monoSmall}>
-            {beforeEvidence
-              ? `Ghi nhận ${new Date(beforeEvidence.capturedAt).toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}`
-              : 'Chưa có metadata'}
-          </Text>
+          {beforeRenderable ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xem ảnh trước xử lý"
+              onPress={() => setPreview('before')}
+            >
+              <Image source={{ uri: beforePhotoUri! }} style={styles.photo} />
+            </Pressable>
+          ) : (
+            <View style={[styles.photoMissing, task.beforePhoto ? styles.photoStored : styles.photo]}>
+              <Ionicons
+                name={task.beforePhoto ? 'cloud-done-outline' : 'image-outline'}
+                size={20}
+                color={task.beforePhoto ? colors.successText : colors.muted}
+              />
+              <Text style={styles.monoSmall}>{task.beforePhoto ? 'Đã lưu' : 'Chưa có ảnh'}</Text>
+            </View>
+          )}
+          {beforeEvidence ? (
+            <Text style={styles.monoSmall}>
+              Ghi nhận{' '}
+              {new Date(beforeEvidence.capturedAt).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.photoCol}>
           <Text style={styles.photoLabelAfter}>Sau</Text>
-          <Image source={getMockEvidenceSource(task.afterPhoto ?? mockAfterPhotoUri, 'after')} style={styles.photo} />
-          <Text style={styles.monoSmall}>
-            {afterEvidence
-              ? `Ghi nhận ${new Date(afterEvidence.capturedAt).toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}`
-              : 'Chưa có metadata'}
-          </Text>
+          {afterRenderable ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xem ảnh sau xử lý"
+              onPress={() => setPreview('after')}
+            >
+              <Image source={{ uri: afterPhotoUri! }} style={styles.photo} />
+            </Pressable>
+          ) : (
+            <View style={[styles.photoMissing, task.afterPhoto ? styles.photoStored : styles.photo]}>
+              <Ionicons
+                name={task.afterPhoto ? 'cloud-done-outline' : 'image-outline'}
+                size={20}
+                color={task.afterPhoto ? colors.successText : colors.muted}
+              />
+              <Text style={styles.monoSmall}>{task.afterPhoto ? 'Đã lưu' : 'Chưa có ảnh'}</Text>
+            </View>
+          )}
+          {afterEvidence ? (
+            <Text style={styles.monoSmall}>
+              Ghi nhận{' '}
+              {new Date(afterEvidence.capturedAt).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          ) : null}
         </View>
       </View>
+      <Modal visible={preview !== null} transparent animationType="fade" onRequestClose={() => setPreview(null)}>
+        <View style={styles.photoPreviewBackdrop}>
+          <View style={styles.photoPreviewHeader}>
+            <Text style={styles.photoPreviewTitle}>{preview === 'before' ? 'Ảnh trước xử lý' : 'Ảnh sau xử lý'}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đóng ảnh xem trước"
+              style={styles.photoPreviewClose}
+              onPress={() => setPreview(null)}
+            >
+              <Ionicons name="close" size={26} color="#ffffff" />
+            </Pressable>
+          </View>
+          {preview ? (
+            <Image
+              source={{ uri: preview === 'before' ? beforePhotoUri! : afterPhotoUri! }}
+              style={styles.photoPreviewImage}
+              resizeMode="contain"
+            />
+          ) : null}
+          {beforeRenderable && afterRenderable ? (
+            <View style={styles.photoPreviewSwitch}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: preview === 'before' }}
+                style={[styles.photoPreviewSwitchButton, preview === 'before' && styles.photoPreviewSwitchActive]}
+                onPress={() => setPreview('before')}
+              >
+                <Text style={styles.photoPreviewSwitchText}>Trước</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: preview === 'after' }}
+                style={[styles.photoPreviewSwitchButton, preview === 'after' && styles.photoPreviewSwitchActive]}
+                onPress={() => setPreview('after')}
+              >
+                <Text style={styles.photoPreviewSwitchText}>Sau</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
     </Card>
   );
 }
@@ -532,6 +612,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: '#e2e8f0',
   },
+  photoStored: {
+    width: '100%',
+    minHeight: 72,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
+    backgroundColor: colors.successSurface,
+    padding: 8,
+  },
+  photoMissing: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
   photoLabelBefore: {
     textAlign: 'center',
     color: colors.amber,
@@ -543,6 +637,62 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 10,
     fontWeight: '900',
+  },
+  photoPreviewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(2, 6, 23, 0.96)',
+    paddingTop: 52,
+    paddingBottom: 34,
+  },
+  photoPreviewHeader: {
+    minHeight: 52,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  photoPreviewTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '800',
+  },
+  photoPreviewClose: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  photoPreviewImage: {
+    flex: 1,
+    width: '100%',
+  },
+  photoPreviewSwitch: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    padding: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  photoPreviewSwitchButton: {
+    minWidth: 92,
+    minHeight: 44,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  photoPreviewSwitchActive: {
+    backgroundColor: colors.primary,
+  },
+  photoPreviewSwitchText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
   },
   metricCard: {
     flex: 1,

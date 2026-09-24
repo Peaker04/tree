@@ -21,14 +21,15 @@ Tuyệt đối tuân thủ phân vai font chữ theo đúng chức năng ngữ n
 
 ## 2. Nạp Font tiếng Việt & Đồng bộ hóa thời gian đo (Font Loading & Timing)
 
-Để đo đạc kích thước văn bản chính xác và xuất file PNG/PDF không bị lỗi nhảy chữ (font swap/glyph shift), trang HTML bắt buộc phải nạp Google Fonts hỗ trợ đầy đủ bộ ký tự Tiếng Việt (`vietnamese` subset):
+Diagram suite dùng font bundle trong repository để kết quả không phụ thuộc mạng hoặc font cài sẵn trên máy:
 
 ```html
-<!-- Nạp font tiếng Việt chính thức -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
 ```
+
+Các file trong `historical/` dùng `../assets/fonts/fonts.css`. Font assets gồm Noto Sans 400–700, Noto Serif 600–700 và Geist Mono 500–600. Không xóa stylesheet này để đổi lấy “single-file” nếu chưa nhúng toàn bộ font data; fallback sang Times/Georgia đã được chứng minh làm sai kerning và vị trí dấu tiếng Việt.
+
+Chi tiết lựa chọn font và phân tích lỗi được lưu tại [`../../../docs/diagrams/TYPOGRAPHY-RESEARCH-VI.md`](../../../docs/diagrams/TYPOGRAPHY-RESEARCH-VI.md).
 
 ### Quy tắc kiểm tra sẵn sàng trước khi đo hoặc xuất (Wait for Fonts Ready):
 Trước khi thực hiện bất kỳ lệnh đo đạc kích thước (`getBBox()`, `measureText()`) hoặc chụp ảnh raster (`screenshot`, `print-to-pdf`):

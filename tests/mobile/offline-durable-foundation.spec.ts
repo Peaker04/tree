@@ -32,6 +32,7 @@ import {
   assertNoIdempotencyKeyInBody,
 } from '../../apps/mobile/src/storage/outbox/stateSeparation';
 import { SqliteMobileTaskRepository } from '../../apps/mobile/src/storage/task/mobileTaskRepository';
+import { SqliteAuthenticatedSnapshotCache } from '../../apps/mobile/src/storage/cache/authenticatedSnapshotCache';
 import {
   InMemoryEvidenceFileStore,
   canSafelyDeleteEvidence,
@@ -419,9 +420,32 @@ describe('Phase 13 Wave 5A: Mobile Durable Persistence & Outbox Foundation', () 
     const migrationsRows = await db.getAllAsync<{ version: number; name: string }>(
       'SELECT version, name FROM schema_migrations ORDER BY version ASC;',
     );
-    expect(migrationsRows.length).toBe(2);
+    expect(migrationsRows.length).toBe(3);
     expect(migrationsRows[0].name).toBe('initial_offline_schema');
     expect(migrationsRows[1].name).toBe('remove_destructive_cascade_fk');
+    expect(migrationsRows[2].name).toBe('authenticated_snapshot_cache');
+  });
+
+  it('B2: authenticated snapshot cache is user-scoped and excludes ephemeral notifications', async () => {
+    const cache = new SqliteAuthenticatedSnapshotCache(db);
+    await cache.save('user-a', {
+      trees: [],
+      staff: [],
+      tasks: [],
+      notifications: [
+        {
+          id: 'local-only',
+          title: 'Local',
+          body: 'Ephemeral',
+          timestamp: '2026-09-20T10:00:00.000Z',
+          read: false,
+          type: 'info',
+        },
+      ],
+    });
+
+    expect((await cache.load('user-a'))?.data.notifications).toEqual([]);
+    expect(await cache.load('user-b')).toBeNull();
   });
 
   // =========================================================================

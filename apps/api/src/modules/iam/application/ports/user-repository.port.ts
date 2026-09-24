@@ -31,4 +31,5 @@ export interface IUserRepository {
     limit?: number,
     cursor?: string,
   ): Promise<{ data: UserAccount[]; meta: { hasMore: boolean; nextCursor: string | null } }>;
+  listActiveStaff(): Promise<UserAccount[]>;
 }

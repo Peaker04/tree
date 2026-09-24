@@ -58,20 +58,20 @@ Hệ thống biểu đồ gồm 16 tệp HTML standalone và 1 tệp chỉ mục
 
 1. `docs/diagrams/01-product-capability-map.html`
 2. `docs/diagrams/02-domain-context-map.html`
-3. `docs/diagrams/03-mvp-operational-swimlane.html`
+3. `docs/diagrams/historical/legacy-operational-swimlane.html`
 4. `docs/diagrams/04-task-lifecycle.html`
-5. `docs/diagrams/05-proof-workflow.html`
-6. `docs/diagrams/06-review-rework-lifecycle.html`
+5. `docs/diagrams/historical/legacy-fixed-proof-workflow.html`
+6. `docs/diagrams/historical/legacy-binary-review.html`
 7. `docs/diagrams/07-action-eligibility-security-matrix.html`
 8. `docs/diagrams/08-role-information-architecture.html`
-9. `docs/diagrams/09-system-current-state.html`
+9. `docs/diagrams/historical/legacy-system-current-state.html`
 10. `docs/diagrams/10-system-target-architecture.html`
-11. `docs/diagrams/11-evidence-submission-sequence.html`
+11. `docs/diagrams/historical/legacy-evidence-submission-sequence.html`
 12. `docs/diagrams/12-architecture-dependency-map.html`
-13. `docs/diagrams/proposed-01-current-vs-recommended-workflow.html`
-14. `docs/diagrams/proposed-02-mvp-operational-swimlane.html`
-15. `docs/diagrams/proposed-03-minimal-task-lifecycle.html`
-16. `docs/diagrams/proposed-04-proof-policy-and-rework.html`
+13. `docs/diagrams/historical/workflow-evolution-comparison.html`
+14. `docs/diagrams/03-operational-workflow.html`
+15. `docs/diagrams/04-task-lifecycle.html`
+16. `docs/diagrams/05-proof-policy-and-rework.html`
 17. `docs/diagrams/README.md` (Chỉ mục và nguyên tắc quản trị suite)
 
 ---
@@ -95,9 +95,9 @@ Mỗi biểu đồ được gán chính xác một trong 6 phân loại chuẩn 
 | `11-evidence-submission-sequence.html` | `HISTORICAL_SUPERSEDED` | `docs/WORKFLOWS.md` (Historical) | `BANNER_ONLY` | Bảo toàn chuỗi nộp bằng chứng cũ; chuẩn hóa banner SUPERSEDED. |
 | `12-architecture-dependency-map.html` | `DEFERRED_UNTIL_ADR` | `AGENTS.md`, `docs/ARCHITECTURE.md` | `BANNER_ONLY` | Giữ nguyên ranh giới monorepo hiện có; ghi rõ phụ thuộc triển khai Admin bị hoãn lại cho Phase 11 ADR (không tự vẽ `apps/admin-web`). |
 | `proposed-01-current-vs-recommended-workflow.html` | `REFERENCE_COMPARISON` | `docs/WORKFLOWS.md`, `docs/PRODUCT.md` | `BANNER_ONLY` | So sánh đối chiếu luồng cứng nhắc cũ và luồng linh hoạt mới; banner khẳng định góc nhìn đối chiếu tham chiếu. |
-| `proposed-02-mvp-operational-swimlane.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/ACCESS-CONTROL.md` | `BANNER_ONLY` | Luồng vận hành chuẩn 3 làn bơi (Manager, Staff, System); không có làn Admin trong tác nghiệp hiện trường. |
-| `proposed-03-minimal-task-lifecycle.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | `BANNER_ONLY` | Máy trạng thái chuẩn 7 trạng thái tất định; không có trạng thái ngoài danh mục; không có transition của Admin. |
-| `proposed-04-proof-policy-and-rework.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | `BANNER_ONLY` | Chuẩn hóa 3 Hồ sơ Bằng chứng ngữ nghĩa và quy trình Rework bảo toàn lịch sử; chuẩn hóa banner derived view. |
+| `03-operational-workflow.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/ACCESS-CONTROL.md` | `BANNER_ONLY` | Luồng vận hành chuẩn 3 làn bơi (Manager, Staff, System); không có làn Admin trong tác nghiệp hiện trường. |
+| `04-task-lifecycle.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | `BANNER_ONLY` | Máy trạng thái chuẩn 7 trạng thái tất định; không có trạng thái ngoài danh mục; không có transition của Admin. |
+| `05-proof-policy-and-rework.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | `BANNER_ONLY` | Chuẩn hóa 3 Hồ sơ Bằng chứng ngữ nghĩa và quy trình Rework bảo toàn lịch sử; chuẩn hóa banner derived view. |
 
 ---
 
@@ -133,9 +133,9 @@ Quyết định xử lý cho toàn bộ 16 biểu đồ:
 11. **`11-evidence-submission-sequence.html` — `BANNER_ONLY`:** Giữ nguyên chuỗi nộp 5 chốt cũ; chuẩn hóa banner `STATUS: HISTORICAL / SUPERSEDED — REFERENCE ONLY`.
 12. **`12-architecture-dependency-map.html` — `BANNER_ONLY`:** Giữ nguyên bản đồ phụ thuộc monorepo hiện có, cập nhật banner `STATUS: TECHNICAL DECISION DEFERRED TO PHASE 11 ADR`, không tự ý thêm `apps/admin-web` khi chưa có ADR.
 13. **`proposed-01-current-vs-recommended-workflow.html` — `BANNER_ONLY`:** Giữ nguyên nội dung so sánh đối chiếu; cập nhật banner `STATUS: REFERENCE COMPARISON — DERIVED VIEW`.
-14. **`proposed-02-mvp-operational-swimlane.html` — `BANNER_ONLY`:** Xác minh luồng vận hành 3 làn bơi chuẩn tắc (Manager, Staff, System); không có làn Admin; cập nhật banner `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
-15. **`proposed-03-minimal-task-lifecycle.html` — `BANNER_ONLY`:** Xác minh đúng 7 trạng thái tất định; không có trạng thái ngoại lai; không có bước chuyển của Admin; cập nhật banner `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
-16. **`proposed-04-proof-policy-and-rework.html` — `BANNER_ONLY`:** Xác minh đúng 3 Hồ sơ Bằng chứng ngữ nghĩa và quy trình Rework bảo toàn lịch sử; cập nhật banner `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
+14. **`03-operational-workflow.html` — `BANNER_ONLY`:** Xác minh luồng vận hành 3 làn bơi chuẩn tắc (Manager, Staff, System); không có làn Admin; cập nhật banner `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
+15. **`04-task-lifecycle.html` — `BANNER_ONLY`:** Xác minh đúng 7 trạng thái tất định; không có trạng thái ngoại lai; không có bước chuyển của Admin; cập nhật banner `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
+16. **`05-proof-policy-and-rework.html` — `BANNER_ONLY`:** Xác minh đúng 3 Hồ sơ Bằng chứng ngữ nghĩa và quy trình Rework bảo toàn lịch sử; cập nhật banner `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
 
 ### Đánh giá về các biểu đồ mới tiềm năng (Optional Diagrams 13, 14, 15):
 Master Plan nêu khả năng thêm các biểu đồ chuyên biệt cho Admin (13, 14, 15). Tuy nhiên, theo triết lý thiết kế của `diagram-design` (*deletion > duplication*, mật độ tối ưu ~4/10), toàn bộ năng lực quản trị MVP, phân quyền 2 mặt phẳng và không gian làm việc của Admin đã được biểu đạt trọn vẹn, trực quan và không xung đột trong các biểu đồ 01, 07 và 08. Việc tạo thêm các biểu đồ 13, 14, 15 sẽ gây trùng lặp thông tin và làm loãng suite. Do đó, quyết định chính thức là **KHÔNG tạo thêm các biểu đồ dư thừa**, bảo tồn sự tập trung và độ tinh gọn của hệ thống.
@@ -271,15 +271,15 @@ Biểu đồ `docs/diagrams/08-role-information-architecture.html` đã được
    - So sánh trực quan mô hình cũ (cứng nhắc, 5 chốt ép buộc) và mô hình mới (linh hoạt, 3 hồ sơ bằng chứng).
    - Đã xác minh: Luồng cũ không bị trình bày như là mục tiêu; không có vai trò Admin trong luồng hiện trường.
    - Banner: `STATUS: REFERENCE COMPARISON — DERIVED VIEW`.
-2. **`proposed-02-mvp-operational-swimlane.html` (`CURRENT_DERIVED_VIEW`):**
+2. **`03-operational-workflow.html` (`CURRENT_DERIVED_VIEW`):**
    - Chu trình vận hành hiện trường gồm đúng 3 làn bơi tác nghiệp: `Operations Manager`, `Field Staff`, và `System`.
    - Đã xác minh: Không có làn bơi của Platform Administrator trong tác nghiệp hiện trường. Đầy đủ các chốt chặn `StartTask`, Xác thực Site, 4 kết luận thẩm định, và 3 lối thoát của trạng thái `BLOCKED`.
    - Banner: `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
-3. **`proposed-03-minimal-task-lifecycle.html` (`CURRENT_DERIVED_VIEW`):**
+3. **`04-task-lifecycle.html` (`CURRENT_DERIVED_VIEW`):**
    - Máy trạng thái thể hiện đúng 7 trạng thái chuẩn tắc: `PENDING`, `IN_PROGRESS`, `BLOCKED`, `WAITING_REVIEW`, `REWORK_REQUIRED`, `COMPLETED`, `CANCELLED`.
    - Đã xác minh: Không có trạng thái thứ 8 (`OFFLINE_SUBMITTED`, `COMPLETED_WITH_EXCEPTION`, `ACCOUNT_SUSPENDED` không phải trạng thái Task). Không có bước chuyển trạng thái nào do Admin thực hiện.
    - Banner: `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
-4. **`proposed-04-proof-policy-and-rework.html` (`CURRENT_DERIVED_VIEW`):**
+4. **`05-proof-policy-and-rework.html` (`CURRENT_DERIVED_VIEW`):**
    - Thể hiện đúng 3 Hồ sơ Bằng chứng ngữ nghĩa: `CHANGE_PROOF` (Site Verification + Trước + Checklist + Sau), `SERVICE_PROOF` (Site Verification + Checklist + Hoàn tất), `INSPECTION_PROOF` (Site Verification + Bảng phát hiện có cấu trúc + Ảnh hiện trạng).
    - Đã xác minh: Bảng phát hiện có cấu trúc (`Structured Findings`) là bắt buộc trong `INSPECTION_PROOF`. Quy trình Rework có mục tiêu bảo toàn lịch sử bằng chứng hợp lệ, chống gian lận dữ liệu.
    - Banner: `STATUS: DERIVED VIEW — NOT SOURCE OF TRUTH`.
@@ -303,9 +303,9 @@ Biểu đồ `docs/diagrams/08-role-information-architecture.html` đã được
 | `11-evidence-submission-sequence.html` | `HISTORICAL_SUPERSEDED` | `docs/WORKFLOWS.md` (Historical Baseline) | Tham chiếu đối chiếu lịch sử |
 | `12-architecture-dependency-map.html` | `DEFERRED_UNTIL_ADR` | `AGENTS.md`, `docs/ARCHITECTURE.md` | Ranh giới monorepo hiện có, hoãn Admin cho ADR |
 | `proposed-01-current-vs-recommended-workflow.html` | `REFERENCE_COMPARISON` | `docs/WORKFLOWS.md`, `docs/PRODUCT.md` | So sánh đối chiếu mô hình cũ và mới |
-| `proposed-02-mvp-operational-swimlane.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/ACCESS-CONTROL.md` | Góc nhìn dẫn xuất quy trình vận hành liên vai trò |
-| `proposed-03-minimal-task-lifecycle.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | Góc nhìn dẫn xuất máy trạng thái 7 trạng thái |
-| `proposed-04-proof-policy-and-rework.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | Góc nhìn dẫn xuất 3 hồ sơ bằng chứng & Rework |
+| `03-operational-workflow.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/ACCESS-CONTROL.md` | Góc nhìn dẫn xuất quy trình vận hành liên vai trò |
+| `04-task-lifecycle.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | Góc nhìn dẫn xuất máy trạng thái 7 trạng thái |
+| `05-proof-policy-and-rework.html` | `CURRENT_DERIVED_VIEW` | `docs/WORKFLOWS.md`, `docs/DOMAIN.md` | Góc nhìn dẫn xuất 3 hồ sơ bằng chứng & Rework |
 
 ---
 
@@ -348,9 +348,9 @@ Total diagrams validated: 16
 [PASS] 10-system-target-architecture.html
 [PASS] 12-architecture-dependency-map.html
 [PASS] proposed-01-current-vs-recommended-workflow.html
-[PASS] proposed-02-mvp-operational-swimlane.html
-[PASS] proposed-03-minimal-task-lifecycle.html
-[PASS] proposed-04-proof-policy-and-rework.html
+[PASS] 03-operational-workflow.html
+[PASS] 04-task-lifecycle.html
+[PASS] 05-proof-policy-and-rework.html
 ```
 
 ### Các chỉ số hình học đã được kiểm chứng tự động:

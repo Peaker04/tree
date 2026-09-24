@@ -1,7 +1,6 @@
 import React from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { mockTreeLandscapePhoto } from '../../assets/mockEvidenceAssets';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius } from '../../theme/tokens';
 import { Tree } from '../../types';
 
@@ -9,11 +8,10 @@ export function TreeIdentityVisual({ tree, compact = false }: { tree: Tree; comp
   return (
     <View
       accessible
-      accessibilityLabel={`Ảnh thực tế khu vực cây ${tree.name}, mã QR ${tree.qrCode}`}
+      accessibilityLabel={`Cây ${tree.name}, đã có mã QR`}
       style={[styles.visual, compact && styles.visualCompact]}
     >
-      <Image source={mockTreeLandscapePhoto} resizeMode="cover" style={styles.photo} />
-      <View style={styles.photoShade} />
+      <Ionicons name="leaf-outline" size={compact ? 42 : 64} color={colors.primaryBorder} />
       <View style={styles.qrBlock}>
         <Ionicons name="qr-code-outline" size={compact ? 22 : 30} color={colors.forest} />
       </View>
@@ -21,13 +19,13 @@ export function TreeIdentityVisual({ tree, compact = false }: { tree: Tree; comp
         <View style={styles.qrLabel}>
           <Ionicons name="qr-code-outline" size={13} color={colors.forest} />
           <Text numberOfLines={1} style={styles.qrText}>
-            {tree.qrCode}
+            Đã gắn mã QR
           </Text>
         </View>
       ) : null}
       <View style={styles.idBadge}>
         <Text numberOfLines={1} style={styles.idText}>
-          {tree.id}
+          Hồ sơ cây
         </Text>
       </View>
     </View>
@@ -41,18 +39,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: radius.lg,
     backgroundColor: colors.honeydew,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   visualCompact: {
     width: 104,
     height: 112,
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
-  photoShade: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(4, 35, 24, 0.16)',
   },
   qrBlock: {
     position: 'absolute',

@@ -20,6 +20,12 @@ import {
 } from './operational-test-doubles';
 import { CryptoTokenService } from '../../apps/api/src/infrastructure/security/crypto-token-service';
 import { randomUUID, createHash } from 'node:crypto';
+import { normalizeChecklistTemplateItems } from '../../apps/api/src/infrastructure/persistence/repositories/drizzle-policy-repository';
+import { TaskType } from '../../apps/api/src/modules/policy-template-governance/domain/task-type.entity';
+import {
+  ChecklistTemplateVersion,
+  ProofPolicyVersion,
+} from '../../apps/api/src/modules/policy-template-governance/domain/policy-version.entity';
 
 describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63, 64, 65, 66)', () => {
   let app: FastifyInstance;
@@ -155,6 +161,144 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       idempotencyRepository: idempotencyRepo,
       operationalScopeRepository: scopeRepo,
       storagePort,
+    });
+  });
+
+  describe('B3: Manager operational catalogs', () => {
+    it('returns only usable CHANGE_PROOF task types and active Staff to an authorized Manager', async () => {
+      await scopeRepo.addScope(managerId, 'GLOBAL');
+      await userRepo.updateWithOcc(staff2Id, 1, { accountStatus: 'SUSPENDED' });
+
+      await taskTypeRepo.save(
+        new TaskType({
+          id: 'TT-CHANGE',
+          version: 1,
+          name: 'Cắt tỉa',
+          defaultProofProfile: 'CHANGE_PROOF',
+          isActive: true,
+        }),
+      );
+      await policyRepo.saveProofPolicyVersion(
+        new ProofPolicyVersion({
+          id: 'POL-CHANGE',
+          taskTypeId: 'TT-CHANGE',
+          versionNumber: 1,
+          proofProfile: 'CHANGE_PROOF',
+        }),
+      );
+      await policyRepo.saveChecklistTemplateVersion(
+        new ChecklistTemplateVersion({
+          id: 'CHK-CHANGE',
+          taskTypeId: 'TT-CHANGE',
+          versionNumber: 1,
+          templateItems: [{ text: 'An toàn khu vực', order: 1 }],
+        }),
+      );
+
+      await taskTypeRepo.save(
+        new TaskType({
+          id: 'TT-SERVICE',
+          version: 1,
+          name: 'Tưới nước',
+          defaultProofProfile: 'SERVICE_PROOF',
+          isActive: true,
+        }),
+      );
+      await policyRepo.saveProofPolicyVersion(
+        new ProofPolicyVersion({
+          id: 'POL-SERVICE',
+          taskTypeId: 'TT-SERVICE',
+          versionNumber: 1,
+          proofProfile: 'SERVICE_PROOF',
+        }),
+      );
+      await policyRepo.saveChecklistTemplateVersion(
+        new ChecklistTemplateVersion({
+          id: 'CHK-SERVICE',
+          taskTypeId: 'TT-SERVICE',
+          versionNumber: 1,
+          templateItems: [{ text: 'Kiểm tra lượng nước', order: 1 }],
+        }),
+      );
+
+      const taskTypes = await app.inject({
+        method: 'GET',
+        url: '/v1/operational/task-types',
+        headers: { authorization: `Bearer ${managerToken}` },
+      });
+      expect(taskTypes.statusCode).toBe(200);
+      expect(taskTypes.json().data).toEqual([{ id: 'TT-CHANGE', name: 'Cắt tỉa', proofProfile: 'CHANGE_PROOF' }]);
+
+      const staff = await app.inject({
+        method: 'GET',
+        url: '/v1/operational/assignable-staff',
+        headers: { authorization: `Bearer ${managerToken}` },
+      });
+      expect(staff.statusCode).toBe(200);
+      expect(staff.json().data).toEqual([{ id: staff1Id, displayName: 'staff1', email: 'staff1@novyx.test' }]);
+    });
+
+    it('rejects unauthenticated callers, Staff, and Managers without operational scope', async () => {
+      const unauthenticatedResponse = await app.inject({
+        method: 'GET',
+        url: '/v1/operational/task-types',
+      });
+      expect(unauthenticatedResponse.statusCode).toBe(401);
+
+      const staffResponse = await app.inject({
+        method: 'GET',
+        url: '/v1/operational/task-types',
+        headers: { authorization: `Bearer ${staff1Token}` },
+      });
+      expect(staffResponse.statusCode).toBe(403);
+
+      const unscopedManagerResponse = await app.inject({
+        method: 'GET',
+        url: '/v1/operational/assignable-staff',
+        headers: { authorization: `Bearer ${otherManagerToken}` },
+      });
+      expect(unscopedManagerResponse.statusCode).toBe(403);
+      expect(unscopedManagerResponse.json().error.code).toBe('FORBIDDEN');
+    });
+  });
+
+  describe('R8: Manager tree onboarding', () => {
+    it('allows an authenticated manager to create a GPS-anchored tree with a unique QR identity', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/governance/trees',
+        headers: { authorization: `Bearer ${managerToken}` },
+        payload: {
+          treeId: 'TREE-R8-MANAGER',
+          qrCode: 'QR-TREE-R8-MANAGER',
+          name: 'Cây demo hiện trường',
+          species: 'Hopea odorata',
+          lat: 10.7769,
+          lng: 106.7009,
+          address: 'Khu vực thử nghiệm',
+          healthStatus: 'Khỏe mạnh',
+          ageYears: 3,
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data).toMatchObject({
+        id: 'TREE-R8-MANAGER',
+        qrCode: 'QR-TREE-R8-MANAGER',
+        lat: 10.7769,
+        lng: 106.7009,
+      });
+    });
+  });
+
+  describe('B4: Create Task persisted checklist compatibility', () => {
+    it('normalizes legacy seeded checklist items to the canonical response shape', () => {
+      expect(normalizeChecklistTemplateItems([{ id: 'chk-1', label: 'An toàn khu vực', required: true }])).toEqual([
+        { text: 'An toàn khu vực', order: 1 },
+      ]);
+      expect(normalizeChecklistTemplateItems([{ text: 'Kiểm tra cành khô', order: 3 }])).toEqual([
+        { text: 'Kiểm tra cành khô', order: 3 },
+      ]);
     });
   });
 
@@ -608,6 +752,15 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       const reworkTask = reworkRes.json().data;
       expect(reworkTask.status).toBe('REWORK_REQUIRED');
 
+      const projectedRework = await app.inject({
+        method: 'GET',
+        url: `/v1/tasks/${task.id}`,
+        headers: { authorization: `Bearer ${staff1Token}` },
+      });
+      expect(projectedRework.statusCode).toBe(200);
+      expect(projectedRework.json().data.rejectReason).toBe('Root zone compaction still visible on northern quadrant');
+      expect(projectedRework.json().data.reworkTarget).toBe('completion_photo');
+
       // Verify NO CareHistory created during rework (Section 48)
       const careHistoryDuringRework = await careHistoryRepo.findByTreeId('TREE-REWORK-1');
       expect(careHistoryDuringRework).toHaveLength(0);
@@ -629,7 +782,6 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
           'idempotency-key': randomUUID(),
         },
         payload: {
-          taskId: task.id,
           expectedVersion: reworkTask.version,
           reworkedProof: {
             proofProfile: 'SERVICE_PROOF',
@@ -642,6 +794,15 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       expect(resubmitRes.statusCode).toBe(200);
       const reWaitingTask = resubmitRes.json().data;
       expect(reWaitingTask.status).toBe('WAITING_REVIEW');
+
+      const projectedResubmission = await app.inject({
+        method: 'GET',
+        url: `/v1/tasks/${task.id}`,
+        headers: { authorization: `Bearer ${staff1Token}` },
+      });
+      expect(projectedResubmission.statusCode).toBe(200);
+      expect(projectedResubmission.json().data.gpsCheck?.verified).toBe(true);
+      expect(projectedResubmission.json().data.qrCheck?.verified).toBe(true);
 
       // 6. Verify evidence attempts history preserved both attempts (Section 21, 22)
       const allAttempts = await evidenceRepo.getEvidenceAttempts(task.id);

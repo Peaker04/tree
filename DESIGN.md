@@ -18,6 +18,79 @@ This document is the single authoritative design specification for the NOVYX Gre
 
 Every future screen refactor, component creation, and code review must strictly adhere to this specification.
 
+### 1.1 Authority and conflict resolution
+
+This document is the normative visual and interaction authority for `apps/mobile`. Apply sources in this order:
+
+1. Functional/domain contracts and security rules.
+2. `docs/FUNCTIONAL_NON_FUNCTIONAL_REQUIREMENTS_RULES.md` for evaluative criteria and the principle-before-pattern reasoning order.
+3. `docs/MOBILE_UI_RULES.md` for mobile workflow, permission, navigation, accessibility, and device constraints.
+4. This `DESIGN.md` for visual hierarchy, semantic tokens, typography, spacing, surfaces, interaction hierarchy, and component governance.
+5. `.planning/NOVYX_MOBILE_SCREEN_CONTRACTS.md` once B2.6 publishes it; until then, do not infer screen-specific information architecture from historical specs.
+6. Historical planning artifacts only as implementation evidence; they cannot override items 1–5.
+
+`.planning/quick/20260714-mobile-ui-ux-operational-refactor-v2/UI-SPEC.md` is historical and superseded as a normative visual source. Its permission and workflow research may be consulted, but its heavy `700/900` typography, gradient budget, legacy fallback language, and alternate spacing scale are not active design rules.
+
+When two active documents appear to conflict, stop implementation and resolve the conflict here before editing screens. Do not silently choose whichever rule is easier.
+
+### 1.2 Design read and operating dials
+
+**Design read:** a trust-first field-operations application for Staff and Managers working outdoors, under interruption and unreliable connectivity. The visual language is botanical, restrained, operational, and evidence-led—not a marketing dashboard or generic card template.
+
+| Dial             | Value | Consequence                                                                                         |
+| ---------------- | ----: | --------------------------------------------------------------------------------------------------- |
+| Design variance  |  3/10 | Predictable composition, stable scan paths, no decorative asymmetry.                                |
+| Motion intensity |  2/10 | Press/selection/loading feedback only; no decorative motion.                                        |
+| Visual density   |  6/10 | Compact operational information, controlled through hierarchy and disclosure rather than tiny text. |
+
+The active font strategy remains the React Native system font. No font dependency is introduced merely for visual novelty. The active weight vocabulary is `400`, `500`, and `600`; heavier weights in legacy screens are migration debt and must not be copied.
+
+### 1.3 Information hierarchy and cognitive-load contract
+
+Every screen must order information in four layers:
+
+1. **Orientation:** role, task/tree identity, current location in the workflow.
+2. **Decision:** current state, risk, proof gap, or next valid action.
+3. **Supporting evidence:** facts required to trust or complete that decision.
+4. **Metadata:** IDs, timestamps, transport/debug detail, and audit data.
+
+Layers 3–4 must not compete visually with layers 1–2. Use progressive disclosure, internal dividers, concise summaries, or focused detail screens instead of rendering all available DTO fields at equal weight.
+
+Each context has exactly one visually dominant primary action. A block of information must trace to a functional requirement, user decision, recovery action, or audit need; otherwise remove it or defer it.
+
+### 1.4 Harness synchronization contract
+
+For every mobile UI task, the harness must read, in order: `AGENTS.md`, `.agents/memory/UI_UX_MEMORY.md`, `docs/MOBILE_UI_RULES.md`, this `DESIGN.md`, `.planning/NOVYX_MOBILE_SCREEN_CONTRACTS.md` when present, shared tokens/primitives, then the affected screen and state owner.
+
+A screen is not conformant merely because it uses green tokens. Conformance requires consistent typography, spacing, surface hierarchy, action hierarchy, state completeness, accessibility, list performance, and device evidence.
+
+### 1.5 Principles, patterns, styles, and implementation
+
+The design system uses these layers in order:
+
+```text
+Business meaning
+→ Design principle
+→ Spatial composition
+→ Context-appropriate interaction pattern
+→ Existing design system and component
+→ Tokens and styling
+→ Implementation
+```
+
+- **Principles** evaluate whether a decision is clear, meaningful, prioritized, accessible, and appropriate to the workflow. They do not mandate a component or visual value.
+- **Spatial composition** evaluates how content occupies and relates in space: intrinsic sizing, content-to-container ratio, proximity, grouping, rhythm, alignment, anchors, density, nesting, balance, separation, priority, and responsive allocation. It is not a fixed layout recipe.
+- **Patterns** describe interaction behavior such as radio selection, progressive disclosure, master-detail, inline validation, or contextual actions. They are optional tools selected by context, not a required inventory.
+- **Style** controls presentation such as fill, border, radius, icon, spacing, and emphasis. A style change must not silently change interaction semantics.
+- **Tokens** encode approved visual decisions; they do not define domain meaning.
+- **Components** implement selected patterns; their existence does not justify using them where the semantics do not fit.
+
+Pattern selection must consider user goal, workflow stage, domain meaning, action frequency and risk, data scale, platform convention, accessibility, responsive behavior, and existing project patterns. Similar screenshots do not prove that two cases require the same pattern.
+
+Screenshots are evidence for symptoms such as hierarchy, density, consistency, reflow, spatial imbalance, weak content-to-container ratio, or interaction ambiguity. Resolve the actual problem using project rules, domain flow, spatial composition, state ownership, existing components, and implementation evidence before changing the UI.
+
+Before adding a card, fixed/minimum height, large padding, decorative surface, or viewport-filling section, verify that it contributes semantic grouping, hierarchy, interaction boundary, state distinction, visual separation, navigation context, media presentation, accessibility, or another explicit product need. Prefer intrinsic sizing and remove any container layer whose removal preserves clarity and safety.
+
 ---
 
 ## 2. Source Principles
@@ -100,12 +173,72 @@ Visual Polish & Aesthetic Detail
 9. **Reflow Instead of Clipping:** Layouts must expand vertically when font size increases or Vietnamese copy wraps; never use fixed-height containers that clip text.
 10. **First-Class System States:** Loading, error, offline, empty, and waiting-review states are fully designed, first-class layouts.
 11. **No Visual Effect Without Functional Purpose:** If a border, background tint, or icon does not convey domain state or assist field execution, remove it.
+12. **Production Cardinality Over Seed Cardinality:** Catalog and people-selection UI must be designed against expected production volume. One-row development data is not a valid basis for the final interaction.
+13. **User Language Boundary:** Internal enums, technical profile names, English seed descriptions, raw API errors and transport metadata never appear in normal product UI.
+14. **Control Semantics Must Match Behavior:** Radio, toggle, multi-select, picker, clear and change affordances must visually communicate their actual behavior.
+15. **Bounded Date-Time Input:** Operational deadlines use localized date-and-time selection; canonical ISO serialization belongs at the service boundary, not in user-entered text.
+16. **Calibrated Learning:** Promote a device-discovered failure into durable memory/contract/tests only when the root cause is reproducible and reusable. Keep one-off taste judgments, temporary seed artifacts and context-specific exceptions local; known failures are causal guidance, not mandatory visual templates.
+17. **Content-Fit Spatial Composition:** Layout dimensions, grouping, whitespace, density and visual weight follow the information and task. Prefer intrinsic sizing; validate content-to-container ratio; use proximity, rhythm and alignment before adding containers or decoration; and avoid stretching sparse content merely to occupy the viewport.
 
 ---
 
 ## 5. Color System
 
-The color system separates **Primitive / Brand Tokens** from **Semantic Application Tokens**. Screens must consume semantic tokens.
+### 5.0 Color System Integration
+
+The provided color palettes are visual references and color sources, not screen-level implementation specifications.
+
+Do not reproduce the reference images literally.
+
+#### Principles
+
+- Preserve the project's existing product, domain, UX, and structural design rules.
+- Treat palette colors as primitives, not direct component colors.
+- Map primitive colors into semantic roles before applying them to UI.
+- Prefer semantic tokens over raw HEX values inside components.
+- Determine color roles from actual context rather than from the position or usage shown in the reference images.
+- Do not force every palette color into the product.
+- A color may remain unused if no meaningful semantic role exists for it.
+- Do not create different color conventions per screen.
+- Reuse existing tokens when they already express the required semantic role.
+- Do not introduce gradients, blur, glow, noise, shadows, or decorative treatments merely because they appear in palette reference artwork.
+- Color must not be the only indicator of state or meaning.
+- Verify readable foreground/background contrast before adopting a pairing.
+- Preserve established status semantics; do not assign business meaning to a color solely because of its visual appearance.
+
+#### Palette Sources
+
+Warm / natural family:
+
+- Honeydew — `#F0F7EA`
+- Cornsilk — `#FFFAE0`
+- Vanilla Custard — `#EEE59F`
+- Willow Green — `#AAD480`
+- Emerald — `#75C97F`
+
+Fresh / cool family:
+
+- Brume — `#C2F2E4`
+- Menthe — `#35C8B4`
+- Limonade — `#EDF7BE`
+- Verveine — `#A4CF4A`
+
+#### Intended Direction
+
+Use the warm/natural family primarily as a foundation candidate and the fresh/cool family primarily as an accent candidate.
+
+This is a direction, not a mandatory mapping.
+
+The final semantic assignment must be determined after inspecting:
+
+- existing design tokens;
+- existing components;
+- current color usage;
+- accessibility requirements;
+- product semantics;
+- interaction patterns.
+
+Prefer extending or normalizing the existing design system over creating a parallel color system.
 
 ### 5.1 Palette Tokens
 
@@ -497,21 +630,26 @@ The following patterns are strictly banned in NOVYX mobile code:
 
 ---
 
-## 22. Approved Reference Implementation
+## 22. Structural Reference Implementation
 
-`apps/mobile/src/screens/staff/StaffHome.tsx` is the first validated reference implementation of the Seed + Linear unified specification.
+`apps/mobile/src/screens/staff/StaffHome.tsx` is a structural reference for state branching and grouped metrics, not a pixel-perfect template or permanent visual authority. Runtime evidence showed that its repeated summary surfaces, decorative imagery, and page length still require B2.6/B5.5 review.
 
-### Key Patterns Standardized in StaffHome:
+### Patterns worth preserving from StaffHome:
 
-1. **Header & Context:** `BrandMark` on the left, notifications button and avatar on the right.
-2. **Warm Hero Card:** Contextual live status indicator (`statusDotLive`), clear operational kicker, and landscape photo thumbnail.
-3. **Linear Grouped Metrics:** A single `Card tone="flat"` housing 3 unbordered metrics separated by 1px vertical hairline dividers (`statsDivider`).
-4. **Shift Progress:** Clean progress bar with Seed lime accent and semantic handling of 0/0 tasks.
-5. **Priority Action Card:** Clear priority badge, `#task-id`, tree info, 5-step proof stepper, and single `size="field"` primary action button.
-6. **State-Driven Multi-Branch Rendering:** Explicit, separate layout branches for Loading, Actionable Task, Waiting Review, Fully Completed, and Standby states.
+1. **State ownership:** explicit loading, offline, actionable, waiting, completed, and standby branches.
+2. **Grouped metrics:** related metrics share one surface with internal dividers.
+3. **Domain-derived action:** the next task and workflow action come from shared helpers.
+4. **Truthful zero state:** no assignment is presented as standby, not completion.
+
+### Patterns that must not be copied blindly:
+
+- Decorative hero media without a functional purpose.
+- Multiple cards repeating the same zero/summary state.
+- Long pages where the next action is pushed below secondary information.
+- Screen-local typography, color, spacing, or radius values.
 
 > [!IMPORTANT]
-> **Adoption Guidance:** Do not copy-paste `StaffHome` markup into other screens. Instead, adopt its architectural discipline: flat surfaces, hairline borders, grouped metrics, restrained typography, and domain-derived actions.
+> **Adoption Guidance:** Reuse the state and information-architecture discipline, then validate the specific screen against its B2.6 contract. Do not copy-paste StaffHome markup or treat its current layout as automatic visual PASS.
 
 ---
 

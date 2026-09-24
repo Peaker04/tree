@@ -139,25 +139,9 @@ function appendNodeOption(currentValue, option) {
 
 function loadRootDotEnv() {
   const envPath = path.join(repoRoot, '.env');
-  if (!fs.existsSync(envPath)) {
-    return;
+  if (fs.existsSync(envPath)) {
+    process.loadEnvFile(envPath);
   }
-
-  fs.readFileSync(envPath, 'utf8')
-    .split(/\r?\n/)
-    .forEach((line) => {
-      const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)\s*$/);
-      if (!match) {
-        return;
-      }
-
-      const [, key, rawValue] = match;
-      if (process.env[key] !== undefined) {
-        return;
-      }
-
-      process.env[key] = rawValue.trim().replace(/^['"]|['"]$/g, '');
-    });
 }
 
 function isAndroidNativeBuildCommand(commandArgs) {

@@ -1,121 +1,65 @@
 import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button, Card } from '../../components/AppPrimitives';
-import { Header, Metric } from '../../components/presentation/TaskSurfaces';
-import { colors } from '../../theme/tokens';
-
-const avatarPhoto = 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&auto=format&fit=crop&q=80';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { UserAvatar } from '../../components/UserAvatar';
+import type { AuthUser } from '@novyx/contracts';
+import { Badge, Button, ListRow, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
+import { colors, layout, spacing, typography } from '../../theme/tokens';
 
 export function StaffAccount({
+  authenticatedUser,
   onLogout,
   completed,
   total,
   notificationsCount,
   onOpenNotifications,
 }: {
+  authenticatedUser: AuthUser | null;
   onLogout: () => void;
   completed: number;
   total: number;
   notificationsCount: number;
   onOpenNotifications: () => void;
 }) {
+  const email = authenticatedUser?.email ?? 'Không có thông tin phiên';
+
   return (
-    <ScrollView contentContainerStyle={styles.screenPad}>
-      <Header title="Tài khoản nhân viên" subtitle="Nguyễn Văn Hùng" />
-      <Card>
-        <View style={styles.row}>
-          <Image source={{ uri: avatarPhoto }} style={styles.bigAvatar} />
-          <View style={styles.flex}>
-            <Text style={styles.itemTitle}>Nguyễn Văn Hùng</Text>
-            <Text style={styles.itemSub}>Nhân viên kỹ thuật hiện trường</Text>
-            <Text style={styles.bodyText}>hung.nguyen@novyx.vn</Text>
-          </View>
+    <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
+
+      <View style={styles.identity}>
+        <UserAvatar email={email} />
+        <View style={styles.flex}>
+          <Text style={styles.email}>{email}</Text>
+          <Text style={styles.role}>Nhân viên hiện trường</Text>
+          <Badge tone="green">Đang đăng nhập</Badge>
         </View>
-      </Card>
-      <View style={styles.statsGrid}>
-        <Metric label="Hoàn thành" value={completed} tone="green" />
-        <Metric label="Tổng nhiệm vụ" value={total} tone="slate" />
       </View>
-      <Pressable accessibilityRole="button" onPress={onOpenNotifications}>
-        <Card style={styles.listCard} tone={notificationsCount > 0 ? 'green' : 'default'}>
-          <View style={styles.rowBetween}>
-            <View style={styles.row}>
-              <View style={styles.accountShortcutIcon}>
-                <Ionicons name="notifications-outline" size={20} color={colors.primary} />
-              </View>
-              <View style={styles.flex}>
-                <Text style={styles.itemTitle}>Thông báo</Text>
-                <Text style={styles.bodyText}>
-                  {notificationsCount > 0 ? `${notificationsCount} cập nhật mới cần xem.` : 'Không có cập nhật mới.'}
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </View>
-        </Card>
-      </Pressable>
+
+      <View style={styles.section}>
+        <SectionTitle icon="id-card-outline">Phiên làm việc</SectionTitle>
+        <ListRow icon="mail-outline" title="Email" subtitle={email} />
+        <ListRow icon="people-outline" title="Vai trò" subtitle="Nhân viên hiện trường" />
+        <ListRow icon="clipboard-outline" title="Công việc" subtitle={`${completed}/${total} đã hoàn thành`} />
+        <ListRow
+          icon="notifications-outline"
+          title="Thông báo"
+          subtitle={notificationsCount ? `${notificationsCount} cập nhật chưa đọc` : 'Không có cập nhật mới'}
+          onPress={onOpenNotifications}
+        />
+      </View>
+
       <Button variant="danger" icon="log-out-outline" onPress={onLogout}>
-        Đăng xuất tài khoản
+        Đăng xuất
       </Button>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screenPad: {
-    padding: 16,
-    paddingBottom: 104,
-    gap: 16,
-  },
-  flex: {
-    flex: 1,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  bigAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-  itemTitle: {
-    color: colors.foreground,
-    fontSize: 14,
-    fontWeight: '800',
-    lineHeight: 20,
-  },
-  itemSub: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 1,
-  },
-  bodyText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  listCard: {
-    gap: 10,
-  },
-  accountShortcutIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  screen: { padding: layout.screenPadding, paddingBottom: layout.bottomNavClearance + spacing.xl, gap: spacing.xl },
+  flex: { flex: 1 },
+  identity: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  email: { ...typography.section, color: colors.ink },
+  role: { ...typography.body, color: colors.pewter, marginTop: 2, marginBottom: spacing.sm },
+  section: { gap: spacing.sm },
 });

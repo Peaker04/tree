@@ -1,3 +1,4 @@
+import type { AuthSession } from '@novyx/contracts';
 import { readPublicRuntimeConfig } from '@novyx/config';
 import type { IDatabaseConnection } from '../storage/database/types';
 import { openAppDatabase } from '../storage/database/sqliteDatabase';
@@ -19,6 +20,7 @@ import {
 } from '../services/evidenceUploadClient';
 import { createHybridGreenOpsService, type GreenOpsService } from '../services/greenOpsService';
 import type { OutboxDispatchResult } from '../storage/outbox/types';
+import { SqliteAuthenticatedSnapshotCache } from '../storage/cache/authenticatedSnapshotCache';
 
 export interface MobileRuntimeOptions {
   envSource?: Record<string, string | undefined>;
@@ -41,7 +43,7 @@ export class MobileSyncRuntime {
   public dispatcher: SubmitEvidenceOutboxDispatcher | null = null;
   public coordinator: OutboxCoordinator | null = null;
   public readonly greenOpsService: GreenOpsService;
-  public readonly dataSource: 'mock' | 'rest';
+  public readonly dataSource = 'rest' as const;
 
   private envSource: Record<string, string | undefined>;
   private storage?: ISecureSessionStorage;
@@ -49,7 +51,7 @@ export class MobileSyncRuntime {
   private unsubscribeNetInfo: (() => void) | null = null;
   private isSyncing = false;
   private isStarted = false;
-  private startPromise: Promise<void> | null = null;
+  private startPromise: Promise<AuthSession | null> | null = null;
 
   constructor(options?: MobileRuntimeOptions) {
     this.envSource = options?.envSource ?? {
@@ -61,7 +63,6 @@ export class MobileSyncRuntime {
     this.binaryReader = options?.binaryReader ?? new DefaultEvidenceBinaryReader();
 
     const config = readPublicRuntimeConfig(this.envSource);
-    this.dataSource = config.dataSource;
     const apiBaseUrl = config.apiBaseUrl;
 
     this.sessionManager = new AuthSessionManager(apiBaseUrl, this.storage);
@@ -76,6 +77,7 @@ export class MobileSyncRuntime {
 
   public setupWithDatabase(db: IDatabaseConnection): void {
     this.db = db;
+    this.greenOpsService.setSnapshotCache(new SqliteAuthenticatedSnapshotCache(db));
     this.taskRepo = new SqliteMobileTaskRepository(db);
     this.outboxRepo = new SqliteOutboxRepository(db);
     this.dispatcher = new SubmitEvidenceOutboxDispatcher(
@@ -87,9 +89,9 @@ export class MobileSyncRuntime {
     this.coordinator = new OutboxCoordinator(this.outboxRepo, this.dispatcher, this.taskRepo, this.db);
   }
 
-  async start(): Promise<void> {
+  async start(): Promise<AuthSession | null> {
     if (this.isStarted) {
-      return;
+      return await this.sessionManager.getSession();
     }
     if (this.startPromise) {
       return await this.startPromise;
@@ -145,10 +147,12 @@ export class MobileSyncRuntime {
       if (session?.accessToken) {
         void this.triggerSync();
       }
+
+      return session;
     })();
 
     try {
-      await this.startPromise;
+      return await this.startPromise;
     } finally {
       this.startPromise = null;
     }
@@ -163,7 +167,6 @@ export class MobileSyncRuntime {
   }
 
   async triggerSync(): Promise<OutboxDispatchResult[]> {
-    if (this.dataSource === 'mock') return [];
     if (this.isSyncing || !this.coordinator) {
       return [];
     }

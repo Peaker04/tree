@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { CanonicalTaskStatus } from '../operational/task-status';
-import type { CanonicalReviewDecision } from '../operational/review-decision';
 import type { GpsCheckDto, QrCheckDto } from '../operational/verification';
 import type { ChecklistItemDto } from '../operational/evidence';
 import type { TreeHealthStatus, TreeRiskStatus } from '../governance/trees';
+import type { ProofProfile } from '../operational/proof-profile';
 
 /**
  * @deprecated TRANSITIONAL_COMPAT
@@ -52,19 +52,6 @@ export type TaskStatus = CanonicalTaskStatus | LegacyTaskStatus;
  * Canonical roles are in HumanRoleSchema ('staff' | 'manager' | 'admin').
  */
 export type Role = 'Staff' | 'Manager';
-
-/**
- * @deprecated TRANSITIONAL_COMPAT
- * Legacy lowercase review decisions used by apps/mobile.
- * Canonical review decisions are in ReviewDecisionSchema ('APPROVE' | 'APPROVE_WITH_EXCEPTION' | 'REQUEST_REWORK' | 'CANCEL').
- */
-export type LegacyReviewDecision = 'approve' | 'request_rework';
-
-/**
- * @deprecated TRANSITIONAL_COMPAT
- * Union supporting canonical and legacy values for backward compatibility.
- */
-export type ReviewDecision = CanonicalReviewDecision | LegacyReviewDecision;
 
 /**
  * @deprecated TRANSITIONAL_COMPAT
@@ -132,6 +119,7 @@ export interface TaskDto {
   id: string;
   title: string;
   taskType: TaskType;
+  proofProfile: ProofProfile;
   description: string;
   treeId: string;
   treeName: string;
@@ -145,10 +133,13 @@ export interface TaskDto {
   qrCheck?: QrCheckDto;
   beforePhoto?: string;
   afterPhoto?: string;
+  beforePhotoDisplayUrl?: string;
+  afterPhotoDisplayUrl?: string;
   evidence?: TaskEvidenceDto[];
   checklist: ChecklistItemDto[];
   notes?: string;
   rejectReason?: string;
+  reworkTarget?: string;
   rejectChips?: string[];
   createdAt: string;
   updatedAt: string;
@@ -200,52 +191,6 @@ export interface CareHistoryDto {
   notes?: string;
   hasException?: boolean;
   exceptionReason?: string;
-}
-
-/**
- * @deprecated TRANSITIONAL_COMPAT
- * Legacy task progress request for apps/mobile.
- */
-export interface UpdateTaskProgressRequest {
-  taskId: string;
-  expectedVersion?: number;
-  status?: TaskStatus;
-  gpsCheck?: GpsCheckDto;
-  qrCheck?: QrCheckDto;
-  beforePhoto?: string;
-  afterPhoto?: string;
-  evidence?: TaskEvidenceDto[];
-  checklist?: ChecklistItemDto[];
-  notes?: string;
-  rejectReason?: string;
-}
-
-/**
- * @deprecated TRANSITIONAL_COMPAT
- * Legacy evidence submission request for apps/mobile.
- */
-export interface SubmitTaskEvidenceRequest {
-  taskId: string;
-  expectedVersion?: number;
-  gpsCheck: GpsCheckDto;
-  qrCheck: QrCheckDto;
-  evidence: TaskEvidenceDto[];
-  checklist: ChecklistItemDto[];
-  notes?: string;
-}
-
-/**
- * @deprecated TRANSITIONAL_COMPAT
- * Legacy review decision request for apps/mobile.
- */
-export interface ReviewDecisionRequest {
-  taskId: string;
-  decision: ReviewDecision;
-  reviewerId: string;
-  expectedVersion?: number;
-  reason?: string;
-  rejectReason?: string;
-  reasonChips?: string[];
 }
 
 /**

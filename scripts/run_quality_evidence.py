@@ -29,25 +29,25 @@ CANONICAL_TASK_STATUSES = {
 }
 
 ACTIVE_DIAGRAM_FILES = [
-    "docs/diagrams/proposed-01-current-vs-recommended-workflow.html",
-    "docs/diagrams/proposed-02-mvp-operational-swimlane.html",
-    "docs/diagrams/proposed-03-minimal-task-lifecycle.html",
-    "docs/diagrams/proposed-04-proof-policy-and-rework.html",
+    "docs/diagrams/historical/workflow-evolution-comparison.html",
+    "docs/diagrams/03-operational-workflow.html",
+    "docs/diagrams/04-task-lifecycle.html",
+    "docs/diagrams/05-proof-policy-and-rework.html",
     "docs/diagrams/01-product-capability-map.html",
     "docs/diagrams/02-domain-context-map.html",
     "docs/diagrams/07-action-eligibility-security-matrix.html",
     "docs/diagrams/08-role-information-architecture.html",
-    "docs/diagrams/09-system-current-state.html",
+    "docs/diagrams/historical/legacy-system-current-state.html",
     "docs/diagrams/10-system-target-architecture.html",
     "docs/diagrams/12-architecture-dependency-map.html",
 ]
 
 HISTORICAL_DIAGRAM_FILES = [
-    "docs/diagrams/03-mvp-operational-swimlane.html",
+    "docs/diagrams/historical/legacy-operational-swimlane.html",
     "docs/diagrams/04-task-lifecycle.html",
-    "docs/diagrams/05-proof-workflow.html",
-    "docs/diagrams/06-review-rework-lifecycle.html",
-    "docs/diagrams/11-evidence-submission-sequence.html",
+    "docs/diagrams/historical/legacy-fixed-proof-workflow.html",
+    "docs/diagrams/historical/legacy-binary-review.html",
+    "docs/diagrams/historical/legacy-evidence-submission-sequence.html",
 ]
 
 def get_git_info():
@@ -282,10 +282,10 @@ def check_can_gate(gate_id):
         for s in CANONICAL_TASK_STATUSES:
             if s not in wf:
                 return False, f"Canonical status {s} missing in docs/WORKFLOWS.md", ["docs/WORKFLOWS.md"]
-        p03 = Path("docs/diagrams/proposed-03-minimal-task-lifecycle.html").read_text(encoding="utf-8")
+        p03 = Path("docs/diagrams/04-task-lifecycle.html").read_text(encoding="utf-8")
         if "ASSIGNED" in p03 and not "Chỉ là điều kiện" in p03:
-            return False, "Forbidden pseudo-status ASSIGNED found in lifecycle diagram", ["docs/diagrams/proposed-03-minimal-task-lifecycle.html"]
-        return True, "Canonical 7-state TaskStatus verified with zero ASSIGNED pseudo-status", ["docs/WORKFLOWS.md", "docs/diagrams/proposed-03-minimal-task-lifecycle.html"]
+            return False, "Forbidden pseudo-status ASSIGNED found in lifecycle diagram", ["docs/diagrams/04-task-lifecycle.html"]
+        return True, "Canonical 7-state TaskStatus verified with zero ASSIGNED pseudo-status", ["docs/WORKFLOWS.md", "docs/diagrams/04-task-lifecycle.html"]
 
     elif gate_id == "CAN-013":
         dom = Path("docs/DOMAIN.md").read_text(encoding="utf-8")
@@ -306,7 +306,7 @@ def check_can_gate(gate_id):
         for o in outcomes:
             if o not in wf:
                 return False, f"Review outcome {o} missing in docs/WORKFLOWS.md", ["docs/WORKFLOWS.md"]
-        return True, "4 deterministic review conclusions verified (non-binary review)", ["docs/WORKFLOWS.md", "docs/diagrams/proposed-04-proof-policy-and-rework.html"]
+        return True, "4 deterministic review conclusions verified (non-binary review)", ["docs/WORKFLOWS.md", "docs/diagrams/05-proof-policy-and-rework.html"]
 
     return False, f"Unknown CAN check {gate_id}", []
 
@@ -839,13 +839,13 @@ def check_diagram_automated_gate(gate_id):
                     return False, f"Stale '5 bước' found in active diagram {f}", [f]
             return True, "Zero stale '5 bước' / 5-chốt claims in active diagrams", ACTIVE_DIAGRAM_FILES
         elif gate_id == "DG-SEM-005":
-            p03 = Path("docs/diagrams/proposed-03-minimal-task-lifecycle.html").read_text(encoding="utf-8")
+            p03 = Path("docs/diagrams/04-task-lifecycle.html").read_text(encoding="utf-8")
             for s in CANONICAL_TASK_STATUSES:
                 if s not in p03:
-                    return False, f"Canonical status {s} missing in proposed-03", ["docs/diagrams/proposed-03-minimal-task-lifecycle.html"]
+                    return False, f"Canonical status {s} missing in proposed-03", ["docs/diagrams/04-task-lifecycle.html"]
             if "ASSIGNED" in p03 and not "Chỉ là điều kiện" in p03:
-                return False, "Forbidden ASSIGNED pseudo-status found in proposed-03", ["docs/diagrams/proposed-03-minimal-task-lifecycle.html"]
-            return True, "Canonical 7-state TaskStatus represented with zero ASSIGNED pseudo-status", ["docs/diagrams/proposed-03-minimal-task-lifecycle.html"]
+                return False, "Forbidden ASSIGNED pseudo-status found in proposed-03", ["docs/diagrams/04-task-lifecycle.html"]
+            return True, "Canonical 7-state TaskStatus represented with zero ASSIGNED pseudo-status", ["docs/diagrams/04-task-lifecycle.html"]
         elif gate_id == "DG-SEM-006":
             for f in HISTORICAL_DIAGRAM_FILES:
                 txt = Path(f).read_text(encoding="utf-8")
@@ -1176,24 +1176,24 @@ def check_diagram_automated_gate(gate_id):
             return True, f"All {len(active_pngs)} active diagram PNG exports certified as high-DPI (exact 2.0x pixel dimensions via IHDR)", [str(p)]
 
         elif gate_id == "DG-EXP-006":
-            p01_3x = p / "proposed-01-current-vs-recommended-workflow@3x.png"
-            p01_svg = p / "proposed-01-current-vs-recommended-workflow.svg"
-            if not p01_3x.exists() or not p01_svg.exists():
+            workflow_3x = p / "03-operational-workflow@3x.png"
+            workflow_svg = p / "03-operational-workflow.svg"
+            if not workflow_3x.exists() or not workflow_svg.exists():
                 return False, "Required @3x export artifacts missing", [str(p)]
-            d_3x = get_png_dimensions(str(p01_3x))
+            d_3x = get_png_dimensions(str(workflow_3x))
             if not d_3x:
-                return False, "Failed to read @3x PNG IHDR dimensions", [str(p01_3x)]
-            svg_txt = p01_svg.read_text(encoding="utf-8")
+                return False, "Failed to read @3x PNG IHDR dimensions", [str(workflow_3x)]
+            svg_txt = workflow_svg.read_text(encoding="utf-8")
             m = re.search(r'viewBox=[\"\']([\d.\s]+)[\"\']', svg_txt)
             if not m:
-                return False, "viewBox missing in proposed-01 SVG", [str(p01_svg)]
+                return False, "viewBox missing in operational workflow SVG", [str(workflow_svg)]
             vb = [float(x) for x in m.group(1).split()]
             lw, lh = vb[2], vb[3]
             ratio_3x_w = round(d_3x[0] / lw, 2)
             ratio_3x_h = round(d_3x[1] / lh, 2)
             if abs(ratio_3x_w - 3.0) > 0.05 or abs(ratio_3x_h - 3.0) > 0.05:
-                return False, f"3x export scale mismatch: {ratio_3x_w}x/{ratio_3x_h}x", [str(p01_3x)]
-            return True, f"Ultra high-DPI @3x print export certified: exact 3.0x pixel dimensions ({d_3x[0]}x{d_3x[1]} vs {lw}x{lh})", [str(p01_3x)]
+                return False, f"3x export scale mismatch: {ratio_3x_w}x/{ratio_3x_h}x", [str(workflow_3x)]
+            return True, f"Ultra high-DPI @3x print export certified: exact 3.0x pixel dimensions ({d_3x[0]}x{d_3x[1]} vs {lw}x{lh})", [str(workflow_3x)]
 
         elif gate_id == "DG-EXP-007":
             tight_pdfs = [pdf for pdf in pdf_files if not pdf.name.endswith(".full.pdf")]
@@ -1263,17 +1263,16 @@ def check_diagram_automated_gate(gate_id):
 
         elif gate_id == "DG-EXP-010":
             active_bases = [
-                "proposed-01-current-vs-recommended-workflow",
-                "proposed-02-mvp-operational-swimlane",
-                "proposed-03-minimal-task-lifecycle",
-                "proposed-04-proof-policy-and-rework",
                 "01-product-capability-map",
                 "02-domain-context-map",
+                "03-operational-workflow",
+                "04-task-lifecycle",
+                "05-proof-policy-and-rework",
                 "07-action-eligibility-security-matrix",
                 "08-role-information-architecture",
-                "09-system-current-state",
                 "10-system-target-architecture",
                 "12-architecture-dependency-map",
+                "13-e2e-lifecycle-implementation-audit",
             ]
             size_errors = []
             for base in active_bases:
@@ -1321,13 +1320,13 @@ def get_gate_dependency_scope(gate_id):
     elif gate_id == "CAN-011":
         return ["docs/PRODUCT.md", "docs/DOMAIN.md", "docs/WORKFLOWS.md", "docs/ACCESS-CONTROL.md", "docs/REQUIREMENTS-TRACEABILITY.md", "DESIGN.md", "docs/MOBILE_UI_RULES.md"]
     elif gate_id == "CAN-012":
-        return ["docs/WORKFLOWS.md", "docs/DOMAIN.md", "docs/diagrams/proposed-03-minimal-task-lifecycle.html"]
+        return ["docs/WORKFLOWS.md", "docs/DOMAIN.md", "docs/diagrams/04-task-lifecycle.html"]
     elif gate_id == "CAN-013":
         return ["docs/DOMAIN.md", "docs/WORKFLOWS.md"]
     elif gate_id == "CAN-014":
         return ["docs/WORKFLOWS.md"]
     elif gate_id == "CAN-015":
-        return ["docs/WORKFLOWS.md", "docs/diagrams/proposed-04-proof-policy-and-rework.html"]
+        return ["docs/WORKFLOWS.md", "docs/diagrams/05-proof-policy-and-rework.html"]
 
     # Gate-specific RTM scopes
     elif gate_id == "RTM-001":

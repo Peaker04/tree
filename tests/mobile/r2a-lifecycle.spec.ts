@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { executeOfflineSubmission } from '../../apps/mobile/src/storage/outbox/submissionService';
 import { InMemoryEvidenceFileStore } from '../../apps/mobile/src/storage/evidence/evidenceFileStore';
 import { SqliteOutboxRepository } from '../../apps/mobile/src/storage/outbox/outboxRepository';
 import { createInMemoryTestDatabase } from '../../apps/mobile/src/storage/database/sqliteDatabase';
 import { runMigrations } from '../../apps/mobile/src/storage/database/migrations';
 import { SqliteMobileTaskRepository } from '../../apps/mobile/src/storage/task/mobileTaskRepository';
+import { getNextProofStep, getTaskProofWorkflowState } from '../../apps/mobile/src/domain/mobileWorkflow';
+import { TaskStatus, type Task } from '../../apps/mobile/src/types';
 import type {
   SubmitEvidenceRequest,
   ReassignTaskRequest,
@@ -13,6 +17,73 @@ import type {
 } from '@novyx/contracts';
 
 describe('R2A Lifecycle Tests', () => {
+  it('routes rework to the rejected proof area instead of treating retained proof as complete', () => {
+    const task = {
+      id: 'task-rework',
+      status: TaskStatus.REWORK_REQUIRED,
+      rejectReason: 'Ảnh sau cần chụp rõ toàn bộ khu vực xử lý',
+      reworkTarget: 'EVIDENCE',
+      gpsCheck: { verified: true },
+      qrCheck: { verified: true },
+      beforePhoto: 's3://before.jpg',
+      afterPhoto: 's3://after.jpg',
+      checklist: [{ id: '1', text: 'An toàn', done: true }],
+    } as Task;
+
+    expect(getNextProofStep(task)).toBe('AFTER');
+    expect(getTaskProofWorkflowState(task)).toMatchObject({
+      nextStep: 'AFTER',
+      activeActionText: 'Chụp lại ảnh sau xử lý',
+    });
+  });
+
+  it('B1: Mobile startup has one session owner and Staff identity is not hard-coded', () => {
+    const mobileAppSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/MobileApp.tsx'),
+      'utf8',
+    );
+    const staffAreaSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffArea.tsx'),
+      'utf8',
+    );
+
+    const greenOpsSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/services/greenOpsService.ts'),
+      'utf8',
+    );
+
+    expect(mobileAppSource).not.toContain('loadStoredAuthSession');
+    expect(mobileAppSource).not.toContain('saveAuthSession');
+    expect(mobileAppSource).not.toMatch(/useEffect\(\(\) => \{\s*void refreshData\(\)/);
+    expect(staffAreaSource).not.toContain("assignedStaffId === 'STF-01'");
+    expect(staffAreaSource).toContain('props.authenticatedStaffId');
+    expect(mobileAppSource).toContain('error instanceof AuthSessionError');
+    expect(mobileAppSource).toContain('Email, số điện thoại hoặc mật khẩu không đúng.');
+    expect(greenOpsSource).toContain("if (status === 'WAITING_REVIEW') return TaskStatus.WAITING_REVIEW");
+    expect(greenOpsSource).toContain("title: needsRework ? 'Công việc cần làm lại' : 'Báo cáo đã được duyệt'");
+    expect(greenOpsSource).toContain('!notifications.some((item) => item.taskId === latestReviewedTask.id)');
+    expect(mobileAppSource).toContain('runtime.uploadClient.uploadEvidence(request.taskId');
+    expect(mobileAppSource).toContain('proof[stage] = uploaded.storageRef || uploaded.objectKey');
+
+    const evidenceStoreSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/storage/evidence/evidenceFileStore.ts'),
+      'utf8',
+    );
+    expect(evidenceStoreSource).toContain('this.hasher = hasher ?? new ExpoEvidenceHasher()');
+  });
+
+  it('B2: production mobile screens contain no mock camera or demo evidence path', () => {
+    const files = [
+      'apps/mobile/src/screens/staff/StaffProofFlow.tsx',
+      'apps/mobile/src/screens/manager/ManagerQrLookup.tsx',
+      'apps/mobile/src/screens/manager/ManagerDashboard.tsx',
+      'apps/mobile/src/screens/staff/StaffHome.tsx',
+    ];
+    const source = files.map((file) => fs.readFileSync(path.resolve(process.cwd(), file), 'utf8')).join('\n');
+
+    expect(source).not.toMatch(/mockEvidenceAssets|mock:\/\/|Dùng mô phỏng|Mô phỏng quét|Payload QR demo/);
+  });
+
   it('R2A-C04: CHANGE_PROOF builder preserves checklist done values; it never rewrites false -> true.', () => {
     // Verified implicitly by MobileApp.tsx code changes making it respect c.done.
     expect(true).toBe(true);

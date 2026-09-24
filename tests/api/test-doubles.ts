@@ -144,6 +144,12 @@ export class InMemoryUserRepository implements IUserRepository {
     return { data: rows.slice(0, limit), meta: { hasMore: false, nextCursor: null } };
   }
 
+  async listActiveStaff(): Promise<UserAccount[]> {
+    return Array.from(this.users.values())
+      .filter((user) => user.role === 'staff' && user.accountStatus === 'ACTIVE')
+      .sort((first, second) => first.email.localeCompare(second.email));
+  }
+
   async advanceAuthVersion(id: string, expectedVersion?: number): Promise<UserAccount> {
     const user = this.users.get(id);
     if (!user) throw new NotFoundError(`User ${id} not found`);

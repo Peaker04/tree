@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { clearAuthSession, loadStoredAuthSession, saveAuthSession } from '../services/authSessionStore';
+import { AuthSessionError } from '../services/authSessionManager';
 import { DataSourceStatus } from '../services/greenOpsService';
 import { getSharedMobileRuntime } from '../infrastructure/runtime';
 import { AppNotification, CareHistory, Role, Task } from '../types';
@@ -10,6 +10,10 @@ import { executeOfflineSubmission } from '../storage/outbox/submissionService';
 import { ExpoEvidenceFileStore } from '../storage/evidence/evidenceFileStore';
 import type { SaveEvidenceInput } from '../storage/evidence/evidenceFileStore';
 import type {
+  AuthUser,
+  AssignableStaffCatalogItem,
+  CanonicalCreateTaskRequest,
+  CreateTreeRequest,
   SubmitEvidenceRequest,
   ReportFieldIssueRequest,
   ResumeBlockedTaskRequest,
@@ -18,8 +22,8 @@ import type {
   ReviewTaskRequest,
   ResubmitReworkRequest,
   CreateNotificationRequest,
-  CreateTaskRequest,
   LoginRequest,
+  OperationalTaskTypeCatalogItem,
 } from '@novyx/contracts';
 import { NotchedBottomNav } from '../components/NotchedBottomNav';
 import {
@@ -38,11 +42,24 @@ type DataSourceState = {
   source: DataSourceStatus;
   loading: boolean;
   message?: string;
+  cachedAt?: string;
 };
 type AuthSourceState = {
   source: DataSourceStatus | 'none';
   role?: Role | 'UNSUPPORTED';
   message?: string;
+};
+type ManagerCatalogState = {
+  taskTypes: OperationalTaskTypeCatalogItem[];
+  staff: AssignableStaffCatalogItem[];
+  loading: boolean;
+  error?: string;
+};
+
+const mapSessionRole = (role: string): Role | 'UNSUPPORTED' => {
+  if (role === 'staff') return 'Staff';
+  if (role === 'manager') return 'Manager';
+  return 'UNSUPPORTED';
 };
 
 export default function MobileApp() {
@@ -54,6 +71,8 @@ export default function MobileApp() {
   const [authSource, setAuthSource] = useState<AuthSourceState>({ source: 'none' });
   const [screen, setScreen] = useState<Screen>('Login');
   const [role, setRole] = useState<Role | 'UNSUPPORTED' | null>(null);
+  const [authenticatedStaffId, setAuthenticatedStaffId] = useState<string | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(null);
   const [authRestoring, setAuthRestoring] = useState(true);
   const [staffStep, setStaffStep] = useState<StaffStep>('HOME');
   const [managerStep, setManagerStep] = useState<ManagerStep>('HOME');
@@ -62,6 +81,11 @@ export default function MobileApp() {
   const [userLat, setUserLat] = useState(10.77421);
   const [userLng, setUserLng] = useState(106.69101);
   const [authLoading, setAuthLoading] = useState(false);
+  const [managerCatalogs, setManagerCatalogs] = useState<ManagerCatalogState>({
+    taskTypes: [],
+    staff: [],
+    loading: false,
+  });
 
   const updateTasks = (tasks: Task[]) => {
     setCareHistoryByTree({});
@@ -100,8 +124,8 @@ export default function MobileApp() {
     [applyMutationSource, greenOpsService],
   );
   const createTask = useCallback(
-    async (request: CreateTaskRequest, fallbackTask: Task) => {
-      const result = await greenOpsService.createTask(request, fallbackTask);
+    async (request: CanonicalCreateTaskRequest) => {
+      const result = await greenOpsService.createTask(request);
       setCareHistoryByTree({});
       setData(greenOpsService.getSnapshot());
       applyMutationSource(result.source, result.message);
@@ -109,20 +133,50 @@ export default function MobileApp() {
     },
     [applyMutationSource, greenOpsService],
   );
+  const createTree = useCallback(
+    async (request: Omit<CreateTreeRequest, 'treeId' | 'qrCode'>) => {
+      const tree = await greenOpsService.createTree(request);
+      setCareHistoryByTree({});
+      setData(greenOpsService.getSnapshot());
+      return tree;
+    },
+    [greenOpsService],
+  );
+  const refreshManagerCatalogs = useCallback(async () => {
+    setManagerCatalogs((current) => ({ ...current, loading: true, error: undefined }));
+    try {
+      const [taskTypes, staff] = await Promise.all([
+        greenOpsService.listOperationalTaskTypes(),
+        greenOpsService.listAssignableStaff(),
+      ]);
+      setManagerCatalogs({ taskTypes, staff, loading: false });
+    } catch (error) {
+      setManagerCatalogs({
+        taskTypes: [],
+        staff: [],
+        loading: false,
+        error: error instanceof Error ? error.message : 'Không tải được danh mục vận hành.',
+      });
+    }
+  }, [greenOpsService]);
+
   const refreshData = useCallback(async () => {
     setDataSource((current) => ({ ...current, loading: true }));
     const result = await greenOpsService.loadSnapshot();
+    if (runtime.taskRepo) {
+      await runtime.taskRepo.cacheTasks(result.data.tasks);
+    }
     setData(result.data);
     setDataSource({
       source: result.source,
       loading: false,
       ...(result.message ? { message: result.message } : {}),
+      ...(result.cachedAt ? { cachedAt: result.cachedAt } : {}),
     });
-  }, [greenOpsService]);
+  }, [greenOpsService, runtime]);
 
   const submitTaskEvidence = useCallback(
     async (task: Task) => {
-      // @ts-expect-error fallback
       if (task.proofProfile !== 'CHANGE_PROOF') {
         applyMutationSource('rest', 'Chỉ hỗ trợ biên bản CHANGE_PROOF trong phiên bản này.');
         throw new Error('UNSUPPORTED_PROFILE');
@@ -135,68 +189,62 @@ export default function MobileApp() {
         !task.afterPhoto ||
         task.checklist.some((c) => !c.done)
       ) {
-        applyMutationSource(
-          'rest',
-          'Bằng chứng chưa đầy đủ hoặc không hợp lệ. Vui lòng kiểm tra lại GPS, QR, ảnh và checklist.',
-        );
+        applyMutationSource('rest', 'Thiếu bằng chứng GPS, QR, ảnh hoặc checklist.');
         throw new Error('INCOMPLETE_PROOF');
       }
 
-      if (runtime.outboxRepo && runtime.taskRepo) {
-        const fileStore = new ExpoEvidenceFileStore();
-        const evidenceInputs: SaveEvidenceInput[] = [
-          {
-            taskId: task.id,
-            stage: 'BEFORE',
-            sourceUri: task.beforePhoto,
-            fileName: 'before_photo.jpg',
-            contentType: 'image/jpeg',
-          },
-          {
-            taskId: task.id,
-            stage: 'AFTER',
-            sourceUri: task.afterPhoto,
-            fileName: 'after_photo.jpg',
-            contentType: 'image/jpeg',
-          },
-        ];
-
-        const request: SubmitEvidenceRequest = {
-          taskId: task.id,
-          expectedVersion: task.version ?? 0,
-          siteVerification: {
-            gpsCheck: task.gpsCheck,
-            qrCheck: task.qrCheck,
-          },
-          proof: {
-            proofProfile: 'CHANGE_PROOF',
-            beforePhotoUri: task.beforePhoto,
-            afterPhotoUri: task.afterPhoto,
-            checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: c.done as true })),
-          },
-          notes: task.notes,
-        };
-
-        await executeOfflineSubmission(fileStore, runtime.outboxRepo, {
-          taskId: task.id,
-          request,
-          evidenceInputs,
-          notes: task.notes,
-        });
-
-        void runtime.triggerSync().then(() => {
-          void refreshData();
-        });
-
-        setData(greenOpsService.getSnapshot());
-        return task;
-      } else {
-        const result = await greenOpsService.submitTaskEvidence(task);
-        setCareHistoryByTree({});
-        setData(greenOpsService.getSnapshot());
-        applyMutationSource(result.source, result.message);
-        return result.data;
+      if (!runtime.outboxRepo || !runtime.taskRepo) {
+        throw new Error('OUTBOX_NOT_READY');
       }
+
+      const fileStore = new ExpoEvidenceFileStore();
+      const evidenceInputs: SaveEvidenceInput[] = [
+        {
+          taskId: task.id,
+          stage: 'BEFORE',
+          sourceUri: task.beforePhoto,
+          fileName: 'before_photo.jpg',
+          contentType: 'image/jpeg',
+        },
+        {
+          taskId: task.id,
+          stage: 'AFTER',
+          sourceUri: task.afterPhoto,
+          fileName: 'after_photo.jpg',
+          contentType: 'image/jpeg',
+        },
+      ];
+
+      const request: SubmitEvidenceRequest = {
+        taskId: task.id,
+        expectedVersion: task.version ?? 0,
+        siteVerification: {
+          gpsCheck: task.gpsCheck,
+          qrCheck: task.qrCheck,
+        },
+        proof: {
+          proofProfile: 'CHANGE_PROOF',
+          beforePhotoUri: task.beforePhoto,
+          afterPhotoUri: task.afterPhoto,
+          checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: c.done as true })),
+        },
+        notes: task.notes,
+      };
+
+      await runtime.taskRepo.cacheTasks([task]);
+      await executeOfflineSubmission(fileStore, runtime.outboxRepo, {
+        taskId: task.id,
+        request,
+        evidenceInputs,
+        notes: task.notes,
+      });
+
+      void runtime.triggerSync().then(() => {
+        void refreshData();
+      });
+
+      setData(greenOpsService.getSnapshot());
+      return task;
     },
     [applyMutationSource, greenOpsService, runtime, refreshData],
   );
@@ -204,12 +252,15 @@ export default function MobileApp() {
   const startTask = useCallback(
     async (task: Task) => {
       const result = await greenOpsService.startTask({ taskId: task.id, expectedVersion: task.version ?? 0 });
+      if (runtime.taskRepo) {
+        await runtime.taskRepo.cacheTasks([result.data]);
+      }
       setCareHistoryByTree({});
       setData(greenOpsService.getSnapshot());
       applyMutationSource(result.source, result.message);
       return result.data;
     },
-    [applyMutationSource, greenOpsService],
+    [applyMutationSource, greenOpsService, runtime],
   );
 
   const reportFieldIssue = useCallback(
@@ -258,36 +309,80 @@ export default function MobileApp() {
 
   const resubmitRework = useCallback(
     async (request: ResubmitReworkRequest) => {
-      const result = await greenOpsService.resubmitRework(request);
+      if (request.reworkedProof.proofProfile !== 'CHANGE_PROOF') {
+        throw new Error('Chỉ hỗ trợ biên bản CHANGE_PROOF trong phiên bản này.');
+      }
+      const fileStore = new ExpoEvidenceFileStore();
+      const proof = { ...request.reworkedProof };
+
+      for (const stage of ['beforePhotoUri', 'afterPhotoUri'] as const) {
+        const localUri = proof[stage];
+        if (!/^(file:|content:)/i.test(localUri)) continue;
+
+        let persisted;
+        try {
+          persisted = await fileStore.persistEvidence({
+            taskId: request.taskId,
+            stage: stage === 'beforePhotoUri' ? 'BEFORE' : 'AFTER',
+            sourceUri: localUri,
+            fileName: stage === 'beforePhotoUri' ? 'before_rework.jpg' : 'after_rework.jpg',
+            contentType: 'image/jpeg',
+          });
+        } catch (error) {
+          throw new Error(`PERSIST_${stage}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
+        let uploaded;
+        try {
+          uploaded = await runtime.uploadClient.uploadEvidence(request.taskId, {
+            localFileUri: persisted.sandboxFileUri,
+            fileName: persisted.fileName,
+            contentType: persisted.contentType,
+            sizeBytes: persisted.sizeBytes,
+            sha256: persisted.sha256,
+          });
+        } catch (error) {
+          throw new Error(`UPLOAD_${stage}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        proof[stage] = uploaded.storageRef || uploaded.objectKey;
+      }
+
+      const result = await greenOpsService.resubmitRework({ ...request, reworkedProof: proof });
       setCareHistoryByTree({});
       setData(greenOpsService.getSnapshot());
       applyMutationSource(result.source, result.message);
       return result.data;
     },
-    [applyMutationSource, greenOpsService],
+    [applyMutationSource, greenOpsService, runtime],
   );
 
   const createNotification = useCallback(
     async (request: CreateNotificationRequest) => {
-      const result = await greenOpsService.createNotification(request);
-      setData(greenOpsService.getSnapshot());
-      applyMutationSource(result.source, result.message);
-      return result.data;
+      const notification: AppNotification = {
+        id: `notif-${Date.now()}`,
+        title: request.title,
+        body: request.body,
+        timestamp: request.timestamp ?? new Date().toISOString(),
+        read: request.read ?? false,
+        type: request.type,
+        ...(request.taskId ? { taskId: request.taskId } : {}),
+      };
+      setData(greenOpsService.replaceNotifications([notification, ...greenOpsService.getSnapshot().notifications]));
+      return notification;
     },
-    [applyMutationSource, greenOpsService],
+    [greenOpsService],
   );
   const markNotificationsRead = useCallback(
-    async (notificationIds: string[], fallbackNotifications: AppNotification[]) => {
-      const result = await greenOpsService.markNotificationsRead(notificationIds, fallbackNotifications);
-      setData(greenOpsService.getSnapshot());
-      applyMutationSource(result.source, result.message);
-      return result.data;
+    async (_notificationIds: string[], fallbackNotifications: AppNotification[]) => {
+      const notifications = fallbackNotifications.map((notification) => ({ ...notification, read: true }));
+      setData(greenOpsService.replaceNotifications(notifications));
+      return notifications;
     },
-    [applyMutationSource, greenOpsService],
+    [greenOpsService],
   );
   const reviewTaskDecision = useCallback(
-    async (request: ReviewTaskRequest, fallbackTask: Task) => {
-      const result = await greenOpsService.reviewTask(request, fallbackTask);
+    async (request: ReviewTaskRequest) => {
+      const result = await greenOpsService.reviewTask(request);
       setCareHistoryByTree({});
       setData(greenOpsService.getSnapshot());
       applyMutationSource(result.source, result.message);
@@ -297,68 +392,48 @@ export default function MobileApp() {
   );
 
   useEffect(() => {
-    void refreshData();
-  }, [refreshData]);
-
-  useEffect(() => {
-    void runtime.start();
-    return () => {
-      void runtime.stop();
-    };
-  }, [runtime]);
-
-  useEffect(() => {
     let mounted = true;
 
-    loadStoredAuthSession()
-      .then((session) => {
+    void runtime
+      .start()
+      .then(async (session) => {
         if (!mounted || !session) {
           return;
         }
 
-        void runtime.sessionManager.setSession(session);
-        const result = greenOpsService.restoreSession(session);
-        setAuthSource({
-          source: result.source,
-          role: result.role,
-        });
-        setRole(result.role);
+        const restoredRole = mapSessionRole(session.user.role);
+        setAuthSource({ source: 'rest', role: restoredRole });
+        setRole(restoredRole);
+        setAuthenticatedUser(session.user);
+        setAuthenticatedStaffId(restoredRole === 'Staff' ? session.user.id : null);
 
-        if (result.role === 'Staff') {
+        if (restoredRole === 'Staff') {
           setStaffStep('HOME');
-          setScreen('Main');
-          void refreshData();
-          void runtime.triggerSync();
-        } else if (result.role === 'Manager') {
+          await refreshData();
+          if (mounted) setScreen('Main');
+        } else if (restoredRole === 'Manager') {
           setManagerStep('HOME');
-          setScreen('Main');
-          void refreshData();
-          void runtime.triggerSync();
+          await Promise.all([refreshData(), refreshManagerCatalogs()]);
+          if (mounted) setScreen('Main');
         } else {
-          setScreen('Login');
           setAuthSource({ source: 'rest', message: 'Platform Administrator must use Admin Web' });
-          void clearAuthSession();
-          void runtime.sessionManager.clearLocalSession();
+          await runtime.sessionManager.clearLocalSession();
         }
       })
       .catch(() => {
         if (mounted) {
-          setAuthSource({
-            source: 'none',
-            message: 'Không đọc được phiên đăng nhập đã lưu.',
-          });
+          setAuthSource({ source: 'none', message: 'Không đọc được phiên đăng nhập đã lưu.' });
         }
       })
       .finally(() => {
-        if (mounted) {
-          setAuthRestoring(false);
-        }
+        if (mounted) setAuthRestoring(false);
       });
 
     return () => {
       mounted = false;
+      void runtime.stop();
     };
-  }, [greenOpsService, refreshData, runtime]);
+  }, [greenOpsService, refreshData, refreshManagerCatalogs, runtime]);
 
   const login = async (identifier: string, password: string) => {
     setAuthLoading(true);
@@ -371,45 +446,52 @@ export default function MobileApp() {
         role: result.role,
         ...(result.message ? { message: result.message } : {}),
       });
-      try {
-        if (result.session && result.role !== 'UNSUPPORTED') {
-          await saveAuthSession(result.session);
-          await runtime.sessionManager.setSession(result.session);
-          void runtime.triggerSync();
-        } else {
-          await clearAuthSession();
-          await runtime.sessionManager.clearLocalSession();
-        }
-      } catch {
-        setAuthSource((current) => ({
-          ...current,
-          message: 'Đăng nhập thành công nhưng chưa lưu được phiên bảo mật trên thiết bị.',
-        }));
+      if (result.session && result.role !== 'UNSUPPORTED') {
+        setAuthenticatedUser(result.session.user);
+        setAuthenticatedStaffId(result.role === 'Staff' ? result.session.user.id : null);
+        void runtime.triggerSync();
+      } else {
+        setAuthenticatedUser(null);
+        setAuthenticatedStaffId(null);
+        await runtime.sessionManager.clearLocalSession();
       }
       setRole(result.role);
 
       if (result.role === 'Staff') {
         setStaffStep('HOME');
+        await refreshData();
         setScreen('Main');
-        void refreshData();
       } else if (result.role === 'Manager') {
         setManagerStep('HOME');
+        await Promise.all([refreshData(), refreshManagerCatalogs()]);
         setScreen('Main');
-        void refreshData();
       } else {
         setScreen('Login');
         setAuthSource((curr) => ({ ...curr, message: 'Platform Administrator must use Admin Web' }));
       }
+    } catch (error) {
+      const message =
+        error instanceof AuthSessionError && error.status === 0
+          ? 'Không kết nối được. Kiểm tra mạng rồi thử lại.'
+          : error instanceof AuthSessionError && (error.status === 401 || error.status === 403)
+            ? 'Email, số điện thoại hoặc mật khẩu không đúng.'
+            : 'Không thể đăng nhập lúc này. Vui lòng thử lại.';
+      setAuthSource({ source: 'none', message });
+      setRole(null);
+      setAuthenticatedUser(null);
+      setAuthenticatedStaffId(null);
+      setScreen('Login');
     } finally {
       setAuthLoading(false);
     }
   };
 
   const logout = () => {
-    void clearAuthSession();
-    void runtime.sessionManager.logout();
     greenOpsService.logout();
     setRole(null);
+    setAuthenticatedUser(null);
+    setAuthenticatedStaffId(null);
+    setManagerCatalogs({ taskTypes: [], staff: [], loading: false });
     setAuthSource({ source: 'none' });
     setActiveTask(null);
     setReviewTask(null);
@@ -435,6 +517,8 @@ export default function MobileApp() {
       <View style={styles.appShell}>
         {isStaff ? (
           <StaffArea
+            authenticatedUser={authenticatedUser}
+            authenticatedStaffId={authenticatedStaffId}
             tasks={data.tasks}
             trees={data.trees}
             notifications={data.notifications}
@@ -456,7 +540,6 @@ export default function MobileApp() {
             reportFieldIssue={reportFieldIssue}
             resubmitRework={resubmitRework}
             createNotification={createNotification}
-            isRestMode={runtime.dataSource === 'rest'}
             markNotificationsRead={markNotificationsRead}
             dataSource={dataSource}
             onRefreshData={refreshData}
@@ -464,9 +547,15 @@ export default function MobileApp() {
           />
         ) : (
           <ManagerArea
+            authenticatedUser={authenticatedUser}
             tasks={data.tasks}
             trees={data.trees}
             staff={data.staff}
+            operationalTaskTypes={managerCatalogs.taskTypes}
+            assignableStaff={managerCatalogs.staff}
+            catalogsLoading={managerCatalogs.loading}
+            catalogsError={managerCatalogs.error}
+            onRetryCatalogs={refreshManagerCatalogs}
             notifications={data.notifications}
             activeStep={managerStep}
             setActiveStep={setManagerStep}
@@ -476,11 +565,14 @@ export default function MobileApp() {
             loadCareHistoryByTree={loadCareHistoryByTree}
             lookupTreeByQr={lookupTreeByQr}
             createTask={createTask}
+            createTree={createTree}
             createNotification={createNotification}
             reviewTaskDecision={reviewTaskDecision}
             resumeBlockedTask={resumeBlockedTask}
             reassignTask={reassignTask}
             cancelTask={cancelTask}
+            dataSource={dataSource}
+            onRefreshData={refreshData}
             onLogout={logout}
           />
         )}

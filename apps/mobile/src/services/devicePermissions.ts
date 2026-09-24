@@ -5,7 +5,13 @@ import type { LocationPermissionResponse } from 'expo-location';
 
 export type DevicePermissionKind = 'camera' | 'location';
 export type DevicePermissionPurpose =
-  'staff-free-qr' | 'staff-task-qr' | 'staff-before-photo' | 'staff-after-photo' | 'manager-qr-lookup' | 'staff-gps';
+  | 'staff-free-qr'
+  | 'staff-task-qr'
+  | 'staff-before-photo'
+  | 'staff-after-photo'
+  | 'manager-qr-lookup'
+  | 'manager-tree-gps'
+  | 'staff-gps';
 export type DevicePermissionUiState =
   'checking' | 'not-determined' | 'rationale' | 'denied-retry' | 'blocked-settings' | 'granted' | 'runtime-unavailable';
 
@@ -50,5 +56,5 @@ export async function openDeviceSettings(): Promise<void> {
 }
 
 export function getPermissionKindForPurpose(purpose: DevicePermissionPurpose): DevicePermissionKind {
-  return purpose === 'staff-gps' ? 'location' : 'camera';
+  return purpose === 'staff-gps' || purpose === 'manager-tree-gps' ? 'location' : 'camera';
 }

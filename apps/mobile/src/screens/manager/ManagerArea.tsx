@@ -1,9 +1,13 @@
 import React from 'react';
 import { AppNotification, CareHistory, Staff, Task, Tree } from '../../types';
 import type {
+  AssignableStaffCatalogItem,
+  AuthUser,
+  CanonicalCreateTaskRequest,
   CancelTaskRequest,
   CreateNotificationRequest,
-  CreateTaskRequest,
+  CreateTreeRequest,
+  OperationalTaskTypeCatalogItem,
   ReassignTaskRequest,
   ResumeBlockedTaskRequest,
   ReviewTaskRequest,
@@ -30,9 +34,15 @@ export const MANAGER_NAV_RIGHT_ITEMS = [
 export const MANAGER_NAV_FAB_ITEM = { id: 'QR_LOOKUP', icon: 'CUSTOM_SCAN' } as const;
 
 export type ManagerAreaProps = {
+  authenticatedUser: AuthUser | null;
   tasks: Task[];
   trees: Tree[];
   staff: Staff[];
+  operationalTaskTypes: OperationalTaskTypeCatalogItem[];
+  assignableStaff: AssignableStaffCatalogItem[];
+  catalogsLoading: boolean;
+  catalogsError?: string;
+  onRetryCatalogs: () => Promise<void>;
   notifications: AppNotification[];
   activeStep: ManagerStep;
   setActiveStep: (step: ManagerStep) => void;
@@ -41,12 +51,20 @@ export type ManagerAreaProps = {
   getCareHistoryByTree: (treeId: string) => CareHistory[];
   loadCareHistoryByTree: (treeId: string) => Promise<CareHistory[]>;
   lookupTreeByQr: (payload: string) => Promise<Tree | null>;
-  createTask: (request: CreateTaskRequest, fallbackTask: Task) => Promise<Task>;
+  createTask: (request: CanonicalCreateTaskRequest) => Promise<Task>;
+  createTree: (request: Omit<CreateTreeRequest, 'treeId' | 'qrCode'>) => Promise<Tree>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
-  reviewTaskDecision: (request: ReviewTaskRequest, fallbackTask: Task) => Promise<Task>;
+  reviewTaskDecision: (request: ReviewTaskRequest) => Promise<Task>;
   resumeBlockedTask?: (request: ResumeBlockedTaskRequest) => Promise<Task>;
   reassignTask?: (request: ReassignTaskRequest) => Promise<Task>;
   cancelTask?: (request: CancelTaskRequest) => Promise<Task>;
+  dataSource?: {
+    source: 'rest' | 'cache' | 'error';
+    loading: boolean;
+    message?: string;
+    cachedAt?: string;
+  };
+  onRefreshData?: () => Promise<void>;
   onLogout: () => void;
 };
 
@@ -64,7 +82,19 @@ export function ManagerArea(props: ManagerAreaProps) {
   }
 
   if (props.activeStep === 'CREATE') {
-    return <ManagerCreateTask {...props} />;
+    return (
+      <ManagerCreateTask
+        trees={props.trees}
+        taskTypes={props.operationalTaskTypes}
+        assignableStaff={props.assignableStaff}
+        loading={props.catalogsLoading}
+        error={props.catalogsError}
+        onRetryCatalogs={props.onRetryCatalogs}
+        setActiveStep={props.setActiveStep}
+        createTask={props.createTask}
+        createNotification={props.createNotification}
+      />
+    );
   }
 
   if (props.activeStep === 'REVIEW' || props.activeStep === 'REVIEW_DETAIL') {

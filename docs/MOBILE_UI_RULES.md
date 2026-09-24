@@ -2,12 +2,47 @@
 
 These rules govern NOVYX GreenOps mobile UI work in `apps/mobile`.
 
+## Design Authority
+
+Apply mobile UI sources in this order:
+
+1. Functional/domain and security contracts.
+2. This document for workflow, navigation, device, accessibility, and field-use constraints.
+3. Root `DESIGN.md` for visual hierarchy, active semantic tokens, typography, spacing, surfaces, and component governance.
+4. `.planning/NOVYX_MOBILE_SCREEN_CONTRACTS.md` once B2.6 publishes it; until then, historical specs cannot supply screen-specific authority.
+5. Historical UI-SPEC/planning artifacts as evidence only.
+
+If a historical artifact conflicts with `DESIGN.md` or this document, the historical artifact does not win. Resolve genuine conflicts before screen implementation.
+
 ## Skill Routing
 
 - Use GSD Core as the workflow guardrail for non-trivial UI slices, but keep execution artifacts outside product code unless the task explicitly owns them.
 - Use Taste Skill as a quality filter, not as a native-mobile library. Its web and landing-page rules translate here into: no generic template UI, no AI-purple gradients, consistent tokens, readable copy, designed loading/empty/error states, and a final visual self-audit.
 - Use shadcn as a composition model only for mobile. Do not install or copy shadcn/ui, Radix, or Tailwind into the Expo native app. Map shadcn concepts to owned React Native primitives in `apps/mobile/src/components/AppPrimitives.tsx`, such as `Card`, `Button`, `Badge`, `Field`, `SectionTitle`, and `EmptyState`.
-- This refactor adds no test framework, package install, new native dependency, new environment variable, new API endpoint, or copied contract type.
+- This design-authority reconciliation adds no UI package, navigation framework, production mock mode, or speculative proof-profile interface. Later API work follows the approved master plan and remains behind existing architecture boundaries.
+
+## Information Architecture and Cognitive Load
+
+- Every screen must have one named job-to-be-done and one visually dominant primary action for the current state.
+- Order information as orientation → decision/next action → supporting evidence → metadata.
+- Use progressive disclosure for audit metadata, history, technical IDs, and exception controls.
+- Do not render all available DTO fields merely because they exist.
+- Avoid multiple cards that repeat the same count, status, empty condition, or instruction.
+- Prefer one grouped surface with internal hairline dividers over several equal-weight cards.
+- Focused GPS, QR, camera, checklist, and review steps must keep the relevant action within a reachable viewport and remove unrelated dashboard content.
+- Form flows group decisions progressively and keep the current selection visible; validation appears beside the affected control.
+- Each information block must trace to a functional requirement, user decision, recovery action, or audit obligation.
+
+## Primitive and Token Contract
+
+- Foundational tokens come only from `packages/ui`; screen styles may not invent foundational colors, type sizes, weights, radii, shadows, or spacing scales.
+- Active typography uses the React Native system font with weights `400`, `500`, and `600`. Existing heavier weights are migration debt, not examples.
+- Content cards are flat by default. Elevation is reserved for floating system surfaces such as the bottom navigation/FAB or modal overlays.
+- `Card` groups real related work; it is not a generic wrapper for every paragraph or metric.
+- `Button` has one primary semantic action per context; secondary, ghost, and destructive variants must not compete with it.
+- `Badge` communicates status only and must pair color with text/icon semantics.
+- Shared primitives must own pressed, disabled, loading, accessibility, and font-scaling behavior.
+- Add a primitive only when at least two real screens need the same semantic behavior.
 
 ## Architecture Rules
 
@@ -21,7 +56,7 @@ These rules govern NOVYX GreenOps mobile UI work in `apps/mobile`.
 ## Visual Rules
 
 - Use shared tokens for foundational colors, radius, and spacing. Avoid ad hoc hex values except for one-off platform surfaces or map/camera overlays.
-- Keep the NOVYX botanical palette: forest green primary, honeydew/cornsilk/willow surfaces, emerald accents, mineral neutrals, restrained amber/danger/sky statuses.
+- Treat the NOVYX warm/natural and fresh/cool palettes as primitive color sources only. Map them through shared semantic tokens after checking context, contrast and established status meaning; do not reproduce palette artwork literally or force every source color into the UI.
 - Keep copy direct and field-ready. Vietnamese labels must fit compact Android screens without awkward wrapping.
 - Minimum practical tap target is 44x44, with primary field actions closer to 48 or 52 high.
 - Every network/device workflow must include loading, denied permission, empty, and error states.
@@ -82,7 +117,10 @@ Staff task execution follows profile-driven proof rendering determined by `Proof
 ## Manager Evidence & Review Rules
 
 - Manager Dashboard prioritizes review backlog, operational pulse, quick actions, risky trees, QR issues, overdue work, and QR demo payloads.
-- Manager Create Task is guided: tree, assignee, task type, checklist, deadline validation, and preview before `Tạo việc`. TaskType determines the required ProofProfile by system policy.
+- Manager Create Task is guided: purpose, localized date/time deadline, searchable tree, searchable assignee, user-facing task type, concise policy preview, validation, and preview before `Tạo việc`. TaskType determines the required ProofProfile by system policy.
+- Internal enum/profile names, English seed descriptions, technical IDs and raw API errors are never user-facing copy.
+- Required single-select controls must look and behave as radio selection, support changing the selected record, and provide an explicit clear/change route when reversal is needed. Do not imply tap-to-toggle behavior.
+- Catalog controls must be designed for production cardinality, not the current one-record development seed.
 - Manager QR lookup is evidence-neutral: it opens tree facts, location/care history, and related tasks; it does not advance Staff proof.
 - Manager Review supports the 4 canonical outcomes at `WAITING_REVIEW`:
   1. `Phê duyệt` (`APPROVE` $\to$ `COMPLETED`, creates CareHistory).

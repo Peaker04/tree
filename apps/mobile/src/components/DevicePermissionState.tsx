@@ -28,38 +28,42 @@ const purposeCopy: Record<
 > = {
   'staff-free-qr': {
     title: 'Quét QR cây',
-    rationale: 'NOVYX cần camera để quét đúng mã QR trên thân cây.',
+    rationale: 'Dùng camera để quét QR cây.',
   },
   'staff-task-qr': {
     title: 'Quét QR nhiệm vụ',
-    rationale: 'NOVYX cần camera để quét đúng mã QR trên thân cây.',
+    rationale: 'Dùng camera để quét QR cây.',
   },
   'staff-before-photo': {
     title: 'Ảnh trước xử lý',
-    rationale: 'NOVYX cần camera để chụp ảnh bằng chứng trước và sau khi xử lý.',
+    rationale: 'Dùng camera để chụp ảnh bằng chứng.',
   },
   'staff-after-photo': {
     title: 'Ảnh sau xử lý',
-    rationale: 'NOVYX cần camera để chụp ảnh bằng chứng trước và sau khi xử lý.',
+    rationale: 'Dùng camera để chụp ảnh bằng chứng.',
   },
   'manager-qr-lookup': {
     title: 'Tra cứu QR cây',
-    rationale: 'NOVYX cần camera để quét đúng mã QR trên thân cây.',
+    rationale: 'Dùng camera để tra cứu cây.',
+  },
+  'manager-tree-gps': {
+    title: 'Vị trí cây',
+    rationale: 'Dùng GPS để lưu vị trí cây.',
   },
   'staff-gps': {
     title: 'Xác minh GPS',
-    rationale: 'NOVYX cần GPS để xác minh bạn đang đứng đúng cây trong bán kính nghiệm thu.',
+    rationale: 'Dùng GPS để xác minh đúng cây.',
   },
 };
 
 const deniedCopy: Record<DevicePermissionKind, string> = {
-  camera: 'Chưa có quyền camera. Cấp quyền để quét QR hoặc chụp ảnh.',
-  location: 'Chưa có quyền vị trí. Cấp quyền để lấy GPS hiện trường.',
+  camera: 'Cấp quyền camera để tiếp tục.',
+  location: 'Cấp quyền vị trí để tiếp tục.',
 };
 
 const blockedCopy: Record<DevicePermissionKind, string> = {
-  camera: 'Quyền camera đang bị chặn. Mở cài đặt Android và bật quyền Camera cho NOVYX.',
-  location: 'Quyền vị trí đang bị chặn. Mở cài đặt Android và bật quyền Vị trí cho NOVYX.',
+  camera: 'Bật quyền Camera trong Cài đặt để tiếp tục.',
+  location: 'Bật quyền Vị trí trong Cài đặt để tiếp tục.',
 };
 
 const grantedCopy: Record<DevicePermissionKind, string> = {
@@ -105,9 +109,7 @@ export function DevicePermissionState({
     return (
       <Card tone="danger" style={styles.card}>
         <StateHeader icon="warning-outline" title={copy.title} />
-        <Text style={styles.body}>
-          {runtimeMessage ?? 'Runtime hiện tại chưa hỗ trợ quyền thiết bị này. Hãy dùng dev client đúng SDK.'}
-        </Text>
+        <Text style={styles.body}>{runtimeMessage ?? 'Thiết bị chưa sẵn sàng. Thử mở lại ứng dụng.'}</Text>
         <ActionRow onCancel={onCancel} />
       </Card>
     );
@@ -209,7 +211,9 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: radius.full,
-    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.iconBorder,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -10,6 +10,7 @@ import {
   TREE_FILTER_OPTIONS,
   TaskFilter,
   TreeFilter,
+  formatTreeAge,
   getTaskStatusMeta,
 } from '../../domain/mobileWorkflow';
 
@@ -137,19 +138,16 @@ export function TreeAssignmentCard({
           <Text style={styles.itemTitle}>{tree.name}</Text>
           <Text style={styles.itemSub}>{tree.species}</Text>
         </View>
-        <View style={styles.treeCode}>
-          <Text style={styles.treeCodeText}>{tree.id.split('-')[1]}</Text>
-        </View>
       </View>
       <Text style={styles.bodyText}>{tree.address}</Text>
       <View style={styles.treeMetaGrid}>
         <View style={styles.treeMetaBox}>
-          <Text style={styles.metricLabel}>QR</Text>
-          <Text style={styles.treeMetaValue}>{tree.qrCode}</Text>
+          <Text style={styles.metricLabel}>Mã nhận diện</Text>
+          <Text style={styles.treeMetaValue}>Đã gắn mã QR</Text>
         </View>
         <View style={styles.treeMetaBox}>
           <Text style={styles.metricLabel}>Tuổi cây</Text>
-          <Text style={styles.treeMetaValue}>{tree.ageYears} năm</Text>
+          <Text style={styles.treeMetaValue}>{formatTreeAge(tree.ageYears)}</Text>
         </View>
       </View>
       {task ? (
@@ -204,28 +202,21 @@ export function TreeLookupResult({
     <Card tone="flat" style={[styles.treeAssignmentCard, { backgroundColor: '#f0fdf4' }]}>
       <TreeIdentityVisual tree={tree} />
       <View style={styles.rowBetween}>
-        <View style={styles.row}>
-          <View style={styles.treeCode}>
-            <Text style={styles.treeCodeText}>{tree.id.split('-')[1]}</Text>
-          </View>
-          <View style={styles.flex}>
-            <Text style={styles.itemTitle}>{tree.name}</Text>
-            <Text style={styles.itemSub}>{tree.species}</Text>
-          </View>
+        <View style={styles.flex}>
+          <Text style={styles.itemTitle}>{tree.name}</Text>
+          <Text style={styles.itemSub}>{tree.species}</Text>
         </View>
         <Badge tone={healthTone}>{tree.healthStatus}</Badge>
       </View>
       <Text style={styles.bodyText}>{tree.address}</Text>
       <View style={styles.treeMetaGrid}>
         <View style={styles.treeMetaBox}>
-          <Text style={styles.metricLabel}>QR</Text>
-          <Text style={styles.treeMetaValue}>{tree.qrCode}</Text>
+          <Text style={styles.metricLabel}>Xác minh</Text>
+          <Text style={styles.treeMetaValue}>Đúng hồ sơ cây</Text>
         </View>
         <View style={styles.treeMetaBox}>
-          <Text style={styles.metricLabel}>Tọa độ</Text>
-          <Text style={styles.treeMetaValue}>
-            {tree.lat.toFixed(5)}, {tree.lng.toFixed(5)}
-          </Text>
+          <Text style={styles.metricLabel}>Vị trí</Text>
+          <Text style={styles.treeMetaValue}>Đã ghi nhận</Text>
         </View>
       </View>
       {task ? (

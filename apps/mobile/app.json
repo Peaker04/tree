@@ -25,7 +25,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Cho phép NOVYX dùng vị trí của bạn để check-in công việc chăm sóc cây xanh."
+          "locationWhenInUsePermission": "Cho phép NOVYX dùng vị trí khi sử dụng ứng dụng để xác minh hiện trường và lưu đúng vị trí cây."
         }
       ],
       [

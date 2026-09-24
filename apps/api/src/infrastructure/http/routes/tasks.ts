@@ -6,7 +6,7 @@ import {
   ResumeBlockedTaskRequestSchema,
   ReassignTaskRequestSchema,
   CancelTaskRequestSchema,
-  SubmitEvidenceRequestSchema,
+  SubmitEvidenceHttpBodySchema,
   ResubmitReworkRequestSchema,
   PresignedUploadRequestSchema,
   TaskResponseSchema,
@@ -39,11 +39,25 @@ import type { ResubmitReworkUseCase } from '../../../modules/work-management/app
 import type { ReviewTaskUseCase } from '../../../modules/work-management/application/use-cases/review-task.use-case';
 import type { GetTaskUseCase } from '../../../modules/work-management/application/use-cases/get-task.use-case';
 import type { ListTasksUseCase } from '../../../modules/work-management/application/use-cases/list-tasks.use-case';
+import type {
+  IEvidenceRepository,
+  EvidenceAttemptRecord,
+  TaskReviewRecord,
+} from '../../../modules/work-management/application/ports/evidence-repository.port';
 import type { IIdempotencyRepository } from '../../../modules/work-management/application/ports/idempotency-repository.port';
 import type { IOperationalUnitOfWork } from '../../../modules/work-management/application/ports/operational-unit-of-work.port';
+import type { IObjectStoragePort } from '../../../modules/work-management/application/ports/object-storage.port';
 import { executeWithIdempotency } from '../middleware/idempotency';
 import type { Task } from '../../../modules/work-management/domain/task.entity';
 import { ValidationError } from '../../../core/errors';
+
+type PathTaskBody<T extends { taskId: string }> = Omit<T, 'taskId'> & { taskId?: string };
+
+function assertPathTaskId(pathTaskId: string, bodyTaskId?: string) {
+  if (bodyTaskId && bodyTaskId !== pathTaskId) {
+    throw new ValidationError(`Path taskId (${pathTaskId}) does not match body taskId (${bodyTaskId})`);
+  }
+}
 
 export interface TaskRouteOptions {
   createTaskUseCase: CreateTaskUseCase;
@@ -58,6 +72,8 @@ export interface TaskRouteOptions {
   reviewTaskUseCase: ReviewTaskUseCase;
   getTaskUseCase: GetTaskUseCase;
   listTasksUseCase: ListTasksUseCase;
+  evidenceRepo: IEvidenceRepository;
+  storagePort: IObjectStoragePort;
   idempotencyRepo: IIdempotencyRepository;
   uow?: IOperationalUnitOfWork | undefined;
   authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
@@ -66,7 +82,44 @@ export interface TaskRouteOptions {
   ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 }
 
-function toTaskDto(task: Task): CanonicalTaskDto {
+function getObjectKey(storageRef?: string): string | null {
+  if (!storageRef?.startsWith('s3://')) return null;
+  const path = storageRef.slice('s3://'.length);
+  const slashIndex = path.indexOf('/');
+  return slashIndex >= 0 ? path.slice(slashIndex + 1) : null;
+}
+
+async function addEvidenceDisplayUrls(
+  task: CanonicalTaskDto,
+  storagePort: IObjectStoragePort,
+): Promise<CanonicalTaskDto> {
+  const [beforePhotoDisplayUrl, afterPhotoDisplayUrl] = await Promise.all(
+    [task.beforePhoto, task.afterPhoto].map(async (storageRef) => {
+      const objectKey = getObjectKey(storageRef);
+      return objectKey ? storagePort.generatePresignedDownloadUrl(objectKey) : undefined;
+    }),
+  );
+  return {
+    ...task,
+    ...(beforePhotoDisplayUrl ? { beforePhotoDisplayUrl } : {}),
+    ...(afterPhotoDisplayUrl ? { afterPhotoDisplayUrl } : {}),
+  };
+}
+
+function toTaskDto(
+  task: Task,
+  evidenceAttempts: EvidenceAttemptRecord[] = [],
+  review?: TaskReviewRecord,
+): CanonicalTaskDto {
+  const latestAttempt = evidenceAttempts.at(-1);
+  const mergedProof = evidenceAttempts.reduce<Record<string, unknown>>(
+    (current, attempt) => ({ ...current, ...attempt.proofData }),
+    {},
+  ) as { beforePhotoUri?: string; afterPhotoUri?: string; checklist?: CanonicalTaskDto['checklist'] };
+  const mergedSiteVerification = evidenceAttempts.reduce<Record<string, unknown>>(
+    (current, attempt) => ({ ...current, ...(attempt.siteVerification ?? {}) }),
+    {},
+  ) as { gpsCheck?: CanonicalTaskDto['gpsCheck']; qrCheck?: CanonicalTaskDto['qrCheck'] };
   return {
     id: task.id,
     version: task.version,
@@ -83,7 +136,14 @@ function toTaskDto(task: Task): CanonicalTaskDto {
     assignedStaffName: task.assignedStaffName,
     deadline: task.deadline,
     status: task.status,
-    checklist: task.checklistSnapshot,
+    checklist: mergedProof.checklist ?? task.checklistSnapshot,
+    gpsCheck: mergedSiteVerification.gpsCheck,
+    qrCheck: mergedSiteVerification.qrCheck,
+    beforePhoto: mergedProof.beforePhotoUri,
+    afterPhoto: mergedProof.afterPhotoUri,
+    notes: latestAttempt?.notes,
+    rejectReason: review?.reworkReason,
+    reworkTarget: review?.targetedArea,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
@@ -138,8 +198,16 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
     async (request, reply) => {
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const result = await options.listTasksUseCase.execute(request.query, actor);
+      const [attempts, reviews] = await Promise.all([
+        Promise.all(result.tasks.map((task) => options.evidenceRepo.getEvidenceAttempts(task.id))),
+        Promise.all(result.tasks.map((task) => options.evidenceRepo.getTaskReviews(task.id))),
+      ]);
       return reply.status(200).send({
-        data: result.tasks.map(toTaskDto),
+        data: await Promise.all(
+          result.tasks.map((task, index) =>
+            addEvidenceDisplayUrls(toTaskDto(task, attempts[index], reviews[index]?.at(-1)), options.storagePort),
+          ),
+        ),
         meta: {
           nextCursor: result.nextCursor,
           hasMore: result.hasMore,
@@ -160,33 +228,38 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
     async (request, reply) => {
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       const task = await options.getTaskUseCase.execute(request.params.id, actor);
-      return reply.status(200).send({ data: toTaskDto(task) });
+      const [attempts, reviews] = await Promise.all([
+        options.evidenceRepo.getEvidenceAttempts(task.id),
+        options.evidenceRepo.getTaskReviews(task.id),
+      ]);
+      return reply
+        .status(200)
+        .send({ data: await addEvidenceDisplayUrls(toTaskDto(task, attempts, reviews.at(-1)), options.storagePort) });
     },
   );
 
   // OP-05: StartTask (Staff only)
-  fastify.post<{ Params: { id: string }; Body: StartTaskRequest }>(
+  fastify.post<{ Params: { id: string }; Body: PathTaskBody<StartTaskRequest> }>(
     '/v1/tasks/:id/start',
     {
       schema: {
-        body: StartTaskRequestSchema,
+        body: StartTaskRequestSchema.partial({ taskId: true }),
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, staffOnly],
     },
     async (request, reply) => {
-      if (request.body.taskId && request.body.taskId !== request.params.id) {
-        throw new ValidationError(
-          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
-        );
-      }
+      assertPathTaskId(request.params.id, request.body.taskId);
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(
         request,
         reply,
         options.idempotencyRepo,
         async () => {
-          const task = await options.startTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          const task = await options.startTaskUseCase.execute(
+            { ...request.body, taskId: request.params.id } as StartTaskRequest,
+            actor,
+          );
           return {
             status: 200,
             data: { data: toTaskDto(task) },
@@ -198,21 +271,17 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
   );
 
   // OP-06: ReportFieldIssue (Staff only)
-  fastify.post<{ Params: { id: string }; Body: ReportFieldIssueRequest }>(
+  fastify.post<{ Params: { id: string }; Body: PathTaskBody<ReportFieldIssueRequest> }>(
     '/v1/tasks/:id/field-issue',
     {
       schema: {
-        body: ReportFieldIssueRequestSchema,
+        body: ReportFieldIssueRequestSchema.partial({ taskId: true }),
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, staffOnly],
     },
     async (request, reply) => {
-      if (request.body.taskId && request.body.taskId !== request.params.id) {
-        throw new ValidationError(
-          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
-        );
-      }
+      assertPathTaskId(request.params.id, request.body.taskId);
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(
         request,
@@ -220,7 +289,7 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         options.idempotencyRepo,
         async () => {
           const task = await options.reportFieldIssueUseCase.execute(
-            { ...request.body, taskId: request.params.id },
+            { ...request.body, taskId: request.params.id } as ReportFieldIssueRequest,
             actor,
           );
           return {
@@ -234,21 +303,17 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
   );
 
   // ResumeBlockedTask (Manager only)
-  fastify.post<{ Params: { id: string }; Body: ResumeBlockedTaskRequest }>(
+  fastify.post<{ Params: { id: string }; Body: PathTaskBody<ResumeBlockedTaskRequest> }>(
     '/v1/tasks/:id/resume',
     {
       schema: {
-        body: ResumeBlockedTaskRequestSchema,
+        body: ResumeBlockedTaskRequestSchema.partial({ taskId: true }),
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, managerOnly],
     },
     async (request, reply) => {
-      if (request.body.taskId && request.body.taskId !== request.params.id) {
-        throw new ValidationError(
-          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
-        );
-      }
+      assertPathTaskId(request.params.id, request.body.taskId);
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(
         request,
@@ -256,7 +321,7 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         options.idempotencyRepo,
         async () => {
           const task = await options.resumeBlockedTaskUseCase.execute(
-            { ...request.body, taskId: request.params.id },
+            { ...request.body, taskId: request.params.id } as ResumeBlockedTaskRequest,
             actor,
           );
           return {
@@ -270,28 +335,27 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
   );
 
   // OP-10: ReassignTask (Manager only)
-  fastify.post<{ Params: { id: string }; Body: ReassignTaskRequest }>(
+  fastify.post<{ Params: { id: string }; Body: PathTaskBody<ReassignTaskRequest> }>(
     '/v1/tasks/:id/reassign',
     {
       schema: {
-        body: ReassignTaskRequestSchema,
+        body: ReassignTaskRequestSchema.partial({ taskId: true }),
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, managerOnly],
     },
     async (request, reply) => {
-      if (request.body.taskId && request.body.taskId !== request.params.id) {
-        throw new ValidationError(
-          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
-        );
-      }
+      assertPathTaskId(request.params.id, request.body.taskId);
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(
         request,
         reply,
         options.idempotencyRepo,
         async () => {
-          const task = await options.reassignTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          const task = await options.reassignTaskUseCase.execute(
+            { ...request.body, taskId: request.params.id } as ReassignTaskRequest,
+            actor,
+          );
           return {
             status: 200,
             data: { data: toTaskDto(task) },
@@ -303,28 +367,27 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
   );
 
   // OP-11: CancelTask (Manager only)
-  fastify.post<{ Params: { id: string }; Body: CancelTaskRequest }>(
+  fastify.post<{ Params: { id: string }; Body: PathTaskBody<CancelTaskRequest> }>(
     '/v1/tasks/:id/cancel',
     {
       schema: {
-        body: CancelTaskRequestSchema,
+        body: CancelTaskRequestSchema.partial({ taskId: true }),
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, managerOnly],
     },
     async (request, reply) => {
-      if (request.body.taskId && request.body.taskId !== request.params.id) {
-        throw new ValidationError(
-          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
-        );
-      }
+      assertPathTaskId(request.params.id, request.body.taskId);
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(
         request,
         reply,
         options.idempotencyRepo,
         async () => {
-          const task = await options.cancelTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          const task = await options.cancelTaskUseCase.execute(
+            { ...request.body, taskId: request.params.id } as CancelTaskRequest,
+            actor,
+          );
           return {
             status: 200,
             data: { data: toTaskDto(task) },
@@ -364,7 +427,7 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
     '/v1/tasks/:id/evidence',
     {
       schema: {
-        body: SubmitEvidenceRequestSchema,
+        body: SubmitEvidenceHttpBodySchema,
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, staffOnly],
@@ -396,21 +459,16 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
   );
 
   // OP-21: ResubmitRework (Staff only)
-  fastify.post<{ Params: { id: string }; Body: ResubmitReworkRequest }>(
+  fastify.post<{ Params: { id: string }; Body: Omit<ResubmitReworkRequest, 'taskId'> }>(
     '/v1/tasks/:id/rework/resubmit',
     {
       schema: {
-        body: ResubmitReworkRequestSchema,
+        body: ResubmitReworkRequestSchema.omit({ taskId: true }),
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, staffOnly],
     },
     async (request, reply) => {
-      if (request.body.taskId && request.body.taskId !== request.params.id) {
-        throw new ValidationError(
-          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
-        );
-      }
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
       await executeWithIdempotency(
         request,

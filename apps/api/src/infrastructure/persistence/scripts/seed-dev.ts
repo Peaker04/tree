@@ -8,6 +8,7 @@ import {
   taskTypes,
   proofPolicyVersions,
   checklistTemplateVersions,
+  tasks,
 } from '../schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
@@ -96,22 +97,28 @@ async function main() {
   // TREE
   const treeId = 'TRE-DEV-01';
   const existingTree = await db.select().from(trees).where(eq(trees.id, treeId)).limit(1);
+  const treeSeed = {
+    name: 'Cây sao đen khu A',
+    species: 'Sao đen',
+    ageYears: 10,
+    lat: '10.774',
+    lng: '106.691',
+    address: 'Khu A, công viên trung tâm',
+    healthStatus: 'Khỏe mạnh' as const,
+    riskStatus: 'healthy' as const,
+    qrCode: 'QR-DEV-01',
+    version: 1,
+  };
   if (existingTree.length === 0) {
-    await db.insert(trees).values({
-      id: treeId,
-      name: 'Development Tree Alpha',
-      species: 'Dipterocarpus alatus',
-      ageYears: 10,
-      lat: '10.774',
-      lng: '106.691',
-      address: 'Central Park Local',
-      healthStatus: 'Khỏe mạnh',
-      riskStatus: 'healthy',
-      qrCode: 'QR-DEV-01',
-      version: 1,
-    });
+    await db.insert(trees).values({ id: treeId, ...treeSeed });
     console.log(' -> Created Tree');
+  } else {
+    await db.update(trees).set(treeSeed).where(eq(trees.id, treeId));
   }
+  await db
+    .update(tasks)
+    .set({ treeName: treeSeed.name, treeAddress: treeSeed.address, assignedStaffName: staffEmail })
+    .where(eq(tasks.treeId, treeId));
 
   // POLICY & TASK TYPE
 
@@ -122,7 +129,7 @@ async function main() {
       id: ttId,
       name: 'Cắt tỉa thử nghiệm',
       defaultProofProfile: 'CHANGE_PROOF',
-      description: 'Used for manual testing',
+      description: 'Công việc cắt tỉa cây tại hiện trường',
       isActive: true,
     });
 
@@ -131,15 +138,15 @@ async function main() {
       taskTypeId: ttId,
       versionNumber: 1,
       proofProfile: 'CHANGE_PROOF',
-      policyDescription: 'Default policy',
+      policyDescription: 'Yêu cầu bằng chứng thay đổi trước và sau xử lý',
     });
 
     await db.insert(checklistTemplateVersions).values({
       id: crypto.randomUUID(),
       taskTypeId: ttId,
       versionNumber: 1,
-      templateItems: [{ id: 'chk-1', label: 'An toàn khu vực', required: true }],
-      templateDescription: 'Default checklist',
+      templateItems: [{ text: 'An toàn khu vực', order: 1 }],
+      templateDescription: 'Danh sách kiểm tra cắt tỉa',
     });
 
     console.log(' -> Created TaskType, Auth Policy and Checklist');

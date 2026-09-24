@@ -85,20 +85,20 @@ File inventory của toàn bộ tài liệu Markdown trong `docs/` tại baselin
 |---|---|---|---:|---|
 | 1 | [`01-product-capability-map.html`](../diagrams/01-product-capability-map.html) | CANONICAL CURRENT-STATE | 22,520 | `a27600a2197f2bee925a73eeb3d383605a2cbdf8e796f49478cd387bd3498fe2` |
 | 2 | [`02-domain-context-map.html`](../diagrams/02-domain-context-map.html) | CANONICAL CURRENT-STATE | 14,796 | `b1d42cea39df9c993da48d0d5a63acb8aeb204422c5e13ab67250f61f6855c29` |
-| 3 | [`03-mvp-operational-swimlane.html`](../diagrams/03-mvp-operational-swimlane.html) | SUPERSEDED / HISTORICAL | 15,017 | `008d4f63ae1598fd0fc909fe78b5a2f10fc18c7e518bcc886f1c50f1d132243e` |
+| 3 | [`03-mvp-operational-swimlane.html`](../diagrams/historical/legacy-operational-swimlane.html) | SUPERSEDED / HISTORICAL | 15,017 | `008d4f63ae1598fd0fc909fe78b5a2f10fc18c7e518bcc886f1c50f1d132243e` |
 | 4 | [`04-task-lifecycle.html`](../diagrams/04-task-lifecycle.html) | SUPERSEDED / HISTORICAL | 10,946 | `01a0de9ddcdd8ac43052bf996884fcc09697b1626bfc5146d6130c91ffb5fc16` |
-| 5 | [`05-proof-workflow.html`](../diagrams/05-proof-workflow.html) | SUPERSEDED / HISTORICAL | 16,641 | `c1c56991970bae36718730ccf7464a3c6c9c856753ac7520fef392e55e461a4f` |
-| 6 | [`06-review-rework-lifecycle.html`](../diagrams/06-review-rework-lifecycle.html) | SUPERSEDED / HISTORICAL | 10,533 | `a945092a9f9a171d435e6d7228479c01811f1cfaed15de74ff0d132a4a07f64e` |
+| 5 | [`05-proof-workflow.html`](../diagrams/historical/legacy-fixed-proof-workflow.html) | SUPERSEDED / HISTORICAL | 16,641 | `c1c56991970bae36718730ccf7464a3c6c9c856753ac7520fef392e55e461a4f` |
+| 6 | [`06-review-rework-lifecycle.html`](../diagrams/historical/legacy-binary-review.html) | SUPERSEDED / HISTORICAL | 10,533 | `a945092a9f9a171d435e6d7228479c01811f1cfaed15de74ff0d132a4a07f64e` |
 | 7 | [`07-action-eligibility-security-matrix.html`](../diagrams/07-action-eligibility-security-matrix.html) | CANONICAL CURRENT-STATE | 14,741 | `cf9a23b83fee195b2df5b3dd00368223793016925e7ea1ca9df85b6537d69e44` |
 | 8 | [`08-role-information-architecture.html`](../diagrams/08-role-information-architecture.html) | CANONICAL CURRENT-STATE | 17,186 | `488ce504268577f30b5b6cb9af59f206faba9f4eeede8d97ac1e2c909c82f095` |
-| 9 | [`09-system-current-state.html`](../diagrams/09-system-current-state.html) | CANONICAL CURRENT-STATE | 14,589 | `2a91a692fac9195e9d2f2eb25442f6683359ac94919580d576fa3b971fcaf27c` |
+| 9 | [`09-system-current-state.html`](../diagrams/historical/legacy-system-current-state.html) | CANONICAL CURRENT-STATE | 14,589 | `2a91a692fac9195e9d2f2eb25442f6683359ac94919580d576fa3b971fcaf27c` |
 | 10 | [`10-system-target-architecture.html`](../diagrams/10-system-target-architecture.html) | PROPOSED TARGET | 13,121 | `c88ffe62dded9b631636ff3f8db93ff4e3666edf2697d38e40a6c45de3de1df3` |
-| 11 | [`11-evidence-submission-sequence.html`](../diagrams/11-evidence-submission-sequence.html) | SUPERSEDED / HISTORICAL | 11,593 | `a9a8f848ecce43fc74b63fe4044883c69233b4c63bbf461a3fd8928839708127` |
+| 11 | [`11-evidence-submission-sequence.html`](../diagrams/historical/legacy-evidence-submission-sequence.html) | SUPERSEDED / HISTORICAL | 11,593 | `a9a8f848ecce43fc74b63fe4044883c69233b4c63bbf461a3fd8928839708127` |
 | 12 | [`12-architecture-dependency-map.html`](../diagrams/12-architecture-dependency-map.html) | CANONICAL CURRENT-STATE | 12,322 | `61aa58a27e125a5db283d049d6b2d24d1169fda118302e4a13f81638bd4d6cd8` |
-| 13 | [`proposed-01-current-vs-recommended-workflow.html`](../diagrams/proposed-01-current-vs-recommended-workflow.html) | PROPOSED TARGET | 17,855 | `e31c47fde50275dbc34adb96b6c79f909c9df6a7a202321562d471b5b6197fe2` |
-| 14 | [`proposed-02-mvp-operational-swimlane.html`](../diagrams/proposed-02-mvp-operational-swimlane.html) | CANONICAL CURRENT-STATE | 20,333 | `4e293c2e2fd742415b7ac0ede23427fe63cc5b5452c3054a2957fefd2688c5f4` |
-| 15 | [`proposed-03-minimal-task-lifecycle.html`](../diagrams/proposed-03-minimal-task-lifecycle.html) | CANONICAL CURRENT-STATE | 18,226 | `0d6ecf8b671ade4d01f08b169c55d82afc420c00633ca9d3c81bc0d0c81081c7` |
-| 16 | [`proposed-04-proof-policy-and-rework.html`](../diagrams/proposed-04-proof-policy-and-rework.html) | CANONICAL CURRENT-STATE | 17,076 | `6c2f80d4f8ca470487037bd0707c13163257f6a901a9c9c3c0a7f40a2f937281` |
+| 13 | [`proposed-01-current-vs-recommended-workflow.html`](../diagrams/historical/workflow-evolution-comparison.html) | PROPOSED TARGET | 17,855 | `e31c47fde50275dbc34adb96b6c79f909c9df6a7a202321562d471b5b6197fe2` |
+| 14 | [`03-operational-workflow.html`](../diagrams/03-operational-workflow.html) | CANONICAL CURRENT-STATE | 20,333 | `4e293c2e2fd742415b7ac0ede23427fe63cc5b5452c3054a2957fefd2688c5f4` |
+| 15 | [`04-task-lifecycle.html`](../diagrams/04-task-lifecycle.html) | CANONICAL CURRENT-STATE | 18,226 | `0d6ecf8b671ade4d01f08b169c55d82afc420c00633ca9d3c81bc0d0c81081c7` |
+| 16 | [`05-proof-policy-and-rework.html`](../diagrams/05-proof-policy-and-rework.html) | CANONICAL CURRENT-STATE | 17,076 | `6c2f80d4f8ca470487037bd0707c13163257f6a901a9c9c3c0a7f40a2f937281` |
 
 ---
 

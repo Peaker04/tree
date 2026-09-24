@@ -10,7 +10,7 @@
   "scripts": {
     "start": "npm run mobile:start",
     "mobile:start": "node scripts/expo-mobile.cjs start --port 8082 --dev-client --host localhost",
-    "mobile:start:ios:go": "node scripts/expo-mobile.cjs start --port 8082 --go",
+    "mobile:start:ios:go": "node scripts/expo-mobile.cjs start --port 8082 --go --host lan",
     "mobile:connect:android": "node scripts/mobile-connect-android.cjs",
     "mobile:android": "node scripts/expo-mobile.cjs run:android --no-install --port 8082",
     "mobile:prebuild:android": "node scripts/expo-mobile.cjs prebuild --platform android --clean --no-install",

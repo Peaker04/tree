@@ -128,7 +128,8 @@ export function getDefaultEvidenceHasher(): IEvidenceHasher {
     return defaultHasher;
   }
   // Detect if running in Node / Vitest
-  if (typeof process !== 'undefined' && process.versions && process.versions.node && !process.env.EXPO_RUNTIME) {
+  const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+  if (!isReactNative && typeof process !== 'undefined' && process.release?.name === 'node' && process.versions?.node) {
     defaultHasher = new NodeEvidenceHasher();
   } else {
     defaultHasher = new ExpoEvidenceHasher();

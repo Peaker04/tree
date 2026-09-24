@@ -26,14 +26,18 @@ Backend-only values must not use the `EXPO_PUBLIC_` prefix:
 
 ## Local Setup
 
+The root `.env` is the single local source for API, database, seed, storage, and Expo launcher variables. API workspace scripts load it with Node's native `--env-file-if-exists` support; shell/CI variables still take precedence and production does not require a file.
+
 ```powershell
 Copy-Item .env.example .env
 npm install
-npm run api:dev
+npm run dev --workspace @novyx/api
 npm run mobile:start
 adb reverse tcp:3000 tcp:3000
 adb reverse tcp:8082 tcp:8082
 npm run typecheck
 ```
+
+Do not create a second API secret file unless an external deployment tool explicitly requires one. `apps/mobile/.env` may contain public Expo variables only; never copy database passwords, dev passwords, or storage credentials into it.
 
 Never commit `.env`.

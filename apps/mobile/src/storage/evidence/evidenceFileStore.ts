@@ -1,4 +1,4 @@
-import { getDefaultEvidenceHasher, type IEvidenceHasher } from './evidenceHasher';
+import { ExpoEvidenceHasher, getDefaultEvidenceHasher, type IEvidenceHasher } from './evidenceHasher';
 import { generateSecureUuid } from '../utils/uuid';
 
 export type EvidenceStage = 'BEFORE' | 'AFTER' | 'COMPLETION' | 'CONDITION' | 'EXCEPTION';
@@ -100,7 +100,7 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
   private hasher: IEvidenceHasher;
 
   constructor(hasher?: IEvidenceHasher) {
-    this.hasher = hasher ?? getDefaultEvidenceHasher();
+    this.hasher = hasher ?? new ExpoEvidenceHasher();
   }
 
   async persistEvidence(input: SaveEvidenceInput): Promise<PersistedEvidenceFile> {

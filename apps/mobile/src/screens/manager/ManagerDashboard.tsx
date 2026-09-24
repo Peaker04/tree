@@ -1,527 +1,398 @@
 import React, { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, BrandMark, Button, Card, Field, SectionTitle } from '../../components/AppPrimitives';
-import { Metric, TaskCard } from '../../components/presentation/TaskSurfaces';
-import { TreeIdentityVisual } from '../../components/presentation/TreeIdentityVisual';
+import { Badge, Button, Field, ListRow, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
 import { getTaskProofGaps, getTreeRiskStatus, isTaskOverdue } from '../../domain/mobileWorkflow';
-import { colors, radius, spacing } from '../../theme/tokens';
-import { TaskStatus, type Tree } from '../../types';
+import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
+import { TaskStatus } from '../../types';
 import type { ManagerAreaProps } from './ManagerArea';
-import { mockTreeLandscapePhoto } from '../../assets/mockEvidenceAssets';
 
 export function ManagerDashboard(props: ManagerAreaProps) {
   const [managingTaskId, setManagingTaskId] = useState<string | null>(null);
   const [reassigningTaskId, setReassigningTaskId] = useState<string | null>(null);
   const [reassignReason, setReassignReason] = useState('');
   const [reassignStaffId, setReassignStaffId] = useState<string | null>(null);
-  const total = props.tasks.length;
-  const completed = props.tasks.filter((task) => task.status === TaskStatus.COMPLETED).length;
+
   const pendingReview = props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW);
-  const active = props.tasks.filter((task) => task.status !== TaskStatus.COMPLETED).length;
-  const riskTrees = props.trees.filter((tree) => getTreeRiskStatus(tree) !== 'healthy');
-  const qrIssueTasks = props.tasks.filter((task) => task.notes?.includes('QR tại cây bị hỏng'));
-  const overdueTasks = props.tasks.filter(isTaskOverdue);
+  const blocked = props.tasks.filter((task) => task.status === 'BLOCKED');
+  const overdue = props.tasks.filter(isTaskOverdue);
+  const riskyTrees = props.trees.filter((tree) => getTreeRiskStatus(tree) !== 'healthy');
   const incompleteReview = pendingReview.filter((task) => getTaskProofGaps(task).length > 0);
+  const open = props.tasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED').length;
+
+  const cachedAt = props.dataSource?.cachedAt
+    ? new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(props.dataSource.cachedAt))
+    : null;
+
+  const nextAction =
+    blocked.length > 0
+      ? {
+          title: `${blocked.length} công việc đang bị chặn`,
+          body: 'Chọn cách xử lý bên dưới.',
+          kind: 'blocked' as const,
+        }
+      : overdue.length > 0
+        ? {
+            title: `${overdue.length} công việc đã quá hạn`,
+            body: 'Xử lý việc quá hạn trước.',
+            kind: 'overdue' as const,
+          }
+        : pendingReview.length > 0
+          ? {
+              title: `${pendingReview.length} báo cáo đang chờ duyệt`,
+              body:
+                incompleteReview.length > 0
+                  ? `${incompleteReview.length} báo cáo còn thiếu bằng chứng.`
+                  : 'Duyệt bằng chứng và chọn kết quả.',
+              kind: 'review' as const,
+            }
+          : {
+              title: 'Tạo nhiệm vụ vận hành mới',
+              body: `${open} nhiệm vụ đang mở.`,
+              kind: 'create' as const,
+            };
 
   return (
-    <ScrollView contentContainerStyle={styles.screenPad}>
-      <View style={styles.headerBlock}>
-        <BrandMark />
-        <Badge tone="sky">NOVYX HQ</Badge>
+    <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader title="Tổng quan" subtitle="Ưu tiên vận hành cần xử lý" />
+
+      {props.dataSource?.source !== 'rest' ? (
+        <Notice
+          tone={props.dataSource?.source === 'cache' ? 'warning' : 'danger'}
+          title={props.dataSource?.source === 'cache' ? 'Đang xem dữ liệu đã lưu' : 'Không tải được dữ liệu vận hành'}
+          body={
+            props.dataSource?.source === 'cache' && cachedAt
+              ? `Bản lưu lúc ${cachedAt}. Kiểm tra kết nối rồi thử lại.`
+              : (props.dataSource?.message ?? 'Kiểm tra kết nối rồi thử lại.')
+          }
+          action={
+            <Button
+              size="compact"
+              variant="outline"
+              loading={props.dataSource?.loading}
+              onPress={() => void props.onRefreshData?.()}
+            >
+              Thử lại
+            </Button>
+          }
+        />
+      ) : null}
+
+      <View style={styles.metrics}>
+        <Metric label="Chờ duyệt" value={pendingReview.length} tone="warning" />
+        <Metric label="Bị chặn" value={blocked.length} tone="danger" />
+        <Metric label="Quá hạn" value={overdue.length} tone="danger" />
+        <Metric label="Cây chú ý" value={riskyTrees.length} tone="warning" />
       </View>
-      <Card tone="warm" style={styles.adminHero}>
-        <View style={styles.heroContentRow}>
-          <View style={styles.flex}>
-            <BrandMark compact dark />
-            <Text style={styles.heroTitle}>Bảng điều khiển cây xanh</Text>
-            <Text style={styles.heroBody}>
-              Theo dõi nghiệm thu, phân công và sức khỏe cây trong cùng một luồng vận hành.
-            </Text>
-            <View style={styles.heroMetaRow}>
-              <View style={styles.heroMetaPill}>
-                <Ionicons name="qr-code-outline" size={13} color={colors.cornsilk} />
-                <Text style={styles.heroMetaText}>QR + GPS</Text>
-              </View>
-              <View style={styles.heroMetaPill}>
-                <Ionicons name="shield-checkmark-outline" size={13} color={colors.cornsilk} />
-                <Text style={styles.heroMetaText}>{pendingReview.length} nghiệm thu</Text>
-              </View>
-            </View>
-          </View>
-          <Image source={mockTreeLandscapePhoto} style={styles.heroImage} />
+
+      <View
+        style={[
+          styles.nextAction,
+          nextAction.kind === 'blocked' && styles.nextActionDanger,
+          nextAction.kind === 'overdue' && styles.nextActionWarning,
+        ]}
+      >
+        <View style={styles.flex}>
+          <Text
+            style={[
+              styles.nextActionLabel,
+              nextAction.kind === 'blocked' && styles.textDanger,
+              nextAction.kind === 'overdue' && styles.textWarning,
+            ]}
+          >
+            Việc cần làm tiếp theo
+          </Text>
+          <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
+          <Text style={styles.body}>{nextAction.body}</Text>
         </View>
-      </Card>
-
-      <Card tone="flat" style={styles.statsBar}>
-        <Metric label="Tổng việc" value={total} tone="slate" bordered={false} />
-        <View style={styles.statsDivider} />
-        <Metric label="Hoàn thành" value={completed} tone="green" bordered={false} />
-        <View style={styles.statsDivider} />
-        <Metric label="Đang mở" value={active} tone="amber" bordered={false} />
-        <View style={styles.statsDivider} />
-        <Metric label="Cây quản lý" value={props.trees.length} tone="green" bordered={false} />
-      </Card>
-
-      <Card tone="warm" style={styles.opsPulseInner}>
-        <SectionTitle icon="analytics-outline">Tình hình tác nghiệp ngày</SectionTitle>
-        <PulseRow label="Đã xong" value={completed} tone="green" />
-        <PulseRow label="Đang chạy / chờ" value={active} tone="amber" />
-        <PulseRow label="Cần kiểm duyệt" value={pendingReview.length} tone="sky" />
-        {incompleteReview.length > 0 ? (
-          <PulseRow label="Thiếu bằng chứng" value={incompleteReview.length} tone="danger" />
+        {nextAction.kind === 'review' || nextAction.kind === 'create' ? (
+          <Button
+            icon={nextAction.kind === 'review' ? 'checkmark-done-outline' : 'add-outline'}
+            onPress={() => props.setActiveStep(nextAction.kind === 'review' ? 'REVIEW' : 'CREATE')}
+          >
+            {nextAction.kind === 'review' ? 'Duyệt báo cáo' : 'Tạo việc'}
+          </Button>
         ) : null}
-      </Card>
+      </View>
 
-      <Card tone="soft" style={styles.quickActionPanel}>
-        <SectionTitle icon="flash-outline">Hành động nhanh</SectionTitle>
-        <View style={styles.twoCols}>
-          <Button icon="add-outline" onPress={() => props.setActiveStep('CREATE')}>
-            Tạo việc
-          </Button>
-          <Button variant="outline" icon="eye-outline" onPress={() => props.setActiveStep('REVIEW')}>
-            Duyệt
-          </Button>
-        </View>
-        <Button variant="outline" icon="leaf-outline" onPress={() => props.setActiveStep('TREES')}>
-          Hồ sơ cây
-        </Button>
-      </Card>
+      {blocked.length > 0 ? (
+        <View style={styles.section}>
+          <SectionTitle icon="warning-outline">Công việc bị chặn</SectionTitle>
+          {blocked.map((task) => (
+            <View key={task.id} style={styles.exceptionRow}>
+              <View style={styles.rowBetween}>
+                <View style={styles.flex}>
+                  <Text style={styles.itemTitle}>{task.title}</Text>
+                  <Text style={styles.body}>{task.treeName}</Text>
+                </View>
+                <Badge tone="danger">Bị chặn</Badge>
+              </View>
+              {task.notes ? <Text style={styles.body}>{task.notes}</Text> : null}
+              <View style={styles.actions}>
+                <Button
+                  size="compact"
+                  disabled={managingTaskId !== null}
+                  loading={managingTaskId === task.id}
+                  onPress={async () => {
+                    setManagingTaskId(task.id);
+                    try {
+                      await props.resumeBlockedTask?.({
+                        taskId: task.id,
+                        expectedVersion: task.version ?? 0,
+                        resolutionNotes: 'Quản lý cho phép tiếp tục công việc',
+                      });
+                    } finally {
+                      setManagingTaskId(null);
+                    }
+                  }}
+                >
+                  Tiếp tục
+                </Button>
+                <Button
+                  size="compact"
+                  variant="outline"
+                  disabled={managingTaskId !== null}
+                  onPress={() => {
+                    setReassigningTaskId(reassigningTaskId === task.id ? null : task.id);
+                    setReassignReason('');
+                    setReassignStaffId(null);
+                  }}
+                >
+                  Đổi người
+                </Button>
+                <Button
+                  size="compact"
+                  variant="danger"
+                  disabled={managingTaskId !== null}
+                  onPress={async () => {
+                    setManagingTaskId(task.id);
+                    try {
+                      await props.cancelTask?.({
+                        taskId: task.id,
+                        expectedVersion: task.version ?? 0,
+                        cancelReason: 'Quản lý hủy công việc do sự cố',
+                      });
+                    } finally {
+                      setManagingTaskId(null);
+                    }
+                  }}
+                >
+                  Hủy
+                </Button>
+              </View>
 
-      {/* Blocked Tasks Section */}
-      {props.tasks.some((t) => t.status === 'BLOCKED') ? (
-        <Card tone="danger" style={styles.quickActionPanel}>
-          <SectionTitle icon="warning-outline">Sự cố hiện trường</SectionTitle>
-          {props.tasks
-            .filter((t) => t.status === 'BLOCKED')
-            .map((task) => (
-              <View key={task.id} style={{ gap: 8, marginBottom: 8 }}>
-                <TaskCard task={task} compact />
-                <View style={styles.twoCols}>
+              {reassigningTaskId === task.id ? (
+                <View style={styles.reassignPanel}>
+                  <Field
+                    label="Lý do đổi người"
+                    value={reassignReason}
+                    onChangeText={setReassignReason}
+                    placeholder="Nêu lý do cần thay đổi"
+                  />
+                  <Text style={styles.fieldLabel}>Người thực hiện mới</Text>
+                  {props.assignableStaff.map((staff) => (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: reassignStaffId === staff.id }}
+                      key={staff.id}
+                      onPress={() => setReassignStaffId(staff.id)}
+                      style={[styles.staffChoice, reassignStaffId === staff.id && styles.staffChoiceSelected]}
+                    >
+                      <Ionicons
+                        name={reassignStaffId === staff.id ? 'radio-button-on' : 'radio-button-off'}
+                        size={20}
+                        color={colors.primaryDark}
+                      />
+                      <Text style={styles.itemTitle}>{staff.email}</Text>
+                    </Pressable>
+                  ))}
                   <Button
-                    disabled={managingTaskId !== null || reassigningTaskId !== null}
-                    size="compact"
-                    icon="play-outline"
+                    disabled={!reassignReason.trim() || !reassignStaffId || managingTaskId !== null}
+                    loading={managingTaskId === task.id}
                     onPress={async () => {
+                      if (!reassignStaffId) return;
                       setManagingTaskId(task.id);
                       try {
-                        await props.resumeBlockedTask?.({
+                        await props.reassignTask?.({
                           taskId: task.id,
                           expectedVersion: task.version ?? 0,
-                          resolutionNotes: 'Quản lý cho phép tiếp tục công việc',
+                          newStaffId: reassignStaffId,
+                          reason: reassignReason.trim(),
                         });
+                        setReassigningTaskId(null);
                       } finally {
                         setManagingTaskId(null);
                       }
                     }}
                   >
-                    Khôi phục
-                  </Button>
-                  <Button
-                    disabled={managingTaskId !== null || reassigningTaskId !== null}
-                    variant="outline"
-                    size="compact"
-                    icon="people-outline"
-                    onPress={() => {
-                      setReassigningTaskId(reassigningTaskId === task.id ? null : task.id);
-                      setReassignReason('');
-                      setReassignStaffId(null);
-                    }}
-                  >
-                    Đổi người
-                  </Button>
-                  <Button
-                    disabled={managingTaskId !== null || reassigningTaskId !== null}
-                    variant="danger"
-                    size="compact"
-                    icon="close-outline"
-                    onPress={async () => {
-                      setManagingTaskId(task.id);
-                      try {
-                        await props.cancelTask?.({
-                          taskId: task.id,
-                          expectedVersion: task.version ?? 0,
-                          cancelReason: 'Quản lý hủy công việc do sự cố',
-                        });
-                      } finally {
-                        setManagingTaskId(null);
-                      }
-                    }}
-                  >
-                    Hủy
+                    Xác nhận đổi người
                   </Button>
                 </View>
-                {reassigningTaskId === task.id ? (
-                  <View style={{ gap: 8, padding: 8, backgroundColor: colors.backgroundAlt, borderRadius: radius.md }}>
-                    <Field
-                      label="Lý do đổi người"
-                      value={reassignReason}
-                      onChangeText={setReassignReason}
-                      placeholder="Thiếu dụng cụ..."
-                    />
-                    <Text style={styles.metricLabel}>Chọn nhân viên:</Text>
-                    {props.staff.map((s) => (
-                      <Pressable
-                        key={s.id}
-                        onPress={() => setReassignStaffId(s.id)}
-                        style={{
-                          padding: 8,
-                          backgroundColor: reassignStaffId === s.id ? colors.primarySoft : colors.card,
-                          borderWidth: 1,
-                          borderColor: reassignStaffId === s.id ? colors.primary : colors.border,
-                          borderRadius: radius.md,
-                        }}
-                      >
-                        <Text style={styles.bodyText}>{s.name}</Text>
-                      </Pressable>
-                    ))}
-                    <Button
-                      disabled={!reassignReason.trim() || !reassignStaffId || managingTaskId !== null}
-                      loading={managingTaskId !== null}
-                      onPress={async () => {
-                        setManagingTaskId(task.id);
-                        try {
-                          await props.reassignTask?.({
-                            taskId: task.id,
-                            expectedVersion: task.version ?? 0,
-                            newStaffId: reassignStaffId!,
-                            reason: reassignReason.trim(),
-                          });
-                          setReassigningTaskId(null);
-                        } finally {
-                          setManagingTaskId(null);
-                        }
-                      }}
-                    >
-                      Xác nhận
-                    </Button>
-                  </View>
-                ) : null}
-              </View>
-            ))}
-        </Card>
+              ) : null}
+            </View>
+          ))}
+        </View>
       ) : null}
 
-      <Card
-        tone="flat"
-        style={[styles.reviewQueueInner, { backgroundColor: pendingReview.length > 0 ? '#fffbeb' : '#f0fdf4' }]}
-      >
-        <View style={styles.rowBetween}>
-          <View style={styles.flex}>
+      {pendingReview.length > 0 ? (
+        <View style={styles.section}>
+          <View style={styles.rowBetween}>
             <SectionTitle icon="shield-checkmark-outline">Hàng chờ nghiệm thu</SectionTitle>
-            <Text style={styles.bodyText}>
-              {pendingReview.length > 0
-                ? `${pendingReview.length} báo cáo cần kiểm tra bằng chứng.`
-                : 'Không có báo cáo tồn đọng.'}
-            </Text>
+            <Badge tone="amber">{pendingReview.length}</Badge>
           </View>
-          <Badge tone={pendingReview.length > 0 ? 'amber' : 'green'}>{pendingReview.length}</Badge>
-        </View>
-        {pendingReview.slice(0, 2).map((task) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Mở báo cáo ${task.title}`}
-            key={task.id}
-            style={styles.reviewQueueRow}
-            onPress={() => {
-              props.setReviewTask(task);
-              props.setActiveStep('REVIEW_DETAIL');
-            }}
-          >
-            <View style={styles.flex}>
-              <Text style={styles.itemTitle}>{task.title}</Text>
-              <Text style={styles.itemSub}>{task.treeName}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </Pressable>
-        ))}
-      </Card>
-
-      <Card tone="soft">
-        <View style={styles.managerSectionHeader}>
-          <View style={styles.flex}>
-            <SectionTitle icon="pulse-outline">Cây cần chú ý</SectionTitle>
-            <Text style={styles.bodyText}>Tập trung những cây lệch chuẩn sức khỏe hoặc quá hạn chăm sóc.</Text>
-          </View>
-          <TreeIdentityVisual tree={riskTrees[0] ?? fallbackTree} compact />
-        </View>
-        {riskTrees.length === 0 ? (
-          <Text style={styles.bodyText}>Danh mục cây đang ổn định.</Text>
-        ) : (
-          riskTrees.slice(0, 3).map((tree) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Mở hồ sơ cây cần chú ý ${tree.name}`}
-              key={tree.id}
-              style={styles.reviewQueueRow}
-              onPress={() => props.setActiveStep('TREES')}
-            >
-              <View style={styles.flex}>
-                <Text style={styles.itemTitle}>{tree.name}</Text>
-                <Text style={styles.itemSub}>{tree.address}</Text>
-              </View>
-              <Badge tone={tree.healthStatus === 'Sâu bệnh' ? 'danger' : 'amber'}>{tree.healthStatus}</Badge>
-            </Pressable>
-          ))
-        )}
-      </Card>
-
-      {qrIssueTasks.length > 0 || overdueTasks.length > 0 ? (
-        <Card tone="amber">
-          <SectionTitle icon="alert-circle-outline">Ngoại lệ vận hành</SectionTitle>
-          {[...qrIssueTasks, ...overdueTasks].slice(0, 3).map((task) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Mở ngoại lệ vận hành ${task.title}`}
+          {pendingReview.slice(0, 3).map((task) => (
+            <ListRow
               key={task.id}
-              style={styles.reviewQueueRow}
+              icon="clipboard-outline"
+              title={task.title}
+              subtitle={`${task.treeName} · ${getTaskProofGaps(task).length ? `${getTaskProofGaps(task).length} mục thiếu` : 'Đủ bằng chứng'}`}
               onPress={() => {
                 props.setReviewTask(task);
-                props.setActiveStep(task.status === TaskStatus.WAITING_REVIEW ? 'REVIEW_DETAIL' : 'REVIEW');
+                props.setActiveStep('REVIEW_DETAIL');
               }}
-            >
-              <View style={styles.flex}>
-                <Text style={styles.itemTitle}>{task.treeName}</Text>
-                <Text style={styles.bodyText}>{task.notes ?? `${task.title} đang quá hạn.`}</Text>
-              </View>
-              <Badge tone="amber">{task.id}</Badge>
-            </Pressable>
+            />
           ))}
-        </Card>
+        </View>
       ) : null}
 
-      <Card tone="green">
-        <SectionTitle icon="qr-code-outline">Payload QR demo</SectionTitle>
-        <Text style={styles.bodyText}>In 1-2 mã dưới đây để demo luồng quét tại cây thật hoặc mô phỏng.</Text>
-        {props.trees.slice(0, 2).map((tree) => (
-          <View key={tree.id} style={styles.qrPayloadRow}>
-            <View style={styles.flex}>
-              <Text style={styles.itemTitle}>{tree.name}</Text>
-              <Text style={styles.monoSmall}>{tree.qrCode}</Text>
-            </View>
-            <Badge
-              tone={
-                tree.healthStatus === 'Sâu bệnh' ? 'danger' : tree.healthStatus === 'Cần chăm sóc' ? 'amber' : 'green'
-              }
-            >
-              {tree.id}
-            </Badge>
-          </View>
-        ))}
-      </Card>
-      <SectionTitle icon="time-outline">Nhật ký gần đây</SectionTitle>
-      {props.tasks.slice(0, 3).map((task) => (
-        <TaskCard key={task.id} task={task} compact />
-      ))}
+      {(riskyTrees.length > 0 || overdue.length > 0) && (
+        <View style={styles.section}>
+          <SectionTitle icon="alert-circle-outline">Ngoại lệ cần chú ý</SectionTitle>
+          {overdue.slice(0, 2).map((task) => (
+            <ListRow
+              key={`overdue-${task.id}`}
+              icon="time-outline"
+              title={task.title}
+              subtitle={`${task.treeName} · Quá hạn`}
+              status={<Badge tone="danger">Quá hạn</Badge>}
+            />
+          ))}
+          {riskyTrees.slice(0, 2).map((tree) => (
+            <ListRow
+              key={`tree-${tree.id}`}
+              icon="leaf-outline"
+              title={tree.name}
+              subtitle={tree.address}
+              status={<Badge tone={tree.healthStatus === 'Sâu bệnh' ? 'danger' : 'amber'}>{tree.healthStatus}</Badge>}
+              onPress={() => props.setActiveStep('TREES')}
+            />
+          ))}
+        </View>
+      )}
+
+      <View style={styles.section}>
+        <SectionTitle icon="navigate-outline">Lối tắt</SectionTitle>
+        {pendingReview.length > 0 ? (
+          <ListRow
+            icon="add-circle-outline"
+            title="Tạo việc"
+            subtitle="Giao một nhiệm vụ vận hành mới"
+            onPress={() => props.setActiveStep('CREATE')}
+          />
+        ) : null}
+        <ListRow
+          icon="leaf-outline"
+          title="Hồ sơ cây"
+          subtitle={`${props.trees.length} cây trong phạm vi vận hành`}
+          onPress={() => props.setActiveStep('TREES')}
+        />
+      </View>
     </ScrollView>
   );
 }
 
-const fallbackTree: Tree = {
-  id: 'TRE-DEMO',
-  name: 'Cây NOVYX mẫu',
-  species: 'GreenOps demo',
-  lat: 0,
-  lng: 0,
-  address: 'Khu vực demo',
-  qrCode: 'NOVYX-TRE-DEMO',
-  healthStatus: 'Khỏe mạnh',
-  riskStatus: 'healthy',
-  ageYears: 1,
-};
-
-function PulseRow({
+function Metric({
   label,
   value,
   tone,
 }: {
   label: string;
   value: number;
-  tone: 'green' | 'amber' | 'sky' | 'danger';
+  tone: 'warning' | 'danger' | 'info' | 'neutral';
 }) {
+  const semanticColor =
+    tone === 'warning'
+      ? colors.warningText
+      : tone === 'danger'
+        ? colors.criticalText
+        : tone === 'info'
+          ? colors.infoText
+          : colors.neutralText;
+  const color = value > 0 ? semanticColor : colors.neutralText;
   return (
-    <View style={styles.opsPulseRow}>
-      <Text style={styles.itemTitle}>{label}</Text>
-      <Text
-        style={[
-          styles.metricStrong,
-          tone === 'green' && styles.metricGreen,
-          tone === 'amber' && styles.metricAmber,
-          tone === 'sky' && styles.metricSky,
-          tone === 'danger' && styles.metricDanger,
-        ]}
-      >
-        {value}
+    <View style={styles.metric}>
+      <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={styles.metricLabel}>
+        {label}
       </Text>
+      <Text style={[styles.metricValue, { color }]}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    padding: layout.screenPadding,
+    paddingBottom: layout.bottomNavClearance + spacing.xl,
+    gap: spacing.xl,
+  },
   flex: { flex: 1 },
-  screenPad: {
-    padding: spacing.screen,
-    gap: spacing.section,
-    paddingBottom: 104,
-  },
-  headerBlock: {
+  metrics: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statsBar: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    paddingVertical: 4,
-    paddingHorizontal: 2,
     borderWidth: 1,
     borderColor: colors.hairlineBorder,
-  },
-  statsDivider: { width: 1, backgroundColor: colors.hairlineBorder, alignSelf: 'stretch', marginVertical: 4 },
-  adminHero: {
-    minHeight: 184,
-  },
-  heroContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  heroTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '900',
-    lineHeight: 28,
-    marginTop: 12,
-  },
-  heroBody: {
-    color: '#d9f7dd',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 18,
-    marginTop: 8,
-  },
-  heroImage: {
-    width: 96,
-    height: 128,
-    borderRadius: radius.lg,
-  },
-  heroMetaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  heroMetaPill: {
-    minHeight: 28,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,250,224,0.28)',
-    paddingHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  heroMetaText: {
-    color: colors.cornsilk,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  opsPulseInner: {
-    gap: 8,
-    minHeight: 0,
-  },
-  opsPulseRow: {
-    minHeight: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(170, 208, 128, 0.38)',
-    backgroundColor: 'rgba(255,255,251,0.66)',
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  quickActionPanel: {
-    gap: 8,
-  },
-  twoCols: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  reviewQueueInner: {
-    gap: 12,
-    minHeight: 0,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  reviewQueueRow: {
-    minHeight: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.card,
     backgroundColor: colors.card,
-    padding: 11,
   },
-  managerSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
-  },
-  qrPayloadRow: {
-    minHeight: 58,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: radius.md,
+  metric: { flex: 1, padding: spacing.md, gap: spacing.xs },
+  metricLabel: { ...typography.metadata, color: colors.pewter },
+  metricValue: { ...typography.metric },
+  nextAction: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radius.card,
+    backgroundColor: colors.successSurface,
     borderWidth: 1,
-    borderColor: colors.primaryBorder,
-    backgroundColor: colors.primarySoft,
-    padding: 11,
-    marginTop: 8,
+    borderColor: colors.successBorder,
   },
-  itemTitle: {
-    color: colors.foreground,
-    fontSize: 14,
-    fontWeight: '900',
-    lineHeight: 20,
+  nextActionLabel: { ...typography.metadata, color: colors.successText },
+  nextActionDanger: { backgroundColor: colors.criticalSurface, borderColor: colors.criticalBorder },
+  nextActionWarning: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder },
+  textDanger: { color: colors.criticalText },
+  textWarning: { color: colors.warningText },
+  nextActionTitle: { ...typography.title, color: colors.ink, marginTop: spacing.xs },
+  section: { gap: spacing.sm },
+  body: { ...typography.body, color: colors.pewter },
+  itemTitle: { ...typography.bodyStrong, color: colors.ink, flexShrink: 1 },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  exceptionRow: {
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.hairlineBorder,
   },
-  itemSub: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 1,
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  reassignPanel: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.compact,
+    backgroundColor: colors.neutralSurface,
   },
-  bodyText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 18,
+  fieldLabel: { ...typography.label, color: colors.ink },
+  staffChoice: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.neutralBorder,
+    borderRadius: radius.control,
+    backgroundColor: colors.card,
   },
-  monoSmall: {
-    color: colors.muted,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  metricStrong: {
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  metricGreen: { color: colors.primary },
-  metricAmber: { color: colors.amber },
-  metricSky: { color: colors.sky },
-  metricDanger: { color: colors.danger },
-  metricLabel: { color: colors.mutedForeground, fontSize: 10, fontWeight: '500' },
+  staffChoiceSelected: { borderColor: colors.successBorder, backgroundColor: colors.successSurface },
 });

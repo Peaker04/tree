@@ -24,7 +24,7 @@
       "artifact_sha256": "28d704a527d4787c7a50ed36ae2b7295486d3ed7cf3734d280e88f0123066a78"
     },
     {
-      "diagram": "proposed-02-mvp-operational-swimlane.html",
+      "diagram": "03-operational-workflow.html",
       "artifact_path": "dist/diagrams_verification/proposed-02-mvp-operational-swimlane.png",
       "dimensions": "2520x1600px",
       "file_size": 283719,
@@ -43,7 +43,7 @@
       "artifact_sha256": "e9a98e512c36bd4e91797c4656d9213a4b6dceeb2d12d7214ee03636c70e4421"
     },
     {
-      "diagram": "proposed-03-minimal-task-lifecycle.html",
+      "diagram": "04-task-lifecycle.html",
       "artifact_path": "dist/diagrams_verification/proposed-03-minimal-task-lifecycle.png",
       "dimensions": "2360x1400px",
       "file_size": 192813,
@@ -62,7 +62,7 @@
       "artifact_sha256": "06870886ff685b3649726ff1306c1d6e96bf4f6cac53fdd6e4836d01404cfa28"
     },
     {
-      "diagram": "proposed-04-proof-policy-and-rework.html",
+      "diagram": "05-proof-policy-and-rework.html",
       "artifact_path": "dist/diagrams_verification/proposed-04-proof-policy-and-rework.png",
       "dimensions": "2360x1480px",
       "file_size": 427284,

@@ -193,6 +193,15 @@ export class DrizzleUserRepository implements IUserRepository {
     };
   }
 
+  async listActiveStaff(): Promise<UserAccount[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.users)
+      .where(and(eq(schema.users.role, 'staff'), eq(schema.users.accountStatus, 'ACTIVE')))
+      .orderBy(schema.users.email);
+    return rows.map((row) => this.mapRowToEntity(row));
+  }
+
   async advanceAuthVersion(id: string, expectedVersion?: number): Promise<UserAccount> {
     if (expectedVersion !== undefined) {
       return this.updateWithOcc(id, expectedVersion, {

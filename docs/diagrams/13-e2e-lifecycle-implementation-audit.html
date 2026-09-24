@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOVYX GreenOps — Đối soát luồng E2E và vòng đời</title><link rel="stylesheet" href="assets/fonts/fonts.css"><!-- SOURCE: docs/diagrams/README.md; canonical sources listed in catalog -->
+<style>
+    :root { --paper:#fcfcf7; --ink:#112116; --muted:#68756b; --line:#d8d8cf; --green:#166534; --lime:#84cc16; --soft:#eef7e8; --amber:#d97706; --amber-soft:#fff7e6; --red:#b91c1c; --red-soft:#fff1f1; --blue:#2563eb; --blue-soft:#eff6ff; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:"Noto Sans",sans-serif; }
+    main { width:1440px; min-height:980px; margin:0 auto; padding:44px 48px 52px; }
+    h1,h2 { font-family:"Noto Serif",serif; margin:0; }
+    h1 { font-size:32px; line-height:1.25; }
+    h2 { font-size:18px; }
+    p { margin:0; }
+    .mono { font-family:"Geist Mono",monospace; }
+    .eyebrow { color:var(--green); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+    .subtitle { max-width:1020px; color:var(--muted); font-size:14px; line-height:1.6; margin-top:10px; }
+    .legend { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }
+    .pill { border:1px solid var(--line); border-radius:999px; background:white; padding:7px 11px; font-size:12px; font-weight:600; }
+    .pill.ok { border-color:#a7d78d; background:var(--soft); color:var(--green); }
+    .pill.gap { border-color:#f0bd73; background:var(--amber-soft); color:#92400e; }
+    .pill.block { border-color:#efaaaa; background:var(--red-soft); color:var(--red); }
+    .section { margin-top:28px; }
+    .flow { display:grid; grid-template-columns:150px repeat(7, 1fr); border:1px solid var(--line); border-radius:16px; overflow:hidden; background:white; }
+    .lane-label { padding:18px 14px; font-weight:700; font-size:13px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); display:flex; align-items:center; }
+    .lane { grid-column:2 / 9; padding:16px; border-bottom:1px solid var(--line); display:grid; grid-template-columns:repeat(7,1fr); gap:12px; align-items:stretch; }
+    .flow > :nth-last-child(-n+2) { border-bottom:0; }
+    .node { position:relative; min-height:106px; border:1px solid var(--line); border-radius:12px; padding:12px; background:#fff; font-size:12px; line-height:1.45; }
+    .node strong { display:block; font-size:13px; margin-bottom:5px; }
+    .node .state { display:inline-block; margin-top:8px; font-family:"Geist Mono",monospace; font-size:11px; font-weight:600; }
+    .node.ok { border-color:#98c984; background:var(--soft); }
+    .node.gap { border-color:#e8ad58; background:var(--amber-soft); }
+    .node.block { border-color:#e89999; background:var(--red-soft); }
+    .node.info { border-color:#93b8f3; background:var(--blue-soft); }
+    .arrow::after { content:"Tiếp theo →"; display:block; margin-top:8px; color:var(--muted); font-size:11px; font-weight:700; text-align:right; }
+    .span2 { grid-column:span 2; }
+    .matrix { display:grid; grid-template-columns:1.05fr 1.25fr 1.25fr .7fr; margin-top:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
+    .cell { padding:12px 14px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); font-size:12px; line-height:1.5; }
+    .cell:nth-child(4n) { border-right:0; }
+    .cell.head { background:#eeeee9; font-weight:700; }
+    .cell.last { border-bottom:0; }
+    .severity { font-family:"Geist Mono",monospace; font-weight:700; }
+    .critical { color:var(--red); } .high { color:#a14c00; } .medium { color:var(--blue); }
+    .states { display:flex; align-items:center; gap:8px; margin-top:12px; padding:18px; border:1px solid var(--line); border-radius:14px; background:white; }
+    .state-box { flex:1; min-height:62px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #a7d78d; border-radius:10px; background:var(--soft); padding:8px; font-family:"Geist Mono",monospace; font-size:11px; font-weight:600; }
+    .state-arrow { color:var(--muted); font-weight:700; }
+    .branch { font-size:11px; color:var(--muted); text-align:center; min-width:46px; }
+    .note { margin-top:16px; padding:14px 16px; border-left:4px solid var(--green); background:#f2f6ef; font-size:12px; line-height:1.55; }
+    footer { margin-top:22px; color:var(--muted); font-size:11px; line-height:1.5; }
+  </style>
+</head>
+<body><svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" viewBox="0 0 1 1" role="img" aria-labelledby="13-e2e-lifecycle-implementation-audit-title 13-e2e-lifecycle-implementation-audit-desc" style="position:absolute;left:-9999px;overflow:hidden"><title id="13-e2e-lifecycle-implementation-audit-title">13-e2e-lifecycle-implementation-audit</title><desc id="13-e2e-lifecycle-implementation-audit-desc">Sơ đồ NOVYX GreenOps được trình bày bằng cấu trúc HTML có khả năng tự xuống dòng.</desc></svg>
+<main>
+  <header>
+    <div class="eyebrow">AS-IS IMPLEMENTATION AUDIT · DERIVED VIEW</div>
+    <h1>Đối soát luồng E2E và vòng đời tác nghiệp</h1>
+    <p class="subtitle">So sánh mã nguồn đang có với vòng đời chuẩn trong <span class="mono">WORKFLOWS.md</span> và <span class="mono">DOMAIN.md</span>. Màu xanh là đoạn đã nối đúng; màu hổ phách là lệch hành vi; màu đỏ là điểm có thể làm hỏng luồng E2E. Sơ đồ này không thay thế tài liệu chuẩn tắc.</p>
+    <div class="legend"><span class="pill ok">Đã nối đúng</span><span class="pill gap">Lệch / thiếu UI</span><span class="pill block">Chặn luồng E2E</span><span class="pill">TaskStatus và SyncStatus là hai chiều độc lập</span></div>
+  </header>
+
+  <section class="section">
+    <h2>1. Luồng thực thi hiện tại</h2>
+    <div class="flow">
+      <div class="lane-label">Quản lý</div>
+      <div class="lane">
+        <div class="node gap arrow"><strong>Tạo việc</strong>Loại việc, checklist và nhân viên lấy từ dữ liệu cứng phía client.<span class="state">PENDING</span></div>
+        <div class="node info" style="grid-column:6"><strong>Thẩm định</strong>UI chỉ có duyệt hoặc yêu cầu làm lại; thiếu 2 kết luận chuẩn.</div>
+        <div class="node gap"><strong>Kết luận</strong><span class="mono">REQUEST_REWORK</span> thiếu <span class="mono">targetedArea</span>; hiển thị sai ngưỡng GPS 30 m.</div>
+      </div>
+
+      <div class="lane-label">Nhân viên</div>
+      <div class="lane">
+        <div class="node block arrow"><strong>Danh sách việc</strong>Lọc cứng theo <span class="mono">STF-01</span>, không theo danh tính phiên đăng nhập.</div>
+        <div class="node block arrow"><strong>Bắt đầu nhanh</strong>Từ Trang chủ đi thẳng vào bước bằng chứng, có thể bỏ qua lệnh <span class="mono">StartTask</span>.<span class="state">PENDING → ?</span></div>
+        <div class="node ok arrow"><strong>Xác thực hiện trường</strong>GPS và QR được thu riêng, không trộn thành một trạng thái giả.</div>
+        <div class="node gap arrow"><strong>Thu bằng chứng</strong>Bản nháp chủ yếu ở React state; thoát ứng dụng trước khi nộp có nguy cơ mất dữ liệu.</div>
+        <div class="node ok"><strong>Nộp / nộp lại</strong>Dùng durable outbox; <span class="mono">SubmitEvidence</span> và <span class="mono">ResubmitRework</span> đi theo lệnh riêng.</div>
+      </div>
+
+      <div class="lane-label">Hệ thống / API</div>
+      <div class="lane">
+        <div class="node ok arrow"><strong>Ủy quyền tạo việc</strong>API kiểm tra role, scope, state và version.</div>
+        <div class="node ok arrow"><strong>StartTask</strong>Chuyển duy nhất <span class="mono">PENDING → IN_PROGRESS</span>.</div>
+        <div class="node ok arrow"><strong>Field issue</strong><span class="mono">IN_PROGRESS → BLOCKED</span>; cấm đổi người trực tiếp khi đang làm.</div>
+        <div class="node ok arrow"><strong>Outbox đồng bộ</strong>Upload ảnh bền vững, idempotency header, retry và phân loại lỗi.<span class="state">SyncStatus độc lập</span></div>
+        <div class="node ok arrow"><strong>SubmitEvidence</strong>Kiểm tra policy, QR/GPS, version và chuyển sang chờ duyệt.<span class="state">WAITING_REVIEW</span></div>
+        <div class="node ok"><strong>ReviewTask</strong>API hỗ trợ đủ 4 kết luận: duyệt, ngoại lệ, làm lại, hủy.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>2. Vòng đời chuẩn phải được giữ nguyên</h2>
+    <div class="states">
+      <div class="state-box">PENDING</div><div class="state-arrow">StartTask →</div>
+      <div class="state-box">IN_PROGRESS</div><div class="branch">SubmitEvidence →<br/>ReportFieldIssue ↓</div>
+      <div class="state-box">WAITING_REVIEW</div><div class="branch">Approve →<br/>Rework ↓</div>
+      <div class="state-box">COMPLETED</div>
+    </div>
+    <div class="states" style="margin-top:8px">
+      <div class="state-box">BLOCKED</div><div class="state-arrow">ReassignTask →</div>
+      <div class="state-box">PENDING</div><div class="branch">hoặc</div>
+      <div class="state-box">REWORK_REQUIRED</div><div class="state-arrow">ResubmitRework →</div>
+      <div class="state-box">WAITING_REVIEW</div><div class="branch">mọi trạng thái<br/>không kết thúc →</div>
+      <div class="state-box">CANCELLED</div>
+    </div>
+    <div class="note"><strong>Không thêm trạng thái task cho offline.</strong> <span class="mono">IDLE / SYNCING / RETRY / CONFLICT / SUCCEEDED</span> thuộc vòng đời outbox, không phải <span class="mono">TaskStatus</span>. CareHistory chỉ được tạo khi task thực sự <span class="mono">COMPLETED</span>.</div>
+  </section>
+
+  <section class="section">
+    <h2>3. Sai lệch ưu tiên cần sửa trong mã nguồn</h2>
+    <div class="matrix">
+      <div class="cell head">Vị trí</div><div class="cell head">Sai lệch</div><div class="cell head">Ảnh hưởng E2E</div><div class="cell head">Mức độ</div>
+      <div class="cell"><span class="mono">StaffArea.tsx</span></div><div class="cell">Danh tính nhân viên bị khóa vào <span class="mono">STF-01</span>.</div><div class="cell">Người dùng thật có thể thấy sai hoặc không thấy nhiệm vụ được giao.</div><div class="cell severity critical">CRITICAL</div>
+      <div class="cell"><span class="mono">StaffArea.tsx</span> / <span class="mono">StaffHome.tsx</span></div><div class="cell">CTA bắt đầu nhanh không gọi <span class="mono">StartTask</span>.</div><div class="cell">Thu bằng chứng khi server vẫn ở <span class="mono">PENDING</span>; nộp sẽ bị từ chối theo state guard.</div><div class="cell severity critical">CRITICAL</div>
+      <div class="cell"><span class="mono">ManagerReview.tsx</span></div><div class="cell">Thiếu <span class="mono">targetedArea</span> khi yêu cầu làm lại; thiếu UI cho duyệt có ngoại lệ và hủy.</div><div class="cell">Nhánh rework có thể lỗi; hai kết luận API không thể thao tác từ ứng dụng.</div><div class="cell severity critical">CRITICAL</div>
+      <div class="cell"><span class="mono">ManagerCreateTask.tsx</span></div><div class="cell">Task type, checklist và staff là dữ liệu cứng / local, không lấy authority từ server.</div><div class="cell">Client có thể gửi cấu hình không còn hợp lệ hoặc sai scope.</div><div class="cell severity high">HIGH</div>
+      <div class="cell"><span class="mono">ManagerReview.tsx</span></div><div class="cell">UI ghi ngưỡng GPS <strong>30 m</strong> thay vì chuẩn <strong>10 m</strong>.</div><div class="cell">Quản lý nhận tín hiệu thẩm định sai dù API vẫn là authority.</div><div class="cell severity high">HIGH</div>
+      <div class="cell last">Proof flow / local storage</div><div class="cell last">Chưa có durable draft trước thao tác enqueue.</div><div class="cell last">Ứng dụng bị kill giữa chừng có thể làm mất ảnh/checklist chưa nộp.</div><div class="cell last severity medium">MEDIUM</div>
+    </div>
+  </section>
+
+  <footer>Nguồn đối soát: <span class="mono">docs/WORKFLOWS.md</span>, <span class="mono">docs/DOMAIN.md</span>, routes/use-cases của <span class="mono">apps/api</span>, và flow hiện tại của <span class="mono">apps/mobile</span>. Encoding: UTF-8. Kiểu chữ tiếng Việt: Noto Sans / Noto Serif; enum và technical ID: Geist Mono.</footer>
+</main>
+</body>
+</html>

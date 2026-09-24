@@ -1,6 +1,6 @@
 import type { IDatabaseConnection, MigrationStep } from './types';
 
-export const LATEST_SCHEMA_VERSION = 2;
+export const LATEST_SCHEMA_VERSION = 3;
 
 export const migrations: MigrationStep[] = [
   {
@@ -187,6 +187,19 @@ export const migrations: MigrationStep[] = [
       `);
 
       await db.execAsync('PRAGMA foreign_keys = ON;');
+    },
+  },
+  {
+    version: 3,
+    name: 'authenticated_snapshot_cache',
+    up: async (db: IDatabaseConnection) => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS authenticated_snapshots (
+          user_id TEXT PRIMARY KEY,
+          snapshot_json TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
     },
   },
 ];

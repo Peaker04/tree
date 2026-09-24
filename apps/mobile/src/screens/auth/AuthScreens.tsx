@@ -46,7 +46,7 @@ export function LoginScreen({
               <View style={styles.logoBox}>
                 <NovyxMark size={36} color={colors.brandForest} accentColor={colors.brandOlive} />
               </View>
-              <Text style={styles.brandKicker}>Urban green verification</Text>
+              <Text style={styles.brandKicker}>Xác minh vận hành cây xanh</Text>
             </View>
             <Text style={styles.brand}>NOVYX</Text>
             <Text style={styles.brandBody}>Quản lý cây xanh, QR, GPS và bằng chứng ảnh cho đội vận hành đô thị.</Text>
@@ -66,7 +66,7 @@ export function LoginScreen({
                 setEmail(value);
                 setError('');
               }}
-              placeholder="hung.nguyen@novyx.vn"
+              placeholder="email@donvi.vn"
               autoCapitalize="none"
               keyboardType="email-address"
             />
@@ -149,21 +149,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warmStone,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    elevation: 5,
   },
   brand: {
     fontSize: 29,
-    fontWeight: '900',
+    fontWeight: '600',
     color: colors.forest,
   },
   brandKicker: {
     color: colors.primaryDark,
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   brandBody: {
     marginTop: 10,
@@ -184,7 +179,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.danger,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 
   sessionRestoreCard: {
@@ -200,7 +195,7 @@ const styles = StyleSheet.create({
   successTitle: {
     color: colors.primaryDark,
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   centerJustified: {
     flex: 1,

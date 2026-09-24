@@ -9,6 +9,7 @@ import { auditRoutes } from './infrastructure/http/routes/audit';
 import { treeRoutes } from './infrastructure/http/routes/trees';
 import { governanceOperationalRoutes } from './infrastructure/http/routes/governance-operational';
 import { taskRoutes } from './infrastructure/http/routes/tasks';
+import { operationalCatalogRoutes } from './infrastructure/http/routes/operational-catalogs';
 import { createAuthGate, requireRoles } from './infrastructure/http/middleware/auth-gate';
 import { DrizzleUserRepository } from './infrastructure/persistence/repositories/drizzle-user-repository';
 import { DrizzleSessionRepository } from './infrastructure/persistence/repositories/drizzle-session-repository';
@@ -69,6 +70,8 @@ import { ResubmitReworkUseCase } from './modules/work-management/application/use
 import { ReviewTaskUseCase } from './modules/work-management/application/use-cases/review-task.use-case';
 import { GetTaskUseCase } from './modules/work-management/application/use-cases/get-task.use-case';
 import { ListTasksUseCase } from './modules/work-management/application/use-cases/list-tasks.use-case';
+import { ListAssignableStaffUseCase } from './modules/work-management/application/use-cases/list-assignable-staff.use-case';
+import { ListOperationalTaskTypesUseCase } from './modules/work-management/application/use-cases/list-operational-task-types.use-case';
 
 import type { IUserRepository } from './modules/iam/application/ports/user-repository.port';
 import type { ISessionRepository } from './modules/iam/application/ports/session-repository.port';
@@ -272,6 +275,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     );
     const getTaskUseCase = new GetTaskUseCase(taskRepo);
     const listTasksUseCase = new ListTasksUseCase(taskRepo);
+    const listAssignableStaffUseCase = new ListAssignableStaffUseCase(userRepo, scopeRepo);
+    const listOperationalTaskTypesUseCase = new ListOperationalTaskTypesUseCase(taskTypeRepo, policyRepo, scopeRepo);
 
     // Register auth routes
     server.register(authRoutes, {
@@ -324,6 +329,15 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       taskTypeRepo,
       authenticate,
       requireAdmin,
+      requireRoles,
+    });
+
+    // Register Manager-authorized operational read catalogs
+    server.register(operationalCatalogRoutes, {
+      listAssignableStaffUseCase,
+      listOperationalTaskTypesUseCase,
+      authenticate,
+      requireRoles,
     });
 
     // Register operational task routes
@@ -340,6 +354,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       reviewTaskUseCase,
       getTaskUseCase,
       listTasksUseCase,
+      evidenceRepo,
+      storagePort,
       idempotencyRepo,
       uow: operationalUow,
       authenticate,

@@ -1,12 +1,17 @@
 import React from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, Card, EmptyState, SectionTitle } from '../../components/AppPrimitives';
-import { TaskCard } from '../../components/presentation/TaskSurfaces';
-import { TaskStatusFilters } from '../../components/presentation/TreeSurfaces';
-import { colors } from '../../theme/tokens';
-import { Task } from '../../types';
-import { TaskFilter } from '../../domain/mobileWorkflow';
+import { Badge, EmptyState, ScreenHeader } from '../../components/AppPrimitives';
+import {
+  TASK_FILTER_OPTIONS,
+  TaskFilter,
+  formatTaskDate,
+  getTaskProofCount,
+  getTaskStatusMeta,
+  isTaskOverdue,
+} from '../../domain/mobileWorkflow';
+import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
+import { Task, TaskStatus } from '../../types';
 
 export function StaffWork({
   openTaskCount,
@@ -26,110 +31,137 @@ export function StaffWork({
   return (
     <FlatList
       data={visibleTasks}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.screenPad}
-      ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+      keyExtractor={(task) => task.id}
+      contentContainerStyle={styles.screen}
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
       ListHeaderComponent={
-        <View style={styles.headerContainer}>
-          <View style={styles.headerBlock}>
-            <View>
-              <Text style={styles.mutedSmall}>Danh sách nhiệm vụ</Text>
-              <Text style={styles.pageTitle}>Công việc của bạn</Text>
-            </View>
-            <Badge tone="green">{openTaskCount} việc mở</Badge>
-          </View>
-          <Card tone="warm" style={styles.workHeroCard}>
-            <View style={styles.rowBetween}>
-              <View style={styles.flex}>
-                <Text style={styles.lightHeroTitle}>Ưu tiên việc cần check-in</Text>
-                <Text style={styles.lightHeroBody}>
-                  Mở từng nhiệm vụ để xác minh GPS, quét QR, chụp ảnh và gửi nghiệm thu.
-                </Text>
-              </View>
-              <Ionicons name="clipboard-outline" size={34} color={colors.primaryDark} />
-            </View>
-          </Card>
-
-          <TaskStatusFilters
-            activeFilter={activeFilter}
-            onFilterChange={onFilterChange}
-            resultCount={visibleTasks.length}
-            totalCount={totalTasks}
-          />
-
-          <SectionTitle icon="clipboard-outline">Nhiệm vụ của bạn ({visibleTasks.length})</SectionTitle>
-
+        <View style={styles.header}>
+          <ScreenHeader title="Công việc" subtitle={`${openTaskCount} việc đang mở`} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+            {TASK_FILTER_OPTIONS.map((option) => {
+              const active = activeFilter === option.id;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  key={option.id}
+                  onPress={() => onFilterChange(option.id)}
+                  style={[styles.filter, active && styles.filterActive]}
+                >
+                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{option.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Text style={styles.resultLabel}>
+            {visibleTasks.length}/{totalTasks} công việc
+          </Text>
           {totalTasks === 0 ? (
-            <EmptyState title="Không có việc tồn đọng" body="Khi quản lý phân công, nhiệm vụ sẽ xuất hiện tại đây." />
+            <EmptyState
+              title="Chưa có công việc được giao"
+              body="Nhiệm vụ mới sẽ xuất hiện sau khi quản lý phân công."
+            />
           ) : visibleTasks.length === 0 ? (
             <EmptyState
               icon="funnel-outline"
-              title="Không có nhiệm vụ trong bộ lọc"
-              body="Đổi trạng thái để xem các việc đang chờ bắt đầu, chờ duyệt hoặc đã hoàn thành."
+              title="Không có việc trong bộ lọc"
+              body="Chọn một trạng thái khác để xem công việc."
             />
           ) : null}
         </View>
       }
-      renderItem={({ item: task }) => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Mở công việc {task.title}`}
-          onPress={() => onOpenTask(task)}
-        >
-          <TaskCard task={task} />
-        </Pressable>
-      )}
+      renderItem={({ item: task }) => <StaffTaskRow task={task} onPress={() => onOpenTask(task)} />}
     />
   );
 }
 
+function StaffTaskRow({ task, onPress }: { task: Task; onPress: () => void }) {
+  const status = getTaskStatusMeta(task.status);
+  const overdue = isTaskOverdue(task);
+  const proofCount = getTaskProofCount(task);
+  const nextHint =
+    task.status === TaskStatus.REWORK_REQUIRED
+      ? 'Mở để xem phần cần làm lại'
+      : task.status === TaskStatus.WAITING_REVIEW
+        ? 'Đã nộp, đang chờ quản lý duyệt'
+        : task.status === TaskStatus.COMPLETED
+          ? 'Đã hoàn thành'
+          : 'Mở để tiếp tục bước bằng chứng';
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Mở công việc ${task.title}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.taskRow, pressed && styles.pressed]}
+    >
+      <View style={styles.rowBetween}>
+        <Badge tone={status.tone}>{status.label}</Badge>
+        <Text style={[styles.deadline, overdue && styles.deadlineOverdue]}>
+          {overdue ? 'Quá hạn' : `Hạn ${formatTaskDate(task.deadline)}`}
+        </Text>
+      </View>
+      <Text style={styles.taskTitle}>{task.title}</Text>
+      <View style={styles.treeRow}>
+        <Ionicons name="leaf-outline" size={16} color={colors.primaryDark} />
+        <Text style={styles.treeName}>{task.treeName}</Text>
+      </View>
+      {task.status === TaskStatus.REWORK_REQUIRED && task.rejectReason ? (
+        <View style={styles.reworkBox}>
+          <Ionicons name="return-down-back-outline" size={17} color={colors.warningText} />
+          <Text style={styles.reworkText}>{task.rejectReason}</Text>
+        </View>
+      ) : null}
+      <View style={styles.rowBetween}>
+        <Text style={styles.proof}>Bằng chứng {proofCount}/5</Text>
+        <Text style={styles.nextHint}>{nextHint}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  screenPad: {
-    padding: 16,
-    paddingBottom: 104,
+  screen: { padding: layout.screenPadding, paddingBottom: layout.bottomNavClearance + spacing.xl },
+  header: { gap: spacing.lg, marginBottom: spacing.lg },
+  separator: { height: spacing.md },
+  filters: { gap: spacing.sm, paddingRight: spacing.xs },
+  filter: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.neutralBorder,
+    borderRadius: radius.pill,
+    backgroundColor: colors.card,
   },
-  headerContainer: {
-    gap: 16,
-    marginBottom: 16, // gap between header and first list item
+  filterActive: { borderColor: colors.successBorder, backgroundColor: colors.successSurface },
+  filterText: { ...typography.label, color: colors.neutralText },
+  filterTextActive: { color: colors.successText },
+  resultLabel: { ...typography.label, color: colors.pewter },
+  taskRow: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
   },
-  flex: {
-    flex: 1,
-  },
-  rowBetween: {
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  taskTitle: { ...typography.section, color: colors.ink },
+  deadline: { ...typography.metadata, color: colors.pewter },
+  deadlineOverdue: { color: colors.criticalText },
+  treeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  treeName: { ...typography.body, color: colors.neutralText, flex: 1 },
+  reworkBox: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.control,
+    backgroundColor: colors.warningSurface,
   },
-  headerBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  mutedSmall: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  pageTitle: {
-    color: colors.foreground,
-    fontSize: 22,
-    fontWeight: '600',
-  },
-  workHeroCard: {
-    minHeight: 132,
-  },
-  lightHeroTitle: {
-    color: colors.foreground,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  lightHeroBody: {
-    color: colors.foregroundSoft,
-    fontSize: 12,
-    fontWeight: '400',
-    lineHeight: 18,
-    marginTop: 6,
-  },
+  reworkText: { ...typography.body, color: colors.warningText, flex: 1 },
+  proof: { ...typography.label, color: colors.pewter },
+  nextHint: { ...typography.label, color: colors.primaryDark, flex: 1, textAlign: 'right' },
+  pressed: { opacity: 0.72 },
 });

@@ -33,10 +33,9 @@ To fully exercise real API workflows (e.g. R2A testing):
 1. Run `ipconfig` in Windows terminal to obtain your Windows IPv4 address on the Wi-Fi adapter.
 2. Set the local untracked `.env` variables (do not modify `.env.example` directly):
 ```env
-EXPO_PUBLIC_DATA_SOURCE=rest
 EXPO_PUBLIC_API_BASE_URL=http://<WINDOWS_IPV4>:3000
 ```
-3. Restart Metro with cache cleared (`npx expo start --go --clear`) so the environment variables inject into the JS bundle payload safely over the local network. Make sure Fastify API is bound to `0.0.0.0` or `<WINDOWS_IPV4>`.
+3. Restart Metro normally and perform a full reload in Expo Go so the public environment value is injected into the bundle. Use `npx expo start --go --clear` only when there is evidence that Metro is serving a stale value. Make sure Fastify API is bound to `0.0.0.0` or `<WINDOWS_IPV4>`.
 
 ## G. Troubleshooting
 - **LAN Failure**: `npx expo start --go --tunnel`

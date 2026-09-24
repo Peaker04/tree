@@ -66,51 +66,59 @@ export const ProofPayloadSchema = z.discriminatedUnion('proofProfile', [
 
 export type ProofPayload = z.infer<typeof ProofPayloadSchema>;
 
-export const SubmitEvidenceRequestSchema = z
-  .object({
-    taskId: z.string().min(1),
-    expectedVersion: z.number().int().nonnegative(),
-    siteVerification: SiteVerificationSchema.optional(),
-    locationException: LocationExceptionSchema.optional(),
-    identityException: IdentityExceptionSchema.optional(),
-    proof: ProofPayloadSchema,
-    notes: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const gpsVerified = data.siteVerification?.gpsCheck?.verified === true;
-    const hasLocationException = Boolean(data.locationException);
+export const SubmitEvidenceBodySchema = z.object({
+  taskId: z.string().min(1).optional(),
+  expectedVersion: z.number().int().nonnegative(),
+  siteVerification: SiteVerificationSchema.optional(),
+  locationException: LocationExceptionSchema.optional(),
+  identityException: IdentityExceptionSchema.optional(),
+  proof: ProofPayloadSchema,
+  notes: z.string().optional(),
+});
 
-    if (gpsVerified && hasLocationException) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Payload ambiguous: cannot provide both verified GPS and LocationException',
-        path: ['locationException'],
-      });
-    } else if (!gpsVerified && !hasLocationException) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Location verification required: must provide verified GPS (<= 10m) or a valid LocationException',
-        path: ['siteVerification', 'gpsCheck'],
-      });
-    }
+type SubmitEvidenceBody = z.infer<typeof SubmitEvidenceBodySchema>;
 
-    const qrVerified = data.siteVerification?.qrCheck?.verified === true;
-    const hasIdentityException = Boolean(data.identityException);
+function validateEvidenceVerification(data: SubmitEvidenceBody, ctx: z.RefinementCtx) {
+  const gpsVerified = data.siteVerification?.gpsCheck?.verified === true;
+  const hasLocationException = Boolean(data.locationException);
 
-    if (qrVerified && hasIdentityException) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Payload ambiguous: cannot provide both verified QR and IdentityException',
-        path: ['identityException'],
-      });
-    } else if (!qrVerified && !hasIdentityException) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Identity verification required: must provide verified QR code or a valid IdentityException',
-        path: ['siteVerification', 'qrCheck'],
-      });
-    }
-  });
+  if (gpsVerified && hasLocationException) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Payload ambiguous: cannot provide both verified GPS and LocationException',
+      path: ['locationException'],
+    });
+  } else if (!gpsVerified && !hasLocationException) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Location verification required: must provide verified GPS (<= 10m) or a valid LocationException',
+      path: ['siteVerification', 'gpsCheck'],
+    });
+  }
+
+  const qrVerified = data.siteVerification?.qrCheck?.verified === true;
+  const hasIdentityException = Boolean(data.identityException);
+
+  if (qrVerified && hasIdentityException) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Payload ambiguous: cannot provide both verified QR and IdentityException',
+      path: ['identityException'],
+    });
+  } else if (!qrVerified && !hasIdentityException) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Identity verification required: must provide verified QR code or a valid IdentityException',
+      path: ['siteVerification', 'qrCheck'],
+    });
+  }
+}
+
+export const SubmitEvidenceRequestSchema = SubmitEvidenceBodySchema.extend({
+  taskId: z.string().min(1),
+}).superRefine(validateEvidenceVerification);
+
+export const SubmitEvidenceHttpBodySchema = SubmitEvidenceBodySchema.superRefine(validateEvidenceVerification);
 
 export type SubmitEvidenceRequest = z.infer<typeof SubmitEvidenceRequestSchema>;
 

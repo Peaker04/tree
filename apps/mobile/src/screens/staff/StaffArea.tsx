@@ -14,7 +14,12 @@ import {
 } from '../../domain/mobileWorkflow';
 import { colors, radius } from '../../theme/tokens';
 import { AppNotification, CareHistory, Task, TaskStatus, Tree } from '../../types';
-import type { CreateNotificationRequest, ReportFieldIssueRequest, ResubmitReworkRequest } from '@novyx/contracts';
+import type {
+  AuthUser,
+  CreateNotificationRequest,
+  ReportFieldIssueRequest,
+  ResubmitReworkRequest,
+} from '@novyx/contracts';
 import { StaffAccount } from './StaffAccount';
 import { StaffHome } from './StaffHome';
 import { StaffProofFlow } from './StaffProofFlow';
@@ -22,6 +27,8 @@ import { StaffTrees } from './StaffTrees';
 import { StaffWork } from './StaffWork';
 
 export function StaffArea(props: {
+  authenticatedUser: AuthUser | null;
+  authenticatedStaffId: string | null;
   tasks: Task[];
   trees: Tree[];
   notifications: AppNotification[];
@@ -43,7 +50,6 @@ export function StaffArea(props: {
   resubmitRework: (request: ResubmitReworkRequest) => Promise<Task>;
   submitTaskEvidence: (task: Task) => Promise<Task>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
-  isRestMode?: boolean;
   markNotificationsRead: (
     notificationIds: string[],
     fallbackNotifications: AppNotification[],
@@ -60,9 +66,12 @@ export function StaffArea(props: {
   const [staffTreeFilter, setStaffTreeFilter] = useState<TreeFilter>('all');
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('open');
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread'>('all');
+  const [mapReturnStep, setMapReturnStep] = useState<StaffStep>('MY_TREES');
   const [markingNotifications, setMarkingNotifications] = useState(false);
-  const staffTasks = props.tasks.filter((task) => task.assignedStaffId === 'STF-01');
-  const openTasks = staffTasks.filter((task) => task.status !== TaskStatus.COMPLETED);
+  const staffTasks = props.authenticatedStaffId
+    ? props.tasks.filter((task) => task.assignedStaffId === props.authenticatedStaffId)
+    : [];
+  const openTasks = staffTasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED');
   const completedTasks = staffTasks.filter((task) => task.status === TaskStatus.COMPLETED);
   const waitingReviewTasks = staffTasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW);
   const actionableTasks = staffTasks.filter(
@@ -96,7 +105,7 @@ export function StaffArea(props: {
         unreadNotificationCount={unreadNotifications.length}
         loading={props.dataSource?.loading}
         errorMessage={props.dataSource?.message}
-        isOffline={props.dataSource?.source === 'fallback' || props.dataSource?.source === 'mock'}
+        isOffline={props.dataSource?.source === 'cache'}
         onRetry={props.onRefreshData}
         onOpenNotifications={() => props.setStep('NOTIFICATIONS')}
         onOpenWork={() => {
@@ -136,6 +145,7 @@ export function StaffArea(props: {
           props.setStep('DETAIL');
         }}
         onMap={(task) => {
+          setMapReturnStep('MY_TREES');
           props.setActiveTask(task);
           props.setStep('MAP');
         }}
@@ -162,6 +172,7 @@ export function StaffArea(props: {
   if (props.step === 'ACCOUNT') {
     return (
       <StaffAccount
+        authenticatedUser={props.authenticatedUser}
         onLogout={props.onLogout}
         completed={completed}
         total={staffTasks.length}
@@ -288,6 +299,8 @@ export function StaffArea(props: {
       trees={props.trees}
       staffTasks={staffTasks}
       openTasks={openTasks}
+      mapReturnStep={mapReturnStep}
+      setMapReturnStep={setMapReturnStep}
       userLat={props.userLat}
       userLng={props.userLng}
       setUserLat={props.setUserLat}
@@ -301,7 +314,6 @@ export function StaffArea(props: {
       reportFieldIssue={props.reportFieldIssue}
       resubmitRework={props.resubmitRework}
       createNotification={props.createNotification}
-      isRestMode={props.isRestMode}
     />
   );
 

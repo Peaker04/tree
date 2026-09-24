@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NOVYX GreenOps — Quy trình vận hành E2E</title>
+  <link rel="stylesheet" href="assets/fonts/fonts.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #f6f8f1; }
+    body { display: grid; place-items: center; padding: 20px; }
+    svg { width: min(100%, 1280px); height: auto; display: block; }
+  </style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-labelledby="novyx-e2e-title novyx-e2e-desc">
+  <title id="novyx-e2e-title">NOVYX GreenOps — Quy trình vận hành E2E</title>
+  <desc id="novyx-e2e-desc">Quy trình tám giai đoạn từ khởi tạo cây, giao việc, thực hiện ngoài hiện trường, tải bằng chứng, duyệt nghiệm thu đến hoàn thành hoặc làm lại có mục tiêu.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#617268" />
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#2f7d45" />
+    </marker>
+    <marker id="arrow-amber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#a06d08" />
+    </marker>
+    <style>
+      .eyebrow { font: 600 11px 'Geist Mono', monospace; letter-spacing: .08em; fill: #52645a; }
+      .title { font: 700 34px 'Noto Serif', serif; fill: #13231a; }
+      .subtitle { font: 400 14px 'Noto Sans', sans-serif; fill: #64748b; }
+      .stage-no { font: 700 11px 'Geist Mono', monospace; fill: #2f7d45; }
+      .stage-name { font: 600 11px 'Noto Sans', sans-serif; fill: #52645a; }
+      .lane-name { font: 700 14px 'Noto Sans', sans-serif; fill: #13231a; }
+      .lane-key { font: 600 11px 'Geist Mono', monospace; fill: #64748b; letter-spacing: .05em; }
+      .node-title { font: 700 13px 'Noto Sans', sans-serif; fill: #13231a; }
+      .node-sub { font: 400 11px 'Noto Sans', sans-serif; fill: #435348; }
+      .tech { font: 600 11px 'Geist Mono', monospace; fill: #435348; }
+      .loop-label { font: 600 11px 'Noto Sans', sans-serif; fill: #80580b; }
+      .outcome-title { font: 700 13px 'Noto Sans', sans-serif; fill: #13231a; }
+      .outcome-copy { font: 400 11px 'Noto Sans', sans-serif; fill: #435348; }
+      .footer { font: 600 11px 'Geist Mono', monospace; fill: #64748b; letter-spacing: .04em; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="720" fill="#f6f8f1" />
+
+  <!-- Header -->
+  <text x="40" y="36" class="eyebrow">NOVYX GREENOPS · CUSTOMER DEMO</text>
+  <text x="40" y="76" class="title">Quy trình vận hành từ đầu đến cuối</text>
+  <text x="40" y="100" class="subtitle">Từ cây ngoài hiện trường đến kết quả nghiệm thu có bằng chứng và truy vết.</text>
+  <text x="1240" y="36" text-anchor="end" class="eyebrow">SOURCE: docs/WORKFLOWS.md · LIVE E2E</text>
+
+  <!-- Stage headers -->
+  <g>
+    <text x="210" y="130" text-anchor="middle" class="stage-no">01</text><text x="210" y="146" text-anchor="middle" class="stage-name">Khởi tạo cây</text>
+    <text x="345" y="130" text-anchor="middle" class="stage-no">02</text><text x="345" y="146" text-anchor="middle" class="stage-name">Giao việc</text>
+    <text x="480" y="130" text-anchor="middle" class="stage-no">03</text><text x="480" y="146" text-anchor="middle" class="stage-name">Lưu canonical</text>
+    <text x="615" y="130" text-anchor="middle" class="stage-no">04</text><text x="615" y="146" text-anchor="middle" class="stage-name">Bắt đầu</text>
+    <text x="750" y="130" text-anchor="middle" class="stage-no">05</text><text x="750" y="146" text-anchor="middle" class="stage-name">Xác thực</text>
+    <text x="885" y="130" text-anchor="middle" class="stage-no">06</text><text x="885" y="146" text-anchor="middle" class="stage-name">Bằng chứng</text>
+    <text x="1020" y="130" text-anchor="middle" class="stage-no">07</text><text x="1020" y="146" text-anchor="middle" class="stage-name">Nộp báo cáo</text>
+    <text x="1155" y="130" text-anchor="middle" class="stage-no">08</text><text x="1155" y="146" text-anchor="middle" class="stage-name">Nghiệm thu</text>
+  </g>
+
+  <!-- Lane surfaces (paths avoid false node classification) -->
+  <path d="M32 158 H1248 V246 H32 Z" fill="#fffefb" stroke="#d5dfd1" />
+  <path d="M32 246 H1248 V334 H32 Z" fill="#f8fbf5" stroke="#d5dfd1" />
+  <path d="M32 334 H1248 V422 H32 Z" fill="#eef5eb" stroke="#d5dfd1" />
+  <path d="M32 422 H1248 V510 H32 Z" fill="#f5f7f4" stroke="#d5dfd1" />
+  <line x1="142" y1="158" x2="142" y2="510" stroke="#c5d2c1" />
+
+  <!-- Lane labels -->
+  <text x="54" y="195" class="lane-name">Quản lý</text><text x="54" y="214" class="lane-key">MANAGER</text>
+  <text x="54" y="283" class="lane-name">Nhân viên</text><text x="54" y="302" class="lane-key">FIELD STAFF</text>
+  <text x="54" y="371" class="lane-name">NOVYX</text><text x="54" y="390" class="lane-key">MOBILE + API</text>
+  <text x="54" y="459" class="lane-name">Dữ liệu</text><text x="54" y="478" class="lane-key">S3 + AUDIT</text>
+
+  <!-- Connectors: shortest clear orthogonal routing, per repository diagram conventions -->
+  <line x1="265" y1="202" x2="290" y2="202" stroke="#617268" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M400 218 H412 V376 H425" fill="none" stroke="#617268" stroke-width="2" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M535 376 H548 V288 H560" fill="none" stroke="#2f7d45" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#arrow-green)" />
+  <line x1="670" y1="290" x2="695" y2="290" stroke="#2f7d45" stroke-width="2.5" marker-end="url(#arrow-green)" />
+  <line x1="805" y1="290" x2="830" y2="290" stroke="#2f7d45" stroke-width="2.5" marker-end="url(#arrow-green)" />
+  <line x1="885" y1="316" x2="885" y2="436" stroke="#2f7d45" stroke-width="2.5" marker-end="url(#arrow-green)" />
+  <path d="M940 464 H952 V376 H965" fill="none" stroke="#617268" stroke-width="2" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M1020 348 V240 H1135 V230" fill="none" stroke="#617268" stroke-width="2" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <line x1="1155" y1="230" x2="1155" y2="348" stroke="#2f7d45" stroke-width="2.5" marker-end="url(#arrow-green)" />
+  <line x1="1155" y1="404" x2="1155" y2="436" stroke="#2f7d45" stroke-width="2.5" marker-end="url(#arrow-green)" />
+
+  <!-- Targeted rework: compact orthogonal return, isolated from the review rail -->
+  <path d="M1100 202 H952 V276 H940" fill="none" stroke="#a06d08" stroke-width="2" stroke-dasharray="7 5" stroke-linejoin="round" marker-end="url(#arrow-amber)" />
+  <rect x="964" y="186" width="112" height="20" rx="3" fill="#fffefb" />
+  <text x="1020" y="200" text-anchor="middle" class="loop-label">Làm lại đúng mục</text>
+
+  <!-- Nodes -->
+  <g>
+    <rect x="155" y="174" width="110" height="56" rx="7" fill="#edf7e8" stroke="#78aa75" />
+    <text x="168" y="194" class="node-title">Hồ sơ cây</text>
+    <text x="168" y="214" class="node-sub">GPS · QR</text>
+  </g>
+  <g>
+    <rect x="290" y="174" width="110" height="56" rx="7" fill="#fffefb" stroke="#718078" />
+    <text x="303" y="194" class="node-title">Tạo nhiệm vụ</text>
+    <text x="303" y="214" class="node-sub">Cây · Staff · hạn</text>
+  </g>
+  <g>
+    <rect x="425" y="348" width="110" height="56" rx="7" fill="#eef6f8" stroke="#72a7b4" />
+    <text x="438" y="368" class="node-title">Lưu task</text>
+    <text x="438" y="388" class="tech">PENDING</text>
+  </g>
+  <g>
+    <rect x="560" y="260" width="110" height="56" rx="7" fill="#edf7e8" stroke="#2f7d45" />
+    <text x="573" y="280" class="node-title">Bắt đầu việc</text>
+    <text x="573" y="300" class="tech">IN_PROGRESS</text>
+  </g>
+  <g>
+    <rect x="695" y="260" width="110" height="56" rx="7" fill="#edf7e8" stroke="#2f7d45" />
+    <text x="708" y="280" class="node-title">Đúng cây</text>
+    <text x="708" y="300" class="node-sub">GPS ≤10 m · QR</text>
+  </g>
+  <g>
+    <rect x="830" y="260" width="110" height="56" rx="7" fill="#edf7e8" stroke="#2f7d45" />
+    <text x="843" y="280" class="node-title">Bằng chứng</text>
+    <text x="843" y="300" class="node-sub">Ảnh · checklist</text>
+  </g>
+  <g>
+    <rect x="830" y="436" width="110" height="56" rx="7" fill="#f1f4f1" stroke="#718078" />
+    <text x="843" y="456" class="node-title">Lưu file thật</text>
+    <text x="843" y="476" class="tech">S3 · SHA-256</text>
+  </g>
+  <g>
+    <rect x="965" y="348" width="110" height="56" rx="7" fill="#eef6f8" stroke="#72a7b4" />
+    <text x="978" y="368" class="node-title">Chờ duyệt</text>
+    <text x="978" y="388" class="tech">WAITING_REVIEW</text>
+  </g>
+  <g>
+    <rect x="1100" y="174" width="110" height="56" rx="7" fill="#fff8e8" stroke="#bf8a25" />
+    <text x="1113" y="194" class="node-title">Duyệt báo cáo</text>
+    <text x="1113" y="214" class="node-sub">Duyệt · làm lại</text>
+  </g>
+  <g>
+    <rect x="1100" y="348" width="110" height="56" rx="7" fill="#eaf5e7" stroke="#2f7d45" />
+    <text x="1113" y="368" class="node-title">Kết thúc task</text>
+    <text x="1113" y="388" class="tech">COMPLETED</text>
+  </g>
+  <g>
+    <rect x="1100" y="436" width="110" height="56" rx="7" fill="#f1f4f1" stroke="#718078" />
+    <text x="1113" y="456" class="node-title">Lưu kết quả</text>
+    <text x="1113" y="476" class="tech">CareHistory</text>
+  </g>
+
+  <!-- Outcome strip -->
+  <rect x="142" y="558" width="1106" height="104" rx="8" fill="#ffffff" stroke="#d5dfd1" />
+  <line x1="510" y1="574" x2="510" y2="646" stroke="#d9e2d5" />
+  <line x1="878" y1="574" x2="878" y2="646" stroke="#d9e2d5" />
+
+  <text x="166" y="586" class="outcome-title">Duyệt / duyệt ngoại lệ</text>
+  <text x="166" y="607" class="outcome-copy">Task hoàn thành; tạo lịch sử chăm sóc;</text>
+  <text x="166" y="625" class="outcome-copy">Staff nhận kết quả.</text>
+
+  <text x="534" y="586" class="outcome-title">Yêu cầu làm lại</text>
+  <text x="534" y="607" class="outcome-copy">Giữ bằng chứng đã đạt; chỉ bổ sung đúng mục</text>
+  <text x="534" y="625" class="outcome-copy">Manager chỉ định rồi nộp lại.</text>
+
+  <text x="902" y="586" class="outcome-title">Hủy / sự cố hiện trường</text>
+  <text x="902" y="607" class="outcome-copy">Bảo toàn lịch sử và audit; không tạo kết quả</text>
+  <text x="902" y="625" class="outcome-copy">nghiệm thu giả.</text>
+
+  <!-- Footer -->
+  <line x1="40" y1="686" x2="1240" y2="686" stroke="#cad6c6" />
+  <circle cx="54" cy="704" r="5" fill="#2f7d45" />
+  <text x="66" y="708" class="outcome-copy">Luồng chính</text>
+  <line x1="150" y1="704" x2="182" y2="704" stroke="#a06d08" stroke-width="2" stroke-dasharray="7 5" />
+  <text x="194" y="708" class="outcome-copy">Làm lại có mục tiêu</text>
+  <text x="1240" y="708" text-anchor="end" class="footer">REST-ONLY · SERVER-AUTHORITATIVE · IDEMPOTENCY · OCC</text>
+</svg>
+</body>
+</html>

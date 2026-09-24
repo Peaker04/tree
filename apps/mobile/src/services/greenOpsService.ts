@@ -1,42 +1,47 @@
-import { createInitialData } from '../data';
-import { AppData, AppNotification, CareHistory, Role, Task, TaskStatus } from '../types';
+import { AppData, AppNotification, CareHistory, Role, Task, TaskStatus, Tree } from '../types';
 import type {
   AuthSession,
   ApiFailure,
+  AssignableStaffCatalogItem,
+  CanonicalCreateTaskRequest,
+  CreateTreeRequest,
   CareHistoryDto,
-  CreateNotificationRequest,
-  CreateTaskRequest,
   GpsCheckDto,
   LoginRequest,
   LoginResponse,
   ListTasksQuery,
   ListTreesQuery,
   NotificationDto,
+  OperationalTaskTypeCatalogItem,
   QrCheckDto,
   ReviewTaskRequest,
-  SubmitTaskEvidenceRequest,
   TaskEvidenceDto,
   TaskDto,
   TreeDto,
-  UpdateTaskProgressRequest,
   CancelTaskRequest,
+  CanonicalTaskDto,
   ReportFieldIssueRequest,
   ResumeBlockedTaskRequest,
   ReassignTaskRequest,
   ResubmitReworkRequest,
   StartTaskRequest,
-  CanonicalTaskDto,
 } from '@novyx/contracts';
 import { readPublicRuntimeConfig } from '@novyx/config';
 import type { IAuthSessionManager } from './authSessionManager';
 import { AuthSessionManager } from './authSessionManager';
 import { MobileApiClient } from './mobileApiClient';
+import type { IAuthenticatedSnapshotCache } from '../storage/cache/authenticatedSnapshotCache';
+import { generateSecureUuid } from '../storage/utils/uuid';
 
 const defaultPublicEnvSource = {
   EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
   EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL,
+  EXPO_PUBLIC_API_FUD: process.env.EXPO_PUBLIC_API_FUD,
+  EXPO_PUBLIC_API_HOME: process.env.EXPO_PUBLIC_API_HOME,
   EXPO_PUBLIC_DATA_SOURCE: process.env.EXPO_PUBLIC_DATA_SOURCE,
 };
+
+type CreateTreeInput = Omit<CreateTreeRequest, 'treeId' | 'qrCode'>;
 
 export interface GreenOpsService {
   getSnapshot: () => AppData;
@@ -44,35 +49,33 @@ export interface GreenOpsService {
   restoreSession: (session: AuthSession) => LoginResult;
   logout: () => void;
   loadSnapshot: () => Promise<SnapshotLoadResult>;
+  listOperationalTaskTypes: () => Promise<OperationalTaskTypeCatalogItem[]>;
+  listAssignableStaff: () => Promise<AssignableStaffCatalogItem[]>;
   listCareHistoryByTree: (treeId: string) => CareHistory[];
   loadCareHistoryByTree: (treeId: string) => Promise<CareHistoryLoadResult>;
   lookupTreeByQr: (payload: string) => Promise<TreeLookupResult>;
-  createTask: (request: CreateTaskRequest, fallbackTask: Task) => Promise<TaskMutationResult>;
+  createTask: (request: CanonicalCreateTaskRequest) => Promise<TaskMutationResult>;
+  createTree: (request: CreateTreeInput) => Promise<Tree>;
   startTask: (request: StartTaskRequest) => Promise<TaskMutationResult>;
   reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<TaskMutationResult>;
   resumeBlockedTask: (request: ResumeBlockedTaskRequest) => Promise<TaskMutationResult>;
   reassignTask: (request: ReassignTaskRequest) => Promise<TaskMutationResult>;
   cancelTask: (request: CancelTaskRequest) => Promise<TaskMutationResult>;
   resubmitRework: (request: ResubmitReworkRequest) => Promise<TaskMutationResult>;
-  updateTaskProgress: (task: Task) => Promise<TaskMutationResult>;
-  submitTaskEvidence: (task: Task) => Promise<TaskMutationResult>;
-  reviewTask: (request: ReviewTaskRequest, fallbackTask: Task) => Promise<TaskMutationResult>;
-  createNotification: (request: CreateNotificationRequest) => Promise<NotificationMutationResult>;
-  markNotificationsRead: (
-    notificationIds: string[],
-    fallbackNotifications: AppNotification[],
-  ) => Promise<NotificationsMutationResult>;
+  reviewTask: (request: ReviewTaskRequest) => Promise<TaskMutationResult>;
   replaceTasks: (tasks: Task[]) => AppData;
   replaceNotifications: (notifications: AppNotification[]) => AppData;
+  setSnapshotCache: (cache: IAuthenticatedSnapshotCache) => void;
   reset: () => AppData;
 }
 
-export type DataSourceStatus = 'mock' | 'rest' | 'fallback';
+export type DataSourceStatus = 'rest' | 'cache' | 'error';
 
 export interface SnapshotLoadResult {
   data: AppData;
   source: DataSourceStatus;
   message?: string;
+  cachedAt?: string;
 }
 
 export interface LoginResult {
@@ -100,18 +103,6 @@ export interface TaskMutationResult {
   message?: string;
 }
 
-export interface NotificationsMutationResult {
-  data: AppNotification[];
-  source: DataSourceStatus;
-  message?: string;
-}
-
-export interface NotificationMutationResult {
-  data: AppNotification;
-  source: DataSourceStatus;
-  message?: string;
-}
-
 export interface GreenOpsRestService {
   login: (request: LoginRequest) => Promise<LoginResponse>;
   restoreSession: (session: AuthSession) => void;
@@ -119,19 +110,18 @@ export interface GreenOpsRestService {
   listTasks: (query?: ListTasksQuery) => Promise<TaskDto[]>;
   listTrees: (query?: ListTreesQuery) => Promise<TreeDto[]>;
   listCareHistoryByTree: (treeId: string) => Promise<CareHistoryDto[]>;
-  createTask: (request: CreateTaskRequest) => Promise<TaskDto>;
+  createTask: (request: CanonicalCreateTaskRequest) => Promise<TaskDto>;
+  createTree: (request: CreateTreeInput) => Promise<TreeDto>;
   startTask: (request: StartTaskRequest) => Promise<TaskDto>;
   reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<TaskDto>;
   resumeBlockedTask: (request: ResumeBlockedTaskRequest) => Promise<TaskDto>;
   reassignTask: (request: ReassignTaskRequest) => Promise<TaskDto>;
   cancelTask: (request: CancelTaskRequest) => Promise<TaskDto>;
   resubmitRework: (request: ResubmitReworkRequest) => Promise<TaskDto>;
-  updateTaskProgress: (request: UpdateTaskProgressRequest) => Promise<TaskDto>;
-  submitTaskEvidence: (request: SubmitTaskEvidenceRequest) => Promise<TaskDto>;
   reviewTask: (request: ReviewTaskRequest) => Promise<TaskDto>;
   listNotifications: () => Promise<NotificationDto[]>;
-  createNotification: (request: CreateNotificationRequest) => Promise<NotificationDto>;
-  markNotificationRead: (notificationId: string) => Promise<NotificationDto>;
+  listOperationalTaskTypes: () => Promise<OperationalTaskTypeCatalogItem[]>;
+  listAssignableStaff: () => Promise<AssignableStaffCatalogItem[]>;
 }
 
 class GreenOpsApiError extends Error {
@@ -241,9 +231,19 @@ const buildTaskEvidenceItems = (task: Task): TaskEvidenceDto[] => {
   return items;
 };
 
+const normalizeMobileTaskStatus = (status: Task['status']): Task['status'] => {
+  if (status === 'PENDING') return TaskStatus.PENDING;
+  if (status === 'IN_PROGRESS') return TaskStatus.IN_PROGRESS;
+  if (status === 'WAITING_REVIEW') return TaskStatus.WAITING_REVIEW;
+  if (status === 'REWORK_REQUIRED') return TaskStatus.REWORK_REQUIRED;
+  if (status === 'COMPLETED') return TaskStatus.COMPLETED;
+  return status;
+};
+
 const cloneTasks = (tasks: Task[]): Task[] =>
   tasks.map((task) => ({
     ...task,
+    status: normalizeMobileTaskStatus(task.status),
     ...(task.gpsCheck ? { gpsCheck: cloneGpsCheck(task.gpsCheck) } : {}),
     ...(task.qrCheck ? { qrCheck: cloneQrCheck(task.qrCheck) } : {}),
     ...(task.evidence ? { evidence: buildTaskEvidenceItems(task) } : {}),
@@ -299,58 +299,19 @@ const mapSessionRole = (session: AuthSession): Role | 'UNSUPPORTED' => {
   return 'UNSUPPORTED';
 };
 
-const buildEvidenceRequest = (task: Task): SubmitTaskEvidenceRequest => ({
-  taskId: task.id,
-  gpsCheck: task.gpsCheck ?? {
-    verified: false,
-    distance: 999,
-    timestamp: new Date().toISOString(),
-    lat: 0,
-    lng: 0,
-  },
-  qrCheck: task.qrCheck ?? {
-    verified: false,
-    scannedCode: '',
-    timestamp: new Date().toISOString(),
-  },
-  evidence: buildTaskEvidenceItems(task),
-  checklist: task.checklist.map((item) => ({ ...item })),
-  ...(task.notes ? { notes: task.notes } : {}),
-});
-
-const buildTaskProgressRequest = (task: Task): UpdateTaskProgressRequest => ({
-  taskId: task.id,
-  status: task.status,
-  ...(task.gpsCheck ? { gpsCheck: cloneGpsCheck(task.gpsCheck) } : {}),
-  ...(task.qrCheck ? { qrCheck: cloneQrCheck(task.qrCheck) } : {}),
-  ...(task.beforePhoto ? { beforePhoto: task.beforePhoto } : {}),
-  ...(task.afterPhoto ? { afterPhoto: task.afterPhoto } : {}),
-  ...(task.evidence ? { evidence: buildTaskEvidenceItems(task) } : {}),
-  checklist: task.checklist.map((item) => ({ ...item })),
-  ...(task.notes ? { notes: task.notes } : {}),
-  ...(task.rejectReason ? { rejectReason: task.rejectReason } : {}),
-});
-
-const buildFallbackNotification = (request: CreateNotificationRequest): AppNotification => ({
-  id: `notif-${Date.now()}`,
-  title: request.title,
-  body: request.body,
-  timestamp: request.timestamp ?? new Date().toISOString(),
-  read: request.read ?? false,
-  type: request.type,
-  ...(request.taskId ? { taskId: request.taskId } : {}),
-});
+const emptyAppData = (): AppData => ({ trees: [], staff: [], tasks: [], notifications: [] });
 
 export function createHybridGreenOpsService(
-  seed: AppData = createInitialData(),
+  seed: AppData | undefined,
   envSource: Record<string, string | undefined> = defaultPublicEnvSource,
   sessionManager?: IAuthSessionManager,
   apiClient?: MobileApiClient,
+  initialSnapshotCache?: IAuthenticatedSnapshotCache,
 ): GreenOpsService {
-  const _config = readPublicRuntimeConfig(envSource);
-  // Section 5 & 33: Explicit data source selection. In mock mode, use mock intentionally.
+  readPublicRuntimeConfig(envSource);
 
-  let snapshot = cloneData(seed);
+  let snapshot = cloneData(seed ?? emptyAppData());
+  let snapshotCache = initialSnapshotCache;
   const restService = createGreenOpsRestService(envSource, sessionManager, apiClient);
 
   return {
@@ -375,28 +336,83 @@ export function createHybridGreenOpsService(
       restService.logout();
     },
     loadSnapshot: async () => {
+      const activeSession = sessionManager?.getActiveSessionSync();
+      const userId = activeSession?.user.id;
       try {
-        const [trees, tasks, notifications] = await Promise.all([
-          restService.listTrees(),
-          restService.listTasks(),
-          restService.listNotifications(),
-        ]);
+        const [trees, tasks] = await Promise.all([restService.listTrees(), restService.listTasks()]);
+        const currentNotifications = snapshot.notifications;
+        const nextTasks = cloneTasks(tasks);
+        let notifications = currentNotifications;
+
+        if (activeSession?.user.role === 'staff') {
+          const latestReviewedTask = nextTasks
+            .filter(
+              (task) =>
+                task.assignedStaffId === activeSession.user.id &&
+                (task.status === TaskStatus.COMPLETED || task.status === TaskStatus.REWORK_REQUIRED),
+            )
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+
+          if (latestReviewedTask && !notifications.some((item) => item.taskId === latestReviewedTask.id)) {
+            const needsRework = latestReviewedTask.status === TaskStatus.REWORK_REQUIRED;
+            notifications = [
+              {
+                id: `review-${latestReviewedTask.id}-${latestReviewedTask.version}`,
+                title: needsRework ? 'Công việc cần làm lại' : 'Báo cáo đã được duyệt',
+                body: needsRework
+                  ? `${latestReviewedTask.title}: ${latestReviewedTask.rejectReason ?? 'Quản lý yêu cầu bổ sung bằng chứng.'}`
+                  : `${latestReviewedTask.title} đã hoàn tất sau khi quản lý duyệt.`,
+                timestamp: latestReviewedTask.updatedAt,
+                read: false,
+                type: needsRework ? 'warning' : 'success',
+                taskId: latestReviewedTask.id,
+              },
+              ...notifications,
+            ];
+          }
+        }
+
         snapshot = {
-          ...snapshot,
           trees: trees.map((tree) => ({ ...tree })),
-          tasks: cloneTasks(tasks),
-          notifications: notifications.map((notification) => ({ ...notification })),
+          staff: [],
+          tasks: nextTasks,
+          notifications,
         };
-        return { data: cloneData(snapshot), source: 'rest' };
-      } catch (error) {
-        // Read-only stale cached data with explicit offline/stale indication
+        let cacheMessage: string | undefined;
+        if (userId && snapshotCache) {
+          try {
+            await snapshotCache.save(userId, snapshot);
+          } catch {
+            cacheMessage = 'Đã tải dữ liệu REST nhưng chưa lưu được bộ nhớ ngoại tuyến.';
+          }
+        }
         return {
           data: cloneData(snapshot),
-          source: 'fallback',
-          message: `Stale cached data (offline): ${toLoadFailureMessage(error)}`,
+          source: 'rest',
+          ...(cacheMessage ? { message: cacheMessage } : {}),
+        };
+      } catch (error) {
+        const cached = userId && snapshotCache ? await snapshotCache.load(userId) : null;
+        if (cached) {
+          snapshot = cloneData(cached.data);
+          return {
+            data: cloneData(snapshot),
+            source: 'cache',
+            cachedAt: cached.updatedAt,
+            message: 'API hiện không khả dụng.',
+          };
+        }
+
+        snapshot = emptyAppData();
+        return {
+          data: cloneData(snapshot),
+          source: 'error',
+          message: toLoadFailureMessage(error),
         };
       }
     },
+    listOperationalTaskTypes: async () => await restService.listOperationalTaskTypes(),
+    listAssignableStaff: async () => await restService.listAssignableStaff(),
     listCareHistoryByTree: (treeId) => cloneCareHistory(buildCareHistory(snapshot.tasks, treeId)),
     loadCareHistoryByTree: async (treeId) => {
       try {
@@ -408,8 +424,8 @@ export function createHybridGreenOpsService(
       } catch (error) {
         return {
           data: cloneCareHistory(buildCareHistory(snapshot.tasks, treeId)),
-          source: 'fallback',
-          message: `Stale cached data (offline): ${toLoadFailureMessage(error)}`,
+          source: 'cache',
+          message: `Dữ liệu lưu trên thiết bị: ${toLoadFailureMessage(error)}`,
         };
       }
     },
@@ -432,19 +448,24 @@ export function createHybridGreenOpsService(
       } catch (error) {
         return {
           data: findTreeInSnapshot(snapshot, payload),
-          source: 'fallback',
-          message: `Stale cached data (offline): ${toLoadFailureMessage(error)}`,
+          source: findTreeInSnapshot(snapshot, payload) ? 'cache' : 'error',
+          message: `Không thể tra cứu API: ${toLoadFailureMessage(error)}`,
         };
       }
     },
     // Section 5: In rest mode, mutation failures MUST NOT execute against mock or mutate fake tasks
-    createTask: async (request, _fallbackTask) => {
+    createTask: async (request) => {
       const task = await restService.createTask(request);
       snapshot = {
         ...snapshot,
         tasks: upsertTask(snapshot.tasks, task),
       };
       return { data: cloneTasks([task])[0], source: 'rest' };
+    },
+    createTree: async (request) => {
+      const tree = await restService.createTree(request);
+      snapshot = { ...snapshot, trees: [tree, ...snapshot.trees] };
+      return { ...tree };
     },
     startTask: async (request) => {
       const task = await restService.startTask(request);
@@ -476,49 +497,13 @@ export function createHybridGreenOpsService(
       snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
       return { data: cloneTasks([task])[0], source: 'rest' };
     },
-    updateTaskProgress: async (task) => {
-      const nextTask = await restService.updateTaskProgress(buildTaskProgressRequest(task));
-      snapshot = {
-        ...snapshot,
-        tasks: upsertTask(snapshot.tasks, nextTask),
-      };
-      return { data: cloneTasks([nextTask])[0], source: 'rest' };
-    },
-    submitTaskEvidence: async (task) => {
-      const nextTask = await restService.submitTaskEvidence(buildEvidenceRequest(task));
-      snapshot = {
-        ...snapshot,
-        tasks: upsertTask(snapshot.tasks, nextTask),
-      };
-      return { data: cloneTasks([nextTask])[0], source: 'rest' };
-    },
-    reviewTask: async (request, _fallbackTask) => {
+    reviewTask: async (request) => {
       const nextTask = await restService.reviewTask(request);
       snapshot = {
         ...snapshot,
         tasks: upsertTask(snapshot.tasks, nextTask),
       };
       return { data: cloneTasks([nextTask])[0], source: 'rest' };
-    },
-    createNotification: async (request) => {
-      // Backend does not have notification routes; keep local/mock explicitly
-      const notification = buildFallbackNotification(request);
-      snapshot = {
-        ...snapshot,
-        notifications: [notification, ...snapshot.notifications.filter((item) => item.id !== notification.id)],
-      };
-      return { data: { ...notification }, source: 'mock' };
-    },
-    markNotificationsRead: async (_notificationIds, fallbackNotifications) => {
-      // Backend does not have notification routes; keep local/mock explicitly
-      snapshot = {
-        ...snapshot,
-        notifications: fallbackNotifications.map((notification) => ({ ...notification, read: true })),
-      };
-      return {
-        data: snapshot.notifications.map((notification) => ({ ...notification })),
-        source: 'mock',
-      };
     },
     replaceTasks: (tasks) => {
       snapshot = {
@@ -534,8 +519,11 @@ export function createHybridGreenOpsService(
       };
       return cloneData(snapshot);
     },
+    setSnapshotCache: (cache) => {
+      snapshotCache = cache;
+    },
     reset: () => {
-      snapshot = cloneData(seed);
+      snapshot = cloneData(seed ?? emptyAppData());
       return cloneData(snapshot);
     },
   };
@@ -592,58 +580,68 @@ export function createGreenOpsRestService(
     createTask: async (request) => {
       const payload = {
         title: request.title,
-        taskTypeId: (request as unknown as { taskTypeId?: string }).taskTypeId ?? request.taskType,
+        taskTypeId: request.taskTypeId,
         description: request.description,
         treeId: request.treeId,
         assignedStaffId: request.assignedStaffId,
         deadline: request.deadline,
       };
-      return await client.post<TaskDto>('/v1/tasks', payload);
+      return await client.post<TaskDto>('/v1/tasks', payload, { idempotencyKey: generateSecureUuid() });
+    },
+    createTree: async (request) => {
+      const identity = generateSecureUuid();
+      return await client.post<TreeDto>(
+        '/v1/governance/trees',
+        { ...request, treeId: `TRE-${identity}`, qrCode: `NOVYX-${identity}` },
+        { idempotencyKey: generateSecureUuid() },
+      );
     },
     startTask: async (request) => {
       const { taskId, ...body } = request;
-      return await client.post<TaskDto>(`/v1/tasks/${taskId}/start`, body);
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/start`, body, { idempotencyKey: generateSecureUuid() });
     },
     reportFieldIssue: async (request) => {
       const { taskId, ...body } = request;
-      return await client.post<TaskDto>(`/v1/tasks/${taskId}/field-issue`, body);
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/field-issue`, body, {
+        idempotencyKey: generateSecureUuid(),
+      });
     },
     resumeBlockedTask: async (request) => {
       const { taskId, ...body } = request;
-      return await client.post<TaskDto>(`/v1/tasks/${taskId}/resume`, body);
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/resume`, body, { idempotencyKey: generateSecureUuid() });
     },
     reassignTask: async (request) => {
       const { taskId, ...body } = request;
-      return await client.post<TaskDto>(`/v1/tasks/${taskId}/reassign`, body);
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/reassign`, body, {
+        idempotencyKey: generateSecureUuid(),
+      });
     },
     cancelTask: async (request) => {
       const { taskId, ...body } = request;
-      return await client.post<TaskDto>(`/v1/tasks/${taskId}/cancel`, body);
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/cancel`, body, { idempotencyKey: generateSecureUuid() });
     },
     resubmitRework: async (request) => {
       const { taskId, ...body } = request;
-      return await client.post<TaskDto>(`/v1/tasks/${taskId}/rework/resubmit`, body);
-    },
-    updateTaskProgress: async () => {
-      throw new Error('UNSUPPORTED_IN_REST_MODE: /tasks/:id/progress does not exist on backend.');
-    },
-    submitTaskEvidence: async () => {
-      throw new Error('NOT_CUT_OVER: submitTaskEvidence direct REST call is deprecated. Use durable Outbox pipeline.');
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/rework/resubmit`, body, {
+        idempotencyKey: generateSecureUuid(),
+      });
     },
     reviewTask: async (request) => {
       const { taskId, ...body } = request;
-      const result = await client.post<CanonicalTaskDto>(`/v1/tasks/${taskId}/review`, body);
+      const result = await client.post<CanonicalTaskDto>(`/v1/tasks/${taskId}/review`, body, {
+        idempotencyKey: generateSecureUuid(),
+      });
       return result as unknown as TaskDto;
     },
     listNotifications: async () => {
-      // Backend does not have notification routes; do not emit HTTP calls
+      // Backend does not have notification routes.
       return Promise.resolve([]);
     },
-    createNotification: async () => {
-      throw new Error('NOT_CUT_OVER: Notifications not supported on backend.');
+    listOperationalTaskTypes: async () => {
+      return await client.get<OperationalTaskTypeCatalogItem[]>('/v1/operational/task-types');
     },
-    markNotificationRead: async () => {
-      throw new Error('NOT_CUT_OVER: Notifications not supported on backend.');
+    listAssignableStaff: async () => {
+      return await client.get<AssignableStaffCatalogItem[]>('/v1/operational/assignable-staff');
     },
   };
 }

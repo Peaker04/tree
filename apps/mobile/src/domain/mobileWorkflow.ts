@@ -19,6 +19,8 @@ export type StaffStep =
 export type TreeFilter = 'all' | TreeRiskStatus;
 export type TaskFilter = 'all' | 'open' | TaskStatus;
 
+export const formatTreeAge = (ageYears: number) => (ageYears > 0 ? `${ageYears} năm` : 'Chưa xác định');
+
 export const TREE_FILTER_OPTIONS: { id: TreeFilter; label: string }[] = [
   { id: 'all', label: 'Tất cả' },
   { id: 'abnormal', label: 'Cần chú ý' },
@@ -67,7 +69,9 @@ export const filterTrees = (trees: Tree[], query: string, filter: TreeFilter) =>
 
 export const filterTasks = (tasks: Task[], filter: TaskFilter) => {
   if (filter === 'all') return tasks;
-  if (filter === 'open') return tasks.filter((task) => task.status !== TaskStatus.COMPLETED);
+  if (filter === 'open') {
+    return tasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED');
+  }
   return tasks.filter((task) => task.status === filter);
 };
 
@@ -134,16 +138,42 @@ export const getTaskActionPriority = (task: Task) => {
   return 4;
 };
 
-export const getNextActionTask = (tasks: Task[], staffId = 'STF-01') =>
+export const getNextActionTask = (tasks: Task[], staffId?: string) =>
   [...tasks]
-    .filter((task) => task.assignedStaffId === staffId && task.status !== TaskStatus.COMPLETED)
+    .filter(
+      (task) =>
+        (!staffId || task.assignedStaffId === staffId) &&
+        (task.status === TaskStatus.PENDING ||
+          task.status === TaskStatus.IN_PROGRESS ||
+          task.status === TaskStatus.REWORK_REQUIRED),
+    )
     .sort((first, second) => {
       const priority = getTaskActionPriority(first) - getTaskActionPriority(second);
       if (priority !== 0) return priority;
       return new Date(first.deadline).getTime() - new Date(second.deadline).getTime();
     })[0] ?? null;
 
+const inferReworkStep = (task: Task): StaffStep | null => {
+  if (task.status !== TaskStatus.REWORK_REQUIRED) return null;
+  const target = task.reworkTarget?.toUpperCase();
+  if (target === 'GPS') return 'GPS';
+  if (target === 'QR') return 'QR';
+  if (target === 'BEFORE') return 'BEFORE';
+  if (target === 'CHECKLIST') return 'CHECKLIST';
+  if (target === 'AFTER') return 'AFTER';
+
+  const reason = normalizeSearch(task.rejectReason ?? '');
+  if (reason.includes('gps')) return 'GPS';
+  if (reason.includes('qr')) return 'QR';
+  if (reason.includes('checklist')) return 'CHECKLIST';
+  if (reason.includes('anh sau')) return 'AFTER';
+  if (reason.includes('anh truoc')) return 'BEFORE';
+  return 'DETAIL';
+};
+
 export const getNextProofStep = (task: Task): StaffStep => {
+  const reworkStep = inferReworkStep(task);
+  if (reworkStep) return reworkStep;
   if (!task.gpsCheck?.verified) return 'GPS';
   if (!task.qrCheck?.verified) return 'QR';
   if (!task.beforePhoto) return 'BEFORE';
@@ -234,7 +264,20 @@ export const getTaskProofWorkflowState = (task: Task): TaskProofWorkflowState =>
 
   let activeActionText = '';
   if (!isSubmittedOrCompleted) {
-    if (rawNextStep === 'REVIEW') {
+    if (task.status === TaskStatus.REWORK_REQUIRED && task.rejectReason) {
+      activeActionText =
+        rawNextStep === 'GPS'
+          ? 'Xác minh lại GPS'
+          : rawNextStep === 'QR'
+            ? 'Quét lại mã cây'
+            : rawNextStep === 'BEFORE'
+              ? 'Chụp lại ảnh trước xử lý'
+              : rawNextStep === 'CHECKLIST'
+                ? 'Kiểm tra lại checklist'
+                : rawNextStep === 'AFTER'
+                  ? 'Chụp lại ảnh sau xử lý'
+                  : 'Xem phần cần làm lại';
+    } else if (rawNextStep === 'REVIEW') {
       activeActionText = 'Kiểm tra & Gửi duyệt kết quả';
     } else {
       const activeStep = steps.find((s) => s.isCurrent);
@@ -289,6 +332,6 @@ export const getEvidenceTransportMeta = (task: Task) => {
     label:
       localFiles.length > 0
         ? `Multipart: ${localFiles.length} file ảnh thật + metadata`
-        : 'JSON: metadata và URL ảnh demo/remote',
+        : 'JSON: metadata và URL ảnh đã đồng bộ',
   };
 };

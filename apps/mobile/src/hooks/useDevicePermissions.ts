@@ -1,3 +1,4 @@
+import { AppState } from 'react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PermissionResponse } from 'expo-camera';
 import type { LocationPermissionResponse } from 'expo-location';
@@ -49,6 +50,9 @@ export function useDevicePermissions() {
     try {
       const response = await loadCameraPermission();
       setCameraPermission(response);
+      setPrompt((current) =>
+        current?.kind === 'camera' ? { ...current, state: classifyPermissionResponse(response) } : current,
+      );
       clearRuntimeUnavailable('camera');
       return response;
     } catch (error) {
@@ -61,6 +65,9 @@ export function useDevicePermissions() {
     try {
       const response = await loadForegroundLocationPermission();
       setLocationPermission(response);
+      setPrompt((current) =>
+        current?.kind === 'location' ? { ...current, state: classifyPermissionResponse(response) } : current,
+      );
       clearRuntimeUnavailable('location');
       return response;
     } catch (error) {
@@ -72,6 +79,13 @@ export function useDevicePermissions() {
   useEffect(() => {
     void refreshCameraPermission();
     void refreshLocationPermission();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void refreshCameraPermission();
+        void refreshLocationPermission();
+      }
+    });
+    return () => subscription.remove();
   }, [refreshCameraPermission, refreshLocationPermission]);
 
   const showRationaleForPurpose = useCallback((purpose: DevicePermissionPurpose) => {
@@ -112,7 +126,7 @@ export function useDevicePermissions() {
   );
 
   const requestLocationForPurpose = useCallback(
-    async (purpose: Extract<DevicePermissionPurpose, 'staff-gps'> = 'staff-gps') => {
+    async (purpose: Extract<DevicePermissionPurpose, 'staff-gps' | 'manager-tree-gps'> = 'staff-gps') => {
       setPrompt({ kind: 'location', purpose, state: 'rationale' });
       try {
         const response = await requestForegroundLocationPermission();

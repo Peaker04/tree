@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleProp, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { CameraView, type BarcodeScanningResult } from 'expo-camera';
 import { DevicePermissionState } from './DevicePermissionState';
 import {
@@ -64,13 +64,16 @@ export function DeviceCameraView({
     <View style={style}>
       <CameraView
         ref={cameraRef as React.Ref<CameraView>}
-        style={{ flex: 1 }}
+        style={StyleSheet.absoluteFill}
         facing="back"
         barcodeScannerSettings={onBarcodeScanned ? { barcodeTypes: ['qr'] } : undefined}
         onBarcodeScanned={onBarcodeScanned}
-      >
-        {children}
-      </CameraView>
+      />
+      {children ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {children}
+        </View>
+      ) : null}
     </View>
   );
 }

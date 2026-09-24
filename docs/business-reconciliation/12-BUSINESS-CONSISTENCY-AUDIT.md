@@ -510,9 +510,9 @@ Toàn bộ 16 biểu đồ trong thư mục `docs/diagrams/` và tệp hướng 
 | `11-evidence-submission-sequence.html` | `HISTORICAL_SUPERSEDED` | Thay thế bởi `proposed-01` | N/A | **CÓ** (Historical Banner) | **PASS — Correctly Classified** |
 | `12-architecture-dependency-map.html` | `DEFERRED_TARGET_VIEW` | AGENTS.md, Phase 11 | N/A | **CÓ** (Deferred ADR Banner) | **PASS — Correctly Deferred** |
 | `proposed-01-current-vs-recommended-workflow.html` | `PROPOSED_TARGET_VIEW` | WORKFLOWS.md, 08-WORKFLOW | **CÓ** | **CÓ** (Derived View) | **PASS** |
-| `proposed-02-mvp-operational-swimlane.html` | `PROPOSED_TARGET_VIEW` | WORKFLOWS.md, 08-WORKFLOW | **CÓ** | **CÓ** (Derived View) | **PASS** |
-| `proposed-03-minimal-task-lifecycle.html` | `PROPOSED_TARGET_VIEW` | WORKFLOWS.md, DOMAIN.md | **CÓ** | **CÓ** (Derived View) | **PASS** |
-| `proposed-04-proof-policy-and-rework.html` | `PROPOSED_TARGET_VIEW` | WORKFLOWS.md, DOMAIN.md | **CÓ** | **CÓ** (Derived View) | **PASS** |
+| `03-operational-workflow.html` | `PROPOSED_TARGET_VIEW` | WORKFLOWS.md, 08-WORKFLOW | **CÓ** | **CÓ** (Derived View) | **PASS** |
+| `04-task-lifecycle.html` | `PROPOSED_TARGET_VIEW` | WORKFLOWS.md, DOMAIN.md | **CÓ** | **CÓ** (Derived View) | **PASS** |
+| `05-proof-policy-and-rework.html` | `PROPOSED_TARGET_VIEW` | WORKFLOWS.md, DOMAIN.md | **CÓ** | **CÓ** (Derived View) | **PASS** |
 | `README.md` | `CATALOG & NAVIGATION INDEX` | Toàn bộ 16 biểu đồ | **CÓ** | **CÓ** (Discipline Index) | **PASS** |
 
 ---

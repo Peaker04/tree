@@ -1,19 +1,24 @@
 export type AppEnvironment = 'development' | 'staging' | 'production';
-export type DataSourceMode = 'mock' | 'rest';
 
 export interface PublicRuntimeConfig {
   appEnv: AppEnvironment;
   apiBaseUrl: string;
-  dataSource: DataSourceMode;
+  dataSource: 'rest';
 }
 
 const allowedAppEnvironments = new Set<AppEnvironment>(['development', 'staging', 'production']);
-const allowedDataSources = new Set<DataSourceMode>(['mock', 'rest']);
 
 export function readPublicRuntimeConfig(source: Record<string, string | undefined>): PublicRuntimeConfig {
   const appEnv = source.EXPO_PUBLIC_APP_ENV;
-  const apiBaseUrl = source.EXPO_PUBLIC_API_BASE_URL;
-  const rawDataSource = source.EXPO_PUBLIC_DATA_SOURCE;
+  const apiBaseUrl = source.EXPO_PUBLIC_API_BASE_URL ?? source.EXPO_PUBLIC_API_FUD ?? source.EXPO_PUBLIC_API_HOME;
+  const apiBaseUrlSource = source.EXPO_PUBLIC_API_BASE_URL
+    ? 'EXPO_PUBLIC_API_BASE_URL'
+    : source.EXPO_PUBLIC_API_FUD
+      ? 'EXPO_PUBLIC_API_FUD'
+      : source.EXPO_PUBLIC_API_HOME
+        ? 'EXPO_PUBLIC_API_HOME'
+        : 'EXPO_PUBLIC_API_BASE_URL';
+  const legacyDataSource = source.EXPO_PUBLIC_DATA_SOURCE;
   const errors: string[] = [];
 
   if (!appEnv || !allowedAppEnvironments.has(appEnv as AppEnvironment)) {
@@ -21,19 +26,17 @@ export function readPublicRuntimeConfig(source: Record<string, string | undefine
   }
 
   if (!apiBaseUrl) {
-    errors.push('EXPO_PUBLIC_API_BASE_URL is required.');
+    errors.push('EXPO_PUBLIC_API_BASE_URL, EXPO_PUBLIC_API_FUD, or EXPO_PUBLIC_API_HOME is required.');
   } else {
     try {
       new URL(apiBaseUrl);
     } catch {
-      errors.push('EXPO_PUBLIC_API_BASE_URL must be a valid absolute URL.');
+      errors.push(`${apiBaseUrlSource} must be a valid absolute URL.`);
     }
   }
 
-  if (!rawDataSource || rawDataSource.trim() === '') {
-    errors.push('EXPO_PUBLIC_DATA_SOURCE is required.');
-  } else if (!allowedDataSources.has(rawDataSource as DataSourceMode)) {
-    errors.push('EXPO_PUBLIC_DATA_SOURCE must be mock or rest.');
+  if (legacyDataSource && legacyDataSource !== 'rest') {
+    errors.push('EXPO_PUBLIC_DATA_SOURCE=mock is no longer supported; mobile runtime is REST-only.');
   }
 
   if (errors.length > 0) {
@@ -41,12 +44,12 @@ export function readPublicRuntimeConfig(source: Record<string, string | undefine
   }
 
   if (!apiBaseUrl) {
-    throw new Error('Invalid public runtime config: EXPO_PUBLIC_API_BASE_URL is required.');
+    throw new Error('Invalid public runtime config: a public API URL is required.');
   }
 
   return {
     appEnv: appEnv as AppEnvironment,
     apiBaseUrl,
-    dataSource: rawDataSource as DataSourceMode,
+    dataSource: 'rest',
   };
 }

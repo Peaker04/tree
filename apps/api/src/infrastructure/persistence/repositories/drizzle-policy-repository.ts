@@ -8,6 +8,19 @@ import {
 import type { IPolicyRepository } from '../../../modules/policy-template-governance/application/ports/policy-repository.port';
 import * as schema from '../schema';
 
+type StoredChecklistTemplateItem = ChecklistTemplateItem | { id?: string; label?: string; required?: boolean };
+
+export function normalizeChecklistTemplateItems(items: unknown): ChecklistTemplateItem[] {
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((item, index) => {
+    const stored = item as StoredChecklistTemplateItem;
+    const text = 'text' in stored ? stored.text : stored.label;
+    if (typeof text !== 'string' || text.trim().length === 0) return [];
+    const order = 'order' in stored && typeof stored.order === 'number' ? stored.order : index + 1;
+    return [{ text: text.trim(), order }];
+  });
+}
+
 export class DrizzlePolicyRepository implements IPolicyRepository {
   constructor(private readonly db: NodePgDatabase<typeof schema>) {}
 
@@ -56,7 +69,7 @@ export class DrizzlePolicyRepository implements IPolicyRepository {
       id: r.id,
       taskTypeId: r.taskTypeId,
       versionNumber: r.versionNumber,
-      templateItems: r.templateItems as ChecklistTemplateItem[],
+      templateItems: normalizeChecklistTemplateItems(r.templateItems),
       templateDescription: r.templateDescription ?? undefined,
       publishedAt: r.publishedAt,
     });

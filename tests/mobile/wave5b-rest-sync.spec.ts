@@ -1755,13 +1755,81 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
   // SECTION 22: REST AUTHORITY TESTS (R01 - R08)
   // =========================================================================
   describe('REST Authority & Boundary Invariants (R01 - R08)', () => {
-    it('R01: missing EXPO_PUBLIC_DATA_SOURCE fails configuration', () => {
+    it('R01: runtime defaults to REST and rejects the removed mock mode', () => {
+      expect(
+        readPublicRuntimeConfig({
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+        }).dataSource,
+      ).toBe('rest');
+      expect(
+        readPublicRuntimeConfig({
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_FUD: 'http://10.12.64.63:3000',
+          EXPO_PUBLIC_API_HOME: 'http://192.168.0.107:3000',
+        }).apiBaseUrl,
+      ).toBe('http://10.12.64.63:3000');
       expect(() =>
         readPublicRuntimeConfig({
           EXPO_PUBLIC_APP_ENV: 'development',
           EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+          EXPO_PUBLIC_DATA_SOURCE: 'mock',
         }),
-      ).toThrow(/EXPO_PUBLIC_DATA_SOURCE is required/);
+      ).toThrow(/mock is no longer supported/);
+    });
+
+    it('R02: REST failure uses only the matching authenticated cache and never demo records', async () => {
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'user-a', email: 's@novyx.test', role: 'staff' },
+      });
+      const sessionManager = new AuthSessionManager('http://localhost:3000/v1', storage);
+      await sessionManager.initialize();
+      const apiClient = new MobileApiClient('http://localhost:3000/v1', sessionManager);
+      globalThis.fetch = vi.fn(async () => {
+        throw new TypeError('offline');
+      });
+
+      const cache = {
+        load: vi.fn(async (userId: string) =>
+          userId === 'user-a'
+            ? {
+                updatedAt: '2026-09-20T10:00:00.000Z',
+                data: {
+                  trees: [],
+                  staff: [],
+                  tasks: [],
+                  notifications: [],
+                },
+              }
+            : null,
+        ),
+        save: vi.fn(),
+      };
+      const service = createHybridGreenOpsService(
+        undefined,
+        {
+          EXPO_PUBLIC_APP_ENV: 'development',
+          EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
+        },
+        sessionManager,
+        apiClient,
+        cache,
+      );
+
+      const cached = await service.loadSnapshot();
+      expect(cached.source).toBe('cache');
+      expect(cached.cachedAt).toBe('2026-09-20T10:00:00.000Z');
+      expect(cache.load).toHaveBeenCalledWith('user-a');
+      expect(cached.data).toEqual({ trees: [], staff: [], tasks: [], notifications: [] });
+
+      cache.load.mockResolvedValueOnce(null);
+      const uncached = await service.loadSnapshot();
+      expect(uncached.source).toBe('error');
+      expect(uncached.data).toEqual({ trees: [], staff: [], tasks: [], notifications: [] });
     });
 
     it('R03: rest explicitly selects REST mode', async () => {
@@ -1773,7 +1841,12 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         user: { id: 'u1', email: 's@novyx.test', role: 'staff' },
       });
       const sessionManager = new AuthSessionManager('http://localhost:3000/v1', storage);
+      await sessionManager.initialize();
       const apiClient = new MobileApiClient('http://localhost:3000/v1', sessionManager);
+      const cache = {
+        load: vi.fn(async () => null),
+        save: vi.fn(async (_userId: string, data: unknown) => ({ data, updatedAt: 'now' })),
+      };
 
       globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
@@ -1801,9 +1874,11 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         },
         sessionManager,
         apiClient,
+        cache,
       );
       const snapshot = await service.loadSnapshot();
       expect(snapshot.source).toBe('rest');
+      expect(cache.save).toHaveBeenCalledWith('u1', { trees: [], staff: [], tasks: [], notifications: [] });
     });
 
     it('R04: REST mutation failure never invokes mock mutation', async () => {
@@ -1834,12 +1909,11 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         service.createTask(
           {
             title: 'New Task Fail',
-            taskType: 'TREE_PLANTING' as const,
+            taskTypeId: 'tt-1',
             description: 'Desc',
             treeId: 'tr-1',
             assignedStaffId: 'st-1',
             deadline: '2026-12-31',
-            checklist: [],
           },
           {
             id: 'mock-id',
@@ -1863,27 +1937,14 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       expect(service.getSnapshot().tasks.length).toBe(initialTasks);
     });
 
-    it('R05: legacy /progress URL is never emitted in REST mode', async () => {
-      const fetchSpy = vi.fn();
-      globalThis.fetch = fetchSpy;
-
-      const service = createHybridGreenOpsService(undefined, {
-        EXPO_PUBLIC_APP_ENV: 'development',
-        EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
-        EXPO_PUBLIC_DATA_SOURCE: 'rest',
-      });
-
-      const dummyTask = service.getSnapshot().tasks[0];
-      await expect(service.updateTaskProgress(dummyTask)).rejects.toThrow(/UNSUPPORTED_IN_REST_MODE/);
-      expect(fetchSpy).not.toHaveBeenCalled();
-    });
-
     it('R06: PATCH /tasks/:id/review is never emitted (uses POST /v1/tasks/:id/review)', async () => {
       let capturedMethod = '';
       let capturedUrl = '';
+      let capturedIdempotencyKey: string | null = null;
       globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         capturedMethod = init?.method ?? 'GET';
         capturedUrl = String(input);
+        capturedIdempotencyKey = new Headers(init?.headers).get('Idempotency-Key');
         return new Response(JSON.stringify({ data: { id: 'task-1', version: 2, status: 'APPROVED', checklist: [] } }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -1926,9 +1987,10 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       expect(capturedMethod).toBe('POST');
       expect(capturedUrl).toContain('/v1/tasks/task-1/review');
       expect(capturedMethod).not.toBe('PATCH');
+      expect(capturedIdempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     });
 
-    it('R07: notification server calls are not emitted when backend capability does not exist', async () => {
+    it('R07: notification list does not emit a server call when capability does not exist', async () => {
       const fetchSpy = vi.fn();
       globalThis.fetch = fetchSpy;
 
@@ -1941,19 +2003,101 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       const notifications = await restService.listNotifications();
       expect(notifications).toEqual([]);
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
 
-      const hybridService = createHybridGreenOpsService(undefined, {
-        EXPO_PUBLIC_APP_ENV: 'development',
-        EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
-        EXPO_PUBLIC_DATA_SOURCE: 'rest',
+    it('R07B: operational catalogs use authenticated canonical Manager endpoints', async () => {
+      const requestedUrls: string[] = [];
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        requestedUrls.push(url);
+        const data = url.endsWith('/operational/task-types')
+          ? [{ id: 'TT-1', name: 'Cắt tỉa', proofProfile: 'CHANGE_PROOF' }]
+          : [{ id: 'staff-uuid', displayName: 'staff', email: 'staff@novyx.test' }];
+        return new Response(JSON.stringify({ data }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      });
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'manager-token',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'manager-1', email: 'manager@novyx.test', role: 'manager' },
+      });
+      const sessionManager = new AuthSessionManager('http://localhost:3000', storage);
+      const restService = createGreenOpsRestService(
+        { EXPO_PUBLIC_APP_ENV: 'development', EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000' },
+        sessionManager,
+      );
+
+      await expect(restService.listOperationalTaskTypes()).resolves.toEqual([
+        { id: 'TT-1', name: 'Cắt tỉa', proofProfile: 'CHANGE_PROOF' },
+      ]);
+      await expect(restService.listAssignableStaff()).resolves.toEqual([
+        { id: 'staff-uuid', displayName: 'staff', email: 'staff@novyx.test' },
+      ]);
+      expect(requestedUrls).toEqual([
+        'http://localhost:3000/v1/operational/task-types',
+        'http://localhost:3000/v1/operational/assignable-staff',
+      ]);
+    });
+
+    it('R07C: canonical Create Task sends taskTypeId and no client checklist', async () => {
+      let capturedBody: unknown;
+      let capturedHeaders: HeadersInit | undefined;
+      globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        capturedBody = JSON.parse(String(init?.body));
+        capturedHeaders = init?.headers;
+        return new Response(
+          JSON.stringify({
+            data: {
+              id: 'task-1',
+              version: 1,
+              title: 'Cắt tỉa cành khô',
+              taskTypeId: 'TT-CHANGE',
+              treeId: 'tree-1',
+              assignedStaffId: 'staff-uuid',
+              deadline: '2026-12-31',
+              status: 'PENDING',
+              checklist: [],
+            },
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } },
+        );
+      });
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'manager-token',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'manager-1', email: 'manager@novyx.test', role: 'manager' },
+      });
+      const service = createGreenOpsRestService(
+        { EXPO_PUBLIC_APP_ENV: 'development', EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000' },
+        new AuthSessionManager('http://localhost:3000', storage),
+      );
+
+      await service.createTask({
+        title: 'Cắt tỉa cành khô',
+        taskTypeId: 'TT-CHANGE',
+        description: 'Loại bỏ cành khô',
+        treeId: 'tree-1',
+        assignedStaffId: 'staff-uuid',
+        deadline: '2026-12-31',
       });
 
-      await hybridService.createNotification({
-        title: 'Local Alert',
-        body: 'Testing',
-        type: 'SYSTEM',
+      expect(capturedBody).toEqual({
+        title: 'Cắt tỉa cành khô',
+        taskTypeId: 'TT-CHANGE',
+        description: 'Loại bỏ cành khô',
+        treeId: 'tree-1',
+        assignedStaffId: 'staff-uuid',
+        deadline: '2026-12-31',
       });
-      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(new Headers(capturedHeaders).get('Idempotency-Key')).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
     });
 
     it('R08: new production MobileApiClient uses shared AuthSessionManager session', async () => {
@@ -1995,7 +2139,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         envSource: {
           EXPO_PUBLIC_APP_ENV: 'development',
           EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
-          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
         },
       });
 
@@ -2028,7 +2172,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         envSource: {
           EXPO_PUBLIC_APP_ENV: 'development',
           EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
-          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
         },
       });
 
@@ -2044,7 +2188,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         envSource: {
           EXPO_PUBLIC_APP_ENV: 'development',
           EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
-          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
         },
       });
       expect(runtime.coordinator).toBeNull();
@@ -2076,7 +2220,9 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
           EXPO_PUBLIC_DATA_SOURCE: 'rest',
         },
       });
-      await runtime.start();
+      const restoredSession = await runtime.start();
+      expect(restoredSession?.user.id).toBe('u1');
+      expect(runtime.sessionManager.getActiveSessionSync()?.accessToken).toBe('active-session-token');
       await seedTestTask(runtime.taskRepo as SqliteMobileTaskRepository, 't-r12');
 
       let dispatchCalled = false;
@@ -2223,7 +2369,7 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
         envSource: {
           EXPO_PUBLIC_APP_ENV: 'development',
           EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/v1',
-          EXPO_PUBLIC_DATA_SOURCE: 'mock',
+          EXPO_PUBLIC_DATA_SOURCE: 'rest',
         },
       });
 
@@ -2442,31 +2588,17 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       expect(coordinator.processAll).toHaveBeenCalled();
     });
 
-    it('R1X-M05: mock mode blocks staff dispatch', async () => {
-      const storage = {
-        loadSession: async () => ({
-          accessToken: 'a',
-          refreshToken: 'r',
-          user: { id: 'staff1', email: 's@t.com', role: 'staff' },
-          expiresAt: '2100-01-01',
-        }),
-      } as unknown;
-      const coordinator = { processAll: vi.fn(async () => [{ id: 'evt-1', success: true }]) } as unknown;
-
-      const runtime = new MobileSyncRuntime({
-        storage,
-        envSource: {
-          EXPO_PUBLIC_APP_ENV: 'development',
-          EXPO_PUBLIC_API_BASE_URL: 'http://localhost',
-          EXPO_PUBLIC_DATA_SOURCE: 'mock',
-        },
-      });
-      runtime.coordinator = coordinator;
-      runtime.isStarted = true;
-
-      const res = await runtime.triggerSync();
-      expect(res.length).toBe(0);
-      expect(coordinator.processAll).not.toHaveBeenCalled();
+    it('R1X-M05: removed mock mode is rejected before runtime startup', () => {
+      expect(
+        () =>
+          new MobileSyncRuntime({
+            envSource: {
+              EXPO_PUBLIC_APP_ENV: 'development',
+              EXPO_PUBLIC_API_BASE_URL: 'http://localhost',
+              EXPO_PUBLIC_DATA_SOURCE: 'mock',
+            },
+          }),
+      ).toThrow(/mock is no longer supported/);
     });
   });
 });

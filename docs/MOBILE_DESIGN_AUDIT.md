@@ -7,6 +7,10 @@
 
 ---
 
+## Authority Status
+
+This audit remains a useful current-state inventory and migration backlog, but it is not a design authority. Root `DESIGN.md` and `docs/MOBILE_UI_RULES.md` govern active decisions; the approved master plan at `.planning/NOVYX_GREENOPS_TRUTHFUL_MOBILE_E2E_MASTER_PLAN.md` controls execution order. Line references and findings must be revalidated before implementation because the working tree has advanced since this audit.
+
 ## 1. Executive Summary
 
 This repository-wide audit systematically evaluates the NOVYX GreenOps mobile application (`apps/mobile`) against the newly established, authoritative [`DESIGN.md`](../DESIGN.md).

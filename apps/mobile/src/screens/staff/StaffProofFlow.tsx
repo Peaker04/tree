@@ -1,21 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as ExpoCamera from 'expo-camera';
 import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { DeviceCameraView, type DeviceCameraViewHandle } from '../../components/DeviceCameraView';
 import { DevicePermissionState } from '../../components/DevicePermissionState';
 import { Header, ChecklistLine, PhotoPair, ProofChainCard } from '../../components/presentation/TaskSurfaces';
 import { TreeLookupResult } from '../../components/presentation/TreeSurfaces';
-import { getDistanceMeters } from '../../data';
+import { getDistanceMeters } from '../../domain/geo';
 import { useDevicePermissions } from '../../hooks/useDevicePermissions';
 import { openDeviceSettings, type DevicePermissionPurpose } from '../../services/devicePermissions';
 import { colors, radius } from '../../theme/tokens';
 import { AppNotification, CareHistory, Task, TaskStatus, Tree } from '../../types';
-import { getMockPhotoSource, mockAfterPhotoUri, mockBeforePhotoUri } from '../../assets/mockEvidenceAssets';
 import type { CreateNotificationRequest, ReportFieldIssueRequest, ResubmitReworkRequest } from '@novyx/contracts';
 import {
   StaffStep,
-  getEvidenceTransportMeta,
   getTaskProofCount,
   getTaskProofGaps,
   getTaskStatusMeta,
@@ -24,7 +23,6 @@ import {
   upsertPhotoEvidence,
 } from '../../domain/mobileWorkflow';
 
-type CameraRuntimeMode = 'mock' | 'native';
 type CameraModule = typeof import('expo-camera');
 
 let cachedMapsModule: typeof import('react-native-maps') | null | undefined;
@@ -38,6 +36,8 @@ export function StaffProofFlow(props: {
   trees: Tree[];
   staffTasks: Task[];
   openTasks: Task[];
+  mapReturnStep: StaffStep;
+  setMapReturnStep: (step: StaffStep) => void;
   userLat: number;
   userLng: number;
   setUserLat: (lat: number) => void;
@@ -51,21 +51,20 @@ export function StaffProofFlow(props: {
   submitTaskEvidence: (task: Task) => Promise<Task>;
   resubmitRework: (request: ResubmitReworkRequest) => Promise<Task>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
-  isRestMode?: boolean;
 }) {
   const { height: windowHeight } = useWindowDimensions();
   const [locating, setLocating] = useState(false);
-  const [locationMessage, setLocationMessage] = useState('Dữ liệu ban đầu đang đặt gần cây để kiểm thử luồng.');
+  const [locationMessage, setLocationMessage] = useState('Chưa có vị trí hiện trường.');
   const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<number | null>(null);
   const [locationCapturedAt, setLocationCapturedAt] = useState<string | null>(null);
   const [qrErrorMessage, setQrErrorMessage] = useState('');
   const [scannedTree, setScannedTree] = useState<Tree | null>(null);
   const [qrLookupLoading, setQrLookupLoading] = useState(false);
   const [qrLookupMessage, setQrLookupMessage] = useState('');
-  const [cameraMode, setCameraMode] = useState<CameraRuntimeMode>(props.isRestMode ? 'native' : 'mock');
-  const [cameraModule, setCameraModule] = useState<CameraModule | null>(null);
+  const cameraModule: CameraModule = ExpoCamera;
   const [cameraRuntimeMessage, setCameraRuntimeMessage] = useState('');
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
   const [gpsPermissionVisible, setGpsPermissionVisible] = useState(false);
   const [startingTask, setStartingTask] = useState(false);
   const [reportingIssue, setReportingIssue] = useState(false);
@@ -84,11 +83,10 @@ export function StaffProofFlow(props: {
   } = useDevicePermissions();
 
   const activeTree = props.activeTask ? props.trees.find((tree) => tree.id === props.activeTask?.treeId) : null;
+  const isRework = props.activeTask?.status === TaskStatus.REWORK_REQUIRED;
   const distance = activeTree ? getDistanceMeters(props.userLat, props.userLng, activeTree.lat, activeTree.lng) : 999;
   const selectedMapTask = props.activeTask ?? props.openTasks[0] ?? props.staffTasks[0] ?? null;
   const selectedMapTree = selectedMapTask ? props.trees.find((tree) => tree.id === selectedMapTask.treeId) : null;
-  const assignedTreeIds = new Set(props.staffTasks.map((task) => task.treeId));
-  const assignedTrees = props.trees.filter((tree) => assignedTreeIds.has(tree.id));
 
   const staffCameraPurpose: Exclude<DevicePermissionPurpose, 'staff-gps'> | null =
     props.step === 'QR'
@@ -101,37 +99,19 @@ export function StaffProofFlow(props: {
           ? 'staff-after-photo'
           : null;
 
-  useEffect(() => {
-    if (cameraMode !== 'native') {
-      setCameraModule(null);
+  useEffect(
+    () => () => {
       releaseCamera();
-      return;
-    }
-
-    let mounted = true;
-
-    import('expo-camera')
-      .then((module) => {
-        if (!mounted) return;
-        setCameraRuntimeMessage('');
-        setCameraModule(module);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setCameraRuntimeMessage(
-          'Runtime hiện tại chưa có expo-camera. Cần rebuild dev client sau khi cài native module.',
-        );
-        setCameraModule(null);
-        releaseCamera();
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [cameraMode, releaseCamera]);
+    },
+    [releaseCamera],
+  );
 
   useEffect(() => {
-    if (cameraMode !== 'native' || !staffCameraPurpose) {
+    setCameraRuntimeMessage('');
+  }, [staffCameraPurpose]);
+
+  useEffect(() => {
+    if (!staffCameraPurpose) {
       releaseCamera();
       return;
     }
@@ -139,14 +119,7 @@ export function StaffProofFlow(props: {
     if (cameraPermission?.granted && activeCameraPurpose !== staffCameraPurpose) {
       void requestCameraForPurpose(staffCameraPurpose);
     }
-  }, [
-    activeCameraPurpose,
-    cameraMode,
-    cameraPermission?.granted,
-    releaseCamera,
-    requestCameraForPurpose,
-    staffCameraPurpose,
-  ]);
+  }, [activeCameraPurpose, cameraPermission?.granted, releaseCamera, requestCameraForPurpose, staffCameraPurpose]);
 
   const patchTask = (task: Task, patch: Partial<Task>) => {
     const nextTask = { ...task, ...patch, updatedAt: new Date().toISOString() };
@@ -167,18 +140,24 @@ export function StaffProofFlow(props: {
   const lookupTreeByQr = async (payload: string) => {
     setQrLookupLoading(true);
     setQrLookupMessage('');
-    const matchedTree = await props.lookupTreeByQr(payload);
-    setQrLookupLoading(false);
+    try {
+      const matchedTree = await props.lookupTreeByQr(payload);
+      if (!matchedTree) {
+        setScannedTree(null);
+        setQrErrorMessage(`Không tìm thấy cây với mã ${payload}. Hãy kiểm tra lại QR hoặc đồng bộ dữ liệu.`);
+        return;
+      }
 
-    if (!matchedTree) {
+      resetQrError();
+      setScannedTree(matchedTree);
+      releaseCamera();
+      setQrLookupMessage(`Đã tìm thấy ${matchedTree.name}.`);
+    } catch {
       setScannedTree(null);
-      setQrErrorMessage(`Không tìm thấy cây với mã ${payload}. Hãy kiểm tra lại QR hoặc đồng bộ dữ liệu.`);
-      return;
+      setQrErrorMessage('Không thể tra cứu cây. Kiểm tra kết nối rồi thử lại.');
+    } finally {
+      setQrLookupLoading(false);
     }
-
-    resetQrError();
-    setScannedTree(matchedTree);
-    setQrLookupMessage(`Đã tra cứu ${matchedTree.qrCode} từ API hoặc dữ liệu fallback.`);
   };
 
   const readDeviceLocationAfterPermission = async () => {
@@ -187,9 +166,7 @@ export function StaffProofFlow(props: {
       const permission = await requestLocationForPurpose('staff-gps');
       if (!permission?.granted) {
         setLocationMessage(
-          permission?.canAskAgain === false
-            ? 'Quyền vị trí đang bị chặn. Mở cài đặt Android và bật quyền Vị trí cho NOVYX.'
-            : 'Chưa có quyền vị trí. Cấp quyền để lấy GPS hiện trường.',
+          permission?.canAskAgain === false ? 'Bật quyền Vị trí trong Cài đặt.' : 'Cấp quyền vị trí để tiếp tục.',
         );
         return;
       }
@@ -212,7 +189,7 @@ export function StaffProofFlow(props: {
       setLocationMessage(
         message.includes('ExpoLocation')
           ? 'Runtime hiện tại chưa có ExpoLocation. Hãy rebuild dev client hoặc mở bằng Expo Go đúng SDK.'
-          : 'Không đọc được GPS thiết bị. Kiểm tra quyền vị trí hoặc tín hiệu ngoài trời.',
+          : 'GPS chưa sẵn sàng. Thử lại ngoài trời.',
       );
     } finally {
       setLocating(false);
@@ -254,13 +231,17 @@ export function StaffProofFlow(props: {
         ...(locationAccuracyMeters !== null ? { accuracyMeters: locationAccuracyMeters } : {}),
       },
     });
-    props.setStep(nextStep);
+    props.setStep(task.qrCheck?.verified ? 'BEFORE' : nextStep);
   };
 
   if (props.step === 'MAP') {
     return (
-      <View style={[styles.screenPad, styles.mapScreen]}>
-        <Header title="Bản đồ check-in" subtitle="Chọn cây, đứng trong bán kính 10m rồi quét QR" />
+      <ScrollView contentContainerStyle={[styles.screenPad, styles.mapScreen]}>
+        <Header
+          title="Bản đồ check-in"
+          subtitle="Chọn cây, đứng trong bán kính 10m rồi quét QR"
+          onBack={() => props.setStep(props.mapReturnStep)}
+        />
         {selectedMapTask && selectedMapTree ? (
           <>
             <TreeCheckinMap
@@ -304,7 +285,7 @@ export function StaffProofFlow(props: {
         ) : (
           <EmptyState title="Không có cây cần check-in" body="Các nhiệm vụ hiện trường sẽ xuất hiện trên bản đồ." />
         )}
-      </View>
+      </ScrollView>
     );
   }
 
@@ -315,67 +296,56 @@ export function StaffProofFlow(props: {
 
     return (
       <ScrollView contentContainerStyle={styles.screenPad}>
-        <Header title="Chi tiết công việc" subtitle={props.activeTask.id} onBack={() => props.setStep('WORK')} />
-        <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
-          <View
-            style={[
-              styles.detailSection,
-              {
-                backgroundColor:
-                  statusMeta.tone === 'danger' ? '#fef2f2' : statusMeta.tone === 'amber' ? '#fffbeb' : '#f8fafc',
-              },
-            ]}
-          >
-            <View style={styles.rowBetween}>
-              <View style={styles.flex}>
-                <Text style={styles.metricLabel}>Trạng thái</Text>
-                <Text style={styles.itemTitle}>{statusMeta.label}</Text>
-              </View>
-              <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
-            </View>
-            {props.activeTask.status === TaskStatus.REWORK_REQUIRED && props.activeTask.rejectReason ? (
-              <Text style={styles.bodyText}>Quản lý yêu cầu sửa: {props.activeTask.rejectReason}</Text>
-            ) : null}
-          </View>
+        <Header title="Chi tiết công việc" onBack={() => props.setStep('WORK')} />
 
-          <View style={styles.hairlineDivider} />
-
-          <View style={styles.detailSection}>
+        <View style={styles.taskOrientation}>
+          <View style={styles.flex}>
             <Text style={styles.itemTitle}>{props.activeTask.title}</Text>
-            <Text style={styles.bodyText}>{props.activeTask.description}</Text>
-            <View style={{ marginTop: 12 }}>
-              <SectionTitle icon="leaf-outline">Hồ sơ cây mục tiêu</SectionTitle>
-              <Text style={styles.itemTitle}>{activeTree?.name ?? props.activeTask.treeName}</Text>
-              <Text style={styles.bodyText}>
-                {activeTree?.species} - {props.activeTask.treeAddress}
-              </Text>
-              <Text style={styles.monoSmall}>QR: {activeTree?.qrCode ?? props.activeTask.treeId}</Text>
+            <Text style={styles.bodyText}>{activeTree?.name ?? props.activeTask.treeName}</Text>
+            <Text style={styles.itemSub}>{props.activeTask.treeAddress}</Text>
+          </View>
+          <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+        </View>
+
+        {props.activeTask.status === TaskStatus.REWORK_REQUIRED && props.activeTask.rejectReason ? (
+          <View style={styles.correctionPanel}>
+            <Ionicons name="build-outline" size={20} color={colors.danger} />
+            <View style={styles.flex}>
+              <Text style={styles.alertText}>Nội dung cần làm lại</Text>
+              <Text style={styles.bodyText}>{props.activeTask.rejectReason}</Text>
             </View>
           </View>
+        ) : null}
 
-          <View style={styles.hairlineDivider} />
+        <View style={styles.progressSummary}>
+          <View style={styles.flex}>
+            <Text style={styles.metricLabel}>Bằng chứng</Text>
+            <Text style={styles.itemTitle}>
+              {wState.proofCount}/{wState.totalRequired} bước hoàn thành
+            </Text>
+          </View>
+          <Badge tone={proofGaps.length === 0 ? 'green' : 'amber'}>
+            {proofGaps.length === 0 ? 'Đã đủ' : `Còn ${proofGaps.length}`}
+          </Badge>
+        </View>
 
-          <View style={styles.detailSection}>
-            <SectionTitle icon="list-outline">Các bước thực hiện</SectionTitle>
-            {props.activeTask.checklist.map((item, index) => (
-              <ChecklistLine key={item.id} index={index} item={item} />
+        {proofGaps.length > 0 && !wState.isSubmittedOrCompleted ? (
+          <View style={styles.compactGapList}>
+            {proofGaps.map((gap) => (
+              <View key={gap} style={styles.compactGapRow}>
+                <Ionicons name="ellipse" size={7} color={colors.warningText} />
+                <Text style={styles.bodyText}>{gap}</Text>
+              </View>
             ))}
           </View>
+        ) : null}
 
-          {!wState.isSubmittedOrCompleted && proofGaps.length > 0 ? (
-            <View>
-              <View style={styles.hairlineDivider} />
-              <View style={[styles.detailSection, { backgroundColor: '#fffbeb' }]}>
-                <SectionTitle icon="build-outline">Cần hoàn thiện</SectionTitle>
-                {proofGaps.map((gap) => (
-                  <Text key={gap} style={styles.bodyText}>
-                    - {gap}
-                  </Text>
-                ))}
-              </View>
-            </View>
-          ) : null}
-        </Card>
+        <View style={styles.sectionBlock}>
+          <SectionTitle icon="list-outline">Các bước thực hiện</SectionTitle>
+          {props.activeTask.checklist.map((item, index) => (
+            <ChecklistLine key={item.id} index={index} item={item} />
+          ))}
+        </View>
 
         {props.activeTask.status === 'IN_PROGRESS' && !reportingIssue ? (
           <Button
@@ -507,7 +477,7 @@ export function StaffProofFlow(props: {
         ) : null}
         <Button
           icon="scan-outline"
-          disabled={!verified || (props.isRestMode && !locationCapturedAt)}
+          disabled={!verified || !locationCapturedAt}
           onPress={() => {
             if (activeTree) {
               resetQrError();
@@ -534,63 +504,49 @@ export function StaffProofFlow(props: {
           <View style={styles.rowBetween}>
             <View style={styles.flex}>
               <Text style={styles.heroKicker}>Chế độ tra cứu cây</Text>
-              <Text style={styles.qrPayloadText}>{scannedTree?.qrCode ?? 'Đưa mã QR cây vào khung'}</Text>
+              <Text style={styles.qrPayloadText}>{scannedTree?.name ?? 'Đưa mã QR cây vào khung'}</Text>
               <Text style={styles.headerSubDark}>Dùng được cả khi chưa có nhiệm vụ đang mở.</Text>
             </View>
             <Ionicons name="leaf-outline" size={32} color="#d9f7dd" />
           </View>
         </Card>
-        {renderQrScanner({
-          purpose: 'staff-free-qr',
-          activeCameraPurpose,
-          permissionState: getPermissionStateForPurpose('staff-free-qr'),
-          cameraModule,
-          cameraMode,
-          cameraRuntimeMessage: cameraRuntimeMessage || getRuntimeMessageForPurpose('staff-free-qr') || '',
-          height: Math.min(460, Math.max(320, windowHeight - 360)),
-          onRequestPermission: () => void requestCameraForPurpose('staff-free-qr'),
-          onMockMode: () => setCameraMode('mock'),
-          onBarcodeScanned: (payload) => {
-            const now = Date.now();
-            if (now - qrScanLockRef.current < 1600) return;
-            qrScanLockRef.current = now;
-            void lookupTreeByQr(payload);
-          },
-          label: 'Quét mã trên thân cây',
-        })}
+        {!scannedTree ? (
+          renderQrScanner({
+            purpose: 'staff-free-qr',
+            activeCameraPurpose,
+            permissionState: getPermissionStateForPurpose('staff-free-qr'),
+            cameraModule,
+            cameraRuntimeMessage: cameraRuntimeMessage || getRuntimeMessageForPurpose('staff-free-qr') || '',
+            height: Math.min(460, Math.max(320, windowHeight - 360)),
+            onRequestPermission: () => void requestCameraForPurpose('staff-free-qr'),
+            onBarcodeScanned: (payload) => {
+              const now = Date.now();
+              if (now - qrScanLockRef.current < 1600) return;
+              qrScanLockRef.current = now;
+              void lookupTreeByQr(payload);
+            },
+            label: 'Quét mã trên thân cây',
+          })
+        ) : (
+          <Button
+            variant="outline"
+            icon="scan-outline"
+            onPress={() => {
+              setScannedTree(null);
+              setQrLookupMessage('');
+              resetQrError();
+              void requestCameraForPurpose('staff-free-qr');
+            }}
+          >
+            Quét mã khác
+          </Button>
+        )}
         {renderQrState({
-          cameraMode,
-          cameraModule,
           cameraRuntimeMessage,
           qrErrorMessage,
           qrLookupLoading,
           qrLookupMessage,
         })}
-        <View style={styles.qrActions}>
-          {!props.isRestMode && (
-            <>
-              <Button
-                variant="outline"
-                icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
-                onPress={() => {
-                  resetQrError();
-                  setCameraMode(cameraMode === 'native' ? 'mock' : 'native');
-                }}
-              >
-                {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
-              </Button>
-              <Button
-                icon="qr-code-outline"
-                loading={qrLookupLoading}
-                onPress={() =>
-                  void lookupTreeByQr(assignedTrees[0]?.qrCode ?? props.trees[0]?.qrCode ?? 'NOVYX-TRE-0824')
-                }
-              >
-                Quét cây mẫu
-              </Button>
-            </>
-          )}
-        </View>
         {scannedTree ? (
           <TreeLookupResult
             tree={scannedTree}
@@ -600,7 +556,14 @@ export function StaffProofFlow(props: {
             onOpenTask={
               relatedTask
                 ? () => {
-                    props.setActiveTask(relatedTask);
+                    const verifiedTask = patchTask(relatedTask, {
+                      qrCheck: {
+                        verified: true,
+                        scannedCode: scannedTree.qrCode,
+                        timestamp: new Date().toISOString(),
+                      },
+                    });
+                    props.setActiveTask(verifiedTask);
                     props.setStep('DETAIL');
                   }
                 : undefined
@@ -608,6 +571,7 @@ export function StaffProofFlow(props: {
             onMap={
               relatedTask
                 ? () => {
+                    props.setMapReturnStep('QR');
                     props.setActiveTask(relatedTask);
                     props.setStep('MAP');
                   }
@@ -626,12 +590,16 @@ export function StaffProofFlow(props: {
 
     return (
       <View style={[styles.screenPad, styles.qrScreen]}>
-        <Header title="Quét mã QR cây" subtitle={props.activeTask.treeId} onBack={() => props.setStep('GPS')} />
+        <Header
+          title="Quét mã QR cây"
+          subtitle={props.activeTask.treeName}
+          onBack={() => props.setStep(isRework ? 'DETAIL' : 'GPS')}
+        />
         <Card tone="dark" style={styles.qrContextCard}>
           <View style={styles.rowBetween}>
             <View style={styles.flex}>
-              <Text style={styles.heroKicker}>Payload demo</Text>
-              <Text style={styles.qrPayloadText}>{expectedQr}</Text>
+              <Text style={styles.heroKicker}>Xác minh đúng cây</Text>
+              <Text style={styles.qrPayloadText}>{props.activeTask.treeName}</Text>
               <Text style={styles.headerSubDark}>
                 {props.activeTask.title} | {proofCount}/5 bằng chứng
               </Text>
@@ -644,11 +612,9 @@ export function StaffProofFlow(props: {
           activeCameraPurpose,
           permissionState: getPermissionStateForPurpose('staff-task-qr'),
           cameraModule,
-          cameraMode,
           cameraRuntimeMessage: cameraRuntimeMessage || getRuntimeMessageForPurpose('staff-task-qr') || '',
           height: Math.min(520, Math.max(360, windowHeight - 292)),
           onRequestPermission: () => void requestCameraForPurpose('staff-task-qr'),
-          onMockMode: () => setCameraMode('mock'),
           onBarcodeScanned: (payload) => {
             const now = Date.now();
             if (now - qrScanLockRef.current < 1600) return;
@@ -659,6 +625,7 @@ export function StaffProofFlow(props: {
               patchActiveTask({
                 qrCheck: { verified: true, scannedCode: payload, timestamp: new Date().toISOString() },
               });
+              releaseCamera();
               props.setStep('BEFORE');
               return;
             }
@@ -666,50 +633,12 @@ export function StaffProofFlow(props: {
             patchActiveTask({
               qrCheck: { verified: false, scannedCode: payload, timestamp: new Date().toISOString() },
             });
-            setQrErrorMessage(`QR vừa quét (${payload}) không khớp cây của nhiệm vụ.`);
+            setQrErrorMessage('QR vừa quét không khớp cây của nhiệm vụ.');
           },
           label: 'Đưa mã QR vào khung',
         })}
-        {renderQrState({ cameraMode, cameraModule, cameraRuntimeMessage, qrErrorMessage })}
+        {renderQrState({ cameraRuntimeMessage, qrErrorMessage })}
         <View style={styles.qrActions}>
-          {!props.isRestMode && (
-            <>
-              <Button
-                variant="outline"
-                icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
-                onPress={() => {
-                  resetQrError();
-                  setCameraMode(cameraMode === 'native' ? 'mock' : 'native');
-                }}
-              >
-                {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
-              </Button>
-              <Button
-                icon="checkmark-outline"
-                onPress={() => {
-                  resetQrError();
-                  patchActiveTask({
-                    qrCheck: { verified: true, scannedCode: expectedQr, timestamp: new Date().toISOString() },
-                  });
-                  props.setStep('BEFORE');
-                }}
-              >
-                Mô phỏng quét thành công
-              </Button>
-              <Button
-                variant="outline"
-                icon="close-circle-outline"
-                onPress={() => {
-                  patchActiveTask({
-                    qrCheck: { verified: false, scannedCode: 'NOVYX-WRONG-TREE', timestamp: new Date().toISOString() },
-                  });
-                  setQrErrorMessage('QR vừa quét không khớp cây của nhiệm vụ. Hãy quét lại đúng mã trên thân cây.');
-                }}
-              >
-                Mô phỏng sai mã
-              </Button>
-            </>
-          )}
           <Button
             variant="outline"
             icon="alert-circle-outline"
@@ -744,22 +673,17 @@ export function StaffProofFlow(props: {
     const capturedPhoto = isBefore ? props.activeTask.beforePhoto : props.activeTask.afterPhoto;
     const photoCameraPurpose = isBefore ? 'staff-before-photo' : 'staff-after-photo';
     const captureEvidencePhoto = async () => {
-      if (!props.activeTask) return;
-      let uri = isBefore ? mockBeforePhotoUri : mockAfterPhotoUri;
+      if (!props.activeTask || !cameraRef.current?.takePictureAsync) {
+        setCameraRuntimeMessage('Camera chưa sẵn sàng. Vui lòng thử lại.');
+        return;
+      }
 
-      if (cameraMode === 'native' && cameraRef.current?.takePictureAsync) {
-        try {
-          uri = (await cameraRef.current.takePictureAsync({ quality: 0.72 })).uri;
-          setCameraRuntimeMessage('Ảnh thật đã được ghi nhận từ camera thiết bị.');
-        } catch {
-          if (props.isRestMode) {
-            setCameraRuntimeMessage('Lỗi thiết bị: Không thể chụp ảnh. Vui lòng thử lại.');
-            return; // Do not fallback to mock
-          }
-          setCameraRuntimeMessage('Không chụp được ảnh thật trong runtime này. Đang dùng ảnh mẫu để tiếp tục smoke.');
-        }
-      } else if (props.isRestMode) {
-        setCameraRuntimeMessage('Lỗi: native camera không sẵn sàng. Không thể dùng ảnh mẫu.');
+      let uri: string;
+      try {
+        uri = (await cameraRef.current.takePictureAsync({ quality: 0.55 })).uri;
+        setCameraRuntimeMessage('');
+      } catch {
+        setCameraRuntimeMessage('Lỗi thiết bị: Không thể chụp ảnh. Vui lòng thử lại.');
         return;
       }
 
@@ -779,52 +703,53 @@ export function StaffProofFlow(props: {
     return (
       <View style={[styles.cameraScreen, styles.flex]}>
         <Header
-          title={isBefore ? 'Chụp ảnh Before' : 'Chụp ảnh After'}
+          title={isBefore ? 'Chụp ảnh trước xử lý' : 'Chụp ảnh sau xử lý'}
           subtitle={props.activeTask.treeName}
-          onBack={() => props.setStep(isBefore ? 'QR' : 'CHECKLIST')}
+          onBack={() => props.setStep(isRework ? 'DETAIL' : isBefore ? 'QR' : 'CHECKLIST')}
           dark
         />
-        {capturedPhoto ? (
-          <View style={styles.cameraPreview}>
-            <Image source={getMockPhotoSource(capturedPhoto, evidenceStage)} style={styles.cameraPreviewImage} />
+        {capturedPhoto && /^(https?:|file:|content:|data:)/i.test(capturedPhoto) ? (
+          <View style={[styles.cameraPreview, { flex: 0, height: Math.min(windowHeight * 0.56, 560) }]}>
+            <Image source={{ uri: capturedPhoto }} style={styles.cameraPreviewImage} />
             <View style={styles.photoPreviewBadge}>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.primaryDark} />
               <Text style={styles.successTitle}>Ảnh đã ghi nhận</Text>
             </View>
           </View>
-        ) : cameraMode === 'native' ? (
+        ) : capturedPhoto ? (
+          <View style={[styles.cameraPreview, styles.storedPhotoPlaceholder, { flex: 0, height: 280 }]}>
+            <Ionicons name="cloud-done-outline" size={38} color={colors.primaryDark} />
+            <Text style={styles.successTitle}>Ảnh cũ đã lưu trên máy chủ</Text>
+            <Text style={styles.bodyText}>Chụp lại để thay thế bằng chứng bị yêu cầu sửa.</Text>
+          </View>
+        ) : (
           <DeviceCameraView
             purpose={photoCameraPurpose}
             activeCameraPurpose={activeCameraPurpose}
             permissionState={getPermissionStateForPurpose(photoCameraPurpose)}
             cameraModule={cameraModule}
             cameraRef={cameraRef}
-            style={styles.cameraPreview}
+            style={[styles.cameraPreview, { flex: 0, height: Math.min(windowHeight * 0.56, 560) }]}
             runtimeMessage={cameraRuntimeMessage || getRuntimeMessageForPurpose(photoCameraPurpose)}
             onRequestPermission={() => void requestCameraForPurpose(photoCameraPurpose)}
             onOpenSettings={() => void openDeviceSettings()}
-            onCancel={() => setCameraMode('mock')}
+            onCancel={() => props.setStep(isBefore ? 'QR' : 'CHECKLIST')}
           >
             <View style={styles.nativeCameraOverlay}>
               <Ionicons name="camera-outline" size={64} color="#e2e8f0" />
-              <Text style={styles.cameraText}>{isBefore ? 'Ảnh before' : 'Ảnh after'}</Text>
+              <Text style={styles.cameraText}>{isBefore ? 'Ảnh trước xử lý' : 'Ảnh sau xử lý'}</Text>
             </View>
           </DeviceCameraView>
-        ) : (
-          <View style={styles.cameraPreview}>
-            <Ionicons name="camera-outline" size={72} color="#e2e8f0" />
-            <Text style={styles.cameraText}>Camera hiện trường</Text>
-          </View>
         )}
-        {cameraRuntimeMessage ? <Text style={styles.cameraHint}>{cameraRuntimeMessage}</Text> : null}
+        {!capturedPhoto && cameraRuntimeMessage ? <Text style={styles.cameraHint}>{cameraRuntimeMessage}</Text> : null}
         {capturedPhoto ? (
           <View style={styles.photoMetaPanel}>
-            <Text style={styles.metricLabel}>Metadata ảnh</Text>
+            <Text style={styles.metricLabel}>Thông tin ảnh</Text>
             <Text style={styles.cameraHint}>
-              {evidenceStage === 'before' ? 'Before' : 'After'} | {props.activeTask.treeId} | GPS{' '}
+              {isBefore ? 'Trước xử lý' : 'Sau xử lý'} · GPS{' '}
               {props.activeTask.gpsCheck?.accuracyMeters
-                ? `accuracy ${props.activeTask.gpsCheck.accuracyMeters.toFixed(0)}m`
-                : 'chưa có accuracy'}
+                ? `sai số ${props.activeTask.gpsCheck.accuracyMeters.toFixed(0)}m`
+                : 'chưa có độ chính xác'}
             </Text>
           </View>
         ) : null}
@@ -839,24 +764,9 @@ export function StaffProofFlow(props: {
               </Button>
             </>
           ) : (
-            <>
-              {!props.isRestMode && (
-                <Button
-                  variant="outline"
-                  icon={cameraMode === 'native' ? 'phone-portrait-outline' : 'camera-outline'}
-                  onPress={() => setCameraMode(cameraMode === 'native' ? 'mock' : 'native')}
-                >
-                  {cameraMode === 'native' ? 'Dùng mô phỏng' : 'Camera thật'}
-                </Button>
-              )}
-              <Button
-                icon="radio-button-on-outline"
-                onPress={captureEvidencePhoto}
-                disabled={props.isRestMode && cameraMode !== 'native' && !cameraRef.current}
-              >
-                Chụp ảnh
-              </Button>
-            </>
+            <Button icon="radio-button-on-outline" onPress={captureEvidencePhoto}>
+              Chụp ảnh
+            </Button>
           )}
         </View>
       </View>
@@ -867,7 +777,11 @@ export function StaffProofFlow(props: {
     const checklist = props.activeTask.checklist;
     return (
       <ScrollView contentContainerStyle={styles.screenPad}>
-        <Header title="Checklist tác nghiệp" subtitle={props.activeTask.title} onBack={() => props.setStep('BEFORE')} />
+        <Header
+          title="Checklist tác nghiệp"
+          subtitle={props.activeTask.title}
+          onBack={() => props.setStep(isRework ? 'DETAIL' : 'BEFORE')}
+        />
         <Card>
           {checklist.map((item, index) => (
             <Pressable
@@ -903,13 +817,13 @@ export function StaffProofFlow(props: {
 
   if (props.step === 'REVIEW' && props.activeTask) {
     const proofGaps = getTaskProofGaps(props.activeTask);
-    const evidenceTransport = getEvidenceTransportMeta(props.activeTask);
     const wState = getTaskProofWorkflowState(props.activeTask);
+    const visibleNotes = props.activeTask.notes?.startsWith('Fixture ') ? '' : (props.activeTask.notes ?? '');
 
     return (
       <ScrollView contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
-        <Header title="Xem lại báo cáo" subtitle={props.activeTask.id} onBack={() => props.setStep('CHECKLIST')} />
-        <Card tone="flat" style={{ padding: 0, overflow: 'hidden' }}>
+        <Header title="Xem lại báo cáo" onBack={() => props.setStep(isRework ? 'DETAIL' : 'CHECKLIST')} />
+        <View style={styles.reviewContent}>
           {/* Gate */}
           <View style={[styles.detailSection, { backgroundColor: proofGaps.length === 0 ? '#f0fdf4' : '#fef2f2' }]}>
             <View style={styles.alertRow}>
@@ -944,25 +858,7 @@ export function StaffProofFlow(props: {
 
           <View style={styles.hairlineDivider} />
 
-          {/* Transport */}
-          <View
-            style={[
-              styles.detailSection,
-              { backgroundColor: evidenceTransport.mode === 'multipart' ? '#f0fdf4' : '#f8fafc' },
-            ]}
-          >
-            <View style={styles.rowBetween}>
-              <View style={styles.flex}>
-                <SectionTitle icon="cloud-upload-outline">Kênh gửi bằng chứng</SectionTitle>
-                <Text style={styles.bodyText}>{evidenceTransport.label}</Text>
-              </View>
-              <Badge tone={evidenceTransport.mode === 'multipart' ? 'green' : 'sky'}>
-                {evidenceTransport.mode === 'multipart' ? 'File thật' : 'Metadata'}
-              </Badge>
-            </View>
-          </View>
-
-          <View style={styles.hairlineDivider} />
+          {/* Transport metadata is intentionally hidden from the normal Staff flow. */}
 
           {/* Photos */}
           <View style={styles.detailSection}>
@@ -986,15 +882,21 @@ export function StaffProofFlow(props: {
             <SectionTitle icon="document-text-outline">Ghi chú nghiệm thu</SectionTitle>
             <Field
               label="Ghi chú hiện trường"
-              value={props.activeTask.notes ?? ''}
+              value={visibleNotes}
               onChangeText={(notes) => patchActiveTask({ notes })}
-              placeholder="Ví dụ: đã thu gom cành khô phía Bắc, cần kiểm tra lại sau mưa..."
+              placeholder="Ghi chú thêm nếu cần"
               multiline
               style={styles.multilineInput}
             />
           </View>
-        </Card>
+        </View>
 
+        {submissionError ? (
+          <View style={styles.submissionError} accessibilityRole="alert">
+            <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
+            <Text style={styles.alertText}>{submissionError}</Text>
+          </View>
+        ) : null}
         <Button
           variant="forest"
           pill
@@ -1008,9 +910,10 @@ export function StaffProofFlow(props: {
               props.setStep(wState.nextStep);
               return;
             }
+            setSubmissionError('');
             setSubmittingEvidence(true);
             try {
-              if (task.status === 'REWORK_REQUIRED') {
+              if (task.status === TaskStatus.REWORK_REQUIRED) {
                 const savedTask = await props.resubmitRework({
                   taskId: task.id,
                   expectedVersion: task.version ?? 0,
@@ -1041,8 +944,15 @@ export function StaffProofFlow(props: {
                 });
                 props.setStep('SUCCESS');
               }
-            } catch {
-              // Stay on current step if unsupported or error
+            } catch (error) {
+              const detail = error instanceof Error ? error.message : '';
+              setSubmissionError(
+                detail.startsWith('PERSIST_')
+                  ? 'Không lưu được ảnh. Ảnh gốc vẫn còn trên thiết bị.'
+                  : detail.startsWith('UPLOAD_')
+                    ? 'Không tải được ảnh. Kiểm tra mạng rồi thử lại.'
+                    : 'Chưa gửi được báo cáo. Ảnh đã được giữ.',
+              );
             } finally {
               setSubmittingEvidence(false);
             }
@@ -1064,10 +974,13 @@ export function StaffProofFlow(props: {
         <View style={styles.successCircle}>
           <Ionicons name="checkmark-outline" size={60} color={colors.primary} />
         </View>
-        <Text style={styles.bigTitle}>Báo cáo đang chờ đồng bộ</Text>
+        <Text style={styles.bigTitle}>
+          {props.activeTask.status === TaskStatus.WAITING_REVIEW ? 'Báo cáo đã gửi' : 'Báo cáo đang chờ đồng bộ'}
+        </Text>
         <Text style={styles.bodyText}>
-          Bằng chứng cho công việc "{props.activeTask.title}" đã được lưu về hàng đợi máy chủ. Trạng thái sẽ cập nhật
-          thành Chờ duyệt sau khi tải lên thành công.
+          {props.activeTask.status === TaskStatus.WAITING_REVIEW
+            ? `Công việc "${props.activeTask.title}" đang chờ quản lý duyệt.`
+            : `Bằng chứng cho công việc "${props.activeTask.title}" đã được lưu về hàng đợi máy chủ. Trạng thái sẽ cập nhật thành Chờ duyệt sau khi tải lên thành công.`}
         </Text>
         <Button
           onPress={() => {
@@ -1088,67 +1001,50 @@ export function StaffProofFlow(props: {
     activeCameraPurpose: activePurpose,
     permissionState,
     cameraModule: module,
-    cameraMode: mode,
     cameraRuntimeMessage: runtimeMessage,
     height,
     onRequestPermission,
-    onMockMode,
     onBarcodeScanned,
     label,
   }: {
     purpose: Exclude<DevicePermissionPurpose, 'staff-gps'>;
     activeCameraPurpose: DevicePermissionPurpose | null;
     permissionState: ReturnType<typeof getPermissionStateForPurpose>;
-    cameraModule: CameraModule | null;
-    cameraMode: CameraRuntimeMode;
+    cameraModule: CameraModule;
     cameraRuntimeMessage: string;
     height: number;
     onRequestPermission: () => void;
-    onMockMode: () => void;
     onBarcodeScanned: (payload: string) => void;
     label: string;
   }) {
-    if (mode === 'native') {
-      return (
-        <DeviceCameraView
-          purpose={purpose}
-          activeCameraPurpose={activePurpose}
-          permissionState={permissionState}
-          cameraModule={module}
-          style={[styles.nativeCameraPreview, { height }]}
-          runtimeMessage={runtimeMessage}
-          onRequestPermission={onRequestPermission}
-          onOpenSettings={() => void openDeviceSettings()}
-          onCancel={onMockMode}
-          onBarcodeScanned={(result) => onBarcodeScanned(result.data)}
-        >
-          <View style={styles.nativeCameraOverlay}>
-            <Ionicons name="scan-outline" size={54} color="#ffffff" />
-            <Text style={styles.cameraText}>{label}</Text>
-          </View>
-        </DeviceCameraView>
-      );
-    }
-
     return (
-      <View style={[styles.scannerBox, { height }]}>
-        <Ionicons name="qr-code-outline" size={70} color="#fff" />
-        <Text style={styles.scannerText}>{assignedTrees[0]?.qrCode ?? 'NOVYX-TRE-0824'}</Text>
-      </View>
+      <DeviceCameraView
+        purpose={purpose}
+        activeCameraPurpose={activePurpose}
+        permissionState={permissionState}
+        cameraModule={module}
+        style={[styles.nativeCameraPreview, { height }]}
+        runtimeMessage={runtimeMessage}
+        onRequestPermission={onRequestPermission}
+        onOpenSettings={() => void openDeviceSettings()}
+        onCancel={releaseCamera}
+        onBarcodeScanned={(result) => onBarcodeScanned(result.data)}
+      >
+        <View style={styles.nativeCameraOverlay}>
+          <Ionicons name="scan-outline" size={54} color="#ffffff" />
+          <Text style={styles.cameraText}>{label}</Text>
+        </View>
+      </DeviceCameraView>
     );
   }
 }
 
 function renderQrState({
-  cameraMode,
-  cameraModule,
   cameraRuntimeMessage,
   qrErrorMessage,
   qrLookupLoading,
   qrLookupMessage,
 }: {
-  cameraMode: CameraRuntimeMode;
-  cameraModule: CameraModule | null;
   cameraRuntimeMessage: string;
   qrErrorMessage: string;
   qrLookupLoading?: boolean;
@@ -1156,11 +1052,7 @@ function renderQrState({
 }) {
   return (
     <>
-      {cameraRuntimeMessage ? (
-        <Text style={[styles.monoSmall, cameraMode === 'native' && !cameraModule && styles.alertText]}>
-          {cameraRuntimeMessage}
-        </Text>
-      ) : null}
+      {cameraRuntimeMessage ? <Text style={styles.monoSmall}>{cameraRuntimeMessage}</Text> : null}
       {qrErrorMessage ? (
         <Card tone="danger" style={styles.alertRow}>
           <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
@@ -1209,17 +1101,17 @@ function TreeCheckinMap({
 }) {
   const [mapsModule, setMapsModule] = useState<typeof import('react-native-maps') | null>(cachedMapsModule ?? null);
   const distance = getDistanceMeters(userLat, userLng, tree.lat, tree.lng);
+  const distanceLabel = distance >= 1000 ? `${(distance / 1000).toFixed(1)} km` : `${distance.toFixed(1)} m`;
   const verified = distance < 10;
-  const region = {
-    latitude: tree.lat,
-    longitude: tree.lng,
+  const mapRegion = {
+    latitude: locationCapturedAt ? userLat : tree.lat,
+    longitude: locationCapturedAt ? userLng : tree.lng,
     latitudeDelta: 0.0022,
     longitudeDelta: 0.0022,
   };
   const MapView = mapsModule?.default;
   const Circle = mapsModule?.Circle;
   const Marker = mapsModule?.Marker;
-  const providerGoogle = mapsModule?.PROVIDER_GOOGLE;
   const locationAgeSeconds = locationCapturedAt
     ? Math.max(0, Math.round((Date.now() - new Date(locationCapturedAt).getTime()) / 1000))
     : null;
@@ -1263,13 +1155,7 @@ function TreeCheckinMap({
     <View style={styles.mapPanel}>
       <View style={styles.mapFrame}>
         {MapView && Circle && Marker ? (
-          <MapView
-            provider={providerGoogle}
-            style={styles.realMap}
-            initialRegion={region}
-            showsUserLocation
-            showsMyLocationButton
-          >
+          <MapView style={styles.realMap} region={mapRegion} showsUserLocation showsMyLocationButton>
             <Circle
               center={{ latitude: tree.lat, longitude: tree.lng }}
               radius={10}
@@ -1279,8 +1165,16 @@ function TreeCheckinMap({
             <Marker
               coordinate={{ latitude: tree.lat, longitude: tree.lng }}
               title={tree.name}
-              description={`${tree.qrCode} | Vị trí cây mẫu`}
+              description="Vị trí cây được giao"
             />
+            {locationCapturedAt ? (
+              <Marker
+                coordinate={{ latitude: userLat, longitude: userLng }}
+                title="Vị trí thiết bị"
+                description={`GPS sai số ${locationAccuracyMeters?.toFixed(0) ?? '—'}m`}
+                pinColor="#2563eb"
+              />
+            ) : null}
           </MapView>
         ) : (
           <View style={styles.mapFallback}>
@@ -1306,7 +1200,7 @@ function TreeCheckinMap({
             <Text style={styles.itemTitle}>{task.treeName}</Text>
             <Text style={styles.itemSub}>{tree.address}</Text>
           </View>
-          <Badge tone={verified ? 'green' : 'amber'}>{distance.toFixed(1)}m</Badge>
+          <Badge tone={verified ? 'green' : 'amber'}>Khoảng cách tới cây: {distanceLabel}</Badge>
         </View>
         <View style={styles.checkinStatusRow}>
           <Ionicons
@@ -1321,7 +1215,7 @@ function TreeCheckinMap({
         <Text style={styles.monoSmall}>{locationMessage}</Text>
         <View style={styles.gpsAuditGrid}>
           <View style={styles.gpsAuditBox}>
-            <Text style={styles.metricLabel}>Độ chính xác</Text>
+            <Text style={styles.metricLabel}>Sai số GPS</Text>
             <Text style={styles.treeMetaValue}>
               {locationAccuracyMeters === null ? 'Chưa có GPS thật' : `${locationAccuracyMeters.toFixed(0)}m`}
             </Text>
@@ -1329,7 +1223,7 @@ function TreeCheckinMap({
           <View style={styles.gpsAuditBox}>
             <Text style={styles.metricLabel}>Thời điểm</Text>
             <Text style={styles.treeMetaValue}>
-              {locationCapturedAt && locationAgeSeconds !== null ? `${locationAgeSeconds}s trước` : 'Dữ liệu mô phỏng'}
+              {locationCapturedAt && locationAgeSeconds !== null ? `${locationAgeSeconds}s trước` : 'Chưa đo GPS'}
             </Text>
           </View>
         </View>
@@ -1350,8 +1244,50 @@ function TreeCheckinMap({
 
 const styles = StyleSheet.create({
   detailSection: {
-    padding: 16,
+    paddingVertical: 16,
     gap: 8,
+  },
+  reviewContent: {
+    gap: 4,
+  },
+  taskOrientation: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.hairlineBorder,
+  },
+  correctionPanel: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSoft,
+  },
+  progressSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 4,
+  },
+  compactGapList: {
+    gap: 6,
+    paddingBottom: 4,
+  },
+  compactGapRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionBlock: {
+    gap: 8,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.hairlineBorder,
   },
   hairlineDivider: {
     height: 1,
@@ -1565,6 +1501,17 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 4,
   },
+  submissionError: {
+    minHeight: 52,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   cameraScreen: {
     backgroundColor: '#020617',
     padding: 16,
@@ -1583,6 +1530,11 @@ const styles = StyleSheet.create({
   cameraPreviewImage: {
     width: '100%',
     height: '100%',
+  },
+  storedPhotoPlaceholder: {
+    gap: 10,
+    padding: 24,
+    backgroundColor: colors.successSurface,
   },
   photoPreviewBadge: {
     position: 'absolute',
