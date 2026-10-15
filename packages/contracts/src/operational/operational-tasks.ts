@@ -14,11 +14,40 @@ export const TaskTypeIdSchema = z.string().min(1);
 export type TaskTypeId = z.infer<typeof TaskTypeIdSchema>;
 
 /**
+ * Date range schema for periodic / daily care routine dispatching.
+ * Formatted as YYYY-MM-DD strings.
+ */
+export const DateRangeSchema = z
+  .object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be YYYY-MM-DD'),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be YYYY-MM-DD'),
+    shift: z.enum(['morning', 'afternoon', 'full_day']).optional(),
+  })
+  .refine((data) => data.endDate >= data.startDate, {
+    message: 'endDate must be on or after startDate',
+    path: ['endDate'],
+  });
+
+export type DateRange = z.infer<typeof DateRangeSchema>;
+
+/**
+ * Tree scope schema supporting zone dispatching or multi-tree groupings.
+ */
+export const TreeScopeSchema = z.object({
+  mode: z.enum(['zone', 'multi_trees', 'single_tree']),
+  zoneId: z.string().optional(),
+  treeIds: z.array(z.string()).min(1),
+});
+
+export type TreeScope = z.infer<typeof TreeScopeSchema>;
+
+/**
  * OP-03: CreateTaskRequest — Aggregate creation.
  * Manager selects tree, taskTypeId, assignedStaffId, deadline, title, description.
  * System deterministically resolves TaskType -> ProofProfile and policyVersion.
  * Checklist policy is governed centrally; manager does not provide arbitrary checklist.
  * expectedVersion is NOT required for creation commands.
+ * Optional dateRange and scope support periodic care routine workflows.
  */
 export const CreateTaskRequestSchema = z.object({
   title: z.string().min(3),
@@ -27,9 +56,26 @@ export const CreateTaskRequestSchema = z.object({
   treeId: z.string().min(1),
   assignedStaffId: z.string().min(1),
   deadline: z.string().min(1),
+  dateRange: DateRangeSchema.optional(),
+  scope: TreeScopeSchema.optional(),
 });
 
 export type CanonicalCreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
+
+/**
+ * Care Order Request — Dispatching routine care over a date range and tree scope.
+ */
+export const CreateCareOrderRequestSchema = z.object({
+  title: z.string().min(3),
+  taskTypeId: TaskTypeIdSchema,
+  description: z.string().default(''),
+  assignedStaffId: z.string().min(1),
+  dateRange: DateRangeSchema,
+  scope: TreeScopeSchema,
+  deadline: z.string().optional(),
+});
+
+export type CreateCareOrderRequest = z.infer<typeof CreateCareOrderRequestSchema>;
 
 /**
  * OP-04: AssignTaskRequest — Mutation against existing task. Requires expectedVersion.
@@ -165,6 +211,8 @@ export const TaskDtoSchema = z.object({
   assignedStaffId: z.string(),
   assignedStaffName: z.string(),
   deadline: z.string(),
+  dateRange: DateRangeSchema.optional(),
+  scope: TreeScopeSchema.optional(),
   status: TaskStatusSchema,
   gpsCheck: GpsCheckSchema.optional(),
   qrCheck: QrCheckSchema.optional(),

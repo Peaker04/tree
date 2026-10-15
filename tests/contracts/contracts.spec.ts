@@ -50,6 +50,9 @@ import {
   SubmitEvidenceRequestSchema,
   TaskTypeIdSchema,
   CreateTaskRequestSchema,
+  DateRangeSchema,
+  TreeScopeSchema,
+  CreateCareOrderRequestSchema,
   AssignTaskRequestSchema,
   StartTaskRequestSchema,
   ReassignTaskRequestSchema,
@@ -1577,6 +1580,105 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
         outcome: 'DENIED',
       };
       expect(AuditEventDtoSchema.safeParse(dto).success).toBe(false);
+    });
+  });
+
+  describe('Phase 14: Daily Care Routine Contracts (DateRange & TreeScope)', () => {
+    it('validates correct date range spanning multiple days or single day', () => {
+      const validRange = {
+        startDate: '2026-10-06',
+        endDate: '2026-10-10',
+        shift: 'morning' as const,
+      };
+      expect(DateRangeSchema.safeParse(validRange).success).toBe(true);
+
+      const sameDay = {
+        startDate: '2026-10-06',
+        endDate: '2026-10-06',
+        shift: 'full_day' as const,
+      };
+      expect(DateRangeSchema.safeParse(sameDay).success).toBe(true);
+    });
+
+    it('rejects reversed date range where endDate is before startDate', () => {
+      const invalidRange = {
+        startDate: '2026-10-10',
+        endDate: '2026-10-06',
+      };
+      const result = DateRangeSchema.safeParse(invalidRange);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('endDate must be on or after startDate');
+      }
+    });
+
+    it('rejects malformed date strings', () => {
+      expect(DateRangeSchema.safeParse({ startDate: '06/10/2026', endDate: '10/10/2026' }).success).toBe(false);
+      expect(DateRangeSchema.safeParse({ startDate: 'invalid', endDate: '2026-10-10' }).success).toBe(false);
+    });
+
+    it('validates tree scope for zone mode and multi_trees mode', () => {
+      const zoneScope = {
+        mode: 'zone' as const,
+        zoneId: 'ZONE-NORTH-01',
+        treeIds: ['TRE-001', 'TRE-002'],
+      };
+      expect(TreeScopeSchema.safeParse(zoneScope).success).toBe(true);
+
+      const multiTreesScope = {
+        mode: 'multi_trees' as const,
+        treeIds: ['TRE-005'],
+      };
+      expect(TreeScopeSchema.safeParse(multiTreesScope).success).toBe(true);
+
+      expect(TreeScopeSchema.safeParse({ mode: 'multi_trees', treeIds: [] }).success).toBe(false);
+    });
+
+    it('preserves 100% backward compatibility for CreateTaskRequestSchema', () => {
+      const legacyRequest = {
+        title: 'Tưới nước hàng ngày',
+        taskTypeId: 'tt-watering-01',
+        description: 'Tưới cây định kỳ',
+        treeId: 'TRE-001',
+        assignedStaffId: 'STF-01',
+        deadline: '2026-10-10T18:00:00.000Z',
+      };
+      expect(CreateTaskRequestSchema.safeParse(legacyRequest).success).toBe(true);
+
+      const enhancedRequest = {
+        ...legacyRequest,
+        dateRange: {
+          startDate: '2026-10-06',
+          endDate: '2026-10-10',
+          shift: 'morning' as const,
+        },
+        scope: {
+          mode: 'zone' as const,
+          zoneId: 'ZONE-A',
+          treeIds: ['TRE-001', 'TRE-002'],
+        },
+      };
+      expect(CreateTaskRequestSchema.safeParse(enhancedRequest).success).toBe(true);
+    });
+
+    it('validates CreateCareOrderRequestSchema', () => {
+      const order = {
+        title: 'Chiến dịch tưới nước mùa khô đợt 1',
+        taskTypeId: 'tt-watering-01',
+        description: 'Tưới theo dải ngày khu vực A',
+        assignedStaffId: 'STF-01',
+        dateRange: {
+          startDate: '2026-10-06',
+          endDate: '2026-10-12',
+          shift: 'morning' as const,
+        },
+        scope: {
+          mode: 'zone' as const,
+          zoneId: 'ZONE-A',
+          treeIds: ['TRE-001', 'TRE-002'],
+        },
+      };
+      expect(CreateCareOrderRequestSchema.safeParse(order).success).toBe(true);
     });
   });
 });

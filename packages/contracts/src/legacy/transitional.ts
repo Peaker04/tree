@@ -127,6 +127,16 @@ export interface TaskDto {
   assignedStaffId: string;
   assignedStaffName: string;
   deadline: string;
+  dateRange?: {
+    startDate: string;
+    endDate: string;
+    shift?: 'morning' | 'afternoon' | 'full_day';
+  };
+  scope?: {
+    mode: 'zone' | 'multi_trees' | 'single_tree';
+    zoneId?: string;
+    treeIds: string[];
+  };
   status: TaskStatus;
   version?: number;
   gpsCheck?: GpsCheckDto;
