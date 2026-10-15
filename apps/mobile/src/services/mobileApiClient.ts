@@ -52,6 +52,7 @@ export class MobileApiClient {
         : `${this.apiBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 
     const headers: Record<string, string> = {
+      'ngrok-skip-browser-warning': 'true',
       ...(options?.headers ?? {}),
     };
 

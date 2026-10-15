@@ -185,8 +185,8 @@ export class OutboxCoordinator {
         break;
       }
       results.push(result);
-      // If a non-retryable error occurred, stop processing to prevent spinning
-      if (!result.success && result.classification && !isRetryableError(result.classification)) {
+      // Stop the current pass on any failure to prevent infinite retry loops on the same item
+      if (!result.success) {
         break;
       }
     }

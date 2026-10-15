@@ -113,7 +113,10 @@ export const isTaskOverdue = (task: Task) => {
 
 export const getTaskProofGaps = (task: Task) => {
   const gaps: string[] = [];
-  if (!task.gpsCheck?.verified) gaps.push('GPS chưa xác minh trong bán kính hợp lệ');
+  const hasLocationEx = Boolean(
+    task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
+  );
+  if (!task.gpsCheck?.verified && !hasLocationEx) gaps.push('GPS chưa xác minh trong bán kính hợp lệ');
   if (!task.qrCheck?.verified) gaps.push('QR cây chưa khớp nhiệm vụ');
   if (!task.beforePhoto) gaps.push('Thiếu ảnh trước khi xử lý');
   if (!task.afterPhoto) gaps.push('Thiếu ảnh sau khi xử lý');
@@ -121,14 +124,18 @@ export const getTaskProofGaps = (task: Task) => {
   return gaps;
 };
 
-export const getTaskProofCount = (task: Task) =>
-  [
-    task.gpsCheck?.verified,
+export const getTaskProofCount = (task: Task) => {
+  const hasLocationEx = Boolean(
+    task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
+  );
+  return [
+    task.gpsCheck?.verified || hasLocationEx,
     task.qrCheck?.verified,
     Boolean(task.beforePhoto),
     Boolean(task.afterPhoto),
     task.checklist.every((item) => item.done),
   ].filter(Boolean).length;
+};
 
 export const getTaskActionPriority = (task: Task) => {
   if (task.status === TaskStatus.REWORK_REQUIRED) return 0;
@@ -174,7 +181,10 @@ const inferReworkStep = (task: Task): StaffStep | null => {
 export const getNextProofStep = (task: Task): StaffStep => {
   const reworkStep = inferReworkStep(task);
   if (reworkStep) return reworkStep;
-  if (!task.gpsCheck?.verified) return 'GPS';
+  const hasLocationEx = Boolean(
+    task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
+  );
+  if (!task.gpsCheck?.verified && !hasLocationEx) return 'GPS';
   if (!task.qrCheck?.verified) return 'QR';
   if (!task.beforePhoto) return 'BEFORE';
   if (task.checklist.some((item) => !item.done)) return 'CHECKLIST';
@@ -208,7 +218,10 @@ export interface TaskProofWorkflowState {
 export const getTaskProofWorkflowState = (task: Task): TaskProofWorkflowState => {
   const isSubmittedOrCompleted = task.status === TaskStatus.WAITING_REVIEW || task.status === TaskStatus.COMPLETED;
 
-  const isGpsDone = Boolean(task.gpsCheck?.verified);
+  const hasLocationEx = Boolean(
+    task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
+  );
+  const isGpsDone = Boolean(task.gpsCheck?.verified || hasLocationEx);
   const isQrDone = Boolean(task.qrCheck?.verified);
   const isBeforeDone = Boolean(task.beforePhoto);
   const isChecklistDone = task.checklist.length > 0 && task.checklist.every((item) => item.done);

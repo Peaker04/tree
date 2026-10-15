@@ -67,6 +67,13 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
       // 2. Atomically persist local evidence metadata rows if provided
       if (params.evidenceFiles && params.evidenceFiles.length > 0) {
         for (const ev of params.evidenceFiles) {
+          if (ev.stage !== 'CONDITION') {
+            await this.db.runAsync(`DELETE FROM local_evidence WHERE task_id = ? AND stage = ? AND id != ?;`, [
+              params.taskId,
+              ev.stage,
+              ev.id,
+            ]);
+          }
           await this.db.runAsync(
             `INSERT INTO local_evidence (
               id,

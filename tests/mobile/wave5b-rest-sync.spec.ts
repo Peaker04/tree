@@ -91,6 +91,25 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
       expect(capturedAuthHeader).toBe('Bearer opaque_access_token_v1');
     });
 
+    it('B01b: requests automatically include ngrok-skip-browser-warning header for field tunnels', async () => {
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession(testSession);
+      const sessionManager = new AuthSessionManager('https://api.novyx.test', storage);
+      const apiClient = new MobileApiClient('https://api.novyx.test', sessionManager);
+
+      let capturedNgrokHeader: string | undefined;
+      globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        capturedNgrokHeader = (init?.headers as Record<string, string>)?.['ngrok-skip-browser-warning'];
+        return new Response(JSON.stringify({ data: { id: 'task-1' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      });
+
+      await apiClient.get('/v1/tasks/task-1');
+      expect(capturedNgrokHeader).toBe('true');
+    });
+
     it('B02: 401 triggers one refresh', async () => {
       const storage = new InMemorySecureSessionStorage();
       await storage.saveSession(testSession);
@@ -2599,6 +2618,127 @@ describe('Phase 13 Wave 5B: REST Transport, Auth Refresh, Outbox Dispatch, Serve
             },
           }),
       ).toThrow(/mock is no longer supported/);
+    });
+
+    it('R1X-M06: PENDING task (version 0) auto-starts before presign/submit and processAll stops on retryable failure without spinning', async () => {
+      const db = await createInMemoryTestDatabase();
+      await runMigrations(db);
+      const taskRepo = new SqliteMobileTaskRepository(db);
+      const outboxRepo = new SqliteOutboxRepository(db);
+
+      const taskId = 'task-pending-autostart';
+      await seedTestTask(taskRepo, taskId, 'PENDING', 0);
+
+      await taskRepo.saveEvidenceMetadata({
+        id: 'ev-before-pending',
+        taskId,
+        stage: 'BEFORE',
+        fileName: 'before.jpg',
+        contentType: 'image/jpeg',
+        sizeBytes: 8,
+        sha256: 'a'.repeat(64),
+        sandboxFileUri: 'file:///sandbox/before.jpg',
+        capturedAt: new Date().toISOString(),
+        isPersistedInSandbox: true,
+      });
+      await taskRepo.saveEvidenceMetadata({
+        id: 'ev-after-pending',
+        taskId,
+        stage: 'AFTER',
+        fileName: 'after.jpg',
+        contentType: 'image/jpeg',
+        sizeBytes: 8,
+        sha256: 'b'.repeat(64),
+        sandboxFileUri: 'file:///sandbox/after.jpg',
+        capturedAt: new Date().toISOString(),
+        isPersistedInSandbox: true,
+      });
+
+      const storage = new InMemorySecureSessionStorage();
+      await storage.saveSession({
+        accessToken: 'staff-tok',
+        refreshToken: 'ref',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        user: { id: 'staff-1', email: 'staff@novyx.test', role: 'staff' },
+      });
+      const sessionManager = new AuthSessionManager('https://api.novyx.test', storage);
+      const apiClient = new MobileApiClient('https://api.novyx.test', sessionManager);
+      const uploadClient = new EvidenceUploadClient(apiClient, {
+        readBinary: async () => new Uint8Array([1, 2, 3]),
+      });
+      const dispatcher = new SubmitEvidenceOutboxDispatcher(apiClient, uploadClient, taskRepo, outboxRepo);
+      const coordinator = new OutboxCoordinator(outboxRepo, dispatcher, taskRepo, db);
+
+      const callOrder: string[] = [];
+      let submittedExpectedVersion = -1;
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes(`/v1/tasks/${taskId}/start`)) {
+          callOrder.push('start');
+          return new Response(
+            JSON.stringify({
+              data: { id: taskId, status: 'IN_PROGRESS', version: 1 },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (url.includes(`/v1/tasks/${taskId}/evidence/presign`)) {
+          callOrder.push('presign');
+          const body = JSON.parse(init?.body as string);
+          return new Response(
+            JSON.stringify({
+              data: {
+                objectKey: `tasks/${taskId}/${body.fileName}`,
+                storageRef: `s3://novyx-evidence/tasks/${taskId}/${body.fileName}`,
+                uploadUrl: 'https://s3.novyx.test/upload',
+                expiresAt: new Date(Date.now() + 600_000).toISOString(),
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (url.includes(`/v1/tasks/${taskId}/evidence`)) {
+          callOrder.push('submit');
+          const body = JSON.parse(init?.body as string);
+          submittedExpectedVersion = body.expectedVersion;
+          return new Response(
+            JSON.stringify({
+              data: { id: taskId, status: 'WAITING_REVIEW', version: 2 },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        return new Response('', { status: 200 });
+      });
+
+      await outboxRepo.enqueueTransactional({
+        taskId,
+        request: {
+          taskId,
+          expectedVersion: 0,
+          siteVerification: {
+            gpsCheck: { verified: true, distance: 3.2, timestamp: new Date().toISOString(), lat: 10.7, lng: 106.6 },
+            qrCheck: { verified: true, scannedCode: 'NOVYX-1', timestamp: new Date().toISOString() },
+          },
+          proof: {
+            proofProfile: 'CHANGE_PROOF',
+            beforePhotoUri: 'file:///sandbox/before.jpg',
+            afterPhotoUri: 'file:///sandbox/after.jpg',
+            checklist: [{ id: 'c1', text: 'Check 1', done: true }],
+          },
+        },
+      });
+
+      const results = await coordinator.processAll();
+      expect(results).toHaveLength(1);
+      expect(results[0].success).toBe(true);
+      expect(callOrder).toEqual(['start', 'presign', 'presign', 'submit']);
+      expect(submittedExpectedVersion).toBe(1);
+
+      const cached = await taskRepo.getCachedTask(taskId);
+      expect(cached?.status).toBe('WAITING_REVIEW');
+      expect(cached?.version).toBe(2);
     });
   });
 });

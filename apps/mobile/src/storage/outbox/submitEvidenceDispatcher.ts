@@ -6,6 +6,7 @@ import type { IDurableOutboxRepository } from './outboxRepository';
 import type { EvidenceUploadClient } from '../../services/evidenceUploadClient';
 import { MobileApiClient, MobileApiError } from '../../services/mobileApiClient';
 import { assertNoIdempotencyKeyInBody } from './stateSeparation';
+import { generateSecureUuid } from '../utils/uuid';
 
 export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
   private apiClient: MobileApiClient;
@@ -54,6 +55,43 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
     assertNoIdempotencyKeyInBody(parsedRequest);
 
     try {
+      // Ensure task is started (IN_PROGRESS) on the server before presigning or submitting evidence
+      const cachedTask = await this.taskRepo.getCachedTask(item.taskId);
+      if (parsedRequest.expectedVersion === 0 || cachedTask?.status === 'PENDING' || cachedTask?.status === 'Pending') {
+        try {
+          const startedTask = await this.apiClient.post<CanonicalTaskDto>(
+            `/v1/tasks/${item.taskId}/start`,
+            { expectedVersion: parsedRequest.expectedVersion },
+            { idempotencyKey: generateSecureUuid() },
+          );
+          parsedRequest = {
+            ...parsedRequest,
+            expectedVersion: startedTask.version,
+          };
+          await this.taskRepo.cacheTasks([startedTask]);
+        } catch (startErr) {
+          if (startErr instanceof MobileApiError && (startErr.status === 400 || startErr.status === 409)) {
+            const currentServerTask = await this.apiClient.get<CanonicalTaskDto>(`/v1/tasks/${item.taskId}`);
+            if (currentServerTask.status === 'IN_PROGRESS') {
+              parsedRequest = {
+                ...parsedRequest,
+                expectedVersion: currentServerTask.version,
+              };
+              await this.taskRepo.cacheTasks([currentServerTask]);
+            } else {
+              throw startErr;
+            }
+          } else {
+            throw startErr;
+          }
+        }
+
+        if (this.outboxRepo) {
+          await this.outboxRepo.updatePayload(item.id, JSON.stringify(parsedRequest));
+        }
+        item.payloadJson = JSON.stringify(parsedRequest);
+      }
+
       let canonicalRequest: SubmitEvidenceRequest;
 
       // If the request is already canonical (e.g. durable storageRef/objectKey on replay), skip upload
@@ -183,10 +221,9 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
     }
 
     if (cloned.locationException?.explanationPhotoUri) {
-      cloned.locationException.explanationPhotoUri = resolveRef(
-        cloned.locationException.explanationPhotoUri,
-        'EXCEPTION',
-      );
+      cloned.locationException.explanationPhotoUri =
+        resolveRef(cloned.locationException.explanationPhotoUri, 'EXCEPTION') ||
+        resolveRef(cloned.locationException.explanationPhotoUri, 'BEFORE');
     }
 
     if (cloned.identityException?.damagedQrPhotoUri) {

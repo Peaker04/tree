@@ -1,4 +1,4 @@
-import type { TaskDto } from '@novyx/contracts';
+import type { CanonicalTaskDto, TaskDto } from '@novyx/contracts';
 import type { IDatabaseConnection } from '../database/types';
 import type { PersistedEvidenceFile } from '../evidence/evidenceFileStore';
 import type { LocalSubmissionStatus } from '../outbox/types';
@@ -24,7 +24,7 @@ export interface LocalDraftData {
 }
 
 export interface IMobileTaskRepository {
-  cacheTasks(tasks: TaskDto[]): Promise<void>;
+  cacheTasks(tasks: Array<TaskDto | CanonicalTaskDto>): Promise<void>;
   getCachedTask(taskId: string): Promise<TaskDto | null>;
   listCachedTasks(): Promise<TaskDto[]>;
   saveDraft(draft: Partial<LocalDraftData> & { taskId: string }): Promise<void>;
@@ -45,7 +45,7 @@ export class SqliteMobileTaskRepository implements IMobileTaskRepository {
     this.db = db;
   }
 
-  async cacheTasks(tasks: TaskDto[]): Promise<void> {
+  async cacheTasks(tasks: Array<TaskDto | CanonicalTaskDto>): Promise<void> {
     const now = new Date().toISOString();
     await this.db.withTransactionAsync(async () => {
       for (const task of tasks) {

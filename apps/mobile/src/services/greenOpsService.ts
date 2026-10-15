@@ -585,6 +585,8 @@ export function createGreenOpsRestService(
         treeId: request.treeId,
         assignedStaffId: request.assignedStaffId,
         deadline: request.deadline,
+        ...(request.dateRange ? { dateRange: request.dateRange } : {}),
+        ...(request.scope ? { scope: request.scope } : {}),
       };
       return await client.post<TaskDto>('/v1/tasks', payload, { idempotencyKey: generateSecureUuid() });
     },
