@@ -1,4 +1,3 @@
-import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { UserAvatar } from '../../components/UserAvatar';
 import type { AuthUser } from '@novyx/contracts';

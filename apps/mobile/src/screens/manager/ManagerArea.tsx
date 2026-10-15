@@ -1,4 +1,3 @@
-import React from 'react';
 import { AppNotification, CareHistory, Staff, Task, Tree } from '../../types';
 import type {
   AssignableStaffCatalogItem,
