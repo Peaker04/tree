@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NOVYX UI Kit - Human Visual Review</title>
+    <style>
+        body { margin: 0; padding: 40px; font-family: sans-serif; background-color: #f7fbf4; color: #1a2f24; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+        .column { display: flex; flex-direction: column; align-items: center; }
+        .label { font-size: 14px; font-weight: bold; margin-bottom: 20px; letter-spacing: 1px; }
+        .img-container { width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); cursor: pointer; background: white; }
+        img { width: 100%; display: block; border-radius: 12px; transition: transform 0.2s; }
+        img:hover { transform: scale(1.02); }
+        .board-container { margin-top: 60px; text-align: center; }
+        .board-container img { max-width: 100%; border-radius: 16px; border: 1px solid #e1e8e2; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:center; font-size: 20px; margin-bottom: 60px;">VISUAL REVIEW ARTIFACTS</h1>
+    
+    <div class="grid">
+        <div class="column">
+            <div class="label">UI KIT SPECIMEN</div>
+            <div class="img-container" onclick="window.open('00_UI_KIT_SPECIMEN.png', '_blank')">
+                <img src="00_UI_KIT_SPECIMEN.png" alt="UI Kit Specimen">
+            </div>
+        </div>
+        <div class="column">
+            <div class="label">TEST A — STAFF HOME</div>
+            <div class="img-container" onclick="window.open('01_TEST_A_STAFF_HOME.png', '_blank')">
+                <img src="01_TEST_A_STAFF_HOME.png" alt="Test A Staff Home">
+            </div>
+        </div>
+        <div class="column">
+            <div class="label">TEST B — TASK DETAIL / PROOF</div>
+            <div class="img-container" onclick="window.open('02_TEST_B_TASK_DETAIL_PROOF.png', '_blank')">
+                <img src="02_TEST_B_TASK_DETAIL_PROOF.png" alt="Test B Task Detail">
+            </div>
+        </div>
+    </div>
+
+    <div class="board-container">
+        <div class="label">COMPOSITE REVIEW BOARD</div>
+        <a href="03_NOVYX_UI_KIT_REVIEW_BOARD.png" target="_blank">
+            <img src="03_NOVYX_UI_KIT_REVIEW_BOARD.png" alt="Review Board">
+        </a>
+    </div>
+</body>
+</html>
