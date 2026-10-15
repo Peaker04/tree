@@ -8,3 +8,7 @@ external/hermes-agent
 package-lock.json
 apps/mobile/package-lock.json
 docs
+.pi
+.design
+.stitch
+scratch

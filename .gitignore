@@ -53,6 +53,10 @@ replay_pid*
 .tmp/
 .idea/
 .planning/
+scratch/
+/field-expo-qr.png
+.pi/
+.stitch/
 
 # python
 __pycache__/

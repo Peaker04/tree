@@ -30,6 +30,7 @@ PI discovers project skills under `.agents/skills/`.
 - Use `karpathy-guidelines` for every implementation or refactor.
 - Add `diagnosing-bugs` for broken, failing, or slow behavior.
 - Add `tdd` for regressions or explicitly test-first work.
+- Use Superpowers methodology (`.agents/skills/superpowers/skills/*`) for brainstorming, systematic debugging, subagent-driven development, plan execution, and code review workflows.
 
 Do not install shadcn, Radix, Tailwind, or web-only UI packages in `apps/mobile`.
 
@@ -54,7 +55,7 @@ When this general harness conflicts with a project-specific canonical contract, 
 - `packages/config` is the only place for environment validation helpers.
 - `packages/ui` is the only place for shared design tokens.
 - `apps/mobile/src/services/greenOpsService.ts`: mobile API boundary.
-- `external/hermes-agent` is a pinned upstream submodule. Do not edit it directly for product work; update it through submodule workflow and document the new commit.
+- `external/hermes-agent` and `.agents/skills/superpowers` are pinned upstream submodules. Do not edit them directly for product work; update them through submodule workflow and document the new commit.
 
 Reuse `apps/mobile/src/components/AppPrimitives.tsx` and existing tokens before adding a component, value, abstraction, or dependency.
 

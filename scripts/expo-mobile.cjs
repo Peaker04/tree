@@ -115,6 +115,17 @@ function configureAndroidEnvironment() {
     prependPath(path.join(sdkRoot, 'emulator'));
   }
 
+  const javaCandidates = [
+    process.env.JAVA_HOME,
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.10.7-hotspot',
+    'C:\\Program Files\\Java\\jdk-21',
+  ].filter(Boolean);
+  const javaHome = javaCandidates.find((candidate) => fs.existsSync(path.join(candidate, 'bin', 'java.exe')));
+  if (javaHome) {
+    process.env.JAVA_HOME = javaHome;
+    prependPath(path.join(javaHome, 'bin'));
+  }
+
   const avdHome = process.env.ANDROID_AVD_HOME || 'D:\\androidavd';
   if (fs.existsSync(avdHome)) {
     process.env.ANDROID_AVD_HOME = avdHome;

@@ -1,3 +1,6 @@
 [submodule "external/hermes-agent"]
 	path = external/hermes-agent
 	url = https://github.com/NousResearch/hermes-agent
+[submodule ".agents/skills/superpowers"]
+	path = .agents/skills/superpowers
+	url = https://github.com/obra/superpowers.git
