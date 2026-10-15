@@ -199,7 +199,7 @@ export function TreeLookupResult({
     tree.healthStatus === 'Sâu bệnh' ? 'danger' : tree.healthStatus === 'Cần chăm sóc' ? 'amber' : 'green';
 
   return (
-    <Card tone="flat" style={[styles.treeAssignmentCard, { backgroundColor: '#f0fdf4' }]}>
+    <Card tone="flat" style={[styles.treeAssignmentCard, { backgroundColor: colors.successSurface }]}>
       <TreeIdentityVisual tree={tree} />
       <View style={styles.rowBetween}>
         <View style={styles.flex}>
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   filterChipTextActive: {
     color: colors.primaryDark,
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   resultText: {
     color: colors.subtle,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   treeAssignmentCard: {
     gap: 12,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     color: colors.foreground,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 20,
   },
   itemSub: {
@@ -451,12 +451,12 @@ const styles = StyleSheet.create({
   monoSmall: {
     color: colors.muted,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   metricLabel: {
     color: colors.mutedForeground,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   treeMetaGrid: {
     flexDirection: 'row',
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   treeMetaValue: {
     color: colors.foreground,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '600',
     marginTop: 5,
   },
   relatedTaskCard: {
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   historyProofText: {
     color: colors.primaryDark,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   treeCode: {
     width: 36,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   },
   treeCodeText: {
     color: colors.primaryDark,
-    fontWeight: '900',
+    fontWeight: '600',
     fontSize: 11,
   },
 });

@@ -131,16 +131,13 @@ describe('NOVYX mobile UI foundation contract', () => {
       'utf8',
     );
 
-    expect(dashboard).toContain('Việc cần làm tiếp theo');
+    expect(dashboard).toContain('Ưu tiên vận hành cần xử lý');
     expect(dashboard).toContain("kind: 'blocked' as const");
     expect(dashboard).toContain("kind: 'overdue' as const");
-    expect(dashboard).toContain('nhiệm vụ đang mở.');
-    expect(dashboard).toContain('<Metric label="Cây chú ý" value={riskyTrees.length} tone="warning" />');
-    expect(dashboard).toContain('const color = value > 0 ? semanticColor : colors.neutralText;');
-    expect(dashboard).not.toContain('<Metric label="Đang mở"');
-    expect(dashboard).not.toContain('title="Không có báo cáo chờ duyệt"');
-    expect(dashboard).toContain('title="Hồ sơ cây"');
-    expect(dashboard).toContain('numberOfLines={1}');
+    expect(dashboard).toContain('label="Cây chú ý"');
+    expect(dashboard).toContain('heroCard');
+    expect(dashboard).toContain('metricsBar');
+    expect(dashboard).not.toContain('metricsGrid');
     expect(dashboard).not.toContain('Bảng điều khiển cây xanh');
     expect(dashboard).not.toContain('Mã QR cây');
     expect(dashboard).not.toMatch(/#[0-9a-fA-F]{3,8}/);
@@ -366,5 +363,78 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(qr).toContain('Chỉ tra cứu, không thay đổi công việc.');
     expect(qr).not.toContain('TreeLookupResult');
     expect(qr).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+  });
+
+  it('exports BottomSheetModal primitive with soft botanical presentation and decoupled backdrop animation', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+    expect(primitives).toContain('export function BottomSheetModal(');
+    expect(primitives).toContain('borderTopLeftRadius: 28');
+    expect(primitives).toContain('borderTopRightRadius: 28');
+    expect(primitives).toContain('sheetHandle');
+    expect(primitives).toContain('backdropAnim');
+    expect(primitives).toContain('sheetAnim');
+  });
+
+  it('provides specialized Soft Botanical DateRangePickerSheet with continuous ribbon track and TreeScopeSelectorSheet', () => {
+    const dateSheet = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/DateRangePickerSheet.tsx'),
+      'utf8',
+    );
+    expect(dateSheet).toContain('export function DateRangePickerSheet(');
+    expect(dateSheet).toContain('Hôm nay');
+    expect(dateSheet).toContain('Tuần này');
+    expect(dateSheet).toContain('Ca:');
+    expect(dateSheet).toContain('Áp dụng dải ngày');
+    expect(dateSheet).toContain('BottomSheetModal');
+    expect(dateSheet).toContain('ribbonTrack');
+    expect(dateSheet).toContain('ribbonStart');
+    expect(dateSheet).toContain('ribbonEnd');
+    expect(dateSheet).toContain('ribbonMiddle');
+    expect(dateSheet).not.toContain('dayCellInRange');
+
+    const treeSheet = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/TreeScopeSelectorSheet.tsx'),
+      'utf8',
+    );
+    expect(treeSheet).toContain('export function TreeScopeSelectorSheet(');
+    expect(treeSheet).toContain('Khu vực');
+    expect(treeSheet).toContain('Chọn nhiều cây');
+    expect(treeSheet).toContain('1 cây đơn lẻ');
+    expect(treeSheet).toContain('Áp dụng phạm vi');
+    expect(treeSheet).toContain('BottomSheetModal');
+  });
+
+  it('provides WebMapView with interactive Leaflet OSM map fallback when native maps are absent', () => {
+    const webMapView = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/presentation/WebMapView.tsx'),
+      'utf8',
+    );
+    expect(webMapView).toContain('export function WebMapView(');
+    expect(webMapView).toContain('leaflet.js');
+    expect(webMapView).toContain('openstreetmap.org');
+    expect(webMapView).toContain('treeCheckinCircle');
+    expect(webMapView).toContain('updateUserLocation');
+    expect(webMapView).toContain('Bản đồ Web (OSM)');
+
+    const staffProofFlow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffProofFlow.tsx'),
+      'utf8',
+    );
+    expect(staffProofFlow).toContain("import { WebMapView } from '../../components/presentation/WebMapView'");
+    expect(staffProofFlow).toContain('<WebMapView');
+  });
+
+  it('enforces future operational task deadlines and prevents past shift assignment errors', () => {
+    const createTask = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerCreateTask.tsx'),
+      'utf8',
+    );
+    expect(createTask).toContain('export function computeOperationalDeadline(');
+    expect(createTask).toContain('isDeadlineInPast');
+    expect(createTask).toContain('Hạn hoàn thành đã qua. Vui lòng chọn ca hoặc ngày trong tương lai.');
+    expect(createTask).toContain('Hạn hoàn thành phải là thời gian trong tương lai');
   });
 });

@@ -1,6 +1,9 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  DimensionValue,
+  Modal,
   Pressable,
   ScrollView,
   StyleProp,
@@ -347,6 +350,100 @@ export function EmptyState({
   );
 }
 
+export function BottomSheetModal({
+  visible,
+  onClose,
+  title,
+  subtitle,
+  children,
+  maxHeight = '88%',
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title?: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  maxHeight?: DimensionValue;
+}) {
+  const [modalVisible, setModalVisible] = React.useState(visible);
+  const backdropAnim = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const sheetAnim = React.useRef(new Animated.Value(visible ? 0 : 450)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sheetAnim, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else if (modalVisible) {
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(sheetAnim, {
+          toValue: 450,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) {
+          setModalVisible(false);
+        }
+      });
+    }
+  }, [visible, modalVisible, backdropAnim, sheetAnim]);
+
+  if (!modalVisible) return null;
+
+  return (
+    <Modal visible={modalVisible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.sheetOverlay}>
+        <Animated.View style={[styles.sheetBackdrop, { opacity: backdropAnim }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng lớp phủ"
+            style={styles.flex}
+            onPress={onClose}
+          />
+        </Animated.View>
+        <Animated.View style={[styles.sheetContainer, { maxHeight, transform: [{ translateY: sheetAnim }] }]}>
+          <View style={styles.sheetHandleContainer}>
+            <View style={styles.sheetHandle} />
+          </View>
+          {title ? (
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.sheetTitle}>{title}</Text>
+                {subtitle ? <Text style={styles.sheetSubtitle}>{subtitle}</Text> : null}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng"
+                onPress={onClose}
+                style={styles.sheetCloseButton}
+              >
+                <Ionicons name="close" size={20} color={colors.pewter} />
+              </Pressable>
+            </View>
+          ) : null}
+          <View style={styles.sheetBody}>{children}</View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: colors.snowWhite },
@@ -521,4 +618,67 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...typography.section, color: colors.ink, textAlign: 'center' },
   emptyBody: { ...typography.body, color: colors.pewter, textAlign: 'center', marginTop: spacing.xs },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheetBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(12, 28, 20, 0.28)',
+  },
+  sheetContainer: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xxl,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  sheetHandleContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  sheetHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.hairlineBorder,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.hairlineBorder,
+  },
+  sheetTitle: {
+    ...typography.title,
+    color: colors.ink,
+  },
+  sheetSubtitle: {
+    ...typography.label,
+    color: colors.pewter,
+    marginTop: 2,
+  },
+  sheetCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    backgroundColor: colors.neutralSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetBody: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.sm,
+  },
 });

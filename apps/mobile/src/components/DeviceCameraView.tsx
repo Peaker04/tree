@@ -70,7 +70,7 @@ export function DeviceCameraView({
         onBarcodeScanned={onBarcodeScanned}
       />
       {children ? (
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <View pointerEvents={__DEV__ ? 'box-none' : 'none'} style={StyleSheet.absoluteFill}>
           {children}
         </View>
       ) : null}

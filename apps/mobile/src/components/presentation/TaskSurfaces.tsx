@@ -305,7 +305,7 @@ export function PhotoPair({ task }: { task: Task }) {
               style={styles.photoPreviewClose}
               onPress={() => setPreview(null)}
             >
-              <Ionicons name="close" size={26} color="#ffffff" />
+              <Ionicons name="close" size={26} color={colors.snowWhite} />
             </Pressable>
           </View>
           {preview ? (
@@ -414,20 +414,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: colors.foreground,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '600',
     letterSpacing: 0,
   },
   headerTitleDark: {
-    color: '#fff',
+    color: colors.snowWhite,
   },
   headerSub: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 18,
   },
   headerSubDark: {
-    color: '#cbd5e1',
+    color: colors.pewter,
   },
   listCard: {
     gap: 10,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     color: colors.foreground,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 20,
   },
   itemSub: {
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   monoSmall: {
     color: colors.muted,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   metricLabel: {
     color: colors.mutedForeground,
@@ -494,12 +494,12 @@ const styles = StyleSheet.create({
   },
   taskSignalPillDanger: {
     backgroundColor: colors.dangerSoft,
-    borderColor: '#ffd5dc',
+    borderColor: colors.criticalBorder,
   },
   taskSignalText: {
     color: colors.mutedForeground,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   taskSignalTextDone: {
     color: colors.primaryDark,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   taskProofText: {
     color: colors.mutedForeground,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   taskProofTextDone: {
     color: colors.primaryDark,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     gap: 9,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#ffd5dc',
+    borderColor: colors.criticalBorder,
     backgroundColor: colors.dangerSoft,
     padding: 11,
   },
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   checkIndexText: {
     color: colors.mutedForeground,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   checkIndexTextDone: {
     color: colors.primaryDark,
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1.35,
     borderRadius: radius.md,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.neutralSurface,
   },
   photoStored: {
     width: '100%',
@@ -630,13 +630,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.amber,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   photoLabelAfter: {
     textAlign: 'center',
     color: colors.primary,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   photoPreviewBackdrop: {
     flex: 1,
@@ -653,10 +653,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   photoPreviewTitle: {
-    color: '#ffffff',
+    color: colors.snowWhite,
     fontSize: 18,
     lineHeight: 24,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   photoPreviewClose: {
     width: 44,
@@ -690,9 +690,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   photoPreviewSwitchText: {
-    color: '#ffffff',
+    color: colors.snowWhite,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   metricCard: {
     flex: 1,

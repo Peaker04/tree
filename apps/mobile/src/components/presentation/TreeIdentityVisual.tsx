@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.forest,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   idBadge: {
     position: 'absolute',
@@ -84,6 +84,6 @@ const styles = StyleSheet.create({
   idText: {
     color: colors.forest,
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
   },
 });

@@ -1,13 +1,19 @@
 {
   "expo": {
     "name": "NOVYX",
+    "owner": "peakers-team",
     "slug": "novyx-greenops",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/novyx-app-icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.novyx.greenops",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Cho phép NOVYX dùng camera để quét QR cây và chụp ảnh bằng chứng hiện trường.",
+        "NSLocationWhenInUseUsageDescription": "Cho phép NOVYX dùng vị trí khi sử dụng ứng dụng để xác minh hiện trường và lưu đúng vị trí cây."
+      }
     },
     "android": {
       "adaptiveIcon": {

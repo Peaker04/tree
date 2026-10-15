@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.foreground,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   body: {
     color: colors.foregroundSoft,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
     lineHeight: 20,
   },
   actions: {
