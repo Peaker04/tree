@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthSessionError } from '../services/authSessionManager';
 import { DataSourceStatus } from '../services/greenOpsService';
 import { getSharedMobileRuntime } from '../infrastructure/runtime';
-import { AppNotification, CareHistory, Role, Task } from '../types';
+import { AppNotification, CareHistory, Role, Task, TaskStatus } from '../types';
 import { colors } from '../theme/tokens';
 import { executeOfflineSubmission } from '../storage/outbox/submissionService';
 import { ExpoEvidenceFileStore } from '../storage/evidence/evidenceFileStore';
@@ -78,7 +78,7 @@ export default function MobileApp() {
   const [managerStep, setManagerStep] = useState<ManagerStep>('HOME');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [reviewTask, setReviewTask] = useState<Task | null>(null);
-  const [userLat, setUserLat] = useState(10.77421);
+  const [userLat, setUserLat] = useState(10.77402);
   const [userLng, setUserLng] = useState(106.69101);
   const [authLoading, setAuthLoading] = useState(false);
   const [managerCatalogs, setManagerCatalogs] = useState<ManagerCatalogState>({
@@ -182,8 +182,13 @@ export default function MobileApp() {
         throw new Error('UNSUPPORTED_PROFILE');
       }
 
+      const hasLocationException = Boolean(
+        task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
+      );
+      const gpsVerified = Boolean(task.gpsCheck?.verified);
+
       if (
-        !task.gpsCheck?.verified ||
+        (!gpsVerified && !hasLocationException) ||
         !task.qrCheck?.verified ||
         !task.beforePhoto ||
         !task.afterPhoto ||
@@ -215,13 +220,28 @@ export default function MobileApp() {
         },
       ];
 
+      const parsedGpsReason =
+        task.notes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() || 'Tán cây rậm rạp làm trôi tín hiệu GPS';
+
       const request: SubmitEvidenceRequest = {
         taskId: task.id,
         expectedVersion: task.version ?? 0,
         siteVerification: {
-          gpsCheck: task.gpsCheck,
+          ...(gpsVerified && task.gpsCheck ? { gpsCheck: task.gpsCheck } : {}),
           qrCheck: task.qrCheck,
         },
+        ...(hasLocationException
+          ? {
+              locationException: {
+                reason: parsedGpsReason,
+                distanceMeters: Math.max(1, Math.round(task.gpsCheck?.distance ?? 11)),
+                explanationPhotoUri: task.beforePhoto,
+                recordedLat: task.gpsCheck?.lat ?? 10.774,
+                recordedLng: task.gpsCheck?.lng ?? 106.691,
+                timestamp: task.gpsCheck?.timestamp ?? new Date().toISOString(),
+              },
+            }
+          : {}),
         proof: {
           proofProfile: 'CHANGE_PROOF',
           beforePhotoUri: task.beforePhoto,
@@ -232,16 +252,25 @@ export default function MobileApp() {
       };
 
       await runtime.taskRepo.cacheTasks([task]);
-      await executeOfflineSubmission(fileStore, runtime.outboxRepo, {
+      const { outboxItem } = await executeOfflineSubmission(fileStore, runtime.outboxRepo, {
         taskId: task.id,
         request,
         evidenceInputs,
         notes: task.notes,
       });
 
-      void runtime.triggerSync().then(() => {
-        void refreshData();
-      });
+      const syncResults = await runtime.triggerSync();
+      const itemResult = syncResults.find((r) => r.outboxId === outboxItem.id);
+
+      if (itemResult?.success) {
+        await refreshData();
+        const refreshedTask = greenOpsService.getSnapshot().tasks.find((t) => t.id === task.id);
+        return refreshedTask ?? { ...task, status: TaskStatus.WAITING_REVIEW };
+      }
+
+      if (itemResult && !itemResult.success && itemResult.classification !== 'NETWORK') {
+        throw new Error(itemResult.error ?? 'SUBMISSION_FAILED');
+      }
 
       setData(greenOpsService.getSnapshot());
       return task;

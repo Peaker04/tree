@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, ListRow, Notice, ScreenHeader } from '../../components/AppPrimitives';
 import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
 import { Task, TaskStatus } from '../../types';
@@ -169,9 +170,21 @@ export function StaffHome({
 }
 
 function Metric({ label, value }: { label: string; value: number | string }) {
+  const iconName: React.ComponentProps<typeof Ionicons>['name'] =
+    label === 'Cần xử lý'
+      ? 'time-outline'
+      : label === 'Chờ duyệt'
+        ? 'shield-checkmark-outline'
+        : 'checkmark-circle-outline';
+
   return (
     <View style={styles.metric}>
-      <Text style={styles.metricLabel}>{label}</Text>
+      <View style={styles.metricHeader}>
+        <Ionicons name={iconName} size={15} color={colors.primaryDark} />
+        <Text numberOfLines={1} style={styles.metricLabel}>
+          {label}
+        </Text>
+      </View>
       <Text style={styles.metricValue}>{value}</Text>
     </View>
   );
@@ -192,14 +205,29 @@ const styles = StyleSheet.create({
   body: { ...typography.body, color: colors.neutralText },
   metrics: {
     flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  metric: {
+    flex: 1,
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.hairlineBorder,
-    borderRadius: radius.card,
     backgroundColor: colors.card,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1.5,
   },
-  metric: { flex: 1, gap: spacing.xs, padding: spacing.md },
-  metricLabel: { ...typography.metadata, color: colors.pewter },
-  metricValue: { ...typography.metric, color: colors.ink },
+  metricHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  metricLabel: { ...typography.metadata, color: colors.pewter, flex: 1 },
+  metricValue: { ...typography.display, fontSize: 24, lineHeight: 28, fontWeight: '600', color: colors.ink },
   section: { gap: spacing.sm },
   sectionTitle: { ...typography.section, color: colors.ink },
 });

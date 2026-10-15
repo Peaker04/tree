@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ExpoCamera from 'expo-camera';
 import { Badge, Button, ListRow, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
@@ -90,13 +90,18 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
                 void lookup(result.data);
               }}
             >
-              <View style={styles.cameraOverlay}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Khung quét mã QR"
+                onPress={__DEV__ ? () => void lookup('TRE-DEV-01') : undefined}
+                style={styles.cameraOverlay}
+              >
                 <View style={styles.scanFrame}>
                   <Ionicons name="qr-code-outline" size={42} color={colors.snowWhite} />
                 </View>
                 <Text style={styles.cameraTitle}>Đặt mã QR cây trong khung</Text>
                 <Text style={styles.cameraBody}>Chỉ tra cứu, không thay đổi công việc.</Text>
-              </View>
+              </Pressable>
             </DeviceCameraView>
 
             {loading ? (

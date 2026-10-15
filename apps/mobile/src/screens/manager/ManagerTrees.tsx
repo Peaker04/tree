@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, EmptyState, Field, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
@@ -8,7 +8,7 @@ import { useDevicePermissions } from '../../hooks/useDevicePermissions';
 import { openDeviceSettings } from '../../services/devicePermissions';
 import { filterTrees, formatTreeAge, getTaskStatusMeta } from '../../domain/mobileWorkflow';
 import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
-import type { CareHistory, Task, Tree } from '../../types';
+import { TaskStatus, type CareHistory, type Task, type Tree } from '../../types';
 import type { TreeFilter } from '../../domain/mobileWorkflow';
 import { TreeQrModal } from '../../components/presentation/TreeQrModal';
 import { TreeSearchFilters } from '../../components/presentation/TreeSurfaces';
@@ -161,6 +161,10 @@ export function ManagerTrees(props: ManagerAreaProps) {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.screen}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        removeClippedSubviews={Platform.OS === 'android'}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={8}
         ListHeaderComponent={
           <View style={styles.header}>
             <ScreenHeader
@@ -356,9 +360,15 @@ export function ManagerTrees(props: ManagerAreaProps) {
         }
         renderItem={({ item: tree }) => {
           const relatedTasks = props.tasks.filter((task) => task.treeId === tree.id);
-          const pendingReview = relatedTasks.find((task) => task.status === 'WAITING_REVIEW');
+          const pendingReview = relatedTasks.find(
+            (task) => task.status === TaskStatus.WAITING_REVIEW || task.status === 'WAITING_REVIEW',
+          );
           const activeTask =
-            pendingReview ?? relatedTasks.find((task) => task.status !== 'COMPLETED' && task.status !== 'CANCELLED');
+            pendingReview ??
+            relatedTasks.find(
+              (task) =>
+                task.status !== TaskStatus.COMPLETED && task.status !== 'COMPLETED' && task.status !== 'CANCELLED',
+            );
           const expanded = expandedTreeId === tree.id;
           return (
             <ManagerTreeRow

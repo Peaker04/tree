@@ -26,6 +26,16 @@ import { StaffProofFlow } from './StaffProofFlow';
 import { StaffTrees } from './StaffTrees';
 import { StaffWork } from './StaffWork';
 
+const NOTIFICATION_TYPE_META: Record<
+  AppNotification['type'],
+  { label: string; tone: 'danger' | 'amber' | 'green' | 'sky' }
+> = {
+  danger: { label: 'Khẩn cấp', tone: 'danger' },
+  warning: { label: 'Cần làm lại', tone: 'amber' },
+  success: { label: 'Thành công', tone: 'green' },
+  info: { label: 'Thông tin', tone: 'sky' },
+};
+
 export function StaffArea(props: {
   authenticatedUser: AuthUser | null;
   authenticatedStaffId: string | null;
@@ -120,9 +130,18 @@ export function StaffArea(props: {
           props.setActiveTask(task);
           props.setStep('DETAIL');
         }}
-        onStartTaskProof={(task) => {
-          props.setActiveTask(task);
-          props.setStep(getNextProofStep(task));
+        onStartTaskProof={async (task) => {
+          let currentTask = task;
+          if (task.status === TaskStatus.PENDING || task.status === 'PENDING') {
+            try {
+              const started = await props.startTask(task);
+              currentTask = { ...task, ...started };
+            } catch {
+              // Offline fallback: OutboxDispatcher will auto-start PENDING task upon sync
+            }
+          }
+          props.setActiveTask(currentTask);
+          props.setStep(getNextProofStep(currentTask));
         }}
       />
     );
@@ -262,18 +281,8 @@ export function StaffArea(props: {
               <Card style={styles.listCard} tone={notification.read ? 'default' : 'green'}>
                 <View style={styles.rowBetween}>
                   <Text style={styles.itemTitle}>{notification.title}</Text>
-                  <Badge
-                    tone={
-                      notification.type === 'danger'
-                        ? 'danger'
-                        : notification.type === 'warning'
-                          ? 'amber'
-                          : notification.type === 'success'
-                            ? 'green'
-                            : 'sky'
-                    }
-                  >
-                    {notification.type}
+                  <Badge tone={NOTIFICATION_TYPE_META[notification.type]?.tone ?? 'sky'}>
+                    {NOTIFICATION_TYPE_META[notification.type]?.label ?? 'Thông báo'}
                   </Badge>
                 </View>
                 <Text style={styles.bodyText}>{notification.body}</Text>
@@ -380,7 +389,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   filterChipTextActive: {
     color: colors.primaryDark,
@@ -393,7 +402,7 @@ const styles = StyleSheet.create({
   sectionTitleText: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   listCard: {
     gap: 10,
@@ -401,7 +410,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     color: colors.foreground,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     lineHeight: 20,
   },
   bodyText: {
@@ -412,11 +421,11 @@ const styles = StyleSheet.create({
   monoSmall: {
     color: colors.muted,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '500',
   },
   linkText: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '600',
   },
 });

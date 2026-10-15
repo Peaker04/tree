@@ -8,8 +8,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type {
   AssignableStaffCatalogItem,
@@ -18,7 +20,9 @@ import type {
   OperationalTaskTypeCatalogItem,
 } from '@novyx/contracts';
 import { AppNotification, Task, Tree } from '../../types';
-import { ActionBar, Button, Field, ScreenHeader } from '../../components/AppPrimitives';
+import { BottomSheetModal, Button, Field, ScreenHeader } from '../../components/AppPrimitives';
+import { DateRangePickerSheet, ShiftType } from '../../components/DateRangePickerSheet';
+import { TreeScopeSelectorSheet, ScopeMode, TreeScopeItem } from '../../components/TreeScopeSelectorSheet';
 import { colors, controlSize, layout, radius, spacing, typography } from '../../theme/tokens';
 import { ManagerStep } from './ManagerArea';
 import {
@@ -45,7 +49,13 @@ export type ManagerCreateTaskProps = {
 };
 
 type SelectorKind = 'tree' | 'staff' | 'taskType';
-type SelectorItem = { id: string; title: string; subtitle: string; keywords: string };
+type SelectorItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  keywords: string;
+  initials?: string;
+};
 
 const TIME_PRESETS = TASK_DEADLINE_TIMES;
 const WEEKDAYS = CALENDAR_WEEKDAYS;
@@ -57,26 +67,69 @@ const formatVietnameseDateTime = formatTaskDeadline;
 const getStaffIdentity = (staff: AssignableStaffCatalogItem) => {
   const displayName = staff.displayName.trim();
   const usableDisplayName = displayName && !/^staff$/i.test(displayName);
-  return usableDisplayName
-    ? { title: displayName, subtitle: staff.email }
-    : { title: staff.email, subtitle: 'Nhân viên đang hoạt động' };
+  const title = usableDisplayName ? displayName : staff.email;
+  const subtitle = usableDisplayName ? staff.email : 'Nhân viên hiện trường';
+  const initials =
+    title
+      .split(' ')
+      .filter(Boolean)
+      .slice(-2)
+      .map((w) => w[0].toUpperCase())
+      .join('') || 'NV';
+  return { title, subtitle, initials };
 };
 
-const getTaskTypeSummary = (_taskType?: OperationalTaskTypeCatalogItem) => 'Yêu cầu ảnh trước và sau';
+const getTaskTypeSummary = (taskType?: OperationalTaskTypeCatalogItem) => {
+  if (!taskType?.description) return 'Yêu cầu ảnh trước và sau';
+  if (/manual testing/i.test(taskType.description) || /test/i.test(taskType.description)) {
+    return 'Yêu cầu ảnh trước và sau';
+  }
+  return taskType.description;
+};
 
 const getSubmitError = (cause: unknown) => {
-  const error = cause as { code?: string; status?: number; message?: string };
-  if (error.code === 'NETWORK_ERROR' || error.status === 0) {
-    return 'Mất kết nối. Dữ liệu đã nhập vẫn được giữ.';
+  const err = cause as { code?: string; status?: number; message?: string; details?: unknown };
+  if (err.code === 'NETWORK_ERROR' || err.status === 0) {
+    return 'Mất kết nối mạng. Dữ liệu đã nhập vẫn được giữ lại.';
   }
-  if (error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
-  if (error.status === 403) return 'Bạn không có quyền tạo việc cho lựa chọn này.';
-  if (error.status === 409) return 'Dữ liệu vừa thay đổi. Kiểm tra lại trước khi tạo.';
-  if (error.status && error.status >= 500) {
-    return 'Chưa tạo được việc. Dữ liệu vẫn được giữ.';
+  if (err.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  if (err.status === 403) return 'Bạn không có quyền tạo việc cho lựa chọn này.';
+  if (err.status === 409) return 'Dữ liệu vừa thay đổi. Vui lòng kiểm tra lại trước khi tạo.';
+  if (err.status && err.status >= 500) {
+    return 'Hệ thống chưa tạo được việc. Dữ liệu vẫn được giữ.';
   }
-  return 'Chưa tạo được việc. Kiểm tra và thử lại.';
+  if (err.message && /future/i.test(err.message)) {
+    return 'Hạn hoàn thành phải là thời gian trong tương lai. Vui lòng kiểm tra lại ngày và ca làm việc.';
+  }
+  if (err.message && !/HTTP/i.test(err.message) && !/Internal/i.test(err.message)) {
+    return err.message;
+  }
+  return 'Chưa thể tạo việc. Vui lòng kiểm tra và thử lại.';
 };
+
+export function computeOperationalDeadline(dateStr: string, shift: ShiftType = 'full_day'): Date {
+  const parts = dateStr.split('-').map(Number);
+  const year = parts[0];
+  const month = parts[1] - 1;
+  const day = parts[2];
+
+  const hour = shift === 'morning' ? 11 : shift === 'afternoon' ? 17 : 18;
+  const minute = shift === 'full_day' ? 0 : 30;
+
+  const target = new Date(year, month, day, hour, minute, 0, 0);
+
+  const now = new Date();
+  const isToday = now.getFullYear() === year && now.getMonth() === month && now.getDate() === day;
+
+  // If today and standard shift hour has already passed (e.g. creating in late evening):
+  if (isToday && target.getTime() <= now.getTime()) {
+    if (shift === 'full_day' && now.getHours() < 23) {
+      target.setHours(23, 59, 0, 0);
+    }
+  }
+
+  return target;
+}
 
 export function ManagerCreateTask({
   trees,
@@ -100,7 +153,10 @@ export function ManagerCreateTask({
   const [taskTypeTouched, setTaskTypeTouched] = useState(false);
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState<Date>();
-  const [deadlinePickerVisible, setDeadlinePickerVisible] = useState(false);
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string; shift?: ShiftType }>();
+  const [treeScope, setTreeScope] = useState<{ mode: ScopeMode; zoneId?: string; treeIds: string[] }>();
+  const [dateRangeSheetVisible, setDateRangeSheetVisible] = useState(false);
+  const [treeScopeSheetVisible, setTreeScopeSheetVisible] = useState(false);
   const [selector, setSelector] = useState<SelectorKind>();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
@@ -110,16 +166,34 @@ export function ManagerCreateTask({
   const selectedStaffIdentity = selectedStaff ? getStaffIdentity(selectedStaff) : undefined;
   const selectedTree = trees.find((item) => item.id === treeId);
   const catalogsReady = taskTypes.length > 0 && assignableStaff.length > 0;
-  const missingCount = [
-    title.trim().length >= 3,
-    Boolean(deadline),
-    Boolean(treeId),
-    Boolean(assignedStaffId),
-    Boolean(taskTypeId),
-  ].filter((ready) => !ready).length;
-  const canSubmit = Boolean(
-    catalogsReady && treeId && taskTypeId && assignedStaffId && title.trim().length >= 3 && deadline && !submitting,
-  );
+
+  const treeScopeItems: TreeScopeItem[] = useMemo(() => {
+    return trees.map((t) => ({
+      id: t.id,
+      code: t.id.startsWith('TRE-') && t.id.length > 10 ? `#${t.id.slice(-4).toUpperCase()}` : t.id,
+      name: t.name,
+      address: t.address,
+      zoneId: t.address?.includes(',') ? t.address.split(',').pop()?.trim() : 'KV-01',
+      zoneName: t.address?.includes(',') ? `Khu ${t.address.split(',').pop()?.trim()}` : 'Khu vực 1',
+    }));
+  }, [trees]);
+
+  const isDeadlineInPast = useMemo(() => {
+    return Boolean(deadline && deadline.getTime() <= Date.now());
+  }, [deadline]);
+
+  const missingLabels = useMemo(() => {
+    const list: string[] = [];
+    if (title.trim().length < 3) list.push('tiêu đề');
+    if (!deadline) list.push('thời hạn');
+    else if (isDeadlineInPast) list.push('thời hạn trong tương lai');
+    if (!treeId) list.push('cây mục tiêu');
+    if (!assignedStaffId) list.push('người thực hiện');
+    if (!taskTypeId) list.push('loại việc');
+    return list;
+  }, [assignedStaffId, deadline, isDeadlineInPast, taskTypeId, title, treeId]);
+
+  const canSubmit = catalogsReady && missingLabels.length === 0 && !isDeadlineInPast && !submitting;
 
   const selectorItems = useMemo<SelectorItem[]>(() => {
     if (selector === 'tree') {
@@ -141,7 +215,7 @@ export function ManagerCreateTask({
       id: taskType.id,
       title: taskType.name,
       subtitle: getTaskTypeSummary(taskType),
-      keywords: taskType.name,
+      keywords: `${taskType.name} ${taskType.description ?? ''}`,
     }));
   }, [assignableStaff, selector, taskTypes, trees]);
 
@@ -180,6 +254,8 @@ export function ManagerCreateTask({
         treeId,
         assignedStaffId,
         deadline: deadline.toISOString(),
+        dateRange,
+        scope: treeScope,
       });
       void createNotification({
         title: 'Đã tạo việc',
@@ -203,15 +279,152 @@ export function ManagerCreateTask({
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <ScreenHeader title="Tạo việc" subtitle="Giao một nhiệm vụ có bằng chứng" />
+        <ScreenHeader title="Tạo việc" subtitle="Phân công nhiệm vụ chăm sóc cây xanh" />
 
+        {/* 1. THỜI GIAN & CA LÀM VIỆC */}
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Thời gian & ca làm việc</Text>
+
+          {/* Quick Presets Row */}
+          <View style={styles.quickPresetRow}>
+            <Pressable
+              accessibilityRole="button"
+              style={[
+                styles.quickPresetChip,
+                dateRange?.startDate === dateRange?.endDate && styles.quickPresetChipActive,
+              ]}
+              onPress={() => {
+                const now = new Date();
+                const dStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const currentShift = dateRange?.shift || 'full_day';
+                setDateRange({ startDate: dStr, endDate: dStr, shift: currentShift });
+                const d = computeOperationalDeadline(dStr, currentShift);
+                setDeadline(d);
+                setDeadlineTouched(true);
+              }}
+            >
+              <Text
+                style={[
+                  styles.quickPresetText,
+                  dateRange?.startDate === dateRange?.endDate && styles.quickPresetTextActive,
+                ]}
+              >
+                Hôm nay
+              </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={styles.quickPresetChip}
+              onPress={() => {
+                const now = new Date();
+                const end = new Date();
+                end.setDate(now.getDate() + 2);
+                const sStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const eStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+                const currentShift = dateRange?.shift || 'full_day';
+                setDateRange({ startDate: sStr, endDate: eStr, shift: currentShift });
+                const d = computeOperationalDeadline(eStr, currentShift);
+                setDeadline(d);
+                setDeadlineTouched(true);
+              }}
+            >
+              <Text style={styles.quickPresetText}>3 ngày tới</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={styles.quickPresetChip}
+              onPress={() => {
+                const now = new Date();
+                const dayOfWeek = now.getDay();
+                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                const monday = new Date(now);
+                monday.setDate(now.getDate() + diffToMonday);
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                const sStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+                const eStr = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
+                const currentShift = dateRange?.shift || 'full_day';
+                setDateRange({ startDate: sStr, endDate: eStr, shift: currentShift });
+                const d = computeOperationalDeadline(eStr, currentShift);
+                setDeadline(d);
+                setDeadlineTouched(true);
+              }}
+            >
+              <Text style={styles.quickPresetText}>Tuần này</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.quickPresetChip, styles.quickPresetCalendarBtn]}
+              onPress={() => setDateRangeSheetVisible(true)}
+            >
+              <Ionicons name="calendar-outline" size={14} color={colors.primaryDark} />
+              <Text style={styles.quickPresetTextCalendar}>Tùy chọn ngày</Text>
+            </Pressable>
+          </View>
+
+          {/* Shift Radio Chips */}
+          <View style={styles.shiftSelectorRow}>
+            {[
+              { key: 'full_day' as const, label: 'Cả ngày', icon: 'time-outline' as const },
+              { key: 'morning' as const, label: 'Ca sáng', icon: 'sunny-outline' as const },
+              { key: 'afternoon' as const, label: 'Ca chiều', icon: 'partly-sunny-outline' as const },
+            ].map((s) => {
+              const active = (dateRange?.shift || 'full_day') === s.key;
+              return (
+                <Pressable
+                  key={s.key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  style={[styles.shiftChip, active && styles.shiftChipActive]}
+                  onPress={() => {
+                    const now = new Date();
+                    const sStr =
+                      dateRange?.startDate ||
+                      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const eStr = dateRange?.endDate || sStr;
+                    setDateRange({ startDate: sStr, endDate: eStr, shift: s.key });
+                    const d = computeOperationalDeadline(eStr, s.key);
+                    setDeadline(d);
+                    setDeadlineTouched(true);
+                  }}
+                >
+                  <Ionicons name={s.icon} size={14} color={active ? colors.snowWhite : colors.pewter} />
+                  <Text style={[styles.shiftText, active && styles.shiftTextActive]}>{s.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <SelectionField
+            label="Hạn hoàn thành"
+            value={
+              dateRange
+                ? `${dateRange.startDate.split('-').reverse().join('/')} — ${dateRange.endDate.split('-').reverse().join('/')} (${dateRange.shift === 'morning' ? 'Ca sáng' : dateRange.shift === 'afternoon' ? 'Ca chiều' : 'Cả ngày'})`
+                : deadline
+                  ? formatVietnameseDateTime(deadline)
+                  : undefined
+            }
+            placeholder="Chọn ngày và giờ"
+            icon="calendar-outline"
+            tone={isDeadlineInPast ? 'warning' : 'info'}
+            error={deadlineTouched && !deadline ? 'Chọn ngày và giờ hoàn thành.' : undefined}
+            onPress={() => setDateRangeSheetVisible(true)}
+          />
+          {isDeadlineInPast ? (
+            <Text accessibilityRole="alert" style={styles.fieldError}>
+              Hạn hoàn thành đã qua. Vui lòng chọn ca hoặc ngày trong tương lai.
+            </Text>
+          ) : null}
+
           <Field
             label="Tiêu đề công việc"
             value={title}
             onChangeText={setTitle}
             onBlur={() => setTitleTouched(true)}
-            placeholder="Ví dụ: Cắt tỉa cành khô"
+            placeholder="Ví dụ: Cắt tỉa cành khô định kỳ khu vực"
             maxLength={120}
           />
           {titleTouched && title.trim().length < 3 ? (
@@ -219,17 +432,9 @@ export function ManagerCreateTask({
               Nhập ít nhất 3 ký tự.
             </Text>
           ) : null}
-          <SelectionField
-            label="Hạn hoàn thành"
-            value={deadline ? formatVietnameseDateTime(deadline) : undefined}
-            placeholder="Chọn ngày và giờ"
-            icon="calendar-outline"
-            tone="info"
-            error={deadlineTouched && !deadline ? 'Chọn ngày và giờ hoàn thành.' : undefined}
-            onPress={() => setDeadlinePickerVisible(true)}
-          />
         </View>
 
+        {/* 2. PHÂN CÔNG HIỆN TRƯỜNG */}
         <View style={styles.section}>
           <View style={styles.sectionHeadingRow}>
             <Text style={styles.sectionTitle}>Phân công</Text>
@@ -252,15 +457,27 @@ export function ManagerCreateTask({
           <View style={styles.assignmentGroup}>
             <SelectionField
               label="Cây mục tiêu"
-              value={selectedTree?.name}
-              detail={selectedTree ? `${selectedTree.address} · ${selectedTree.healthStatus}` : undefined}
+              value={
+                treeScope && treeScope.mode === 'zone'
+                  ? `Toàn khu vực (${treeScope.treeIds.length} cây)`
+                  : treeScope && treeScope.mode === 'multi_trees'
+                    ? `${treeScope.treeIds.length} cây đã chọn`
+                    : selectedTree?.name
+              }
+              detail={
+                treeScope && treeScope.mode === 'zone'
+                  ? `Khu vực: ${treeScope.zoneId ?? 'Đã chọn'} · ${treeScope.treeIds.length} cây`
+                  : selectedTree
+                    ? `${selectedTree.address} · ${selectedTree.healthStatus}`
+                    : undefined
+              }
               placeholder="Chọn cây"
               icon="leaf-outline"
               tone="success"
               disabled={loading || Boolean(error)}
               grouped
               error={treeTouched && !treeId ? 'Chọn cây mục tiêu.' : undefined}
-              onPress={() => setSelector('tree')}
+              onPress={() => setTreeScopeSheetVisible(true)}
             />
             <View style={styles.groupDivider} />
             <SelectionField
@@ -291,27 +508,32 @@ export function ManagerCreateTask({
           </View>
         </View>
 
+        {/* 3. HƯỚNG DẪN HIỆN TRƯỜNG */}
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Hướng dẫn hiện trường</Text>
           <Field
             label="Ghi chú cho nhân viên (không bắt buộc)"
             value={description}
             onChangeText={setDescription}
-            placeholder="Lưu ý tại hiện trường"
+            placeholder="Lưu ý tại hiện trường hoặc yêu cầu dụng cụ..."
             multiline
+            numberOfLines={4}
             maxLength={1000}
           />
         </View>
 
+        {/* 4. TỔNG KẾT HỒ SƠ */}
         {selectedTree && selectedTaskType && selectedStaff && deadline ? (
           <View style={styles.summary}>
             <View style={styles.summaryHeader}>
               <Ionicons name="checkmark-circle" size={20} color={colors.successText} />
-              <Text style={styles.summaryTitle}>Sẵn sàng tạo việc</Text>
+              <Text style={styles.summaryTitle}>Hồ sơ đã sẵn sàng</Text>
             </View>
-            <SummaryLine label="Cây" value={selectedTree.name} />
-            <SummaryLine label="Nhân viên" value={selectedStaffIdentity?.title ?? selectedStaff.email} />
-            <SummaryLine label="Loại việc" value={selectedTaskType.name} />
-            <SummaryLine label="Hạn" value={formatVietnameseDateTime(deadline)} />
+            <SummaryLine label="Tiêu đề" value={title.trim()} />
+            <SummaryLine label="Cây mục tiêu" value={selectedTree.name} />
+            <SummaryLine label="Người thực hiện" value={selectedStaffIdentity?.title ?? selectedStaff.email} />
+            <SummaryLine label="Quy trình" value={selectedTaskType.name} />
+            <SummaryLine label="Hạn chót" value={formatVietnameseDateTime(deadline)} />
           </View>
         ) : null}
 
@@ -322,46 +544,33 @@ export function ManagerCreateTask({
           </View>
         ) : null}
 
-        <ActionBar>
+        {/* 5. ACTION BAR TRONG LUỒNG CUỘN */}
+        <View style={styles.actionBarSection}>
           <View style={styles.readinessRow}>
             <Ionicons
-              name={canSubmit ? 'checkmark-circle' : 'ellipse-outline'}
+              name={canSubmit ? 'checkmark-circle' : 'alert-circle-outline'}
               size={18}
-              color={canSubmit ? colors.successText : colors.neutralText}
+              color={canSubmit ? colors.successText : colors.warningText}
             />
             <Text style={[styles.readinessText, canSubmit && styles.readinessTextReady]}>
-              {canSubmit ? 'Đã đủ thông tin' : `Còn ${missingCount} mục bắt buộc`}
+              {canSubmit ? 'Đã đủ thông tin để tạo việc' : `Còn thiếu: ${missingLabels.join(', ')}`}
             </Text>
           </View>
           <Button
             variant="forest"
             size="field"
             icon="send-outline"
-            accessibilityLabel="Tạo công việc"
+            accessibilityLabel="Khởi tạo công việc"
             onPress={() => void submit()}
             disabled={!canSubmit}
             loading={submitting}
           >
-            Tạo việc
+            Khởi tạo công việc
           </Button>
-        </ActionBar>
+        </View>
       </ScrollView>
 
-      <DateTimePickerModal
-        key={`${deadlinePickerVisible}-${deadline?.toISOString() ?? 'new'}`}
-        visible={deadlinePickerVisible}
-        value={deadline}
-        onClose={() => {
-          if (!deadline) setDeadlineTouched(true);
-          setDeadlinePickerVisible(false);
-        }}
-        onConfirm={(value) => {
-          setDeadline(value);
-          setDeadlineTouched(true);
-          setDeadlinePickerVisible(false);
-        }}
-      />
-
+      {/* MODAL: TÌM KIẾM & CHỌN MỤC TIÊU */}
       <SearchSelector
         key={selector ?? 'closed'}
         visible={Boolean(selector)}
@@ -370,6 +579,44 @@ export function ManagerCreateTask({
         selectedId={selector === 'tree' ? treeId : selector === 'staff' ? assignedStaffId : taskTypeId}
         onSelect={chooseItem}
         onClose={closeSelector}
+      />
+
+      {/* BOTTOM SHEET: DẢI NGÀY & CA CHĂM SÓC */}
+      <DateRangePickerSheet
+        visible={dateRangeSheetVisible}
+        onClose={() => {
+          if (!deadline) setDeadlineTouched(true);
+          setDateRangeSheetVisible(false);
+        }}
+        startDate={dateRange?.startDate}
+        endDate={dateRange?.endDate}
+        shift={dateRange?.shift}
+        onConfirm={(range) => {
+          setDateRange(range);
+          const end = computeOperationalDeadline(range.endDate, range.shift || 'full_day');
+          setDeadline(end);
+          setDeadlineTouched(true);
+          setDateRangeSheetVisible(false);
+        }}
+      />
+
+      {/* BOTTOM SHEET: PHẠM VI CÂY / KHU VỰC */}
+      <TreeScopeSelectorSheet
+        visible={treeScopeSheetVisible}
+        onClose={() => {
+          if (!treeId) setTreeTouched(true);
+          setTreeScopeSheetVisible(false);
+        }}
+        trees={treeScopeItems}
+        selectedScope={treeScope}
+        onConfirm={(scope) => {
+          setTreeScope(scope);
+          if (scope.treeIds.length > 0) {
+            setTreeId(scope.treeIds[0]);
+          }
+          setTreeTouched(true);
+          setTreeScopeSheetVisible(false);
+        }}
       />
     </KeyboardAvoidingView>
   );
@@ -446,8 +693,14 @@ function SelectionField({
         ) : null}
         <View style={styles.flex}>
           {grouped ? <Text style={styles.groupedFieldLabel}>{label}</Text> : null}
-          <Text style={value ? styles.selectionValue : styles.selectionPlaceholder}>{value ?? placeholder}</Text>
-          {detail ? <Text style={styles.selectionDetail}>{detail}</Text> : null}
+          <Text style={value ? styles.selectionValue : styles.selectionPlaceholder} numberOfLines={1}>
+            {value ?? placeholder}
+          </Text>
+          {detail ? (
+            <Text style={styles.selectionDetail} numberOfLines={1}>
+              {detail}
+            </Text>
+          ) : null}
           {error ? (
             <Text accessibilityRole="alert" style={styles.selectionError}>
               {error}
@@ -460,7 +713,7 @@ function SelectionField({
   );
 }
 
-function DateTimePickerModal({
+export function DateTimePickerModal({
   visible,
   value,
   onClose,
@@ -494,10 +747,10 @@ function DateTimePickerModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={styles.datePickerPage}>
+      <SafeAreaView style={styles.modalRoot} edges={['top', 'bottom']}>
         <View style={styles.selectorHeader}>
-          <View>
-            <Text style={styles.selectorTitle}>Chọn hạn hoàn thành</Text>
+          <View style={styles.flex}>
+            <Text style={styles.selectorTitle}>Thời hạn hoàn thành</Text>
             <Text style={styles.datePickerValue}>{formatVietnameseDateTime(draft)}</Text>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel="Đóng" onPress={onClose} style={styles.closeButton}>
@@ -505,75 +758,81 @@ function DateTimePickerModal({
           </Pressable>
         </View>
 
-        <View style={styles.monthHeader}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tháng trước"
-            disabled={!canGoPrevious}
-            onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-            style={[styles.monthButton, !canGoPrevious && styles.monthButtonDisabled]}
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.ink} />
-          </Pressable>
-          <Text style={styles.monthTitle}>
-            Tháng {month.getMonth() + 1}, {month.getFullYear()}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tháng sau"
-            onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-            style={styles.monthButton}
-          >
-            <Ionicons name="chevron-forward" size={20} color={colors.ink} />
-          </Pressable>
-        </View>
-
-        <View style={styles.calendarGrid}>
-          {WEEKDAYS.map((day) => (
-            <Text key={day} style={styles.weekday}>
-              {day}
-            </Text>
-          ))}
-          {cells.map((date, index) => {
-            if (!date) return <View key={`empty-${index}`} style={styles.dayCell} />;
-            const disabled = !isTaskDeadlineDateSelectable(date);
-            const selected = sameDay(date, draft);
-            return (
-              <Pressable
-                key={date.toISOString()}
-                accessibilityRole="radio"
-                accessibilityState={{ selected, disabled }}
-                disabled={disabled}
-                onPress={() => chooseDate(date)}
-                style={[styles.dayCell, selected && styles.dayCellSelected]}
-              >
-                <Text style={[styles.dayText, disabled && styles.dayTextDisabled, selected && styles.dayTextSelected]}>
-                  {date.getDate()}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Text style={styles.fieldLabel}>Giờ hoàn thành</Text>
-        <View style={styles.timeGrid}>
-          {TIME_PRESETS.map((time) => (
+        <ScrollView contentContainerStyle={styles.datePickerScrollContent}>
+          <View style={styles.monthHeader}>
             <Pressable
-              key={time}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: selectedTime === time }}
-              onPress={() => chooseTime(time)}
-              style={[styles.timeOption, selectedTime === time && styles.timeOptionSelected]}
+              accessibilityRole="button"
+              accessibilityLabel="Tháng trước"
+              disabled={!canGoPrevious}
+              onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+              style={[styles.monthButton, !canGoPrevious && styles.monthButtonDisabled]}
             >
-              <Text style={[styles.timeText, selectedTime === time && styles.timeTextSelected]}>{time}</Text>
+              <Ionicons name="chevron-back" size={20} color={colors.ink} />
             </Pressable>
-          ))}
-        </View>
+            <Text style={styles.monthTitle}>
+              Tháng {month.getMonth() + 1}, {month.getFullYear()}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Tháng sau"
+              onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+              style={styles.monthButton}
+            >
+              <Ionicons name="chevron-forward" size={20} color={colors.ink} />
+            </Pressable>
+          </View>
 
-        <Button variant="forest" size="field" onPress={() => onConfirm(draft)}>
-          Xác nhận thời hạn
-        </Button>
-      </View>
+          <View style={styles.calendarGrid}>
+            {WEEKDAYS.map((day) => (
+              <Text key={day} style={styles.weekday}>
+                {day}
+              </Text>
+            ))}
+            {cells.map((date, index) => {
+              if (!date) return <View key={`empty-${index}`} style={styles.dayCell} />;
+              const disabled = !isTaskDeadlineDateSelectable(date);
+              const selected = sameDay(date, draft);
+              return (
+                <Pressable
+                  key={date.toISOString()}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected, disabled }}
+                  disabled={disabled}
+                  onPress={() => chooseDate(date)}
+                  style={[styles.dayCell, selected && styles.dayCellSelected]}
+                >
+                  <Text
+                    style={[styles.dayText, disabled && styles.dayTextDisabled, selected && styles.dayTextSelected]}
+                  >
+                    {date.getDate()}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.subGroupHeader}>GIỜ HOÀN THÀNH</Text>
+          <View style={styles.timeGrid}>
+            {TIME_PRESETS.map((time) => (
+              <Pressable
+                key={time}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: selectedTime === time }}
+                onPress={() => chooseTime(time)}
+                style={[styles.timeOption, selectedTime === time && styles.timeOptionSelected]}
+              >
+                <Text style={[styles.timeText, selectedTime === time && styles.timeTextSelected]}>{time}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFooterBar}>
+          <Button variant="forest" size="field" onPress={() => onConfirm(draft)}>
+            Xác nhận thời hạn
+          </Button>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -599,49 +858,92 @@ function SearchSelector({
   );
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={styles.selectorPage}>
-        <View style={styles.selectorHeader}>
-          <Text style={styles.selectorTitle}>{title}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Đóng" onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.ink} />
-          </Pressable>
+    <BottomSheetModal
+      visible={visible}
+      onClose={onClose}
+      title={title}
+      subtitle={
+        title.includes('cây')
+          ? 'Chọn cây mục tiêu để thực hiện'
+          : title.includes('nhân viên')
+            ? 'Chọn người thực hiện nhiệm vụ'
+            : 'Chọn quy trình kỹ thuật chuẩn hóa'
+      }
+      maxHeight="88%"
+    >
+      <View style={styles.searchBarWrap}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={18} color={colors.pewter} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Nhập tên, số hiệu hoặc từ khóa..."
+            placeholderTextColor={colors.muted}
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+          />
+          {query.length > 0 && Platform.OS !== 'ios' ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Xóa tìm kiếm" onPress={() => setQuery('')}>
+              <Ionicons name="close-circle" size={18} color={colors.pewter} />
+            </Pressable>
+          ) : null}
         </View>
-        <Field label="Tìm kiếm" value={query} onChangeText={setQuery} placeholder="Nhập tên hoặc thông tin liên quan" />
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.selectorList}
-          ListEmptyComponent={<Text style={styles.supporting}>Không tìm thấy kết quả phù hợp.</Text>}
-          renderItem={({ item }) => {
-            const selected = item.id === selectedId;
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                onPress={() => onSelect(item.id)}
-                style={({ pressed }) => [
-                  styles.resultRow,
-                  selected && styles.resultSelected,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.flex}>
-                  <Text style={styles.resultTitle}>{item.title}</Text>
-                  <Text style={styles.resultSubtitle}>{item.subtitle}</Text>
-                </View>
-                <Ionicons
-                  name={selected ? 'checkmark-circle' : 'chevron-forward'}
-                  size={22}
-                  color={selected ? colors.primaryDark : colors.pewter}
-                />
-              </Pressable>
-            );
-          }}
-        />
       </View>
-    </Modal>
+
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.selectorList}
+        ListEmptyComponent={
+          <View style={styles.emptyListWrap}>
+            <Ionicons name="search-outline" size={32} color={colors.pewter} />
+            <Text style={styles.supporting}>Không tìm thấy kết quả phù hợp.</Text>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const selected = item.id === selectedId;
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              onPress={() => onSelect(item.id)}
+              style={({ pressed }) => [styles.resultRow, selected && styles.resultSelected, pressed && styles.pressed]}
+            >
+              {item.initials ? (
+                <View style={[styles.avatarCircle, selected && styles.avatarCircleActive]}>
+                  <Text style={[styles.avatarText, selected && styles.avatarTextActive]}>{item.initials}</Text>
+                </View>
+              ) : (
+                <View style={styles.itemIconCircle}>
+                  <Ionicons
+                    name={title.includes('công việc') ? 'cut-outline' : 'leaf-outline'}
+                    size={18}
+                    color={colors.forestDepths}
+                  />
+                </View>
+              )}
+
+              <View style={styles.flex}>
+                <Text style={[styles.resultTitle, selected && styles.resultTitleActive]} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.resultSubtitle} numberOfLines={1}>
+                  {item.subtitle}
+                </Text>
+              </View>
+
+              <Ionicons
+                name={selected ? 'checkmark-circle' : 'chevron-forward'}
+                size={22}
+                color={selected ? colors.primaryDark : colors.pewter}
+              />
+            </Pressable>
+          );
+        }}
+      />
+    </BottomSheetModal>
   );
 }
 
@@ -649,13 +951,19 @@ function SummaryLine({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.summaryLine}>
       <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryValue} numberOfLines={1}>
+        {value}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  modalRoot: {
+    flex: 1,
+    backgroundColor: colors.snowWhite,
+  },
   page: {
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.md,
@@ -668,6 +976,14 @@ const styles = StyleSheet.create({
   sectionStatus: { ...typography.label, color: colors.infoText },
   fieldLabel: { ...typography.label, color: colors.ink },
   fieldError: { ...typography.label, color: colors.warningText, marginTop: -spacing.sm },
+  subGroupHeader: {
+    ...typography.metadata,
+    color: colors.pewter,
+    fontWeight: '600',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.5,
+  },
   selectionIcon: {
     width: controlSize.minimumTouchTarget,
     height: controlSize.minimumTouchTarget,
@@ -749,16 +1065,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   errorText: { ...typography.body, color: colors.criticalText, flex: 1 },
+  actionBarSection: {
+    gap: spacing.md,
+    paddingTop: spacing.sm,
+  },
   readinessRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   readinessText: { ...typography.label, color: colors.neutralText },
   readinessTextReady: { color: colors.successText },
   supporting: { ...typography.body, color: colors.pewter },
   pressed: { opacity: 0.72 },
-  datePickerPage: {
-    flex: 1,
-    backgroundColor: colors.snowWhite,
-    padding: layout.screenPadding,
-    gap: spacing.xl,
+  datePickerScrollContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
   datePickerValue: { ...typography.bodyStrong, color: colors.primaryDark, marginTop: spacing.xs },
   monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -805,8 +1124,19 @@ const styles = StyleSheet.create({
   timeOptionSelected: { borderColor: colors.successBorder, backgroundColor: colors.successSurface },
   timeText: { ...typography.bodyStrong, color: colors.neutralText },
   timeTextSelected: { color: colors.successText },
-  selectorPage: { flex: 1, backgroundColor: colors.snowWhite, padding: layout.screenPadding, gap: spacing.lg },
-  selectorHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  modalFooterBar: {
+    padding: layout.screenPadding,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairlineBorder,
+    backgroundColor: colors.snowWhite,
+  },
+  selectorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing.md,
+  },
   selectorTitle: { ...typography.title, color: colors.ink },
   closeButton: {
     width: controlSize.minimumTouchTarget,
@@ -814,7 +1144,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selectorList: { gap: spacing.sm, paddingBottom: spacing.xxl },
+  searchBarWrap: {
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: spacing.sm,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: controlSize.field,
+    borderRadius: radius.control,
+    backgroundColor: colors.neutralSurface,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  searchIcon: {
+    marginRight: 2,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    ...typography.body,
+    color: colors.ink,
+    padding: 0,
+  },
+  selectorList: {
+    gap: spacing.sm,
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: spacing.xxl,
+  },
+  emptyListWrap: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+  },
   resultRow: {
     minHeight: 64,
     flexDirection: 'row',
@@ -828,5 +1189,99 @@ const styles = StyleSheet.create({
   },
   resultSelected: { borderColor: colors.primaryDark, backgroundColor: colors.primarySoft },
   resultTitle: { ...typography.bodyStrong, color: colors.ink },
+  resultTitleActive: { color: colors.primaryDark },
   resultSubtitle: { ...typography.label, color: colors.pewter, marginTop: 2 },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.neutralSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarCircleActive: {
+    backgroundColor: colors.primarySoft,
+  },
+  avatarText: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  avatarTextActive: {
+    color: colors.primaryDark,
+  },
+  itemIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.neutralSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickPresetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: 2,
+  },
+  quickPresetChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    backgroundColor: colors.neutralSurface,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+  },
+  quickPresetChipActive: {
+    backgroundColor: colors.forestDepths,
+    borderColor: colors.forestDepths,
+  },
+  quickPresetText: {
+    ...typography.metadata,
+    color: colors.ink,
+    fontWeight: '500',
+  },
+  quickPresetTextActive: {
+    color: colors.snowWhite,
+    fontWeight: '600',
+  },
+  quickPresetCalendarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.cardWarm,
+    borderColor: colors.willowGreen,
+  },
+  quickPresetTextCalendar: {
+    ...typography.metadata,
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  shiftSelectorRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: 2,
+  },
+  shiftChip: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    borderRadius: radius.control,
+    backgroundColor: colors.neutralSurface,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+  },
+  shiftChipActive: {
+    backgroundColor: colors.forestDepths,
+    borderColor: colors.forestDepths,
+  },
+  shiftText: {
+    ...typography.metadata,
+    color: colors.ink,
+    fontWeight: '500',
+  },
+  shiftTextActive: {
+    color: colors.snowWhite,
+    fontWeight: '600',
+  },
 });

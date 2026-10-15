@@ -29,32 +29,62 @@ export function ManagerDashboard(props: ManagerAreaProps) {
       }).format(new Date(props.dataSource.cachedAt))
     : null;
 
-  const nextAction =
+  const heroPriority =
     blocked.length > 0
       ? {
-          title: `${blocked.length} công việc đang bị chặn`,
-          body: 'Chọn cách xử lý bên dưới.',
           kind: 'blocked' as const,
+          pretitle: 'SỰ CỐ KHẨN CẤP',
+          title: `${blocked.length} công việc đang bị chặn`,
+          body: 'Phát hiện sự cố kỹ thuật hoặc vật cản tại hiện trường cần quản lý can thiệp.',
+          icon: 'alert-circle' as const,
+          iconColor: colors.criticalText,
+          count: blocked.length,
+          actionLabel: 'Xử lý công việc bị chặn',
+          actionIcon: 'warning-outline' as const,
+          onPress: () => {
+            // Handled in blocked section
+          },
         }
       : overdue.length > 0
         ? {
-            title: `${overdue.length} công việc đã quá hạn`,
-            body: 'Xử lý việc quá hạn trước.',
             kind: 'overdue' as const,
+            pretitle: 'ƯU TIÊN VẬN HÀNH',
+            title: `${overdue.length} công việc đã quá hạn`,
+            body: 'Ưu tiên rà soát và điều phối nhân sự xử lý để đảm bảo an toàn cây xanh.',
+            icon: 'time' as const,
+            iconColor: colors.warningText,
+            count: overdue.length,
+            actionLabel: 'Xem hàng chờ nghiệm thu',
+            actionIcon: 'checkmark-done-outline' as const,
+            onPress: () => props.setActiveStep('REVIEW'),
           }
         : pendingReview.length > 0
           ? {
+              kind: 'review' as const,
+              pretitle: 'CHỜ NGHIỆM THU',
               title: `${pendingReview.length} báo cáo đang chờ duyệt`,
               body:
                 incompleteReview.length > 0
-                  ? `${incompleteReview.length} báo cáo còn thiếu bằng chứng.`
-                  : 'Duyệt bằng chứng và chọn kết quả.',
-              kind: 'review' as const,
+                  ? `${incompleteReview.length} báo cáo còn thiếu bằng chứng, cần kiểm tra kỹ.`
+                  : 'Nhân viên đã nộp đủ hồ sơ ảnh đối chứng. Sẵn sàng nghiệm thu.',
+              icon: 'shield-checkmark' as const,
+              iconColor: colors.successText,
+              count: pendingReview.length,
+              actionLabel: 'Duyệt báo cáo ngay',
+              actionIcon: 'checkmark-done-outline' as const,
+              onPress: () => props.setActiveStep('REVIEW'),
             }
           : {
-              title: 'Tạo nhiệm vụ vận hành mới',
-              body: `${open} nhiệm vụ đang mở.`,
-              kind: 'create' as const,
+              kind: 'stable' as const,
+              pretitle: 'TRẠNG THÁI VẬN HÀNH',
+              title: 'Vận hành ổn định',
+              body: `Tất cả công việc trong tiến độ chăm sóc. ${open} nhiệm vụ đang mở.`,
+              icon: 'leaf' as const,
+              iconColor: colors.forestDepths,
+              count: 0,
+              actionLabel: 'Giao việc mới',
+              actionIcon: 'add-outline' as const,
+              onPress: () => props.setActiveStep('CREATE'),
             };
 
   return (
@@ -83,41 +113,125 @@ export function ManagerDashboard(props: ManagerAreaProps) {
         />
       ) : null}
 
-      <View style={styles.metrics}>
-        <Metric label="Chờ duyệt" value={pendingReview.length} tone="warning" />
-        <Metric label="Bị chặn" value={blocked.length} tone="danger" />
-        <Metric label="Quá hạn" value={overdue.length} tone="danger" />
-        <Metric label="Cây chú ý" value={riskyTrees.length} tone="warning" />
-      </View>
-
+      {/* 1. HERO OPERATIONAL PRIORITY CARD */}
       <View
         style={[
-          styles.nextAction,
-          nextAction.kind === 'blocked' && styles.nextActionDanger,
-          nextAction.kind === 'overdue' && styles.nextActionWarning,
+          styles.heroCard,
+          heroPriority.kind === 'blocked' && styles.heroCardDanger,
+          heroPriority.kind === 'overdue' && styles.heroCardWarning,
+          heroPriority.kind === 'review' && styles.heroCardSuccess,
         ]}
       >
-        <View style={styles.flex}>
-          <Text
+        <View style={styles.heroHeader}>
+          <View
             style={[
-              styles.nextActionLabel,
-              nextAction.kind === 'blocked' && styles.textDanger,
-              nextAction.kind === 'overdue' && styles.textWarning,
+              styles.heroIconBadge,
+              heroPriority.kind === 'blocked' && styles.heroIconBadgeDanger,
+              heroPriority.kind === 'overdue' && styles.heroIconBadgeWarning,
+              heroPriority.kind === 'review' && styles.heroIconBadgeSuccess,
             ]}
           >
-            Việc cần làm tiếp theo
-          </Text>
-          <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
-          <Text style={styles.body}>{nextAction.body}</Text>
+            <Ionicons name={heroPriority.icon} size={20} color={heroPriority.iconColor} />
+          </View>
+          <View style={styles.flex}>
+            <Text
+              style={[
+                styles.heroPretitle,
+                heroPriority.kind === 'blocked' && styles.textDanger,
+                heroPriority.kind === 'overdue' && styles.textWarning,
+                heroPriority.kind === 'review' && styles.textSuccess,
+              ]}
+            >
+              {heroPriority.pretitle}
+            </Text>
+            <Text style={styles.heroTitle}>{heroPriority.title}</Text>
+          </View>
+          {heroPriority.count > 0 ? (
+            <View
+              style={[
+                styles.heroCountBadge,
+                heroPriority.kind === 'blocked' && styles.heroCountBadgeDanger,
+                heroPriority.kind === 'overdue' && styles.heroCountBadgeWarning,
+                heroPriority.kind === 'review' && styles.heroCountBadgeSuccess,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.heroCountBadgeText,
+                  heroPriority.kind === 'blocked' && styles.textDanger,
+                  heroPriority.kind === 'overdue' && styles.textWarning,
+                  heroPriority.kind === 'review' && styles.textSuccess,
+                ]}
+              >
+                {heroPriority.count}
+              </Text>
+            </View>
+          ) : null}
         </View>
-        {nextAction.kind === 'review' || nextAction.kind === 'create' ? (
-          <Button
-            icon={nextAction.kind === 'review' ? 'checkmark-done-outline' : 'add-outline'}
-            onPress={() => props.setActiveStep(nextAction.kind === 'review' ? 'REVIEW' : 'CREATE')}
-          >
-            {nextAction.kind === 'review' ? 'Duyệt báo cáo' : 'Tạo việc'}
+        <Text style={styles.heroDescription}>{heroPriority.body}</Text>
+        <View style={styles.heroActionRow}>
+          <Button size="compact" variant="primary" icon={heroPriority.actionIcon} onPress={heroPriority.onPress}>
+            {heroPriority.actionLabel}
           </Button>
-        ) : null}
+        </View>
+      </View>
+
+      {/* 2. STREAMLINED METRICS BAR (4 PILLS IN ONE SLEEK ROW) */}
+      <View style={styles.metricsBar}>
+        <MetricPill
+          label="Chờ duyệt"
+          value={pendingReview.length}
+          tone="warning"
+          icon="shield-checkmark-outline"
+          onPress={() => props.setActiveStep('REVIEW')}
+        />
+        <MetricPill label="Bị chặn" value={blocked.length} tone="danger" icon="ban-outline" />
+        <MetricPill
+          label="Quá hạn"
+          value={overdue.length}
+          tone="danger"
+          icon="time-outline"
+          onPress={() => props.setActiveStep('REVIEW')}
+        />
+        <MetricPill
+          label="Cây chú ý"
+          value={riskyTrees.length}
+          tone="warning"
+          icon="leaf-outline"
+          onPress={() => props.setActiveStep('TREES')}
+        />
+      </View>
+
+      {/* 3. TIẾN ĐỘ CHĂM SÓC CÂY ĐỊNH KỲ */}
+      <View style={styles.routineCard}>
+        <View style={styles.routineHeader}>
+          <View style={styles.routineIconBadge}>
+            <Ionicons name="leaf" size={18} color={colors.primaryDark} />
+          </View>
+          <View style={styles.flex}>
+            <Text style={styles.routineTitle}>Tiến độ điều phối chăm sóc</Text>
+            <Text style={styles.routineSubtitle}>
+              {props.tasks.filter((t) => t.status === TaskStatus.COMPLETED).length}/{props.tasks.length} việc hoàn thành
+              (
+              {props.tasks.length > 0
+                ? Math.round(
+                    (props.tasks.filter((t) => t.status === TaskStatus.COMPLETED).length / props.tasks.length) * 100,
+                  )
+                : 0}
+              %)
+            </Text>
+          </View>
+        </View>
+        <View style={styles.progressBarTrack}>
+          <View
+            style={[
+              styles.progressBarFill,
+              {
+                width: `${props.tasks.length > 0 ? Math.min(100, Math.round((props.tasks.filter((t) => t.status === TaskStatus.COMPLETED).length / props.tasks.length) * 100)) : 0}%`,
+              },
+            ]}
+          />
+        </View>
       </View>
 
       {blocked.length > 0 ? (
@@ -306,31 +420,54 @@ export function ManagerDashboard(props: ManagerAreaProps) {
   );
 }
 
-function Metric({
+function MetricPill({
   label,
   value,
   tone,
+  icon,
+  onPress,
 }: {
   label: string;
   value: number;
   tone: 'warning' | 'danger' | 'info' | 'neutral';
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  onPress?: () => void;
 }) {
   const semanticColor =
-    tone === 'warning'
-      ? colors.warningText
-      : tone === 'danger'
-        ? colors.criticalText
-        : tone === 'info'
-          ? colors.infoText
-          : colors.neutralText;
-  const color = value > 0 ? semanticColor : colors.neutralText;
-  return (
-    <View style={styles.metric}>
-      <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={styles.metricLabel}>
+    tone === 'warning' ? colors.warningText : tone === 'danger' ? colors.criticalText : colors.forestDepths;
+  const isAlert = value > 0 && (tone === 'danger' || tone === 'warning');
+  const countColor = isAlert ? semanticColor : colors.ink;
+  const iconColor = isAlert ? semanticColor : colors.pewter;
+
+  const content = (
+    <View
+      style={[
+        styles.metricPill,
+        isAlert && tone === 'danger' && styles.metricPillDanger,
+        isAlert && tone === 'warning' && styles.metricPillWarning,
+      ]}
+    >
+      <View style={styles.metricPillTop}>
+        <Ionicons name={icon} size={14} color={iconColor} />
+        <Text style={[styles.metricPillValue, { color: countColor }]}>{value}</Text>
+      </View>
+      <Text numberOfLines={1} style={styles.metricPillLabel}>
         {label}
       </Text>
-      <Text style={[styles.metricValue, { color }]}>{value}</Text>
     </View>
+  );
+
+  return onPress ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+      style={styles.flex}
+      onPress={onPress}
+    >
+      {content}
+    </Pressable>
+  ) : (
+    <View style={styles.flex}>{content}</View>
   );
 }
 
@@ -341,30 +478,136 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   flex: { flex: 1 },
-  metrics: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.hairlineBorder,
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-  },
-  metric: { flex: 1, padding: spacing.md, gap: spacing.xs },
-  metricLabel: { ...typography.metadata, color: colors.pewter },
-  metricValue: { ...typography.metric },
-  nextAction: {
-    gap: spacing.md,
+  heroCard: {
     padding: spacing.lg,
     borderRadius: radius.card,
-    backgroundColor: colors.successSurface,
+    backgroundColor: colors.cardWarm,
     borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    gap: spacing.md,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  heroCardDanger: {
+    backgroundColor: colors.criticalSurface,
+    borderColor: colors.criticalBorder,
+  },
+  heroCardWarning: {
+    backgroundColor: colors.warningSurface,
+    borderColor: colors.warningBorder,
+  },
+  heroCardSuccess: {
+    backgroundColor: colors.successSurface,
     borderColor: colors.successBorder,
   },
-  nextActionLabel: { ...typography.metadata, color: colors.successText },
-  nextActionDanger: { backgroundColor: colors.criticalSurface, borderColor: colors.criticalBorder },
-  nextActionWarning: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  heroIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.neutralSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroIconBadgeDanger: { backgroundColor: 'rgba(217, 72, 72, 0.12)' },
+  heroIconBadgeWarning: { backgroundColor: 'rgba(217, 153, 33, 0.14)' },
+  heroIconBadgeSuccess: { backgroundColor: 'rgba(46, 125, 82, 0.14)' },
+  heroPretitle: {
+    ...typography.metadata,
+    letterSpacing: 0.5,
+    fontWeight: '600',
+    color: colors.pewter,
+  },
   textDanger: { color: colors.criticalText },
   textWarning: { color: colors.warningText },
-  nextActionTitle: { ...typography.title, color: colors.ink, marginTop: spacing.xs },
+  textSuccess: { color: colors.successText },
+  heroTitle: {
+    ...typography.title,
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.ink,
+    marginTop: 2,
+  },
+  heroCountBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    backgroundColor: colors.neutralSurface,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+  },
+  heroCountBadgeDanger: { backgroundColor: 'rgba(217, 72, 72, 0.1)', borderColor: colors.criticalBorder },
+  heroCountBadgeWarning: { backgroundColor: 'rgba(217, 153, 33, 0.1)', borderColor: colors.warningBorder },
+  heroCountBadgeSuccess: { backgroundColor: 'rgba(46, 125, 82, 0.1)', borderColor: colors.successBorder },
+  heroCountBadgeText: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    color: colors.ink,
+  },
+  heroDescription: {
+    ...typography.body,
+    color: colors.ink,
+    lineHeight: 20,
+  },
+  heroActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricsBar: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  metricPill: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: 4,
+    borderRadius: radius.control,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    minHeight: 58,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  metricPillDanger: {
+    backgroundColor: colors.criticalSurface,
+    borderColor: colors.criticalBorder,
+  },
+  metricPillWarning: {
+    backgroundColor: colors.warningSurface,
+    borderColor: colors.warningBorder,
+  },
+  metricPillTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricPillValue: {
+    ...typography.bodyStrong,
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  metricPillLabel: {
+    ...typography.metadata,
+    fontSize: 11,
+    lineHeight: 13,
+    color: colors.pewter,
+    textAlign: 'center',
+  },
   section: { gap: spacing.sm },
   body: { ...typography.body, color: colors.pewter },
   itemTitle: { ...typography.bodyStrong, color: colors.ink, flexShrink: 1 },
@@ -395,4 +638,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   staffChoiceSelected: { borderColor: colors.successBorder, backgroundColor: colors.successSurface },
+  routineCard: {
+    padding: spacing.md,
+    borderRadius: radius.card,
+    backgroundColor: colors.cardWarm,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    gap: spacing.sm,
+  },
+  routineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  routineIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.successSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routineTitle: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+  },
+  routineSubtitle: {
+    ...typography.metadata,
+    color: colors.pewter,
+    marginTop: 2,
+  },
+  progressBarTrack: {
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.neutralSurface,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryDark,
+  },
 });

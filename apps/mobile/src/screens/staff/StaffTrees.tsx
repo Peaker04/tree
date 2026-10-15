@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, EmptyState, Field, ScreenHeader } from '../../components/AppPrimitives';
 import {
@@ -67,6 +67,10 @@ export function StaffTrees({
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={styles.screen}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
+      removeClippedSubviews={Platform.OS === 'android'}
+      maxToRenderPerBatch={10}
+      windowSize={5}
+      initialNumToRender={8}
       ListHeaderComponent={
         <View style={styles.header}>
           <ScreenHeader title="Cây của tôi" subtitle={`${assignedTrees.length} cây có quan hệ phân công`} />

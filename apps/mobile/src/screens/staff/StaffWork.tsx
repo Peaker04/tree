@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, EmptyState, ScreenHeader } from '../../components/AppPrimitives';
 import {
@@ -34,6 +34,10 @@ export function StaffWork({
       keyExtractor={(task) => task.id}
       contentContainerStyle={styles.screen}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
+      removeClippedSubviews={Platform.OS === 'android'}
+      maxToRenderPerBatch={10}
+      windowSize={5}
+      initialNumToRender={8}
       ListHeaderComponent={
         <View style={styles.header}>
           <ScreenHeader title="Công việc" subtitle={`${openTaskCount} việc đang mở`} />
@@ -98,7 +102,11 @@ function StaffTaskRow({ task, onPress }: { task: Task; onPress: () => void }) {
       <View style={styles.rowBetween}>
         <Badge tone={status.tone}>{status.label}</Badge>
         <Text style={[styles.deadline, overdue && styles.deadlineOverdue]}>
-          {overdue ? 'Quá hạn' : `Hạn ${formatTaskDate(task.deadline)}`}
+          {task.dateRange
+            ? `${task.dateRange.startDate.split('-').slice(1).reverse().join('/')} - ${task.dateRange.endDate.split('-').slice(1).reverse().join('/')}${task.dateRange.shift === 'morning' ? ' (Sáng)' : task.dateRange.shift === 'afternoon' ? ' (Chiều)' : ''}`
+            : overdue
+              ? 'Quá hạn'
+              : `Hạn ${formatTaskDate(task.deadline)}`}
         </Text>
       </View>
       <Text style={styles.taskTitle}>{task.title}</Text>
