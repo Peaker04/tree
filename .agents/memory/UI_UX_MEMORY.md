@@ -179,13 +179,23 @@ Full normative detail remains in `docs/MOBILE_UI_RULES.md`.
 - Visual acceptance requires opening full-size 1440×1400 browser renders for every affected file; a contact sheet alone is not evidence.
 - Re-render the entire diagram folder after shared typography/layout changes and never claim visual PASS without checking overlap, clipping, overflow, encoding, and source/status accuracy.
 
+## Research and evidence routing
+
+- Root `DESIGN.md` is the reconciled active visual authority. `.design/`, `.stitch/`, generated specimens and historical UI-SPECs are non-authoritative evidence only.
+- Materially changed UI records each research recommendation as accepted or rejected (or adapted) against the resolving project authority; a tool result is never applied silently.
+- Impeccable owns shape, holistic critique and native technical audit. UI-UX Pro Max provides external React Native pattern research. Taste remains an anti-slop quality filter, not a native product-flow framework.
+- The operational record template lives in `.agents/skills/mobile-ui-ux/SKILL.md`; this memory stores the stable rule, not per-task logs.
+- Device evidence status must be explicit: `PASS`, `FAIL` or `NEEDS_EVIDENCE`. Compile/export output alone cannot produce visual PASS.
+
 ## Skill routing
 
 - Entry point: `.agents/skills/mobile-ui-ux/SKILL.md`.
-- Design exploration/review: `.agents/skills/ui-ux-pro-max/SKILL.md` with `--stack react-native`.
+- Shape, critique and native audit: Impeccable.
+- Design exploration/research: `.agents/skills/ui-ux-pro-max/SKILL.md` with `--stack react-native`, followed by an accepted/adapted/rejected decision.
 - Visual quality filter: existing Taste Skill.
 - Implementation discipline: `karpathy-guidelines`.
-- Broken or slow behavior: `diagnosing-bugs`.
+- Test changes: `test-audit`.
+- Broken or slow behavior: `diagnosing-bugs` and systematic debugging.
 - Regression/test-first work: `tdd`.
 
 Do not apply web-library instructions from a generic skill to React Native. shadcn is a composition reference only; do not install shadcn, Radix, or Tailwind.

@@ -16,10 +16,13 @@ If a historical artifact conflicts with `DESIGN.md` or this document, the histor
 
 ## Skill Routing
 
-- Use GSD Core as the workflow guardrail for non-trivial UI slices, but keep execution artifacts outside product code unless the task explicitly owns them.
-- Use Taste Skill as a quality filter, not as a native-mobile library. Its web and landing-page rules translate here into: no generic template UI, no AI-purple gradients, consistent tokens, readable copy, designed loading/empty/error states, and a final visual self-audit.
-- Use shadcn as a composition model only for mobile. Do not install or copy shadcn/ui, Radix, or Tailwind into the Expo native app. Map shadcn concepts to owned React Native primitives in `apps/mobile/src/components/AppPrimitives.tsx`, such as `Card`, `Button`, `Badge`, `Field`, `SectionTitle`, and `EmptyState`.
-- This design-authority reconciliation adds no UI package, navigation framework, production mock mode, or speculative proof-profile interface. Later API work follows the approved master plan and remains behind existing architecture boundaries.
+- Start every mobile UI task with the project `mobile-ui-ux` skill and the relevant FR/NFR and owner contracts.
+- Use Impeccable `shape` for materially changed composition or interaction, `critique` for holistic design review and native `audit` for accessibility, performance, platform conformance and adaptivity.
+- Use `ui-ux-pro-max --stack react-native` as external pattern research only. Record the recommendation as accepted, adapted or rejected against project authority; the App Store landing result previously returned for NOVYX is a documented rejected mismatch.
+- Use Taste Skill as an anti-slop quality filter, not as a native-mobile library. Its web and landing-page rules translate here into: no generic template UI, no AI-purple gradients, consistent tokens, readable copy, designed loading/empty/error states and a final visual self-audit.
+- Use `test-audit` whenever UI tests are created, changed or reviewed. Tests protect observable behavior and architecture boundaries, not style names or private JSX structure.
+- Use shadcn as a composition model only for mobile. Do not install or copy shadcn/ui, Radix or Tailwind into the Expo native app. Map useful concepts to owned React Native primitives.
+- Skills never override domain, authorization, security, accessibility, data-integrity or data-loss invariants.
 
 ## Information Architecture and Cognitive Load
 

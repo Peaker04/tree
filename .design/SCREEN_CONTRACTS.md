@@ -1,5 +1,9 @@
 # NOVYX GreenOps — Screen Contracts
 
+> Status: non-authoritative evidence.
+> Active mobile UI decisions live in root `DESIGN.md` after reconciliation.
+> This artifact may inform rationale but cannot override domain contracts, FR/NFR, `docs/MOBILE_UI_RULES.md`, root `DESIGN.md`, or approved screen contracts.
+
 *(Extracted from B2.6 and Workspace Memory)*
 
 ## 1. Universal Screen Contract

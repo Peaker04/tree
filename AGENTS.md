@@ -24,13 +24,17 @@ Do not ask the user to repeat project context that is already available in these
 
 PI discovers project skills under `.agents/skills/`.
 
-- Always start mobile interface work with `mobile-ui-ux`.
-- Use `ui-ux-pro-max` only when visual direction, interaction patterns, color, typography, layout, accessibility, or React Native-specific recommendations need exploration. Run its bundled script from the repository root and pass `--stack react-native`.
-- Use the existing Taste Skill as a quality filter for visual work, not as a web component library.
+- Always start mobile interface work with `mobile-ui-ux` and apply the relevant FR/NFR and owner contracts before visual pattern selection.
+- Use Impeccable `shape` for materially changed interaction/composition, `critique` for holistic design review, and native `audit` for accessibility, performance, platform conformance and adaptivity. Focused Impeccable commands apply only after authority and requirements are resolved.
+- Use `ui-ux-pro-max` only when visual direction, interaction patterns, color, typography, layout, accessibility, or React Native-specific recommendations need exploration. Run its bundled script from the repository root with `--stack react-native`, then record the recommendation as accepted, adapted or rejected against project authority.
+- Use the existing Taste Skill only as an anti-slop quality filter for visual work, not as a native-mobile architecture or web component library.
 - Use `karpathy-guidelines` for every implementation or refactor.
-- Add `diagnosing-bugs` for broken, failing, or slow behavior.
-- Add `tdd` for regressions or explicitly test-first work.
-- Use Superpowers methodology (`.agents/skills/superpowers/skills/*`) for brainstorming, systematic debugging, subagent-driven development, plan execution, and code review workflows.
+- Use `test-audit` whenever mobile UI tests are written, changed or reviewed; tests protect observable behavior and architecture boundaries, not private style/component identifiers.
+- Add `diagnosing-bugs` and systematic debugging for broken, failing or slow behavior.
+- Add `tdd` for behavioral regressions or explicitly test-first work.
+- Use Superpowers methodology (`.agents/skills/superpowers/skills/*`) for brainstorming, systematic debugging, plan execution and code review workflows.
+
+Skills are process aids. They never override business, authorization, security, accessibility, data-integrity or data-loss invariants.
 
 Do not install shadcn, Radix, Tailwind, or web-only UI packages in `apps/mobile`.
 

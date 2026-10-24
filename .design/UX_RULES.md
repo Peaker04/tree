@@ -1,5 +1,9 @@
 # NOVYX GreenOps — UX Rules & Interaction
 
+> Status: non-authoritative evidence.
+> Active mobile UI decisions live in root `DESIGN.md` after reconciliation.
+> This artifact may inform rationale but cannot override domain contracts, FR/NFR, `docs/MOBILE_UI_RULES.md`, root `DESIGN.md`, or approved screen contracts.
+
 ## 1. Navigation Behavior
 - **Global Navigation (Bottom Nav)**
   - Staff: `Trang chủ` | `Cây của tôi` | `[CENTER QR]` | `Công việc` | `Tài khoản`.

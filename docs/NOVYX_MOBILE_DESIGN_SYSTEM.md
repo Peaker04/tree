@@ -1,222 +1,189 @@
 # NOVYX Mobile Design System — Implementation Reference
 
-Status: active implementation reference
-Authority: subordinate to root `DESIGN.md`, `docs/MOBILE_UI_RULES.md` and screen contracts
-Platform: Expo SDK 57 / React Native / compact Android first / physical iPhone acceptance
+**Status:** active implementation reference  
+**Authority:** subordinate to domain/security contracts, FR/NFR, `docs/MOBILE_UI_RULES.md`, root `DESIGN.md` and approved screen contracts  
+**Platform:** Expo SDK 57 / React Native / compact Android first / physical iPhone acceptance
 
 ## 1. Product expression
 
-NOVYX GreenOps is an operational botanical product, not a generic white-card dashboard.
+NOVYX GreenOps uses the **Living Botanical Operational** direction:
 
-The interface must communicate:
+- warm neutral canvas with selective semantic tonal regions;
+- Emerald as the contextual primary-action role;
+- deep forest for limited authority/orientation and the global QR utility;
+- evidence and state before decoration;
+- open rows, hairline dividers and intrinsic layout before contained surfaces;
+- low motion and field-readable density.
 
-- **Forest authority:** dark forest surfaces identify orientation, primary action and trusted operational context.
-- **Living-system accent:** lime is a small active/verified accent, never a page background.
-- **Warm field canvas:** off-white botanical canvas reduces glare without sacrificing contrast.
-- **Operational precision:** hairline separators, restrained radius, concise copy and predictable alignment.
-- **Evidence over decoration:** color and emphasis identify state, action or trust—not visual filler.
+Design dials: variance `4/10`, motion `2/10`, density `6/10`.
 
-Design dials remain variance `3/10`, motion `2/10`, density `6/10`.
+Current source that still uses pill primary actions, sub-13px metadata, repetitive cards, shadows or heavy weights is migration debt. This reference does not claim current visual conformance.
 
-## 2. Color System Integration
+## 2. Token ownership
 
-The provided color palettes are visual references and color sources, not screen-level implementation specifications.
+Foundational values live in `packages/ui/src/index.ts` and are consumed through `apps/mobile/src/theme/tokens.ts`. Screen styles may not invent foundational colors, type sizes, weights, radii, shadows or spacing scales.
 
-Do not reproduce the reference images literally.
+Later foundation waves may rename or replace legacy tokens after caller migration. Until then, map existing tokens by semantic role rather than palette name.
 
-### Principles
+## 3. Color roles
 
-- Preserve the project's existing product, domain, UX, and structural design rules.
-- Treat palette colors as primitives, not direct component colors.
-- Map primitive colors into semantic roles before applying them to UI.
-- Prefer semantic tokens over raw HEX values inside components.
-- Determine color roles from actual context rather than from the position or usage shown in the reference images.
-- Do not force every palette color into the product.
-- A color may remain unused if no meaningful semantic role exists for it.
-- Do not create different color conventions per screen.
-- Reuse existing tokens when they already express the required semantic role.
-- Do not introduce gradients, blur, glow, noise, shadows, or decorative treatments merely because they appear in palette reference artwork.
-- Color must not be the only indicator of state or meaning.
-- Verify readable foreground/background contrast before adopting a pairing.
-- Preserve established status semantics; do not assign business meaning to a color solely because of its visual appearance.
-
-### Palette Sources
-
-Warm / natural family:
-
-- Honeydew — `#F0F7EA`
-- Cornsilk — `#FFFAE0`
-- Vanilla Custard — `#EEE59F`
-- Willow Green — `#AAD480`
-- Emerald — `#75C97F`
-
-Fresh / cool family:
-
-- Brume — `#C2F2E4`
-- Menthe — `#35C8B4`
-- Limonade — `#EDF7BE`
-- Verveine — `#A4CF4A`
-
-### Intended Direction
-
-Use the warm/natural family primarily as a foundation candidate and the fresh/cool family primarily as an accent candidate.
-
-This is a direction, not a mandatory mapping.
-
-The final semantic assignment must be determined after inspecting:
-
-- existing design tokens;
-- existing components;
-- current color usage;
-- accessibility requirements;
-- product semantics;
-- interaction patterns.
-
-Prefer extending or normalizing the existing design system over creating a parallel color system.
-
-## 3. Token ownership
-
-All foundational values live in `packages/ui/src/index.ts` and are consumed through `apps/mobile/src/theme/tokens.ts`.
-
-Screens may compose semantic tokens but may not introduce new foundational colors, type sizes, weights, spacing, radii or shadows.
-
-### Canvas and surfaces
-
-| Role | Token | Use |
+| Semantic role | Direction | Usage |
 |---|---|---|
-| App canvas | `colors.snowWhite` / `colors.background` | Screen background |
-| Primary content | `colors.card` | Inputs, rows, grouped data |
-| Secondary grouping | `colors.warmStone` | Quiet grouping and neutral callouts |
-| Authority surface | `colors.forestDepths` | Hero/context surface and primary CTA |
-| Hairline | `colors.hairlineBorder` | Dividers and flat boundaries |
-
-Dark text must not be placed on authority surfaces; white text must not be placed on warm/light surfaces.
-
-### Status surfaces
-
-Status tokens use a three-token set: surface, border and text.
-
-| Meaning | Surface | Border | Text |
-|---|---|---|---|
-| Success/verified | `successSurface` | `successBorder` | `successText` |
-| Information/in progress | `infoSurface` | `infoBorder` | `infoText` |
-| Warning/waiting | `warningSurface` | `warningBorder` | `warningText` |
-| Critical/rework/error | `criticalSurface` | `criticalBorder` | `criticalText` |
-| Neutral/standby | `neutralSurface` | `neutralBorder` | `neutralText` |
-
-Status color is never decorative and never communicates meaning without text/icon semantics.
-
-## 4. Typography
-
-Use the React Native system font only until an explicit brand-font decision is approved.
-
-| Role | Token | Typical use |
-|---|---|---|
-| Display | `typography.display` | Screen title or major operational identity |
-| Title | `typography.title` | Modal title and major section |
-| Section | `typography.section` | Group heading |
-| Body strong | `typography.bodyStrong` | Selected values and row title |
-| Body | `typography.body` | Instructions and supporting copy |
-| Label | `typography.label` | Field labels and badges |
-| Metadata | `typography.metadata` | IDs/timestamps only when required |
-| Metric | `typography.metric` | Operational numbers |
+| Canvas | warm off-white | Screen background and visual rest. |
+| Content | near-white neutral | Inputs, rows and contained content. |
+| Quiet grouping | warm stone | Borderless low-emphasis grouping. |
+| Primary action | Emerald | One contextual progression action. |
+| Authority | deep forest | Limited trusted orientation and global QR utility. |
+| Information | Brume / sky | In-progress or explanatory state. |
+| Waiting | Cornsilk / amber | Waiting, attention and caution. |
+| Verified | subtle success | Confirmed state without green saturation. |
+| Critical | rose | Error, rework, cancellation and destructive state. |
+| Accent | Limonade / Verveine | Small progress or selection punctuation. |
 
 Rules:
 
-- weights: `400`, `500`, `600` only;
-- Vietnamese text uses explicit line height;
-- body text does not use `700/900`;
-- do not shrink text to preserve a rigid layout;
-- technical metadata never becomes the primary label.
+- screens consume semantic roles, not raw palette colors;
+- primary action and brand authority are not the same role;
+- status uses a surface/border/text triplet plus text or icon meaning;
+- green icon containers are not a default;
+- normally use at most one dominant tonal region per screen state;
+- map/camera/QR/platform exceptions remain isolated and documented.
+
+## 4. Typography
+
+Use the React Native system font.
+
+| Role | Size | Weight | Use |
+|---|---:|---:|---|
+| Display | `22–26px` | `600` | Screen identity. |
+| Title | `18–20px` | `600` | Focused decision or sheet. |
+| Section | `16–18px` | `600` | Semantic group. |
+| Body strong | `14–16px` | `500–600` | Selected value and action label. |
+| Body | `14–16px` | `400` | Instructions and supporting content. |
+| Label / metadata | at least `13px` | `500` | Labels, timestamps and secondary facts. |
+| Compact navigation | `11–12px` | `500–600` | Bottom navigation only. |
+| Metric | `22–28px` | `600` | Decision-relevant operational values. |
+
+Rules:
+
+- weights are `400`, `500` and `600`;
+- Vietnamese uses explicit line height and intrinsic reflow;
+- do not shrink text or disable scaling to preserve rigid geometry;
+- technical metadata remains lower priority than user decisions.
 
 ## 5. Size and spacing
 
-- Screen gutter: `layout.screenPadding` (`16`).
-- Standard section gap: `layout.sectionGap` (`16`).
-- Compact row gap: `layout.compactGap` (`8`).
-- Minimum touch target: `controlSize.minimumTouchTarget` (`44`).
-- Default control: `controlSize.default` (`48`).
-- Primary field action: `controlSize.field` (`52`).
-- Bottom-navigation clearance: `layout.bottomNavClearance` (`104`).
+- screen gutter: `16px`;
+- section rhythm: `16–24px`;
+- compact gap: `4–8px`;
+- content gap: `12px`;
+- minimum touch target: `44dp`;
+- default control: `48dp`;
+- primary field action: `52dp`;
+- bottom-navigation clearance: `104dp`.
 
-Use the existing 4px spacing scale. New one-off numeric spacing is prohibited unless it represents platform chrome or measured media geometry.
+Use the existing 4px rhythm. Fixed dimensions require a media, interaction, accessibility, platform or product reason.
 
-## 6. Shape language
+## 6. Shape grammar
 
-| Component | Radius |
-|---|---|
-| Input/control | `radius.control` |
-| Compact media/callout | `radius.compact` |
-| Content surface | `radius.card` |
-| Sheet/container | `radius.container` |
-| Badge/chip/primary CTA | `radius.pill` |
+| Component role | Radius |
+|---|---:|
+| Compact control | `8–12px` |
+| Primary action | `16px` rounded rectangle |
+| Input / selector | `12–16px` |
+| Content / evidence surface | `16–20px` |
+| Sheet / overlay | `24–28px` |
+| Badge / chip / avatar / QR utility | pill or circle |
 
-Cards are flat. Shadows are reserved for bottom navigation, FAB, sheets and true overlays.
+Do not use a full oval for the default primary action. Do not repeat one radius across unrelated components.
 
-## 7. Component contracts
+## 7. Surface grammar
+
+Use the minimum boundary:
+
+```text
+whitespace → typography → hairline → tonal region → contained surface → overlay
+```
+
+- **Tonal region:** quiet grouping, normally without four-sided border.
+- **Contained surface:** a real object, decision or evidence block.
+- **Evidence surface:** media/GPS/QR/checklist grouping.
+- **Status notice:** loading/offline/error/recovery.
+- **Overlay:** elevated sheet, modal or floating navigation.
+
+Content surfaces have zero elevation. Card nesting and decorative shadow stacks are prohibited.
+
+## 8. Component contracts
+
+### Button
+
+- variants: primary, secondary, ghost and destructive;
+- primary is Emerald, `16px` radius and `48–52dp` high;
+- one dominant primary action per state;
+- disabled, loading, pressed and recovery states are owned by the primitive;
+- destructive actions collect user-owned rationale when required.
 
 ### Badge
 
-- One line only; status badges never wrap.
-- Use short user language, normally 1–3 words.
-- Never show internal enums such as `CHANGE_PROOF`.
-- Badge must use a semantic status token set, not white-on-white or transparent low-contrast treatment.
-- Badge cannot be positioned outside the parent row because sibling copy failed to shrink.
-- At larger font scale, simplify the label rather than wrapping.
+- short one-line domain-level status only;
+- normally one to three words;
+- never raw enums;
+- not a default trailing row decoration.
+
+### Row
+
+- open layout with semantic proximity and hairline separation;
+- primary text, supporting state and trailing affordance only when actionable;
+- row-level state uses text/icon/checkbox/progress before a badge;
+- growing collections are virtualized.
 
 ### Metric group
 
-- One grouped surface with dividers.
-- Prefer two or three values in the initial viewport.
-- Four values are allowed only when every label remains one line at compact width and increased font scale.
-- Do not duplicate the same metrics in a second large section.
-
-### Hero/context surface
-
-- Use a dark authority surface when text is light.
-- One title, one short supporting sentence and at most two compact signals.
-- Hero is not required on every screen.
-- Never pair `tone="warm"` with white hero copy.
+- group values by decision purpose, not visual tile count;
+- normally two or three values in the initial viewport;
+- grouped metrics do not require a card or a named private style;
+- do not duplicate metrics elsewhere on the same screen.
 
 ### Selection field
 
-- Closed state shows the selected value and `Chọn`/`Thay đổi`.
-- Opens a modal/page-sheet with search and virtualized results when data can grow.
-- Required single-select uses radio semantics.
-- Selection replacement is explicit; no ambiguous tap-to-toggle behavior.
+- closed state shows current value and `Chọn`/`Thay đổi`;
+- growing results use a searchable virtualized sheet;
+- required single-select uses radio semantics;
+- replacement and clear behavior are explicit.
 
 ### Date-time picker
 
-- Closed state shows a localized date and time.
-- Opens a page-sheet calendar with month navigation and touch-sized day cells.
-- Past dates are disabled.
-- Time is chosen separately with bounded operational time slots.
-- Confirmation is explicit; dismissing does not alter the saved value.
-- Payload serialization uses ISO at the service boundary.
+- localized closed summary;
+- arbitrary future date plus bounded time selection;
+- past dates disabled;
+- explicit confirmation;
+- cancellation does not mutate the saved value;
+- ISO serialization occurs at the service boundary.
 
-### Error and offline state
+### Notice and operational states
 
-- User copy is Vietnamese and action-specific.
-- Technical timestamps use localized display, not raw ISO strings.
-- Preserve useful cached content without washing out or disabling unrelated sections.
-- Diagnostic details stay in development diagnostics.
+- Vietnamese action-specific copy;
+- cached/offline state remains readable and recoverable;
+- errors preserve input and evidence;
+- diagnostics remain separate from user copy.
 
-## 8. Visual acceptance
+## 9. Accessibility and native behavior
 
-Every changed screen requires full-size device evidence for:
+- interactive targets are at least `44×44dp`;
+- interactive elements expose Vietnamese role, label and state;
+- major screen and section titles expose header semantics;
+- color never carries status alone;
+- content supports long Vietnamese, increased font scale, keyboard and safe areas;
+- focused workflows own predictable Back behavior;
+- visual acceptance is blocked until required compact Android and iPhone evidence is reviewed.
 
-- normal state;
-- selected/active state;
-- disabled/loading/error state where relevant;
-- increased text scale;
-- compact-width wrapping;
-- bottom-nav and safe-area clearance.
+## 10. Governance
 
-Reject the implementation when any of these occur:
+A primitive or token is added only when:
 
-- white text on a light surface;
-- status badge wrapping or clipping;
-- raw enum, raw ISO timestamp or raw server message;
-- repeated equal-weight cards without information hierarchy;
-- CTA hidden by navigation or keyboard;
-- visual acceptance inferred from typecheck/export alone.
+1. no existing semantic equivalent exists;
+2. at least two real consumers need it, except unique device/navigation owners;
+3. the distinction is semantic rather than cosmetic;
+4. it belongs in the architecture owner named by `AGENTS.md`.
+
+`.design/`, `.stitch/` and historical UI specs are non-authoritative evidence. Approved decisions must be reconciled into root `DESIGN.md` before implementation.

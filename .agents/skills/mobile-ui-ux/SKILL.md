@@ -19,10 +19,11 @@ Use this as the project entry point for mobile interface work. It complements, r
 
 For new visual direction or a broad redesign, also use:
 
-- `ui-ux-pro-max` with `--stack react-native`
-- the existing Taste Skill as a quality filter
+- Impeccable `shape` before implementation, `critique` for holistic design review and native `audit` for accessibility, performance, platform conformance and adaptivity;
+- `ui-ux-pro-max` with `--stack react-native` as external pattern research;
+- the existing Taste Skill as an anti-slop quality filter.
 
-For implementation, review, or refactoring, also use `karpathy-guidelines`. Add `diagnosing-bugs` for broken or slow behavior and `tdd` for regressions or test-first work.
+Record each research recommendation as accepted, adapted or rejected against project authority. For implementation, review or refactoring, also use `karpathy-guidelines`. Use `test-audit` whenever tests are written, changed or reviewed. Add `diagnosing-bugs`/systematic debugging for broken or slow behavior and `tdd` for behavioral regressions.
 
 ## Harness calibration
 
@@ -46,10 +47,37 @@ Before implementing or reviewing any mobile screen:
 4. For every reported UI issue, write the reasoning chain before choosing a solution: `Problem → User Goal → Business Context → Design Principle → Spatial Composition → Candidate Pattern → Existing Design System → Component / Token → Implementation`. Name the affected principle explicitly. A screenshot identifies symptoms; it never selects dimensions or the pattern by itself.
 5. Audit the relevant spatial composition before implementation: content-to-container ratio, intrinsic/fixed sizing, grouping, proximity, vertical/horizontal rhythm, alignment, visual anchors, information density, container nesting, section separation, focal priority and responsive behavior. Classify the cause as local layout, shared component, token, design system, content structure, responsive behavior or interaction pattern, then fix the lowest appropriate scope.
 6. Compare candidate patterns against action frequency, risk, reversibility, information volume, platform convention, accessibility, responsive behavior and existing project patterns. Do not treat a pattern list as a component backlog, and do not confuse interaction behavior with visual style.
-7. Run `ui-ux-pro-max` with `--stack react-native` for any new or materially changed interaction. Treat database results as research input only; reject recommendations that conflict with project authority or native conventions.
-8. Use Taste as a visual quality filter and `karpathy-guidelines` as the implementation filter.
+7. Run Impeccable `shape` for materially changed composition or interaction, then use `critique` and native `audit` at the review gate. Run `ui-ux-pro-max` with `--stack react-native` only when external pattern research is needed. Treat every result as research input and record whether it was accepted, adapted or rejected against project authority.
+8. Use Taste only as an anti-slop visual filter, `karpathy-guidelines` as the implementation filter and `test-audit` for any test change.
 9. Before implementation, resolve trust-boundary, data-loss, authorization and accessibility invariants. Resolve other criteria only when relevant; do not block work to satisfy an inapplicable pattern.
 10. On the first reproducible occurrence of a reusable device-discovered failure, update the memory register and add the smallest durable regression check. Keep one-off or local exceptions local.
+
+## Required execution records
+
+For every materially changed mobile UI slice, record these two compact blocks before implementation.
+
+### Research acceptance record
+
+- Source/skill:
+- Recommendation:
+- Decision: accepted | adapted | rejected
+- Resolving authority:
+- Affected surface:
+- Required evidence:
+
+### FR/NFR execution record
+
+- Business intent and authoritative rule:
+- User/job and entry/exit:
+- Information order and primary action:
+- Data scale and control semantics:
+- Applicable states and failure recovery:
+- Security/data-loss/accessibility invariants:
+- Spatial-composition root cause:
+- Physical-device acceptance matrix:
+- Explicit exclusions:
+
+Use the reasoning chain `Problem → User Goal → Business Context → Design Principle → Spatial Composition → Candidate Pattern → Existing Design System → Component / Token → Implementation`. Keep these records proportional to the task; they are not permission to invent speculative architecture.
 
 ## Design authority
 
