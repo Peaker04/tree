@@ -110,17 +110,22 @@ export function WebMapView(props: WebMapViewProps) {
       attributionControl: false
     }).setView([${treeLat}, ${treeLng}], 18);
 
-    var tileUrl = '${
-      engine === 'google'
-        ? 'https://mt{s}.google.com/vt/lyrs=m&hl=vi&gl=VN&x={x}&y={y}&z={z}'
-        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-    }';
-    var subdomains = '${engine === 'google' ? '0123' : 'abc'}';
+    // OpenStreetMap tile source (https://tile.openstreetmap.org/{z}/{x}/{y}.png) is connection-reset by mobile WebViews.
+    // Use Google Maps Roadmap tiles (or CartoDB Voyager) for high-speed reliable rendering in Vietnam.
+    var tileUrl = 'https://mt{s}.google.com/vt/lyrs=m&hl=vi&gl=VN&x={x}&y={y}&z={z}';
+    var subdomains = '0123';
 
-    L.tileLayer(tileUrl, {
+    var tileLayer = L.tileLayer(tileUrl, {
       maxZoom: 20,
       subdomains: subdomains
     }).addTo(map);
+
+    tileLayer.on('tileerror', function(error, tile) {
+      if (tile && tile.src && !tile.src.includes('cartocdn')) {
+        var coords = error.coords;
+        tile.src = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/' + coords.z + '/' + coords.x + '/' + coords.y + '@2x.png';
+      }
+    });
 
     var treeIcon = L.divIcon({
       className: '',
@@ -253,6 +258,8 @@ export function WebMapView(props: WebMapViewProps) {
         javaScriptEnabled
         domStorageEnabled
         scrollEnabled={false}
+        androidLayerType="hardware"
+        mixedContentMode="always"
         style={styles.webView}
       />
 
