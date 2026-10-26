@@ -1530,10 +1530,12 @@ function TreeCheckinMap({
   // iOS uses native MapKit vector maps out of the box with zero keys. Android testbed uses Google Roadmap tiles fallback.
   const isIos = Platform.OS === 'ios';
   const shouldRenderWebMap = !isIos || !nativeMapAvailable || !MapView || !Circle || !Marker;
+  const { height: windowHeight } = useWindowDimensions();
+  const adaptiveMapHeight = Math.min(340, Math.max(260, windowHeight - 350));
 
   return (
     <View style={styles.mapPanel}>
-      <View style={styles.mapFrame}>
+      <View style={[styles.mapFrame, { height: adaptiveMapHeight }]}>
         {shouldRenderWebMap ? (
           <WebMapView
             treeLat={tree.lat}

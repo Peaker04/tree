@@ -37,7 +37,7 @@ export function WebMapView(props: WebMapViewProps) {
     style,
   } = props;
 
-  const [engine] = useState<MapEngine>(initialEngine);
+  const [_engine] = useState<MapEngine>(initialEngine);
   const [mapLayer, setMapLayer] = useState<'roadmap' | 'satellite'>('roadmap');
   const [isLoading, setIsLoading] = useState(true);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -119,7 +119,11 @@ export function WebMapView(props: WebMapViewProps) {
 
     var currentTileLayer = L.tileLayer(roadmapUrl, {
       maxZoom: 20,
-      subdomains: subdomains
+      subdomains: subdomains,
+      updateWhenIdle: false,
+      updateInterval: 80,
+      keepBuffer: 8,
+      fadeAnimation: false
     }).addTo(map);
 
     currentTileLayer.on('tileerror', function(error, tile) {
@@ -135,11 +139,16 @@ export function WebMapView(props: WebMapViewProps) {
       var nextUrl = layerType === 'satellite' ? satelliteUrl : roadmapUrl;
       currentTileLayer = L.tileLayer(nextUrl, {
         maxZoom: 20,
-        subdomains: subdomains
+        subdomains: subdomains,
+        updateWhenIdle: false,
+        updateInterval: 80,
+        keepBuffer: 8,
+        fadeAnimation: false
       }).addTo(map);
       if (treeCheckinCircle) treeCheckinCircle.bringToFront();
       if (treeMarker) treeMarker.bringToFront();
       if (userMarker) userMarker.bringToFront();
+      map.invalidateSize();
     };
 
     var treeIcon = L.divIcon({
@@ -243,11 +252,14 @@ export function WebMapView(props: WebMapViewProps) {
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_READY' }));
       }
-    }, 300);
+      if (map) {
+        map.invalidateSize();
+      }
+    }, 200);
   </script>
 </body>
 </html>`;
-  }, [treeLat, treeLng, treeName, userLat, userLng, locationAccuracyMeters, locationCapturedAt, effectiveRadiusMeters, trees, engine]);
+  }, [treeLat, treeLng, treeName, userLat, userLng, locationAccuracyMeters, locationCapturedAt, effectiveRadiusMeters, trees]);
 
   useEffect(() => {
     if (!isMapReady || !webViewRef.current || !locationCapturedAt) return;

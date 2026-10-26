@@ -583,6 +583,8 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(webMapView).not.toContain('function NativeVectorMap');
     expect(webMapView).not.toContain("TurboModuleRegistry.get('RNCWebViewModule')");
     expect(webMapView).toContain('google.com/vt');
+    expect(webMapView).toContain('updateWhenIdle: false');
+    expect(webMapView).toContain('keepBuffer: 8');
   });
 
   it('enforces UI-040: unblocked 1-tap GPS acquisition with hardware service check and >=20s satellite timeout', () => {
@@ -620,5 +622,6 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(proofFlow).not.toContain('bán kính 10m rồi quét QR');
     expect(proofFlow).not.toContain('mapTaskList');
     expect(proofFlow).toContain('size="field"');
+    expect(proofFlow).toContain('adaptiveMapHeight');
   });
 });
