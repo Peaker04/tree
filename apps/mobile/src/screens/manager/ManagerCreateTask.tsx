@@ -67,10 +67,10 @@ const formatVietnameseDateTime = formatTaskDeadline;
 const getStaffIdentity = (staff: AssignableStaffCatalogItem) => {
   const displayName = staff.displayName.trim();
   const usableDisplayName = displayName && !/^staff$/i.test(displayName);
-  const title = usableDisplayName ? displayName : staff.email;
-  const subtitle = usableDisplayName ? staff.email : 'Nhân viên hiện trường';
+  const title = usableDisplayName ? displayName : 'Nhân viên hiện trường';
+  const subtitle = usableDisplayName ? staff.email : 'Đội phụ trách cây xanh';
   const initials =
-    title
+    (usableDisplayName ? displayName : 'Nhân viên')
       .split(' ')
       .filter(Boolean)
       .slice(-2)
@@ -173,8 +173,8 @@ export function ManagerCreateTask({
       code: t.id.startsWith('TRE-') && t.id.length > 10 ? `#${t.id.slice(-4).toUpperCase()}` : t.id,
       name: t.name,
       address: t.address,
-      zoneId: t.address?.includes(',') ? t.address.split(',').pop()?.trim() : 'KV-01',
-      zoneName: t.address?.includes(',') ? `Khu ${t.address.split(',').pop()?.trim()}` : 'Khu vực 1',
+      species: t.species,
+      healthStatus: t.healthStatus,
     }));
   }, [trees]);
 
@@ -457,19 +457,11 @@ export function ManagerCreateTask({
           <View style={styles.assignmentGroup}>
             <SelectionField
               label="Cây mục tiêu"
-              value={
-                treeScope && treeScope.mode === 'zone'
-                  ? `Toàn khu vực (${treeScope.treeIds.length} cây)`
-                  : treeScope && treeScope.mode === 'multi_trees'
-                    ? `${treeScope.treeIds.length} cây đã chọn`
-                    : selectedTree?.name
-              }
+              value={selectedTree?.name}
               detail={
-                treeScope && treeScope.mode === 'zone'
-                  ? `Khu vực: ${treeScope.zoneId ?? 'Đã chọn'} · ${treeScope.treeIds.length} cây`
-                  : selectedTree
-                    ? `${selectedTree.address} · ${selectedTree.healthStatus}`
-                    : undefined
+                selectedTree
+                  ? `${selectedTree.address} · ${selectedTree.healthStatus}`
+                  : undefined
               }
               placeholder="Chọn cây"
               icon="leaf-outline"
@@ -531,7 +523,7 @@ export function ManagerCreateTask({
             </View>
             <SummaryLine label="Tiêu đề" value={title.trim()} />
             <SummaryLine label="Cây mục tiêu" value={selectedTree.name} />
-            <SummaryLine label="Người thực hiện" value={selectedStaffIdentity?.title ?? selectedStaff.email} />
+            <SummaryLine label="Người thực hiện" value={selectedStaffIdentity?.title ?? 'Nhân viên hiện trường'} />
             <SummaryLine label="Quy trình" value={selectedTaskType.name} />
             <SummaryLine label="Hạn chót" value={formatVietnameseDateTime(deadline)} />
           </View>
@@ -600,7 +592,7 @@ export function ManagerCreateTask({
         }}
       />
 
-      {/* BOTTOM SHEET: PHẠM VI CÂY / KHU VỰC */}
+      {/* BOTTOM SHEET: PHẠM VI CÂY */}
       <TreeScopeSelectorSheet
         visible={treeScopeSheetVisible}
         onClose={() => {
@@ -608,6 +600,7 @@ export function ManagerCreateTask({
           setTreeScopeSheetVisible(false);
         }}
         trees={treeScopeItems}
+        selectedTreeId={treeId}
         selectedScope={treeScope}
         onConfirm={(scope) => {
           setTreeScope(scope);

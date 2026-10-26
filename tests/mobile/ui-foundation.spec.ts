@@ -595,4 +595,19 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(proofFlow).toContain('20000');
     expect(proofFlow).not.toContain("showRationaleForPurpose('staff-gps')");
   });
+
+  it('enforces UI-039: honest tree selection and prohibits address-split zone fabrication', () => {
+    const createTask = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerCreateTask.tsx'),
+      'utf8',
+    );
+    const scopeSheet = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/TreeScopeSelectorSheet.tsx'),
+      'utf8',
+    );
+
+    expect(createTask).not.toContain(".split(',').pop()");
+    expect(scopeSheet).not.toContain("activeMode === 'zone'");
+    expect(scopeSheet).toContain('Chọn cây mục tiêu');
+  });
 });
