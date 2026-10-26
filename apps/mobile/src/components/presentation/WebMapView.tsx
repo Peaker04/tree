@@ -38,6 +38,7 @@ export function WebMapView(props: WebMapViewProps) {
   } = props;
 
   const [engine] = useState<MapEngine>(initialEngine);
+  const [mapLayer, setMapLayer] = useState<'roadmap' | 'satellite'>('roadmap');
   const [isLoading, setIsLoading] = useState(true);
   const [isMapReady, setIsMapReady] = useState(false);
   const webViewRef = useRef<WebView>(null);
@@ -112,20 +113,34 @@ export function WebMapView(props: WebMapViewProps) {
 
     // OpenStreetMap tile source (https://tile.openstreetmap.org/{z}/{x}/{y}.png) is connection-reset by mobile WebViews.
     // Use Google Maps Roadmap tiles (or CartoDB Voyager) for high-speed reliable rendering in Vietnam.
-    var tileUrl = 'https://mt{s}.google.com/vt/lyrs=m&hl=vi&gl=VN&x={x}&y={y}&z={z}';
+    var roadmapUrl = 'https://mt{s}.google.com/vt/lyrs=m&hl=vi&gl=VN&x={x}&y={y}&z={z}';
+    var satelliteUrl = 'https://mt{s}.google.com/vt/lyrs=y&hl=vi&gl=VN&x={x}&y={y}&z={z}';
     var subdomains = '0123';
 
-    var tileLayer = L.tileLayer(tileUrl, {
+    var currentTileLayer = L.tileLayer(roadmapUrl, {
       maxZoom: 20,
       subdomains: subdomains
     }).addTo(map);
 
-    tileLayer.on('tileerror', function(error, tile) {
+    currentTileLayer.on('tileerror', function(error, tile) {
       if (tile && tile.src && !tile.src.includes('cartocdn')) {
         var coords = error.coords;
         tile.src = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/' + coords.z + '/' + coords.x + '/' + coords.y + '@2x.png';
       }
     });
+
+    window.switchLayer = function(layerType) {
+      if (!map || !currentTileLayer) return;
+      map.removeLayer(currentTileLayer);
+      var nextUrl = layerType === 'satellite' ? satelliteUrl : roadmapUrl;
+      currentTileLayer = L.tileLayer(nextUrl, {
+        maxZoom: 20,
+        subdomains: subdomains
+      }).addTo(map);
+      if (treeCheckinCircle) treeCheckinCircle.bringToFront();
+      if (treeMarker) treeMarker.bringToFront();
+      if (userMarker) userMarker.bringToFront();
+    };
 
     var treeIcon = L.divIcon({
       className: '',
@@ -195,6 +210,25 @@ export function WebMapView(props: WebMapViewProps) {
       } else {
         navPolyline.setLatLngs([[lat, lng], [${treeLat}, ${treeLng}]]);
       }
+
+      // Check geofence distance
+      if (treeCheckinCircle && map) {
+        var d = map.distance([lat, lng], [${treeLat}, ${treeLng}]);
+        if (d <= ${initialRadius}) {
+          treeCheckinCircle.setStyle({ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.25 });
+        } else {
+          treeCheckinCircle.setStyle({ color: '#eab308', fillColor: '#facc15', fillOpacity: 0.14 });
+        }
+      }
+
+      // Smooth auto-fit bounds framing both tree and user
+      if (treeMarker && userMarker && map) {
+        var b = L.latLngBounds([
+          [${treeLat}, ${treeLng}],
+          [lat, lng]
+        ]);
+        map.fitBounds(b, { padding: [35, 35], maxZoom: 19, animate: true });
+      }
     }
 
     if (${initialUserLat} !== null && ${initialUserLng} !== null) {
@@ -247,6 +281,14 @@ export function WebMapView(props: WebMapViewProps) {
     }
   };
 
+  const handleToggleMapLayer = () => {
+    const nextLayer = mapLayer === 'roadmap' ? 'satellite' : 'roadmap';
+    setMapLayer(nextLayer);
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`if (window.switchLayer) { window.switchLayer('${nextLayer}'); } true;`);
+    }
+  };
+
   return (
     <View style={[styles.container, style]}>
       <WebView
@@ -265,11 +307,26 @@ export function WebMapView(props: WebMapViewProps) {
 
       {/* Top Header Badge */}
       <View pointerEvents="box-none" style={styles.topControlBar}>
-        <Badge tone="green">Bản đồ Web (OSM)</Badge>
+        <Badge tone={mapLayer === 'satellite' ? 'lime' : 'green'}>
+          {mapLayer === 'satellite' ? 'Vệ tinh (Hybrid)' : 'Bản đồ Web (OSM)'}
+        </Badge>
       </View>
 
-      {/* Floating Recenter Controls */}
+      {/* Floating Controls */}
       <View pointerEvents="box-none" style={styles.floatingControls}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Chuyển đổi lớp bản đồ giao thông và vệ tinh"
+          style={[styles.mapActionButton, mapLayer === 'satellite' && styles.mapActionButtonActive]}
+          onPress={handleToggleMapLayer}
+        >
+          <Ionicons
+            name={mapLayer === 'satellite' ? 'map-outline' : 'earth-outline'}
+            size={18}
+            color={mapLayer === 'satellite' ? colors.snowWhite : colors.primaryDark}
+          />
+        </Pressable>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Định tâm tới vị trí cây"
@@ -352,6 +409,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+  },
+  mapActionButtonActive: {
+    backgroundColor: colors.primaryDark,
+    borderColor: colors.primaryDark,
   },
   attributionPill: {
     position: 'absolute',
