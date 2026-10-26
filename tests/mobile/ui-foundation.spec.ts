@@ -610,4 +610,15 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(scopeSheet).not.toContain("activeMode === 'zone'");
     expect(scopeSheet).toContain('Chọn cây mục tiêu');
   });
+
+  it('enforces UI-041: field check-in density 6/10 with above-the-fold actions and no redundant task list', () => {
+    const proofFlow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffProofFlow.tsx'),
+      'utf8',
+    );
+
+    expect(proofFlow).not.toContain('bán kính 10m rồi quét QR');
+    expect(proofFlow).not.toContain('mapTaskList');
+    expect(proofFlow).toContain('size="field"');
+  });
 });

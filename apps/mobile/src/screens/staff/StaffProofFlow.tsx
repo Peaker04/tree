@@ -344,50 +344,24 @@ export function StaffProofFlow(props: {
       <ScrollView contentContainerStyle={[styles.screenPad, styles.mapScreen]}>
         <Header
           title="Bản đồ check-in"
-          subtitle="Chọn cây, đứng trong bán kính 10m rồi quét QR"
+          subtitle="Xác minh vị trí thiết bị trước khi quét mã QR hoặc chụp ảnh"
           onBack={() => props.setStep(props.mapReturnStep)}
         />
         {selectedMapTask && selectedMapTree ? (
-          <>
-            <TreeCheckinMap
-              task={selectedMapTask}
-              tree={selectedMapTree}
-              trees={props.trees}
-              userLat={props.userLat}
-              userLng={props.userLng}
-              locationMessage={locationMessage}
-              locating={locating}
-              locationAccuracyMeters={locationAccuracyMeters}
-              locationCapturedAt={locationCapturedAt}
-              permissionStateNode={gpsPermissionNode}
-              onLocate={refreshDeviceLocation}
-              onCheckIn={() => checkInTask(selectedMapTask, selectedMapTree)}
-            />
-            <View style={styles.mapTaskList}>
-              <SectionTitle icon="leaf-outline">Cây cần xử lý hôm nay</SectionTitle>
-              {props.openTasks.map((task) => {
-                const tree = props.trees.find((item) => item.id === task.treeId);
-                const active = task.id === selectedMapTask.id;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Chọn cây check-in ${task.treeName}`}
-                    accessibilityState={{ selected: active }}
-                    key={task.id}
-                    style={[styles.mapTaskRow, active && styles.mapTaskRowActive]}
-                    onPress={() => props.setActiveTask(task)}
-                  >
-                    <View style={[styles.mapTaskDot, active && styles.mapTaskDotActive]} />
-                    <View style={styles.flex}>
-                      <Text style={styles.itemTitle}>{task.treeName}</Text>
-                      <Text style={styles.itemSub}>{tree?.address ?? task.treeAddress}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
+          <TreeCheckinMap
+            task={selectedMapTask}
+            tree={selectedMapTree}
+            trees={props.trees}
+            userLat={props.userLat}
+            userLng={props.userLng}
+            locationMessage={locationMessage}
+            locating={locating}
+            locationAccuracyMeters={locationAccuracyMeters}
+            locationCapturedAt={locationCapturedAt}
+            permissionStateNode={gpsPermissionNode}
+            onLocate={refreshDeviceLocation}
+            onCheckIn={() => checkInTask(selectedMapTask, selectedMapTree)}
+          />
         ) : (
           <EmptyState title="Không có cây cần check-in" body="Các nhiệm vụ hiện trường sẽ xuất hiện trên bản đồ." />
         )}
@@ -1621,48 +1595,44 @@ function TreeCheckinMap({
         <View style={styles.rowBetween}>
           <View style={styles.flex}>
             <Text style={styles.itemTitle}>{task.treeName}</Text>
-            <Text style={styles.itemSub}>{tree.address}</Text>
+            <Text style={styles.itemSub} numberOfLines={1}>
+              {tree.address}
+            </Text>
           </View>
           <Badge tone={verified ? 'green' : 'amber'}>
-            {verified ? `Khoảng cách tới cây: ${distanceLabel} (Hợp lệ)` : `Khoảng cách tới cây: ${distanceLabel}`}
+            Khoảng cách tới cây: {distanceLabel}
           </Badge>
         </View>
         <View style={styles.checkinStatusRow}>
           <Ionicons
             name={verified ? 'checkmark-circle-outline' : 'navigate-outline'}
-            size={19}
+            size={18}
             color={verified ? colors.primaryDark : colors.amber}
           />
           <Text style={styles.bodyText}>
             {verified
               ? isSupervisor
-                ? `Thiết bị đã trong vùng check-in (≤ ${effectiveRadius.toFixed(0)}m). Bấm Check-in để mở bước chụp ảnh Trước.`
-                : `Thiết bị đã trong vùng check-in (≤ ${effectiveRadius.toFixed(0)}m). Bấm Check-in để mở bước quét QR.`
-              : `Thiết bị đang cách cây ${distanceLabel} (Bán kính hợp lệ: ≤ ${effectiveRadius.toFixed(0)}m). Di chuyển lại gần gốc cây hoặc bấm Báo ngoại lệ vị trí.`}
+                ? `Đã trong vùng check-in (≤ ${effectiveRadius.toFixed(0)}m). Bấm Check-in để chụp ảnh Trước.`
+                : `Đã trong vùng check-in (≤ ${effectiveRadius.toFixed(0)}m). Bấm Check-in để quét QR.`
+              : `Cách cây ${distanceLabel} (Bán kính: ≤ ${effectiveRadius.toFixed(0)}m). Di chuyển lại gần hoặc báo ngoại lệ.`}
           </Text>
         </View>
-        <View style={styles.gpsAuditGrid}>
-          <View style={styles.gpsAuditBox}>
-            <Text style={styles.metricLabel}>Sai số GPS</Text>
-            <Text style={styles.treeMetaValue}>
-              {locationAccuracyMeters === null ? 'Chưa có GPS thật' : `±${locationAccuracyMeters.toFixed(0)}m`}
-            </Text>
-          </View>
-          <View style={styles.gpsAuditBox}>
-            <Text style={styles.metricLabel}>Thời điểm đo</Text>
-            <Text style={styles.treeMetaValue}>
-              {locationCapturedAt && locationAgeSeconds !== null ? `${locationAgeSeconds}s trước` : 'Chưa đo GPS'}
-            </Text>
-          </View>
+        <View style={styles.signalStatusRow}>
+          <Ionicons name="radio-outline" size={15} color={colors.pewter} />
+          <Text style={styles.monoSmall}>
+            Sai số GPS: {locationAccuracyMeters === null ? 'Chưa có GPS thật' : `±${locationAccuracyMeters.toFixed(0)}m`}
+            {locationCapturedAt && locationAgeSeconds !== null ? ` • Đo ${locationAgeSeconds}s trước` : ''}
+          </Text>
         </View>
         <Text style={styles.monoSmall}>{locationMessage}</Text>
         {permissionStateNode ? <View style={{ marginVertical: 4 }}>{permissionStateNode}</View> : null}
         <View style={styles.twoCols}>
-          <Button variant="outline" icon="locate-outline" loading={locating} onPress={onLocate}>
+          <Button variant="outline" size="field" icon="locate-outline" loading={locating} onPress={onLocate}>
             Lấy GPS
           </Button>
           <Button
             icon={isSupervisor ? 'camera-outline' : 'scan-outline'}
+            size="field"
             variant={verified ? 'primary' : 'outline'}
             onPress={verified ? onCheckIn : (onRequestException ?? onCheckIn)}
           >
@@ -1842,7 +1812,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mapFrame: {
-    height: 330,
+    height: 220,
     overflow: 'hidden',
     borderRadius: radius.xl,
     borderWidth: 1,
@@ -1899,34 +1869,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  mapTaskList: {
-    gap: 10,
-    paddingBottom: 4,
-  },
-  mapTaskRow: {
-    minHeight: 70,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+  signalStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  mapTaskRowActive: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primaryBorder,
-  },
-  mapTaskDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: colors.borderStrong,
-  },
-  mapTaskDotActive: {
-    backgroundColor: colors.primary,
+    gap: 6,
   },
   qrScreen: {
     flex: 1,
