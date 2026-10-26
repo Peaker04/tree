@@ -254,7 +254,7 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(proofFlow).not.toContain('<Text style={styles.qrPayloadText}>{expectedQr}</Text>');
     expect(proofFlow).not.toContain('QR vừa quét (${payload})');
     expect(proofFlow).toContain('scannedCode: scannedTree.qrCode');
-    expect(proofFlow).toContain("task.qrCheck?.verified ? 'BEFORE' : nextStep");
+    expect(proofFlow).toContain("task.qrCheck?.verified ? 'CHECKLIST' : nextStep");
     expect(mobileApp).toContain('await runtime.taskRepo.cacheTasks(result.data.tasks);');
     expect(mobileApp).toContain('await runtime.taskRepo.cacheTasks([task]);');
 
@@ -425,6 +425,30 @@ describe('NOVYX mobile UI foundation contract', () => {
     );
     expect(staffProofFlow).toContain("import { WebMapView } from '../../components/presentation/WebMapView'");
     expect(staffProofFlow).toContain('<WebMapView');
+    expect(staffProofFlow).toContain('initialEngine="leaflet"');
+    expect(staffProofFlow).not.toContain('Check-in và quét QR');
+    expect(webMapView).toContain("initialEngine = 'leaflet'");
+    expect(webMapView).toContain('<svg width="16" height="16"');
+    expect(webMapView).not.toContain("html: '🌲'");
+  });
+
+  it('harmonizes design kit shape grammar, secondary button surface, and open filter rhythm', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+    const treeSurfaces = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/presentation/TreeSurfaces.tsx'),
+      'utf8',
+    );
+
+    expect(primitives).toContain('borderRadius: radius.card');
+    expect(primitives).toContain(
+      'button_secondary: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairlineBorder }',
+    );
+    expect(treeSurfaces).toContain('<View style={styles.treeFilterPanel}>');
+    expect(treeSurfaces).toContain('<View style={styles.taskFilterPanel}>');
+    expect(treeSurfaces).toContain('minHeight: 44');
   });
 
   it('enforces future operational task deadlines and prevents past shift assignment errors', () => {
@@ -436,5 +460,128 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(createTask).toContain('isDeadlineInPast');
     expect(createTask).toContain('Hạn hoàn thành đã qua. Vui lòng chọn ca hoặc ngày trong tương lai.');
     expect(createTask).toContain('Hạn hoàn thành phải là thời gian trong tương lai');
+  });
+
+  it('enforces BA acceptance audit invariants (BA-01 rework unlock, BA-02 RefreshControl, BA-03 BackHandler, BA-04 actor display names, BA-05 QR bottom clearance, BA-06 cubic easing & LayoutAnimation)', async () => {
+    const { formatActorDisplayName, getTaskProofWorkflowState, sanitizeNotificationText } =
+      await import('../../apps/mobile/src/domain/mobileWorkflow');
+    const { TaskStatus } = await import('../../apps/mobile/src/types');
+
+    // BA-01: Staff is unlocked for GPS/QR/CHECKLIST rework even when staffCompletedAt was previously set
+    const reworkChecklistTask = {
+      id: 'TSK-REWORK-STAFF',
+      title: 'Cắt tỉa cành thấp',
+      treeId: 'TRE-01',
+      treeName: 'Sao đen #108',
+      treeAddress: 'Công viên Tao Đàn',
+      assignedStaffId: 'STF-01',
+      assignedStaffName: 'staff@novyx.local',
+      status: TaskStatus.REWORK_REQUIRED,
+      reworkTarget: 'CHECKLIST' as const,
+      rejectReason: 'Checklist còn thiếu',
+      staffCompletedAt: '2026-10-24T08:00:00.000Z',
+      gpsCheck: { verified: true, distance: 3.2, timestamp: '2026-10-24T07:55:00.000Z', lat: 10.77, lng: 106.69 },
+      qrCheck: { verified: true, scannedCode: 'QR-01', timestamp: '2026-10-24T07:56:00.000Z' },
+      checklist: [{ id: '1', text: 'An toàn', done: true }],
+      deadline: '2026-10-25T17:00:00.000Z',
+      updatedAt: '2026-10-24T09:00:00.000Z',
+      proofProfile: 'CHANGE_PROOF' as const,
+      evidence: [],
+    };
+    const staffReworkState = getTaskProofWorkflowState(reworkChecklistTask, 'Staff');
+    expect(staffReworkState.isSubmittedOrCompleted).toBe(false);
+    expect(staffReworkState.nextStep).toBe('CHECKLIST');
+    expect(staffReworkState.activeActionText).toBe('Kiểm tra lại danh mục công việc');
+
+    // BA-04: Clean Vietnamese actor display names
+    expect(formatActorDisplayName('staff@novyx.local')).toBe('Nhân viên hiện trường');
+    expect(formatActorDisplayName('supervisor@novyx.local')).toBe('Giám sát hiện trường');
+    expect(formatActorDisplayName('manager@novyx.local')).toBe('Quản lý điều phối');
+    expect(sanitizeNotificationText('Nhiệm vụ mới từ manager@novyx.local cho staff@novyx.local')).toBe(
+      'Nhiệm vụ mới từ Quản lý điều phối cho Nhân viên hiện trường',
+    );
+
+    // BA-02, BA-03, BA-05, BA-06 source checks
+    const mobileApp = fs.readFileSync(path.resolve(process.cwd(), 'apps/mobile/src/screens/MobileApp.tsx'), 'utf8');
+    const proofFlow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffProofFlow.tsx'),
+      'utf8',
+    );
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+    const managerReview = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerReview.tsx'),
+      'utf8',
+    );
+    const staffTrees = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffTrees.tsx'),
+      'utf8',
+    );
+
+    expect(mobileApp).toContain("BackHandler.addEventListener('hardwareBackPress'");
+    expect(proofFlow).toContain("isRework ? 'Cần cập nhật'");
+    expect(proofFlow).toContain('paddingBottom: 148');
+    expect(primitives).toContain('Easing.out(Easing.cubic)');
+    expect(primitives).toContain('Easing.in(Easing.cubic)');
+    expect(managerReview).toContain('RefreshControl');
+    expect(managerReview).toContain('LayoutAnimation.configureNext');
+    expect(staffTrees).toContain('RefreshControl');
+    expect(staffTrees).toContain('LayoutAnimation.configureNext');
+  });
+
+  it('accurately detects exact-hour overdue tasks and supports overdue filtering', async () => {
+    const { isTaskOverdue, filterTasks, TASK_FILTER_OPTIONS } = await import(
+      '../../apps/mobile/src/domain/mobileWorkflow'
+    );
+    const { TaskStatus } = await import('@novyx/contracts');
+    type MobileTask = import('../../apps/mobile/src/types').Task;
+
+    const pastDeadline = new Date(Date.now() - 60000).toISOString();
+    const futureDeadline = new Date(Date.now() + 3600000).toISOString();
+
+    const overdueTask = {
+      id: 'task-overdue-1',
+      title: 'Tưới cây quá hạn',
+      status: TaskStatus.IN_PROGRESS,
+      deadline: pastDeadline,
+    } as unknown as MobileTask;
+
+    const futureTask = {
+      id: 'task-future-1',
+      title: 'Tưới cây tương lai',
+      status: TaskStatus.IN_PROGRESS,
+      deadline: futureDeadline,
+    } as unknown as MobileTask;
+
+    const completedTask = {
+      id: 'task-completed-1',
+      title: 'Đã xong',
+      status: TaskStatus.COMPLETED,
+      deadline: pastDeadline,
+    } as unknown as MobileTask;
+
+    expect(isTaskOverdue(overdueTask)).toBe(true);
+    expect(isTaskOverdue(futureTask)).toBe(false);
+    expect(isTaskOverdue(completedTask)).toBe(false);
+
+    const filtered = filterTasks([overdueTask, futureTask, completedTask], 'overdue');
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].id).toBe('task-overdue-1');
+
+    expect(TASK_FILTER_OPTIONS).toContainEqual({ id: 'overdue', label: 'Quá hạn' });
+  });
+
+  it('enforces UI-038: real WebView map with genuine raster tiles and prohibits fake NativeVectorMap', () => {
+    const webMapView = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/presentation/WebMapView.tsx'),
+      'utf8',
+    );
+
+    expect(webMapView).toContain("import { WebView } from 'react-native-webview'");
+    expect(webMapView).not.toContain('function NativeVectorMap');
+    expect(webMapView).not.toContain("TurboModuleRegistry.get('RNCWebViewModule')");
+    expect(webMapView).toContain('google.com/vt');
   });
 });
