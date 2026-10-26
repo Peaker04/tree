@@ -95,7 +95,6 @@ export function StaffProofFlow(props: {
     activeCameraPurpose,
     requestCameraForPurpose,
     requestLocationForPurpose,
-    showRationaleForPurpose,
     releaseCamera,
     getPermissionStateForPurpose,
     getRuntimeMessageForPurpose,

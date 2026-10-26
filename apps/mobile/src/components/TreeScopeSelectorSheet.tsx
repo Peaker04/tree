@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, radius, spacing, typography, controlSize } from '../theme/tokens';
+import { colors, layout, radius, spacing, typography, controlSize } from '../theme/tokens';
 import { BottomSheetModal, Button, Badge } from './AppPrimitives';
 
 export type ScopeMode = 'single_tree' | 'multi_trees';
@@ -127,7 +127,7 @@ export function TreeScopeSelectorSheet({
                     <Text style={[styles.treeName, isSelected && styles.treeNameSelected]} numberOfLines={1}>
                       {tree.name}
                     </Text>
-                    <Badge tone="soft">{tree.code}</Badge>
+                    <Badge tone="neutral">{tree.code}</Badge>
                   </View>
                   <Text style={styles.treeMeta} numberOfLines={1}>
                     {tree.species ? `${tree.species} • ` : ''}
