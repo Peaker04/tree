@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ExpoCamera from 'expo-camera';
+import * as Location from 'expo-location';
 import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { DeviceCameraView, type DeviceCameraViewHandle } from '../../components/DeviceCameraView';
 import { DevicePermissionState } from '../../components/DevicePermissionState';
@@ -200,7 +201,6 @@ export function StaffProofFlow(props: {
     setLocating(true);
     setLocationMessage('Đang kết nối GPS vệ tinh...');
     try {
-      const Location = await import('expo-location');
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
         setLocationMessage('Vui lòng bật Định vị (GPS) trong Cài đặt của điện thoại.');
@@ -223,9 +223,7 @@ export function StaffProofFlow(props: {
 
       let position: import('expo-location').LocationObject | null = null;
       try {
-        position =
-          (await Location.getLastKnownPositionAsync({ maxAge: 120000 })) ||
-          (await Location.getLastKnownPositionAsync());
+        position = (await Location.getLastKnownPositionAsync()) || (await Location.getLastKnownPositionAsync({ maxAge: 120000 }));
       } catch {
         // Fall back to active measurement
       }
@@ -234,14 +232,14 @@ export function StaffProofFlow(props: {
         setUserLng(position.coords.longitude);
         setLocationAccuracyMeters(position.coords.accuracy ?? null);
         setLocationCapturedAt(new Date().toISOString());
-        setLocationMessage('Đang tinh chỉnh độ chính xác GPS vệ tinh...');
+        setLocationMessage('Đang tinh chỉnh độ chính xác GPS...');
       }
 
       try {
-        // Allow up to 20s for high-accuracy physical satellite fix under tree canopy
+        // On iOS use High (MapKit). On Android, use Balanced/High for fast fused fix indoors and in field.
         const activePosition = await Promise.race([
           Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
+            accuracy: isIos ? Location.Accuracy.High : Location.Accuracy.Balanced,
           }),
           new Promise<null>((res) => setTimeout(() => res(null), 20000)),
         ]);
