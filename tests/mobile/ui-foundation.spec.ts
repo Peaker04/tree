@@ -584,4 +584,15 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(webMapView).not.toContain("TurboModuleRegistry.get('RNCWebViewModule')");
     expect(webMapView).toContain('google.com/vt');
   });
+
+  it('enforces UI-040: unblocked 1-tap GPS acquisition with hardware service check and >=20s satellite timeout', () => {
+    const proofFlow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffProofFlow.tsx'),
+      'utf8',
+    );
+
+    expect(proofFlow).toContain('hasServicesEnabledAsync');
+    expect(proofFlow).toContain('20000');
+    expect(proofFlow).not.toContain("showRationaleForPurpose('staff-gps')");
+  });
 });
