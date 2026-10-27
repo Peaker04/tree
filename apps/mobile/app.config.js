@@ -9,18 +9,23 @@ try {
 
 const mobileConfig = require('./app.json').expo;
 const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || '';
+const isExpoGo = process.env.EXPO_GO === '1' || process.argv.includes('--go');
+
+const extraPlugins = ['expo-secure-store'];
+if (!isExpoGo && googleMapsApiKey) {
+  extraPlugins.push([
+    'react-native-maps',
+    {
+      androidGoogleMapsApiKey: googleMapsApiKey,
+    },
+  ]);
+}
 
 module.exports = {
   ...mobileConfig,
   sdkVersion: '58.0.0',
   plugins: [
     ...(mobileConfig.plugins || []),
-    'expo-secure-store',
-    [
-      'react-native-maps',
-      {
-        androidGoogleMapsApiKey: googleMapsApiKey,
-      },
-    ],
+    ...extraPlugins,
   ],
 };
