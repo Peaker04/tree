@@ -347,6 +347,65 @@ export function Notice({
   );
 }
 
+export function PressableScale({
+  children,
+  onPress,
+  disabled,
+  style,
+  scaleTo = 0.98,
+  accessibilityRole,
+  accessibilityLabel,
+  accessibilityState,
+  hitSlop,
+}: {
+  children: React.ReactNode;
+  onPress?: () => void;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+  scaleTo?: number;
+  accessibilityRole?: React.ComponentProps<typeof Pressable>['accessibilityRole'];
+  accessibilityLabel?: string;
+  accessibilityState?: React.ComponentProps<typeof Pressable>['accessibilityState'];
+  hitSlop?: React.ComponentProps<typeof Pressable>['hitSlop'];
+}) {
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: scaleTo,
+      duration: 70,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      bounciness: 0,
+      speed: 16,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+      <Pressable
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={accessibilityState}
+        hitSlop={hitSlop}
+        disabled={disabled}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={onPress}
+        style={style}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 export function ListRow({
   title,
   subtitle,
@@ -376,13 +435,13 @@ export function ListRow({
     </>
   );
   return onPress ? (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}
+      style={[styles.listRow]}
     >
       {content}
-    </Pressable>
+    </PressableScale>
   ) : (
     <View style={styles.listRow}>{content}</View>
   );
@@ -468,23 +527,30 @@ export function BottomSheetModal({
     [onClose, sheetAnim],
   );
 
+  const handleShow = () => {
+    sheetAnim.setValue(screenHeight);
+    backdropAnim.setValue(0);
+    Animated.parallel([
+      Animated.timing(backdropAnim, {
+        toValue: 1,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetAnim, {
+        toValue: 0,
+        duration: 280,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   React.useEffect(() => {
     if (visible) {
+      sheetAnim.setValue(screenHeight);
+      backdropAnim.setValue(0);
       setModalVisible(true);
-      Animated.parallel([
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 280,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetAnim, {
-          toValue: 0,
-          duration: 280,
-          easing: Easing.bezier(0.16, 1, 0.3, 1),
-          useNativeDriver: true,
-        }),
-      ]).start();
     } else if (modalVisible) {
       Animated.parallel([
         Animated.timing(backdropAnim, {
@@ -510,7 +576,7 @@ export function BottomSheetModal({
   if (!modalVisible) return null;
 
   return (
-    <Modal visible={modalVisible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={modalVisible} transparent animationType="none" onRequestClose={onClose} onShow={handleShow}>
       <View style={styles.sheetOverlay}>
         <Animated.View style={[styles.sheetBackdrop, { opacity: backdropAnim }]}>
           <Pressable

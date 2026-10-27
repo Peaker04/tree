@@ -1,8 +1,9 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Path } from 'react-native-svg';
+import { PressableScale } from './AppPrimitives';
 import { colors, controlSize, elevation, radius, spacing, typography } from '../theme/tokens';
 
 export type NavigationIcon = React.ComponentProps<typeof Ionicons>['name'];
@@ -133,20 +134,21 @@ export function NotchedBottomNav({
 
       {/* 2. Nút FAB trung tâm: đặt ở top: 0 của Root Container (hoàn toàn nằm trong View cha) */}
       <View style={styles.fabSlot}>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Quét mã QR"
           accessibilityState={{ selected: activeId === fabItem.id }}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => onPress(fabItem.id)}
-          style={({ pressed }) => [styles.fab, activeId === fabItem.id && styles.fabActive, pressed && styles.pressed]}
+          scaleTo={0.92}
+          style={[styles.fab, activeId === fabItem.id && styles.fabActive]}
         >
           {fabItem.icon === 'CUSTOM_SCAN' ? (
             <ScanIcon color={colors.snowWhite} size={26} />
           ) : (
             <Ionicons name={fabItem.icon} size={26} color={colors.snowWhite} />
           )}
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );
@@ -154,19 +156,20 @@ export function NotchedBottomNav({
 
 function NavItem({ item, active, onPress }: { item: NavigationItem; active: boolean; onPress: (id: string) => void }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="tab"
       accessibilityLabel={item.label}
       accessibilityState={{ selected: active }}
       hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
       onPress={() => onPress(item.id)}
-      style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+      scaleTo={0.93}
+      style={styles.item}
     >
       <Ionicons name={item.icon} size={22} color={active ? colors.primaryDark : colors.muted} />
       <Text numberOfLines={1} maxFontSizeMultiplier={1.15} style={[styles.label, active && styles.labelActive]}>
         {item.label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
