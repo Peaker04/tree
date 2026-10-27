@@ -4,13 +4,12 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, Button, EmptyState, Field, ScreenHeader } from '../../components/AppPrimitives';
+import { Badge, Button, EmptyState, Field, ScreenHeader, SegmentedFilterBar } from '../../components/AppPrimitives';
 import {
   TREE_FILTER_OPTIONS,
   TreeFilter,
@@ -133,22 +132,12 @@ export function StaffTrees({
                 rightIcon={query ? 'close-circle-outline' : 'search-outline'}
                 onRightIconPress={query ? () => onQueryChange('') : undefined}
               />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-                {TREE_FILTER_OPTIONS.map((option) => {
-                  const active = activeFilter === option.id;
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      key={option.id}
-                      onPress={() => onFilterChange(option.id)}
-                      style={[styles.filter, active && styles.filterActive]}
-                    >
-                      <Text style={[styles.filterText, active && styles.filterTextActive]}>{option.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+              <SegmentedFilterBar
+                variant="scrollable"
+                options={TREE_FILTER_OPTIONS}
+                selectedId={activeFilter}
+                onSelect={(id) => onFilterChange(id)}
+              />
               <Text style={styles.resultLabel}>
                 {visibleAssignedTrees.length}/{assignedTrees.length} cây
               </Text>

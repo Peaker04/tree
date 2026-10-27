@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, layout, radius, spacing, typography, controlSize } from '../theme/tokens';
-import { BottomSheetModal, Button, Badge } from './AppPrimitives';
+import { BottomSheetModal, Button, SegmentedFilterBar, SelectableItemRow, type FilterOption } from './AppPrimitives';
 
 export type ScopeMode = 'single_tree' | 'multi_trees' | 'zone';
 
@@ -161,6 +161,12 @@ export function TreeScopeSelectorSheet({
   const canConfirm =
     activeMode === 'single_tree' ? Boolean(singleId) : activeMode === 'multi_trees' ? multiIds.size > 0 : Boolean(selectedZoneId);
 
+  const MODE_OPTIONS: FilterOption<ScopeMode>[] = [
+    { id: 'single_tree', label: '1 Cây', icon: 'radio-button-on-outline' },
+    { id: 'multi_trees', label: 'Nhiều cây', icon: 'checkbox-outline' },
+    { id: 'zone', label: 'Khu vực', icon: 'grid-outline' },
+  ];
+
   return (
     <BottomSheetModal
       visible={visible}
@@ -171,49 +177,11 @@ export function TreeScopeSelectorSheet({
     >
       <View style={styles.sheetContainer}>
         {/* Mode Segmented Controls */}
-        <View style={styles.segmentBar}>
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeMode === 'single_tree' }}
-            onPress={() => setActiveMode('single_tree')}
-            style={[styles.segmentTab, activeMode === 'single_tree' && styles.segmentTabActive]}
-          >
-            <Ionicons
-              name="radio-button-on-outline"
-              size={15}
-              color={activeMode === 'single_tree' ? colors.primaryDark : colors.pewter}
-            />
-            <Text style={[styles.segmentText, activeMode === 'single_tree' && styles.segmentTextActive]}>1 Cây</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeMode === 'multi_trees' }}
-            onPress={() => setActiveMode('multi_trees')}
-            style={[styles.segmentTab, activeMode === 'multi_trees' && styles.segmentTabActive]}
-          >
-            <Ionicons
-              name="checkbox-outline"
-              size={15}
-              color={activeMode === 'multi_trees' ? colors.primaryDark : colors.pewter}
-            />
-            <Text style={[styles.segmentText, activeMode === 'multi_trees' && styles.segmentTextActive]}>Nhiều cây</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeMode === 'zone' }}
-            onPress={() => setActiveMode('zone')}
-            style={[styles.segmentTab, activeMode === 'zone' && styles.segmentTabActive]}
-          >
-            <Ionicons
-              name="grid-outline"
-              size={15}
-              color={activeMode === 'zone' ? colors.primaryDark : colors.pewter}
-            />
-            <Text style={[styles.segmentText, activeMode === 'zone' && styles.segmentTextActive]}>Khu vực</Text>
-          </Pressable>
-        </View>
+        <SegmentedFilterBar
+          options={MODE_OPTIONS}
+          selectedId={activeMode}
+          onSelect={(mode) => setActiveMode(mode)}
+        />
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
@@ -267,37 +235,18 @@ export function TreeScopeSelectorSheet({
                 <Text style={styles.emptyText}>Không tìm thấy khu vực nào phù hợp.</Text>
               </View>
             }
-            renderItem={({ item: zone }) => {
-              const isSelected = selectedZoneId === zone.id;
-              return (
-                <Pressable
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => setSelectedZoneId(zone.id)}
-                  style={[styles.treeRow, isSelected && styles.treeRowSelected]}
-                >
-                  <View style={[styles.treeIconCircle, isSelected && styles.treeIconCircleSelected]}>
-                    <Ionicons name="location" size={18} color={isSelected ? colors.primaryDark : colors.pewter} />
-                  </View>
-
-                  <View style={styles.treeInfo}>
-                    <View style={styles.treeNameRow}>
-                      <Text style={[styles.treeName, isSelected && styles.treeNameSelected]} numberOfLines={1}>
-                        {zone.name}
-                      </Text>
-                      <Badge tone={isSelected ? 'green' : 'neutral'}>{zone.treeCount} cây</Badge>
-                    </View>
-                    <Text style={styles.treeMeta} numberOfLines={1}>
-                      Bao gồm toàn bộ {zone.treeCount} cây trong khu vực này
-                    </Text>
-                  </View>
-
-                  <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
-                    {isSelected ? <View style={styles.radioDot} /> : null}
-                  </View>
-                </Pressable>
-              );
-            }}
+            renderItem={({ item: zone }) => (
+              <SelectableItemRow
+                key={zone.id}
+                mode="radio"
+                selected={selectedZoneId === zone.id}
+                onPress={() => setSelectedZoneId(zone.id)}
+                icon="location"
+                title={zone.name}
+                badge={`${zone.treeCount} cây`}
+                subtitle={`Bao gồm toàn bộ ${zone.treeCount} cây trong khu vực này`}
+              />
+            )}
           />
         ) : (
           <FlatList
@@ -315,50 +264,24 @@ export function TreeScopeSelectorSheet({
                 <Text style={styles.emptyText}>Không tìm thấy cây nào phù hợp.</Text>
               </View>
             }
-            renderItem={({ item: tree }) => {
-              const isSelected = activeMode === 'single_tree' ? singleId === tree.id : multiIds.has(tree.id);
-              return (
-                <Pressable
-                  accessibilityRole={activeMode === 'single_tree' ? 'radio' : 'checkbox'}
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => {
-                    if (activeMode === 'single_tree') {
-                      setSingleId(tree.id);
-                    } else {
-                      toggleTreeInMulti(tree.id);
-                    }
-                  }}
-                  style={[styles.treeRow, isSelected && styles.treeRowSelected]}
-                >
-                  <View style={[styles.treeIconCircle, isSelected && styles.treeIconCircleSelected]}>
-                    <Ionicons name="leaf" size={18} color={isSelected ? colors.primaryDark : colors.pewter} />
-                  </View>
-
-                  <View style={styles.treeInfo}>
-                    <View style={styles.treeNameRow}>
-                      <Text style={[styles.treeName, isSelected && styles.treeNameSelected]} numberOfLines={1}>
-                        {tree.name}
-                      </Text>
-                      <Badge tone="neutral">{tree.code}</Badge>
-                    </View>
-                    <Text style={styles.treeMeta} numberOfLines={1}>
-                      {tree.species ? `${tree.species} • ` : ''}
-                      {tree.address ?? 'Khu vực quản lý'}
-                    </Text>
-                  </View>
-
-                  {activeMode === 'single_tree' ? (
-                    <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
-                      {isSelected ? <View style={styles.radioDot} /> : null}
-                    </View>
-                  ) : (
-                    <View style={[styles.checkboxBox, isSelected && styles.checkboxBoxSelected]}>
-                      {isSelected ? <Ionicons name="checkmark" size={14} color={colors.snowWhite} /> : null}
-                    </View>
-                  )}
-                </Pressable>
-              );
-            }}
+            renderItem={({ item: tree }) => (
+              <SelectableItemRow
+                key={tree.id}
+                mode={activeMode === 'single_tree' ? 'radio' : 'checkbox'}
+                selected={activeMode === 'single_tree' ? singleId === tree.id : multiIds.has(tree.id)}
+                onPress={() => {
+                  if (activeMode === 'single_tree') {
+                    setSingleId(tree.id);
+                  } else {
+                    toggleTreeInMulti(tree.id);
+                  }
+                }}
+                icon="leaf"
+                title={tree.name}
+                badge={tree.code}
+                subtitle={`${tree.species ? `${tree.species} • ` : ''}${tree.address ?? 'Khu vực quản lý'}`}
+              />
+            )}
           />
         )}
 

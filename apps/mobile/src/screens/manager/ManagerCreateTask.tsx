@@ -21,7 +21,7 @@ import type {
   OperationalTaskTypeCatalogItem,
 } from '@novyx/contracts';
 import { AppNotification, Task, Tree } from '../../types';
-import { BottomSheetModal, Button, Field, ScreenHeader } from '../../components/AppPrimitives';
+import { BottomSheetModal, Button, Field, ScreenHeader, SegmentedFilterBar } from '../../components/AppPrimitives';
 import { DateRangePickerSheet, ShiftType } from '../../components/DateRangePickerSheet';
 import { TreeScopeSelectorSheet, ScopeMode, TreeScopeItem } from '../../components/TreeScopeSelectorSheet';
 import { colors, controlSize, layout, radius, spacing, typography } from '../../theme/tokens';
@@ -367,38 +367,26 @@ export function ManagerCreateTask({
             </Pressable>
           </View>
 
-          {/* Shift Radio Chips */}
-          <View style={styles.shiftSelectorRow}>
-            {[
-              { key: 'full_day' as const, label: 'Cả ngày', icon: 'time-outline' as const },
-              { key: 'morning' as const, label: 'Ca sáng', icon: 'sunny-outline' as const },
-              { key: 'afternoon' as const, label: 'Ca chiều', icon: 'partly-sunny-outline' as const },
-            ].map((s) => {
-              const active = (dateRange?.shift || 'full_day') === s.key;
-              return (
-                <Pressable
-                  key={s.key}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  style={[styles.shiftChip, active && styles.shiftChipActive]}
-                  onPress={() => {
-                    const now = new Date();
-                    const sStr =
-                      dateRange?.startDate ||
-                      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                    const eStr = dateRange?.endDate || sStr;
-                    setDateRange({ startDate: sStr, endDate: eStr, shift: s.key });
-                    const d = computeOperationalDeadline(eStr, s.key);
-                    setDeadline(d);
-                    setDeadlineTouched(true);
-                  }}
-                >
-                  <Ionicons name={s.icon} size={14} color={active ? colors.snowWhite : colors.pewter} />
-                  <Text style={[styles.shiftText, active && styles.shiftTextActive]}>{s.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          {/* Shift Segmented Bar */}
+          <SegmentedFilterBar
+            options={[
+              { id: 'full_day' as const, label: 'Cả ngày', icon: 'time-outline' as const },
+              { id: 'morning' as const, label: 'Ca sáng', icon: 'sunny-outline' as const },
+              { id: 'afternoon' as const, label: 'Ca chiều', icon: 'partly-sunny-outline' as const },
+            ]}
+            selectedId={dateRange?.shift || 'full_day'}
+            onSelect={(sKey) => {
+              const now = new Date();
+              const sStr =
+                dateRange?.startDate ||
+                `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+              const eStr = dateRange?.endDate || sStr;
+              setDateRange({ startDate: sStr, endDate: eStr, shift: sKey });
+              const d = computeOperationalDeadline(eStr, sKey);
+              setDeadline(d);
+              setDeadlineTouched(true);
+            }}
+          />
 
           <SelectionField
             label="Hạn hoàn thành"

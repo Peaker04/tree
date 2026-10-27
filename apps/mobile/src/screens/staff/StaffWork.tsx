@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, EmptyState, ScreenHeader } from '../../components/AppPrimitives';
+import { Badge, EmptyState, ScreenHeader, SegmentedFilterBar } from '../../components/AppPrimitives';
 import {
   TASK_FILTER_OPTIONS,
   TaskFilter,
@@ -62,22 +62,12 @@ export function StaffWork({
         initialNumToRender={8}
         ListHeaderComponent={
           <View style={styles.header}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-            {TASK_FILTER_OPTIONS.map((option) => {
-              const active = activeFilter === option.id;
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  key={option.id}
-                  onPress={() => onFilterChange(option.id)}
-                  style={[styles.filter, active && styles.filterActive]}
-                >
-                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{option.label}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+            <SegmentedFilterBar
+              variant="scrollable"
+              options={TASK_FILTER_OPTIONS}
+              selectedId={activeFilter}
+              onSelect={(id) => onFilterChange(id)}
+            />
           <Text style={styles.resultLabel}>
             {visibleTasks.length}/{totalTasks} công việc
           </Text>

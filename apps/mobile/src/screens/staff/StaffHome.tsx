@@ -1,7 +1,6 @@
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, Button, ListRow, Notice, ScreenHeader } from '../../components/AppPrimitives';
+import { Badge, Button, ListRow, MetricStatTile, Notice, ScreenHeader } from '../../components/AppPrimitives';
 import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
 import { Task, TaskStatus } from '../../types';
 import { getTaskProofWorkflowState } from '../../domain/mobileWorkflow';
@@ -145,9 +144,9 @@ export function StaffHome({
       </View>
 
       <View style={styles.metrics}>
-        <Metric label="Cần xử lý" value={actionable} />
-        <Metric label="Chờ duyệt" value={waitingReviewCount} />
-        <Metric label="Hoàn thành" value={hasAssignments ? `${completionRate}%` : '—'} />
+        <MetricStatTile label="Cần xử lý" value={actionable} icon="time-outline" tone="warning" onPress={onOpenWork} />
+        <MetricStatTile label="Chờ duyệt" value={waitingReviewCount} icon="shield-checkmark-outline" tone="info" onPress={onOpenWork} />
+        <MetricStatTile label="Hoàn thành" value={hasAssignments ? `${completionRate}%` : '—'} icon="checkmark-circle-outline" tone="success" onPress={onOpenWork} />
       </View>
 
       <View style={styles.section}>
@@ -175,27 +174,6 @@ export function StaffHome({
         ) : null}
       </View>
       </ScrollView>
-    </View>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number | string }) {
-  const iconName: React.ComponentProps<typeof Ionicons>['name'] =
-    label === 'Cần xử lý'
-      ? 'time-outline'
-      : label === 'Chờ duyệt'
-        ? 'shield-checkmark-outline'
-        : 'checkmark-circle-outline';
-
-  return (
-    <View style={styles.metric}>
-      <View style={styles.metricHeader}>
-        <Ionicons name={iconName} size={15} color={colors.primaryDark} />
-        <Text numberOfLines={1} style={styles.metricLabel}>
-          {label}
-        </Text>
-      </View>
-      <Text style={styles.metricValue}>{value}</Text>
     </View>
   );
 }

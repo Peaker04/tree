@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, Button, Field, ListRow, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
+import { Badge, Button, Field, ListRow, MetricStatTile, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
 import { getTaskProofGaps, getTreeRiskStatus, isTaskOverdue } from '../../domain/mobileWorkflow';
 import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
 import { TaskStatus } from '../../types';
@@ -202,22 +202,22 @@ export function ManagerDashboard(props: ManagerAreaProps) {
 
       {/* 2. STREAMLINED METRICS BAR (4 PILLS IN ONE SLEEK ROW) */}
       <View style={styles.metricsBar}>
-        <MetricPill
+        <MetricStatTile
           label="Chờ duyệt"
           value={pendingReview.length}
           tone="warning"
           icon="shield-checkmark-outline"
           onPress={() => props.setActiveStep('REVIEW')}
         />
-        <MetricPill label="Bị chặn" value={blocked.length} tone="danger" icon="ban-outline" />
-        <MetricPill
+        <MetricStatTile label="Bị chặn" value={blocked.length} tone="danger" icon="ban-outline" />
+        <MetricStatTile
           label="Quá hạn"
           value={overdue.length}
           tone="danger"
           icon="time-outline"
           onPress={() => props.setActiveStep('REVIEW')}
         />
-        <MetricPill
+        <MetricStatTile
           label="Cây chú ý"
           value={riskyTrees.length}
           tone="warning"
@@ -442,57 +442,6 @@ export function ManagerDashboard(props: ManagerAreaProps) {
       </View>
       </ScrollView>
     </View>
-  );
-}
-
-function MetricPill({
-  label,
-  value,
-  tone,
-  icon,
-  onPress,
-}: {
-  label: string;
-  value: number;
-  tone: 'warning' | 'danger' | 'info' | 'neutral';
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  onPress?: () => void;
-}) {
-  const semanticColor =
-    tone === 'warning' ? colors.warningText : tone === 'danger' ? colors.criticalText : colors.forestDepths;
-  const isAlert = value > 0 && (tone === 'danger' || tone === 'warning');
-  const countColor = isAlert ? semanticColor : colors.ink;
-  const iconColor = isAlert ? semanticColor : colors.pewter;
-
-  const content = (
-    <View
-      style={[
-        styles.metricPill,
-        isAlert && tone === 'danger' && styles.metricPillDanger,
-        isAlert && tone === 'warning' && styles.metricPillWarning,
-      ]}
-    >
-      <View style={styles.metricPillTop}>
-        <Ionicons name={icon} size={14} color={iconColor} />
-        <Text style={[styles.metricPillValue, { color: countColor }]}>{value}</Text>
-      </View>
-      <Text numberOfLines={1} style={styles.metricPillLabel}>
-        {label}
-      </Text>
-    </View>
-  );
-
-  return onPress ? (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}`}
-      style={styles.flex}
-      onPress={onPress}
-    >
-      {content}
-    </Pressable>
-  ) : (
-    <View style={styles.flex}>{content}</View>
   );
 }
 
