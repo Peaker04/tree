@@ -434,9 +434,10 @@ export function SupervisorArea(props: {
     const email = props.authenticatedUser?.email ?? 'Không có thông tin phiên';
     return (
       <AnimatedScreenTransition key="ACCOUNT" screenKey="ACCOUNT">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
-        <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
-        <View style={styles.identity}>
+        <View style={styles.flex}>
+          <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
+            <View style={styles.identity}>
           <UserAvatar email={email} />
           <View style={styles.flex}>
             <Text style={styles.emailText}>{email}</Text>
@@ -465,8 +466,9 @@ export function SupervisorArea(props: {
         <Button variant="danger" icon="log-out-outline" onPress={props.onLogout}>
           Đăng xuất
         </Button>
-      </ScrollView>
-    </AnimatedScreenTransition>
+          </ScrollView>
+        </View>
+      </AnimatedScreenTransition>
     );
   }
 

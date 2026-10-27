@@ -763,4 +763,24 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(primitives).toContain('screenHeaderWrap');
     expect(mobileApp).not.toContain('paddingTop: insets.top');
   });
+
+  it('enforces UI-049: anchors ScreenHeader outside ScrollView in Account screens', () => {
+    const staffAccount = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffAccount.tsx'),
+      'utf8',
+    );
+    const supervisorArea = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/supervisor/SupervisorArea.tsx'),
+      'utf8',
+    );
+    const managerAccount = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerAccount.tsx'),
+      'utf8',
+    );
+
+    expect(staffAccount).toContain('<ScreenHeader title="Tài khoản"');
+    expect(staffAccount).not.toMatch(/<ScrollView[^>]*>\s*<ScreenHeader/);
+    expect(supervisorArea).not.toMatch(/<ScrollView[^>]*>\s*<ScreenHeader title="Tài khoản"/);
+    expect(managerAccount).not.toMatch(/<ScrollView[^>]*>\s*<ScreenHeader/);
+  });
 });

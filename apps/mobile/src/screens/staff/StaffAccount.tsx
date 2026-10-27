@@ -22,10 +22,10 @@ export function StaffAccount({
   const email = authenticatedUser?.email ?? 'Không có thông tin phiên';
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
+    <View style={styles.container}>
       <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
-
-      <View style={styles.identity}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
+        <View style={styles.identity}>
         <UserAvatar email={email} />
         <View style={styles.flex}>
           <Text style={styles.email}>{email}</Text>
@@ -47,14 +47,16 @@ export function StaffAccount({
         />
       </View>
 
-      <Button variant="danger" icon="log-out-outline" onPress={onLogout}>
-        Đăng xuất
-      </Button>
-    </ScrollView>
+        <Button variant="danger" icon="log-out-outline" onPress={onLogout}>
+          Đăng xuất
+        </Button>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   screen: { padding: layout.screenPadding, paddingBottom: layout.bottomNavClearance + spacing.xl, gap: spacing.xl },
   flex: { flex: 1 },
   identity: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },

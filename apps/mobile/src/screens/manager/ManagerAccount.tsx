@@ -10,10 +10,10 @@ export function ManagerAccount(props: ManagerAreaProps) {
   const email = props.authenticatedUser?.email ?? 'Không có thông tin phiên';
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
+    <View style={styles.container}>
       <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
-
-      <View style={styles.identity}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
+        <View style={styles.identity}>
         <UserAvatar email={email} />
         <View style={styles.flex}>
           <Text style={styles.email}>{email}</Text>
@@ -37,11 +37,13 @@ export function ManagerAccount(props: ManagerAreaProps) {
       <Button variant="danger" icon="log-out-outline" onPress={props.onLogout}>
         Đăng xuất
       </Button>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   screen: { padding: layout.screenPadding, paddingBottom: layout.bottomNavClearance + spacing.xl, gap: spacing.xl },
   flex: { flex: 1 },
   identity: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
