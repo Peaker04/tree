@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
+const https = require('node:https');
 const { execFileSync } = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
@@ -33,13 +34,15 @@ const record = (name, ok, detail) => {
 const request = (method, url, body, token) =>
   new Promise((resolve) => {
     const target = new URL(url);
+    const client = target.protocol === 'https:' ? https : http;
     const payload = body === undefined ? undefined : JSON.stringify(body);
-    const req = http.request(
+    const req = client.request(
       target,
       {
         method,
         headers: {
           Accept: 'application/json',
+          'ngrok-skip-browser-warning': 'true',
           ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
