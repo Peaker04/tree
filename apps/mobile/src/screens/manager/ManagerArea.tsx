@@ -71,7 +71,7 @@ export type ManagerAreaProps = {
 export function ManagerArea(props: ManagerAreaProps) {
   if (props.activeStep === 'QR_LOOKUP') {
     return (
-      <AnimatedScreenTransition key="QR_LOOKUP">
+      <AnimatedScreenTransition key="QR_LOOKUP" screenKey="QR_LOOKUP">
         <ManagerQrLookup {...props} />
       </AnimatedScreenTransition>
     );
@@ -79,7 +79,7 @@ export function ManagerArea(props: ManagerAreaProps) {
 
   if (props.activeStep === 'ACCOUNT') {
     return (
-      <AnimatedScreenTransition key="ACCOUNT">
+      <AnimatedScreenTransition key="ACCOUNT" screenKey="ACCOUNT">
         <ManagerAccount {...props} />
       </AnimatedScreenTransition>
     );
@@ -87,7 +87,7 @@ export function ManagerArea(props: ManagerAreaProps) {
 
   if (props.activeStep === 'TREES') {
     return (
-      <AnimatedScreenTransition key="TREES">
+      <AnimatedScreenTransition key="TREES" screenKey="TREES">
         <ManagerTrees {...props} />
       </AnimatedScreenTransition>
     );
@@ -95,7 +95,7 @@ export function ManagerArea(props: ManagerAreaProps) {
 
   if (props.activeStep === 'CREATE') {
     return (
-      <AnimatedScreenTransition key="CREATE">
+      <AnimatedScreenTransition key="CREATE" screenKey="CREATE">
         <ManagerCreateTask
           trees={props.trees}
           taskTypes={props.operationalTaskTypes}
@@ -113,14 +113,14 @@ export function ManagerArea(props: ManagerAreaProps) {
 
   if (props.activeStep === 'REVIEW' || props.activeStep === 'REVIEW_DETAIL') {
     return (
-      <AnimatedScreenTransition key={props.activeStep}>
+      <AnimatedScreenTransition key={props.activeStep} screenKey={props.activeStep}>
         <ManagerReview {...props} />
       </AnimatedScreenTransition>
     );
   }
 
   return (
-    <AnimatedScreenTransition key="HOME">
+    <AnimatedScreenTransition key="HOME" screenKey="HOME">
       <ManagerDashboard {...props} />
     </AnimatedScreenTransition>
   );

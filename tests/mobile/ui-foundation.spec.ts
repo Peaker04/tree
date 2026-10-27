@@ -699,4 +699,21 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(appJson).toContain('"scheme": "novyx-greenops"');
     expect(tunnelScript).toContain('exps://');
   });
+
+  it('enforces UI-051: AnimatedScreenTransition keys on screenKey and eliminates children dependency to prevent flickering', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+    const managerArea = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerArea.tsx'),
+      'utf8',
+    );
+
+    expect(primitives).toContain('screenKey');
+    expect(primitives).not.toContain('}, [children, fadeAnim]);');
+    expect(primitives).toContain('}, [screenKey, fadeAnim]);');
+    expect(primitives).toContain('fadeAnim.setValue(0.7)');
+    expect(managerArea).toContain('screenKey={');
+  });
 });

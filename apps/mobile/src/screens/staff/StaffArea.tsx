@@ -146,7 +146,7 @@ export function StaffArea(props: {
 
   if (props.step === 'HOME') {
     return (
-      <AnimatedScreenTransition key="HOME">
+      <AnimatedScreenTransition key="HOME" screenKey="HOME">
         <StaffHome
           openTaskCount={openTasks.length}
           actionableTaskCount={actionableTasks.length}
@@ -194,7 +194,7 @@ export function StaffArea(props: {
 
   if (props.step === 'MY_TREES') {
     return (
-      <AnimatedScreenTransition key="MY_TREES">
+      <AnimatedScreenTransition key="MY_TREES" screenKey="MY_TREES">
         <StaffTrees
           assignedTrees={assignedTrees}
           visibleAssignedTrees={visibleAssignedTrees}
@@ -223,7 +223,7 @@ export function StaffArea(props: {
 
   if (props.step === 'WORK') {
     return (
-      <AnimatedScreenTransition key="WORK">
+      <AnimatedScreenTransition key="WORK" screenKey="WORK">
         <StaffWork
           openTaskCount={openTasks.length}
           visibleTasks={visibleTasks}
@@ -243,7 +243,7 @@ export function StaffArea(props: {
 
   if (props.step === 'ACCOUNT') {
     return (
-      <AnimatedScreenTransition key="ACCOUNT">
+      <AnimatedScreenTransition key="ACCOUNT" screenKey="ACCOUNT">
         <StaffAccount
           authenticatedUser={props.authenticatedUser}
           onLogout={props.onLogout}
@@ -258,7 +258,7 @@ export function StaffArea(props: {
 
   if (props.step === 'NOTIFICATIONS') {
     return (
-      <AnimatedScreenTransition key="NOTIFICATIONS">
+      <AnimatedScreenTransition key="NOTIFICATIONS" screenKey="NOTIFICATIONS">
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         <Header
           title="Thông báo"
@@ -390,7 +390,7 @@ export function StaffArea(props: {
   );
 
   if (proof) {
-    return <AnimatedScreenTransition key={props.step}>{proof}</AnimatedScreenTransition>;
+    return <AnimatedScreenTransition key={props.step} screenKey={props.step}>{proof}</AnimatedScreenTransition>;
   }
 
   return (

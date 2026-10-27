@@ -198,23 +198,25 @@ export function Button({
 }
 
 export function AnimatedScreenTransition({
+  screenKey,
   children,
   style,
 }: {
+  screenKey?: string;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
-    fadeAnim.setValue(0);
+    fadeAnim.setValue(0.7);
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 140,
-      easing: Easing.out(Easing.cubic),
+      duration: 160,
+      easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
-  }, [children, fadeAnim]);
+  }, [screenKey, fadeAnim]);
 
   return <Animated.View style={[{ flex: 1, opacity: fadeAnim }, style]}>{children}</Animated.View>;
 }

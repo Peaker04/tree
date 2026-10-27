@@ -152,7 +152,7 @@ export function SupervisorArea(props: {
     const workflow = nextTask ? getTaskProofWorkflowState(nextTask, 'Supervisor') : null;
     const isOffline = props.dataSource?.source === 'cache';
     return (
-      <AnimatedScreenTransition key="HOME">
+      <AnimatedScreenTransition key="HOME" screenKey="HOME">
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.screen}
@@ -293,7 +293,7 @@ export function SupervisorArea(props: {
 
   if (props.step === 'MY_TREES') {
     return (
-      <AnimatedScreenTransition key="MY_TREES">
+      <AnimatedScreenTransition key="MY_TREES" screenKey="MY_TREES">
         <StaffTrees
           assignedTrees={props.trees}
           visibleAssignedTrees={visibleTrees}
@@ -322,7 +322,7 @@ export function SupervisorArea(props: {
 
   if (props.step === 'WORK') {
     return (
-      <AnimatedScreenTransition key="WORK">
+      <AnimatedScreenTransition key="WORK" screenKey="WORK">
         <FlatList
           data={visibleTasks}
           keyExtractor={(task) => task.id}
@@ -433,7 +433,7 @@ export function SupervisorArea(props: {
   if (props.step === 'ACCOUNT') {
     const email = props.authenticatedUser?.email ?? 'Không có thông tin phiên';
     return (
-      <AnimatedScreenTransition key="ACCOUNT">
+      <AnimatedScreenTransition key="ACCOUNT" screenKey="ACCOUNT">
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
         <View style={styles.identity}>
@@ -472,7 +472,7 @@ export function SupervisorArea(props: {
 
   if (props.step === 'NOTIFICATIONS') {
     return (
-      <AnimatedScreenTransition key="NOTIFICATIONS">
+      <AnimatedScreenTransition key="NOTIFICATIONS" screenKey="NOTIFICATIONS">
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <Header
           title="Thông báo"
@@ -605,7 +605,7 @@ export function SupervisorArea(props: {
     />
   );
 
-  if (proof) return <AnimatedScreenTransition key={props.step}>{proof}</AnimatedScreenTransition>;
+  if (proof) return <AnimatedScreenTransition key={props.step} screenKey={props.step}>{proof}</AnimatedScreenTransition>;
 
   return (
     <View style={[styles.screen, styles.centerJustified]}>
