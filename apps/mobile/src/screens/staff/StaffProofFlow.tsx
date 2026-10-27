@@ -1512,7 +1512,7 @@ function TreeCheckinMap({
             trees={trees}
             initialEngine="leaflet"
           />
-        ) : (
+        ) : MapView && Circle && Marker ? (
           <MapView style={styles.realMap} region={mapRegion}>
             <Circle center={{ latitude: tree.lat, longitude: tree.lng }} radius={effectiveRadius} />
             <Marker coordinate={{ latitude: tree.lat, longitude: tree.lng }} title={tree.name} />
@@ -1528,7 +1528,7 @@ function TreeCheckinMap({
               />
             ) : null}
           </MapView>
-        )}
+        ) : null}
       </View>
       <Card style={styles.mapCheckinCard} tone={verified ? 'green' : 'amber'}>
         <View style={styles.rowBetween}>
