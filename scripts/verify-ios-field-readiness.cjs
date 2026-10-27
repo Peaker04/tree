@@ -12,7 +12,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const envPath = path.join(repoRoot, '.env');
 if (fs.existsSync(envPath)) process.loadEnvFile(envPath);
 
-const API_BASE_URL = 'https://cannot-gutter-retry.ngrok-free.dev';
+const API_BASE_URL = process.env.API_BASE_URL || process.env.EXPO_PUBLIC_API_BASE_URL || LOCAL_API_URL;
 const LOCAL_API_URL = 'http://127.0.0.1:3000';
 const METRO_URL = 'http://127.0.0.1:8082';
 

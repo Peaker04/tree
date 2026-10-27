@@ -347,6 +347,8 @@ export function Notice({
   );
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function PressableScale({
   children,
   onPress,
@@ -388,21 +390,19 @@ export function PressableScale({
   };
 
   return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
-      <Pressable
-        accessibilityRole={accessibilityRole}
-        accessibilityLabel={accessibilityLabel}
-        accessibilityState={accessibilityState}
-        hitSlop={hitSlop}
-        disabled={disabled}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={onPress}
-        style={style}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
+    <AnimatedPressable
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={accessibilityState}
+      hitSlop={hitSlop}
+      disabled={disabled}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={onPress}
+      style={[{ transform: [{ scale: scaleAnim }] }, style as ViewStyle]}
+    >
+      {children}
+    </AnimatedPressable>
   );
 }
 
@@ -690,18 +690,17 @@ export function SegmentedFilterBar<T extends string>({
       {options.map((opt) => {
         const active = selectedId === opt.id;
         return (
-          <PressableScale
+          <Pressable
             key={opt.id}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            scaleTo={0.96}
             onPress={() => onSelect(opt.id)}
             style={[styles.segmentTab, active && styles.segmentTabActive]}
           >
             {opt.icon ? (
               <Ionicons
                 name={opt.icon}
-                size={15}
+                size={16}
                 color={active ? colors.primaryDark : colors.pewter}
               />
             ) : null}
@@ -715,7 +714,7 @@ export function SegmentedFilterBar<T extends string>({
                 </Text>
               </View>
             ) : null}
-          </PressableScale>
+          </Pressable>
         );
       })}
     </View>
@@ -1105,15 +1104,16 @@ const styles = StyleSheet.create({
     padding: 3,
     marginBottom: spacing.sm,
     gap: 4,
+    height: 42,
   },
   segmentTab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xs,
+    height: '100%',
     borderRadius: radius.compact,
-    gap: 4,
+    gap: 6,
   },
   segmentTabActive: {
     backgroundColor: colors.card,
@@ -1124,13 +1124,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   segmentText: {
-    ...typography.metadata,
+    ...typography.label,
     color: colors.pewter,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   segmentTextActive: {
     color: colors.primaryDark,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   segmentBadge: {
     paddingHorizontal: 5,

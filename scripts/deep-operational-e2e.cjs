@@ -13,7 +13,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const envPath = path.join(repoRoot, '.env');
 if (fs.existsSync(envPath)) process.loadEnvFile(envPath);
 
-const API_BASE_URL = 'https://cannot-gutter-retry.ngrok-free.dev';
+const API_BASE_URL = process.env.API_BASE_URL || process.env.EXPO_PUBLIC_API_BASE_URL || 'http://127.0.0.1:3000';
 const PASSWORD = process.env.NOVYX_DEV_PASSWORD || 'NovyxDev123!';
 const STAFF_EMAIL = 'staff@novyx.local';
 const MANAGER_EMAIL = 'manager@novyx.local';
