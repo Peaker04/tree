@@ -7,6 +7,7 @@ import {
   Easing,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -404,7 +405,7 @@ export function BottomSheetModal({
   title,
   subtitle,
   children,
-  maxHeight = '88%',
+  maxHeight = '92%',
 }: {
   visible: boolean;
   onClose: () => void;
@@ -418,20 +419,46 @@ export function BottomSheetModal({
   const backdropAnim = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
   const sheetAnim = React.useRef(new Animated.Value(visible ? 0 : screenHeight)).current;
 
+  const panResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 5,
+        onPanResponderMove: (_, gesture) => {
+          if (gesture.dy > 0) {
+            sheetAnim.setValue(gesture.dy);
+          }
+        },
+        onPanResponderRelease: (_, gesture) => {
+          if (gesture.dy > 80 || gesture.vy > 0.8) {
+            onClose();
+          } else {
+            Animated.spring(sheetAnim, {
+              toValue: 0,
+              bounciness: 4,
+              speed: 14,
+              useNativeDriver: true,
+            }).start();
+          }
+        },
+      }),
+    [onClose, sheetAnim],
+  );
+
   React.useEffect(() => {
     if (visible) {
       setModalVisible(true);
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 1,
-          duration: 180,
+          duration: 160,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(sheetAnim, {
+        Animated.spring(sheetAnim, {
           toValue: 0,
-          duration: 220,
-          easing: Easing.out(Easing.cubic),
+          bounciness: 3,
+          speed: 14,
           useNativeDriver: true,
         }),
       ]).start();
@@ -471,7 +498,7 @@ export function BottomSheetModal({
           />
         </Animated.View>
         <Animated.View style={[styles.sheetContainer, { maxHeight, transform: [{ translateY: sheetAnim }] }]}>
-          <View style={styles.sheetHandleContainer}>
+          <View {...panResponder.panHandlers} style={styles.sheetHandleContainer}>
             <View style={styles.sheetHandle} />
           </View>
           {title ? (
@@ -494,12 +521,12 @@ export function BottomSheetModal({
             <KeyboardAvoidingView
               behavior="padding"
               keyboardVerticalOffset={24}
-              style={styles.sheetBody}
+              style={[styles.sheetBody, styles.flex]}
             >
               {children}
             </KeyboardAvoidingView>
           ) : (
-            <View style={styles.sheetBody}>{children}</View>
+            <View style={[styles.sheetBody, styles.flex]}>{children}</View>
           )}
         </Animated.View>
       </View>
@@ -694,11 +721,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(12, 28, 20, 0.28)',
   },
   sheetContainer: {
+    height: '82%',
     backgroundColor: colors.card,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.lg,
     shadowColor: colors.forest,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
@@ -741,6 +769,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sheetBody: {
+    flex: 1,
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
   },

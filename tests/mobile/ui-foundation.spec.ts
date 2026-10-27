@@ -681,4 +681,15 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(staffTrees).not.toContain('LayoutAnimation.configureNext');
     expect(managerTrees).not.toContain('LayoutAnimation.configureNext');
   });
+
+  it('enforces UI-045 and UI-046: BottomSheetModal explicit expanded geometry, spring physics and swipe-down dismissal', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+
+    expect(primitives).toContain("height: '82%'");
+    expect(primitives).toContain('PanResponder.create');
+    expect(primitives).toContain('Animated.spring(sheetAnim');
+  });
 });
