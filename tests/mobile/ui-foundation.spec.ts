@@ -624,4 +624,14 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(proofFlow).toContain('size="field"');
     expect(proofFlow).toContain('adaptiveMapHeight');
   });
+
+  it('enforces UI-042: standardizes bottom navigation bar geometry for iOS Home Indicator and Android 3-button nav', () => {
+    const bottomNav = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/NotchedBottomNav.tsx'),
+      'utf8',
+    );
+
+    expect(bottomNav).toContain("BASE_BAR_HEIGHT = Platform.OS === 'ios' ? 56 : 64");
+    expect(bottomNav).not.toContain("BASE_BAR_HEIGHT = Platform.OS === 'ios' ? 82 : 72");
+  });
 });
