@@ -21,7 +21,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, controlSize, layout, radius, spacing, typography } from '../theme/tokens';
 import { NovyxMark } from './NovyxMark';
 
@@ -67,29 +67,49 @@ export function ScreenHeader({
   subtitle,
   onBack,
   action,
+  dark = false,
+  borderBottom = false,
 }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
   action?: React.ReactNode;
+  dark?: boolean;
+  borderBottom?: boolean;
 }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.screenHeader}>
-      {onBack ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Quay lại"
-          onPress={onBack}
-          style={styles.headerButton}
-        >
-          <Ionicons name="chevron-back" size={22} color={colors.ink} />
-        </Pressable>
-      ) : null}
-      <View style={styles.flex}>
-        <Text style={styles.screenTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.screenSubtitle}>{subtitle}</Text> : null}
+    <View
+      style={[
+        styles.screenHeaderWrap,
+        { paddingTop: insets.top },
+        dark && styles.screenHeaderDark,
+        borderBottom && styles.screenHeaderBorder,
+      ]}
+    >
+      <View style={styles.screenHeader}>
+        {onBack ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
+            onPress={onBack}
+            style={[styles.headerButton, dark && styles.headerButtonDark]}
+          >
+            <Ionicons name="chevron-back" size={22} color={dark ? colors.snowWhite : colors.ink} />
+          </Pressable>
+        ) : null}
+        <View style={styles.flex}>
+          <Text numberOfLines={1} style={[styles.screenTitle, dark && styles.screenTitleDark]}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text numberOfLines={1} style={[styles.screenSubtitle, dark && styles.screenSubtitleDark]}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        {action}
       </View>
-      {action}
     </View>
   );
 }
@@ -541,7 +561,28 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.snowWhite },
   screenContent: { paddingHorizontal: layout.screenPadding, paddingTop: spacing.md, gap: layout.sectionGap },
   screenContentWithNav: { paddingBottom: layout.bottomNavClearance + spacing.xxl },
-  screenHeader: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  screenHeaderWrap: {
+    backgroundColor: colors.background,
+    paddingHorizontal: layout.screenPadding,
+  },
+  screenHeaderDark: {
+    backgroundColor: '#020617',
+  },
+  screenHeaderBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.hairlineBorder,
+  },
+  headerButtonDark: {
+    backgroundColor: '#0f172a',
+    borderColor: '#334155',
+  },
+  screenTitleDark: {
+    color: colors.snowWhite,
+  },
+  screenSubtitleDark: {
+    color: '#94a3b8',
+  },
+  screenHeader: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
   screenTitle: { ...typography.display, color: colors.ink },
   screenSubtitle: { ...typography.body, color: colors.pewter, marginTop: 2 },

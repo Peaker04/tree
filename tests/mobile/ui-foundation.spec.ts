@@ -751,13 +751,16 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(createTask).toContain('scope');
   });
 
-  it('enforces UI-049: standardizes iOS Safe Area with dynamic useSafeAreaInsets and root padding to prevent notch collision', () => {
+  it('enforces UI-049: Option 1 Immersive Botanical Navigation Bar with edge-to-edge root and safe ScreenHeader', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
     const mobileApp = fs.readFileSync(path.resolve(process.cwd(), 'apps/mobile/src/screens/MobileApp.tsx'), 'utf8');
-    const appSource = fs.readFileSync(path.resolve(process.cwd(), 'apps/mobile/App.tsx'), 'utf8');
 
-    expect(mobileApp).toContain('useSafeAreaInsets');
-    expect(mobileApp).toContain('paddingTop: insets.top');
-    expect(mobileApp).not.toContain("edges={['top'");
-    expect(appSource).toContain('initialMetrics={initialWindowMetrics}');
+    expect(primitives).toContain('useSafeAreaInsets');
+    expect(primitives).toContain('paddingTop: insets.top');
+    expect(primitives).toContain('screenHeaderWrap');
+    expect(mobileApp).not.toContain('paddingTop: insets.top');
   });
 });
