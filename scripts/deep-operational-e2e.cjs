@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
+const nodeCrypto = require('node:crypto');
 
 const repoRoot = path.resolve(__dirname, '..');
 const envPath = path.join(repoRoot, '.env');
@@ -214,7 +215,7 @@ async function run() {
     0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f,
     0x00, 0xbf, 0x00, 0xff, 0xd9,
   ]);
-  const contentHash = crypto.createHash('sha256').update(dummyJpeg).digest('hex');
+  const contentHash = nodeCrypto.createHash('sha256').update(dummyJpeg).digest('hex');
 
   const presignBefore = await request(
     'POST',
@@ -326,7 +327,7 @@ async function run() {
     'AUD-09',
     'Quản lý trả về yêu cầu sửa đổi (REWORK_REQUIRED)',
     rejectRes.status === 200 && reworkTask?.status === 'REWORK_REQUIRED',
-    `Mục tiêu làm lại: ${reworkTask?.reworkTarget}, Lý do: ${reworkTask?.rejectReason}`,
+    `Mục tiêu làm lại: ${reworkTask?.reworkTarget || rejectPayload.targetedArea}, Lý do: ${reworkTask?.rejectReason || rejectPayload.reworkReason}`,
   );
 
   // STEP 8: STAFF RE-SUBMITS REWORK TARGET
