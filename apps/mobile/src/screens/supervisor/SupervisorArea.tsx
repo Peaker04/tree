@@ -475,12 +475,13 @@ export function SupervisorArea(props: {
   if (props.step === 'NOTIFICATIONS') {
     return (
       <AnimatedScreenTransition key="NOTIFICATIONS" screenKey="NOTIFICATIONS">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
-        <Header
-          title="Thông báo"
-          subtitle="Cập nhật nhiệm vụ cần giám sát và kiểm duyệt"
-          onBack={() => props.setStep('HOME')}
-        />
+        <View style={styles.flex}>
+          <Header
+            title="Thông báo"
+            subtitle="Cập nhật nhiệm vụ cần giám sát và kiểm duyệt"
+            onBack={() => props.setStep('HOME')}
+          />
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <View style={styles.taskFilterPanel}>
           <View style={styles.rowBetween}>
             <View style={styles.sectionTitleRow}>
@@ -573,8 +574,9 @@ export function SupervisorArea(props: {
             </Pressable>
           ))
         )}
-      </ScrollView>
-    </AnimatedScreenTransition>
+          </ScrollView>
+        </View>
+      </AnimatedScreenTransition>
     );
   }
 

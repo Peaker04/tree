@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, Card, SectionTitle } from '../AppPrimitives';
+import { Badge, Card, ScreenHeader, SectionTitle } from '../AppPrimitives';
 import { colors, radius } from '../../theme/tokens';
 import { ChecklistItem, Task, TaskStatus, Tree } from '../../types';
 import {
@@ -24,19 +24,7 @@ export function Header({
   onBack?: () => void;
   dark?: boolean;
 }) {
-  return (
-    <View style={styles.header}>
-      {onBack ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" onPress={onBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color={colors.foreground} />
-        </Pressable>
-      ) : null}
-      <View style={styles.flex}>
-        <Text style={[styles.headerTitle, dark && styles.headerTitleDark]}>{title}</Text>
-        {subtitle ? <Text style={[styles.headerSub, dark && styles.headerSubDark]}>{subtitle}</Text> : null}
-      </View>
-    </View>
-  );
+  return <ScreenHeader title={title} subtitle={subtitle} onBack={onBack} dark={dark} />;
 }
 
 export function TaskCard({ task, compact }: { task: Task; compact?: boolean }) {

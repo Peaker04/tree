@@ -259,12 +259,13 @@ export function StaffArea(props: {
   if (props.step === 'NOTIFICATIONS') {
     return (
       <AnimatedScreenTransition key="NOTIFICATIONS" screenKey="NOTIFICATIONS">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
-        <Header
-          title="Thông báo"
-          subtitle="Cập nhật nhiệm vụ và kiểm duyệt hiện trường"
-          onBack={() => props.setStep('HOME')}
-        />
+        <View style={styles.flex}>
+          <Header
+            title="Thông báo"
+            subtitle="Cập nhật nhiệm vụ và kiểm duyệt hiện trường"
+            onBack={() => props.setStep('HOME')}
+          />
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         <View style={styles.taskFilterPanel}>
           <View style={styles.rowBetween}>
             <HeaderLabel />
@@ -354,8 +355,9 @@ export function StaffArea(props: {
             </Pressable>
           ))
         )}
-      </ScrollView>
-    </AnimatedScreenTransition>
+          </ScrollView>
+        </View>
+      </AnimatedScreenTransition>
     );
   }
 
