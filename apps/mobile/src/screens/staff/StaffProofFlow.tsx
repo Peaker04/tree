@@ -12,6 +12,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ExpoCamera from 'expo-camera';
 import * as Location from 'expo-location';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
 import { DeviceCameraView, type DeviceCameraViewHandle } from '../../components/DeviceCameraView';
 import { DevicePermissionState } from '../../components/DevicePermissionState';
@@ -67,6 +68,7 @@ export function StaffProofFlow(props: {
   const actorRole = props.role ?? 'Staff';
   const isSupervisor = actorRole === 'Supervisor';
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState('Chưa có vị trí hiện trường.');
   const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<number | null>(null);
@@ -829,7 +831,7 @@ export function StaffProofFlow(props: {
     const wState = getTaskProofWorkflowState(props.activeTask, actorRole);
 
     return (
-      <View style={[styles.screenPad, styles.qrScreen]}>
+      <View style={[styles.screenPad, styles.qrScreen, { paddingTop: Math.max(insets.top, 16) }]}>
         <Header
           title="Quét mã QR cây"
           subtitle={props.activeTask.treeName}
@@ -958,7 +960,7 @@ export function StaffProofFlow(props: {
     const activeGpsCheck = isSupervisor ? props.activeTask.supervisorGpsCheck : props.activeTask.gpsCheck;
 
     return (
-      <View style={[styles.cameraScreen, styles.flex]}>
+      <View style={[styles.cameraScreen, styles.flex, { paddingTop: Math.max(insets.top, 24) }]}>
         <Header
           title={isBefore ? 'Chụp ảnh trước xử lý' : 'Chụp ảnh sau xử lý'}
           subtitle={props.activeTask.treeName}

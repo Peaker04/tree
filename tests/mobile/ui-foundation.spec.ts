@@ -750,4 +750,15 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(scopeSheet).toContain('Chọn tất cả');
     expect(createTask).toContain('scope');
   });
+
+  it('enforces UI-049: standardizes iOS Safe Area without static initialMetrics and anchors headers safely below notch/island', () => {
+    const appSource = fs.readFileSync(path.resolve(process.cwd(), 'apps/mobile/App.tsx'), 'utf8');
+    const proofFlow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffProofFlow.tsx'),
+      'utf8',
+    );
+
+    expect(appSource).not.toContain('initialMetrics={initialWindowMetrics}');
+    expect(proofFlow).toContain('insets.top');
+  });
 });
