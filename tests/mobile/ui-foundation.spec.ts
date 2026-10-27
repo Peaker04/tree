@@ -784,4 +784,17 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(supervisorArea).not.toMatch(/<ScrollView[^>]*>\s*<ScreenHeader title="Tài khoản"/);
     expect(managerAccount).not.toMatch(/<ScrollView[^>]*>\s*<ScreenHeader/);
   });
+
+  it('enforces clean Fabric startup and optimized list virtualization', () => {
+    const indexSource = fs.readFileSync(path.resolve(process.cwd(), 'apps/mobile/index.ts'), 'utf8');
+    const scopeSheet = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/TreeScopeSelectorSheet.tsx'),
+      'utf8',
+    );
+
+    expect(indexSource).not.toContain('setLayoutAnimationEnabledExperimental');
+    expect(scopeSheet).toContain('removeClippedSubviews');
+    expect(scopeSheet).toContain('maxToRenderPerBatch={10}');
+    expect(scopeSheet).toContain('windowSize={5}');
+  });
 });

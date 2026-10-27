@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, layout, radius, spacing, typography, controlSize } from '../theme/tokens';
 import { BottomSheetModal, Button, Badge } from './AppPrimitives';
@@ -258,6 +258,9 @@ export function TreeScopeSelectorSheet({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.treeList}
+            removeClippedSubviews={Platform.OS === 'android'}
+            maxToRenderPerBatch={10}
+            windowSize={5}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="grid-outline" size={32} color={colors.pewter} />
@@ -303,6 +306,9 @@ export function TreeScopeSelectorSheet({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.treeList}
+            removeClippedSubviews={Platform.OS === 'android'}
+            maxToRenderPerBatch={10}
+            windowSize={5}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="leaf-outline" size={32} color={colors.pewter} />
