@@ -445,7 +445,8 @@ export function BottomSheetModal({
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 5,
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          gesture.dy > 5 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
         onPanResponderMove: (_, gesture) => {
           if (gesture.dy > 0) {
             sheetAnim.setValue(gesture.dy);
