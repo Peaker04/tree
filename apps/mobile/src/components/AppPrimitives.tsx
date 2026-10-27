@@ -148,30 +148,74 @@ export function Button({
       : variant === 'danger'
         ? colors.criticalText
         : colors.ink;
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.97,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
-      disabled={disabled || loading}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        styles[`button_${variant}`],
-        styles[`buttonSize_${size}`],
-        pill && styles.pill,
-        (disabled || loading) && styles.disabled,
-        pressed && styles.pressed,
-        style,
-      ]}
-    >
-      {loading ? <ActivityIndicator color={foreground} size="small" /> : null}
-      {!loading && icon ? <Ionicons name={icon} size={18} color={foreground} /> : null}
-      <Text numberOfLines={size === 'field' ? 2 : 1} style={[styles.buttonText, { color: foreground }]}>
-        {children}
-      </Text>
-    </Pressable>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
+        disabled={disabled || loading}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.button,
+          styles[`button_${variant}`],
+          styles[`buttonSize_${size}`],
+          pill && styles.pill,
+          (disabled || loading) && styles.disabled,
+          pressed && styles.pressed,
+        ]}
+      >
+        {loading ? <ActivityIndicator color={foreground} size="small" /> : null}
+        {!loading && icon ? <Ionicons name={icon} size={18} color={foreground} /> : null}
+        <Text numberOfLines={size === 'field' ? 2 : 1} style={[styles.buttonText, { color: foreground }]}>
+          {children}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
+}
+
+export function AnimatedScreenTransition({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 140,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [children, fadeAnim]);
+
+  return <Animated.View style={[{ flex: 1, opacity: fadeAnim }, style]}>{children}</Animated.View>;
 }
 
 export function Badge({

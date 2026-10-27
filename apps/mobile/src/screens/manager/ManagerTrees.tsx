@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, LayoutAnimation, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, EmptyState, Field, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
@@ -134,7 +134,6 @@ export function ManagerTrees(props: ManagerAreaProps) {
   };
 
   const toggleTree = async (treeId: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (expandedTreeId === treeId) {
       setExpandedTreeId(null);
       return;
@@ -186,7 +185,6 @@ export function ManagerTrees(props: ManagerAreaProps) {
                   size="compact"
                   icon={addingTree ? 'close-outline' : 'add-outline'}
                   onPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     setAddingTree(!addingTree);
                   }}
                 >

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Image,
-  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -482,7 +481,6 @@ export function StaffProofFlow(props: {
             icon="warning-outline"
             disabled={startingTask}
             onPress={() => {
-              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
               setReportingIssue(true);
             }}
           >
@@ -509,7 +507,6 @@ export function StaffProofFlow(props: {
                 variant="outline"
                 size="compact"
                 onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                   setReportingIssue(false);
                   setIssueDesc('');
                 }}
@@ -617,7 +614,6 @@ export function StaffProofFlow(props: {
             isSupervisor={isSupervisor}
             onLocate={refreshDeviceLocation}
             onRequestException={() => {
-              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
               setReportingLocationException(true);
             }}
             onCheckIn={() => {
@@ -670,7 +666,6 @@ export function StaffProofFlow(props: {
                 variant="outline"
                 size="compact"
                 onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                   setReportingLocationException(false);
                   setLocationExceptionReason('');
                 }}

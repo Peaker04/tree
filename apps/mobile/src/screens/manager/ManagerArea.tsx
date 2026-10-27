@@ -1,3 +1,4 @@
+import { AnimatedScreenTransition } from '../../components/AppPrimitives';
 import { AppNotification, CareHistory, Staff, Task, Tree } from '../../types';
 import type {
   AssignableStaffCatalogItem,
@@ -69,36 +70,58 @@ export type ManagerAreaProps = {
 
 export function ManagerArea(props: ManagerAreaProps) {
   if (props.activeStep === 'QR_LOOKUP') {
-    return <ManagerQrLookup {...props} />;
+    return (
+      <AnimatedScreenTransition key="QR_LOOKUP">
+        <ManagerQrLookup {...props} />
+      </AnimatedScreenTransition>
+    );
   }
 
   if (props.activeStep === 'ACCOUNT') {
-    return <ManagerAccount {...props} />;
+    return (
+      <AnimatedScreenTransition key="ACCOUNT">
+        <ManagerAccount {...props} />
+      </AnimatedScreenTransition>
+    );
   }
 
   if (props.activeStep === 'TREES') {
-    return <ManagerTrees {...props} />;
+    return (
+      <AnimatedScreenTransition key="TREES">
+        <ManagerTrees {...props} />
+      </AnimatedScreenTransition>
+    );
   }
 
   if (props.activeStep === 'CREATE') {
     return (
-      <ManagerCreateTask
-        trees={props.trees}
-        taskTypes={props.operationalTaskTypes}
-        assignableStaff={props.assignableStaff}
-        loading={props.catalogsLoading}
-        error={props.catalogsError}
-        onRetryCatalogs={props.onRetryCatalogs}
-        setActiveStep={props.setActiveStep}
-        createTask={props.createTask}
-        createNotification={props.createNotification}
-      />
+      <AnimatedScreenTransition key="CREATE">
+        <ManagerCreateTask
+          trees={props.trees}
+          taskTypes={props.operationalTaskTypes}
+          assignableStaff={props.assignableStaff}
+          loading={props.catalogsLoading}
+          error={props.catalogsError}
+          onRetryCatalogs={props.onRetryCatalogs}
+          setActiveStep={props.setActiveStep}
+          createTask={props.createTask}
+          createNotification={props.createNotification}
+        />
+      </AnimatedScreenTransition>
     );
   }
 
   if (props.activeStep === 'REVIEW' || props.activeStep === 'REVIEW_DETAIL') {
-    return <ManagerReview {...props} />;
+    return (
+      <AnimatedScreenTransition key={props.activeStep}>
+        <ManagerReview {...props} />
+      </AnimatedScreenTransition>
+    );
   }
 
-  return <ManagerDashboard {...props} />;
+  return (
+    <AnimatedScreenTransition key="HOME">
+      <ManagerDashboard {...props} />
+    </AnimatedScreenTransition>
+  );
 }

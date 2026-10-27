@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
-  LayoutAnimation,
   Platform,
   Pressable,
   RefreshControl,
@@ -229,7 +228,6 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
 
   const selectDecision = (nextDecision: Decision) => {
     if (nextDecision !== decision) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setDecision(nextDecision);
       setReason('');
       setTouched(false);

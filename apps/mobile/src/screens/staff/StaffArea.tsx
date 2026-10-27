@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, Button, Card, EmptyState } from '../../components/AppPrimitives';
+import { AnimatedScreenTransition, Badge, Button, Card, EmptyState } from '../../components/AppPrimitives';
 import { Header } from '../../components/presentation/TaskSurfaces';
 import {
   filterTasks,
@@ -146,111 +146,120 @@ export function StaffArea(props: {
 
   if (props.step === 'HOME') {
     return (
-      <StaffHome
-        openTaskCount={openTasks.length}
-        actionableTaskCount={actionableTasks.length}
-        completionRate={completionRate}
-        completed={completed}
-        totalTasks={staffTasks.length}
-        assignedTreeCount={assignedTrees.length}
-        waitingReviewCount={waitingReview}
-        nextTask={nextTask}
-        unreadNotificationCount={unreadNotifications.length}
-        loading={props.dataSource?.loading}
-        errorMessage={props.dataSource?.message}
-        isOffline={props.dataSource?.source === 'cache'}
-        onRetry={props.onRefreshData}
-        onOpenNotifications={() => props.setStep('NOTIFICATIONS')}
-        onOpenWork={() => {
-          props.setActiveTask(null);
-          props.setStep('WORK');
-        }}
-        onOpenTrees={() => {
-          props.setActiveTask(null);
-          props.setStep('MY_TREES');
-        }}
-        onOpenTask={(task) => {
-          props.setActiveTask(task);
-          props.setStep('DETAIL');
-        }}
-        onStartTaskProof={async (task) => {
-          let currentTask = task;
-          if (task.status === TaskStatus.PENDING || task.status === 'PENDING') {
-            try {
-              const started = await props.startTask(task);
-              currentTask = { ...task, ...started };
-            } catch {
-              // Offline fallback: OutboxDispatcher will auto-start PENDING task upon sync
+      <AnimatedScreenTransition key="HOME">
+        <StaffHome
+          openTaskCount={openTasks.length}
+          actionableTaskCount={actionableTasks.length}
+          completionRate={completionRate}
+          completed={completed}
+          totalTasks={staffTasks.length}
+          assignedTreeCount={assignedTrees.length}
+          waitingReviewCount={waitingReview}
+          nextTask={nextTask}
+          unreadNotificationCount={unreadNotifications.length}
+          loading={props.dataSource?.loading}
+          errorMessage={props.dataSource?.message}
+          isOffline={props.dataSource?.source === 'cache'}
+          onRetry={props.onRefreshData}
+          onOpenNotifications={() => props.setStep('NOTIFICATIONS')}
+          onOpenWork={() => {
+            props.setActiveTask(null);
+            props.setStep('WORK');
+          }}
+          onOpenTrees={() => {
+            props.setActiveTask(null);
+            props.setStep('MY_TREES');
+          }}
+          onOpenTask={(task) => {
+            props.setActiveTask(task);
+            props.setStep('DETAIL');
+          }}
+          onStartTaskProof={async (task) => {
+            let currentTask = task;
+            if (task.status === TaskStatus.PENDING || task.status === 'PENDING') {
+              try {
+                const started = await props.startTask(task);
+                currentTask = { ...task, ...started };
+              } catch {
+                // Offline fallback: OutboxDispatcher will auto-start PENDING task upon sync
+              }
             }
-          }
-          props.setActiveTask(currentTask);
-          props.setStep(getNextProofStep(currentTask, 'Staff'));
-        }}
-      />
+            props.setActiveTask(currentTask);
+            props.setStep(getNextProofStep(currentTask, 'Staff'));
+          }}
+        />
+      </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'MY_TREES') {
     return (
-      <StaffTrees
-        assignedTrees={assignedTrees}
-        visibleAssignedTrees={visibleAssignedTrees}
-        staffTasks={staffTasks}
-        query={staffTreeQuery}
-        activeFilter={staffTreeFilter}
-        loading={props.dataSource?.loading}
-        onRefresh={props.onRefreshData}
-        getCareHistoryByTree={props.getCareHistoryByTree}
-        loadCareHistoryByTree={props.loadCareHistoryByTree}
-        onQueryChange={setStaffTreeQuery}
-        onFilterChange={setStaffTreeFilter}
-        onOpenTask={(task) => {
-          props.setActiveTask(task);
-          props.setStep('DETAIL');
-        }}
-        onMap={(task) => {
-          setMapReturnStep('MY_TREES');
-          props.setActiveTask(task);
-          props.setStep('MAP');
-        }}
-      />
+      <AnimatedScreenTransition key="MY_TREES">
+        <StaffTrees
+          assignedTrees={assignedTrees}
+          visibleAssignedTrees={visibleAssignedTrees}
+          staffTasks={staffTasks}
+          query={staffTreeQuery}
+          activeFilter={staffTreeFilter}
+          loading={props.dataSource?.loading}
+          onRefresh={props.onRefreshData}
+          getCareHistoryByTree={props.getCareHistoryByTree}
+          loadCareHistoryByTree={props.loadCareHistoryByTree}
+          onQueryChange={setStaffTreeQuery}
+          onFilterChange={setStaffTreeFilter}
+          onOpenTask={(task) => {
+            props.setActiveTask(task);
+            props.setStep('DETAIL');
+          }}
+          onMap={(task) => {
+            setMapReturnStep('MY_TREES');
+            props.setActiveTask(task);
+            props.setStep('MAP');
+          }}
+        />
+      </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'WORK') {
     return (
-      <StaffWork
-        openTaskCount={openTasks.length}
-        visibleTasks={visibleTasks}
-        totalTasks={staffTasks.length}
-        activeFilter={taskFilter}
-        loading={props.dataSource?.loading}
-        onRefresh={props.onRefreshData}
-        onFilterChange={setTaskFilter}
-        onOpenTask={(task) => {
-          props.setActiveTask(task);
-          props.setStep('DETAIL');
-        }}
-      />
+      <AnimatedScreenTransition key="WORK">
+        <StaffWork
+          openTaskCount={openTasks.length}
+          visibleTasks={visibleTasks}
+          totalTasks={staffTasks.length}
+          activeFilter={taskFilter}
+          loading={props.dataSource?.loading}
+          onRefresh={props.onRefreshData}
+          onFilterChange={setTaskFilter}
+          onOpenTask={(task) => {
+            props.setActiveTask(task);
+            props.setStep('DETAIL');
+          }}
+        />
+      </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'ACCOUNT') {
     return (
-      <StaffAccount
-        authenticatedUser={props.authenticatedUser}
-        onLogout={props.onLogout}
-        completed={completed}
-        total={staffTasks.length}
-        notificationsCount={unreadNotifications.length}
-        onOpenNotifications={() => props.setStep('NOTIFICATIONS')}
-      />
+      <AnimatedScreenTransition key="ACCOUNT">
+        <StaffAccount
+          authenticatedUser={props.authenticatedUser}
+          onLogout={props.onLogout}
+          completed={completed}
+          total={staffTasks.length}
+          notificationsCount={unreadNotifications.length}
+          onOpenNotifications={() => props.setStep('NOTIFICATIONS')}
+        />
+      </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'NOTIFICATIONS') {
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
+      <AnimatedScreenTransition key="NOTIFICATIONS">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         <Header
           title="Thông báo"
           subtitle="Cập nhật nhiệm vụ và kiểm duyệt hiện trường"
@@ -346,6 +355,7 @@ export function StaffArea(props: {
           ))
         )}
       </ScrollView>
+    </AnimatedScreenTransition>
     );
   }
 
@@ -379,7 +389,9 @@ export function StaffArea(props: {
     />
   );
 
-  if (proof) return proof;
+  if (proof) {
+    return <AnimatedScreenTransition key={props.step}>{proof}</AnimatedScreenTransition>;
+  }
 
   return (
     <View style={[styles.screenPad, styles.centerJustified]}>

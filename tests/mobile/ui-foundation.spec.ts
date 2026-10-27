@@ -526,9 +526,7 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(primitives).toContain('Easing.out(Easing.cubic)');
     expect(primitives).toContain('Easing.in(Easing.cubic)');
     expect(managerReview).toContain('RefreshControl');
-    expect(managerReview).toContain('LayoutAnimation.configureNext');
     expect(staffTrees).toContain('RefreshControl');
-    expect(staffTrees).toContain('LayoutAnimation.configureNext');
   });
 
   it('accurately detects exact-hour overdue tasks and supports overdue filtering', async () => {
@@ -662,5 +660,25 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(staffTrees).toContain('showsVerticalScrollIndicator={false}');
     expect(managerCreate).toContain('showsVerticalScrollIndicator={false}');
     expect(webMapView).toContain('::-webkit-scrollbar { display: none');
+  });
+
+  it('enforces UI-044: micro-spring button motion, AnimatedScreenTransition and eliminates Fabric LayoutAnimation', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+    const staffTrees = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffTrees.tsx'),
+      'utf8',
+    );
+    const managerTrees = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerTrees.tsx'),
+      'utf8',
+    );
+
+    expect(primitives).toContain('export function AnimatedScreenTransition');
+    expect(primitives).toContain('scale');
+    expect(staffTrees).not.toContain('LayoutAnimation.configureNext');
+    expect(managerTrees).not.toContain('LayoutAnimation.configureNext');
   });
 });

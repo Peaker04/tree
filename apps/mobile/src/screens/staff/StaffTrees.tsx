@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
   FlatList,
-  LayoutAnimation,
   Platform,
   Pressable,
   RefreshControl,
@@ -58,7 +57,6 @@ export function StaffTrees({
 
   const toggle = useCallback(
     async (treeId: string) => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       if (expandedTreeId === treeId) {
         setExpandedTreeId(null);
         return;
