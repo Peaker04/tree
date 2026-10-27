@@ -335,31 +335,33 @@ export function StaffProofFlow(props: {
 
   if (props.step === 'MAP') {
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>
+      <View style={styles.flex}>
         <Header
           title="Bản đồ check-in"
           subtitle="Xác minh vị trí thiết bị trước khi quét mã QR hoặc chụp ảnh"
           onBack={() => props.setStep(props.mapReturnStep)}
         />
-        {selectedMapTask && selectedMapTree ? (
-          <TreeCheckinMap
-            task={selectedMapTask}
-            tree={selectedMapTree}
-            trees={props.trees}
-            userLat={props.userLat}
-            userLng={props.userLng}
-            locationMessage={locationMessage}
-            locating={locating}
-            locationAccuracyMeters={locationAccuracyMeters}
-            locationCapturedAt={locationCapturedAt}
-            permissionStateNode={gpsPermissionNode}
-            onLocate={refreshDeviceLocation}
-            onCheckIn={() => checkInTask(selectedMapTask, selectedMapTree)}
-          />
-        ) : (
-          <EmptyState title="Không có cây cần check-in" body="Các nhiệm vụ hiện trường sẽ xuất hiện trên bản đồ." />
-        )}
-      </ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>
+          {selectedMapTask && selectedMapTree ? (
+            <TreeCheckinMap
+              task={selectedMapTask}
+              tree={selectedMapTree}
+              trees={props.trees}
+              userLat={props.userLat}
+              userLng={props.userLng}
+              locationMessage={locationMessage}
+              locating={locating}
+              locationAccuracyMeters={locationAccuracyMeters}
+              locationCapturedAt={locationCapturedAt}
+              permissionStateNode={gpsPermissionNode}
+              onLocate={refreshDeviceLocation}
+              onCheckIn={() => checkInTask(selectedMapTask, selectedMapTree)}
+            />
+          ) : (
+            <EmptyState title="Không có cây cần check-in" body="Các nhiệm vụ hiện trường sẽ xuất hiện trên bản đồ." />
+          )}
+        </ScrollView>
+      </View>
     );
   }
 
@@ -389,8 +391,9 @@ export function StaffProofFlow(props: {
         ].filter((item): item is string => Boolean(item));
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
+      <View style={styles.flex}>
         <Header title="Chi tiết công việc" onBack={() => props.setStep('WORK')} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
 
         <View style={styles.taskOrientation}>
           <View style={styles.flex}>
@@ -589,14 +592,16 @@ export function StaffProofFlow(props: {
               : wState.activeActionText ||
                 (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
         </Button>
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
   if (props.step === 'GPS' && props.activeTask) {
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
+      <View style={styles.flex}>
         <Header title="Xác minh GPS" subtitle={props.activeTask.treeName} onBack={() => props.setStep('DETAIL')} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         {activeTree ? (
           <TreeCheckinMap
             task={props.activeTask}
@@ -707,7 +712,8 @@ export function StaffProofFlow(props: {
             </View>
           </Card>
         ) : null}
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
@@ -1040,12 +1046,13 @@ export function StaffProofFlow(props: {
   if (props.step === 'CHECKLIST' && props.activeTask) {
     const checklist = props.activeTask.checklist;
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
+      <View style={styles.flex}>
         <Header
           title="Checklist tác nghiệp"
           subtitle={props.activeTask.title}
           onBack={() => props.setStep(isRework ? 'DETAIL' : 'QR')}
         />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         <Card>
           {checklist.map((item, index) => (
             <Pressable
@@ -1076,7 +1083,8 @@ export function StaffProofFlow(props: {
         <Button icon="checkmark-done-outline" onPress={() => props.setStep('REVIEW')}>
           Xem lại & Gửi xác nhận hiện trường
         </Button>
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
@@ -1106,7 +1114,7 @@ export function StaffProofFlow(props: {
     const visibleNotes = props.activeTask.notes?.startsWith('Fixture ') ? '' : (props.activeTask.notes ?? '');
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
+      <View style={styles.flex}>
         {isSupervisor ? (
           <Header title="Xem lại bằng chứng giám sát" onBack={() => props.setStep(isRework ? 'DETAIL' : 'AFTER')} />
         ) : (
@@ -1115,6 +1123,7 @@ export function StaffProofFlow(props: {
             onBack={() => props.setStep(isRework ? 'DETAIL' : 'CHECKLIST')}
           />
         )}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
         <View style={styles.reviewContent}>
           {/* Gate */}
           <View
@@ -1285,7 +1294,8 @@ export function StaffProofFlow(props: {
                 : 'Gửi định vị GPS & Xác nhận hoàn thành'
               : wState.activeActionText}
         </Button>
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
