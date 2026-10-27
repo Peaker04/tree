@@ -716,4 +716,19 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(primitives).toContain('fadeAnim.setValue(0.7)');
     expect(managerArea).toContain('screenKey={');
   });
+
+  it('enforces UI-052: eliminates eager tab refresh and layout shifts with gesture-bound pull refresh', () => {
+    const managerReview = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerReview.tsx'),
+      'utf8',
+    );
+    const managerDashboard = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerDashboard.tsx'),
+      'utf8',
+    );
+
+    expect(managerReview).not.toContain("if (props.activeStep === 'REVIEW' && prevStepRef.current !== 'REVIEW')");
+    expect(managerReview).toContain('pullRefreshing');
+    expect(managerDashboard).toContain('pullRefreshing');
+  });
 });

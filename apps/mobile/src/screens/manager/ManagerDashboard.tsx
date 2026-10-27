@@ -88,6 +88,16 @@ export function ManagerDashboard(props: ManagerAreaProps) {
               onPress: () => props.setActiveStep('CREATE'),
             };
 
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const handlePullRefresh = async () => {
+    setPullRefreshing(true);
+    try {
+      await props.onRefreshData?.();
+    } finally {
+      setPullRefreshing(false);
+    }
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -95,8 +105,8 @@ export function ManagerDashboard(props: ManagerAreaProps) {
       refreshControl={
         props.onRefreshData ? (
           <RefreshControl
-            refreshing={Boolean(props.dataSource?.loading)}
-            onRefresh={() => void props.onRefreshData?.()}
+            refreshing={pullRefreshing}
+            onRefresh={handlePullRefresh}
             tintColor={colors.primaryDark}
           />
         ) : undefined

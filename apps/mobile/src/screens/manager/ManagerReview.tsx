@@ -50,19 +50,20 @@ const decisionToneColor: Record<DecisionTone, string> = {
 
 export function ManagerReview(props: ManagerAreaProps) {
   const [query, setQuery] = useState('');
-  const prevStepRef = useRef<string | null>(null);
-  const refreshData = props.onRefreshData;
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const pending = [...props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW)].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
   const visible = pending.filter((task) => matchesTaskQuery(task, query));
 
-  useEffect(() => {
-    if (props.activeStep === 'REVIEW' && prevStepRef.current !== 'REVIEW') {
-      void refreshData?.();
+  const handlePullRefresh = async () => {
+    setPullRefreshing(true);
+    try {
+      await props.onRefreshData?.();
+    } finally {
+      setPullRefreshing(false);
     }
-    prevStepRef.current = props.activeStep;
-  }, [props.activeStep, refreshData]);
+  };
 
   if (props.activeStep === 'REVIEW_DETAIL' && props.reviewTask) {
     return <ManagerReviewDetail {...props} reviewTask={props.reviewTask} />;
@@ -77,8 +78,8 @@ export function ManagerReview(props: ManagerAreaProps) {
       refreshControl={
         props.onRefreshData ? (
           <RefreshControl
-            refreshing={Boolean(props.dataSource?.loading)}
-            onRefresh={() => void props.onRefreshData?.()}
+            refreshing={pullRefreshing}
+            onRefresh={handlePullRefresh}
             tintColor={colors.primaryDark}
           />
         ) : undefined

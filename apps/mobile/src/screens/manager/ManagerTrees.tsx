@@ -18,7 +18,17 @@ import type { ManagerAreaProps } from './ManagerArea';
 export function ManagerTrees(props: ManagerAreaProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<TreeFilter>('all');
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const [expandedTreeId, setExpandedTreeId] = useState<string | null>(null);
+
+  const handlePullRefresh = async () => {
+    setPullRefreshing(true);
+    try {
+      await props.onRefreshData?.();
+    } finally {
+      setPullRefreshing(false);
+    }
+  };
   const [historyLoadingTreeId, setHistoryLoadingTreeId] = useState<string | null>(null);
   const [historyErrorTreeId, setHistoryErrorTreeId] = useState<string | null>(null);
   const [addingTree, setAddingTree] = useState(false);
@@ -164,8 +174,8 @@ export function ManagerTrees(props: ManagerAreaProps) {
         refreshControl={
           props.onRefreshData ? (
             <RefreshControl
-              refreshing={Boolean(props.dataSource?.loading)}
-              onRefresh={() => void props.onRefreshData?.()}
+              refreshing={pullRefreshing}
+              onRefresh={handlePullRefresh}
               tintColor={colors.primaryDark}
             />
           ) : undefined
