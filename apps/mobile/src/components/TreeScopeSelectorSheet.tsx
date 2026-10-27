@@ -166,7 +166,7 @@ export function TreeScopeSelectorSheet({
       visible={visible}
       onClose={onClose}
       title="Chọn cây mục tiêu"
-      subtitle="Phân công theo 1 cây, nhiều cây hoặc theo Khu vực"
+      subtitle="Chọn 1 cây đơn lẻ, Chọn nhiều cây hoặc theo Khu vực"
       maxHeight="88%"
     >
       <View style={styles.sheetContainer}>
@@ -365,11 +365,7 @@ export function TreeScopeSelectorSheet({
             onPress={handleConfirm}
             accessibilityLabel="Áp dụng phạm vi"
           >
-            {activeMode === 'single_tree'
-              ? 'Áp dụng 1 cây mục tiêu'
-              : activeMode === 'multi_trees'
-                ? `Áp dụng ${multiIds.size} cây đã chọn`
-                : 'Áp dụng toàn bộ khu vực'}
+            Áp dụng phạm vi
           </Button>
         </View>
       </View>
