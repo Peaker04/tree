@@ -731,4 +731,23 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(managerReview).toContain('pullRefreshing');
     expect(managerDashboard).toContain('pullRefreshing');
   });
+
+  it('enforces UI-050: 3-tier tree scope hierarchy supporting single_tree, multi_trees, and zone dispatch', () => {
+    const scopeSheet = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/TreeScopeSelectorSheet.tsx'),
+      'utf8',
+    );
+    const createTask = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerCreateTask.tsx'),
+      'utf8',
+    );
+
+    expect(scopeSheet).toContain("'single_tree' | 'multi_trees' | 'zone'");
+    expect(scopeSheet).toContain('single_tree');
+    expect(scopeSheet).toContain('multi_trees');
+    expect(scopeSheet).toContain('zone');
+    expect(scopeSheet).toContain('Khu vực');
+    expect(scopeSheet).toContain('Chọn tất cả');
+    expect(createTask).toContain('scope');
+  });
 });

@@ -458,11 +458,21 @@ export function ManagerCreateTask({
           <View style={styles.assignmentGroup}>
             <SelectionField
               label="Cây mục tiêu"
-              value={selectedTree?.name}
+              value={
+                treeScope?.mode === 'multi_trees'
+                  ? `${treeScope.treeIds.length} cây đã chọn`
+                  : treeScope?.mode === 'zone'
+                    ? `Khu vực: ${treeScope.zoneId}`
+                    : selectedTree?.name
+              }
               detail={
-                selectedTree
-                  ? `${selectedTree.address} · ${selectedTree.healthStatus}`
-                  : undefined
+                treeScope?.mode === 'multi_trees'
+                  ? `Bao gồm ${selectedTree?.name || 'cây'} và ${treeScope.treeIds.length - 1} cây khác`
+                  : treeScope?.mode === 'zone'
+                    ? `Bao gồm toàn bộ ${treeScope.treeIds.length} cây trong khu vực`
+                    : selectedTree
+                      ? `${selectedTree.address} · ${selectedTree.healthStatus}`
+                      : undefined
               }
               placeholder="Chọn cây"
               icon="leaf-outline"
