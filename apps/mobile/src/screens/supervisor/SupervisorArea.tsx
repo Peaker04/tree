@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
+  AnimatedScreenTransition,
   Badge,
   Button,
   Card,
@@ -151,18 +152,20 @@ export function SupervisorArea(props: {
     const workflow = nextTask ? getTaskProofWorkflowState(nextTask, 'Supervisor') : null;
     const isOffline = props.dataSource?.source === 'cache';
     return (
-      <ScrollView
-        contentContainerStyle={styles.screen}
-        refreshControl={
-          props.onRefreshData ? (
-            <RefreshControl
-              refreshing={Boolean(props.dataSource?.loading)}
-              onRefresh={() => void props.onRefreshData?.()}
-              tintColor={colors.primaryDark}
-            />
-          ) : undefined
-        }
-      >
+      <AnimatedScreenTransition key="HOME">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.screen}
+          refreshControl={
+            props.onRefreshData ? (
+              <RefreshControl
+                refreshing={Boolean(props.dataSource?.loading)}
+                onRefresh={() => void props.onRefreshData?.()}
+                tintColor={colors.primaryDark}
+              />
+            ) : undefined
+          }
+        >
         <ScreenHeader
           title="Giám sát hiện trường"
           subtitle={isOffline ? 'Ca giám sát · dữ liệu đã lưu' : 'Ca giám sát hiện tại'}
@@ -284,51 +287,56 @@ export function SupervisorArea(props: {
           />
         </View>
       </ScrollView>
+    </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'MY_TREES') {
     return (
-      <StaffTrees
-        assignedTrees={props.trees}
-        visibleAssignedTrees={visibleTrees}
-        staffTasks={supervisorTasks}
-        query={treeQuery}
-        activeFilter={treeFilter}
-        loading={props.dataSource?.loading}
-        onRefresh={props.onRefreshData}
-        getCareHistoryByTree={props.getCareHistoryByTree}
-        loadCareHistoryByTree={props.loadCareHistoryByTree}
-        onQueryChange={setTreeQuery}
-        onFilterChange={setTreeFilter}
-        onOpenTask={(task) => {
-          props.setActiveTask(task);
-          props.setStep('DETAIL');
-        }}
-        onMap={(task) => {
-          setMapReturnStep('MY_TREES');
-          props.setActiveTask(task);
-          props.setStep('MAP');
-        }}
-      />
+      <AnimatedScreenTransition key="MY_TREES">
+        <StaffTrees
+          assignedTrees={props.trees}
+          visibleAssignedTrees={visibleTrees}
+          staffTasks={supervisorTasks}
+          query={treeQuery}
+          activeFilter={treeFilter}
+          loading={props.dataSource?.loading}
+          onRefresh={props.onRefreshData}
+          getCareHistoryByTree={props.getCareHistoryByTree}
+          loadCareHistoryByTree={props.loadCareHistoryByTree}
+          onQueryChange={setTreeQuery}
+          onFilterChange={setTreeFilter}
+          onOpenTask={(task) => {
+            props.setActiveTask(task);
+            props.setStep('DETAIL');
+          }}
+          onMap={(task) => {
+            setMapReturnStep('MY_TREES');
+            props.setActiveTask(task);
+            props.setStep('MAP');
+          }}
+        />
+      </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'WORK') {
     return (
-      <FlatList
-        data={visibleTasks}
-        keyExtractor={(task) => task.id}
-        contentContainerStyle={styles.screen}
-        refreshControl={
-          props.onRefreshData ? (
-            <RefreshControl
-              refreshing={Boolean(props.dataSource?.loading)}
-              onRefresh={() => void props.onRefreshData?.()}
-              tintColor={colors.primaryDark}
-            />
-          ) : undefined
-        }
+      <AnimatedScreenTransition key="WORK">
+        <FlatList
+          data={visibleTasks}
+          keyExtractor={(task) => task.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.screen}
+          refreshControl={
+            props.onRefreshData ? (
+              <RefreshControl
+                refreshing={Boolean(props.dataSource?.loading)}
+                onRefresh={() => void props.onRefreshData?.()}
+                tintColor={colors.primaryDark}
+              />
+            ) : undefined
+          }
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         removeClippedSubviews={Platform.OS === 'android'}
         maxToRenderPerBatch={10}
@@ -418,13 +426,15 @@ export function SupervisorArea(props: {
           );
         }}
       />
+    </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'ACCOUNT') {
     const email = props.authenticatedUser?.email ?? 'Không có thông tin phiên';
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
+      <AnimatedScreenTransition key="ACCOUNT">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
         <View style={styles.identity}>
           <UserAvatar email={email} />
@@ -456,12 +466,14 @@ export function SupervisorArea(props: {
           Đăng xuất
         </Button>
       </ScrollView>
+    </AnimatedScreenTransition>
     );
   }
 
   if (props.step === 'NOTIFICATIONS') {
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
+      <AnimatedScreenTransition key="NOTIFICATIONS">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <Header
           title="Thông báo"
           subtitle="Cập nhật nhiệm vụ cần giám sát và kiểm duyệt"
@@ -560,6 +572,7 @@ export function SupervisorArea(props: {
           ))
         )}
       </ScrollView>
+    </AnimatedScreenTransition>
     );
   }
 
@@ -592,7 +605,7 @@ export function SupervisorArea(props: {
     />
   );
 
-  if (proof) return proof;
+  if (proof) return <AnimatedScreenTransition key={props.step}>{proof}</AnimatedScreenTransition>;
 
   return (
     <View style={[styles.screen, styles.centerJustified]}>

@@ -54,7 +54,7 @@ export function Screen({
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       {scroll ? (
-        <ScrollView contentContainerStyle={contentStyle}>{children}</ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={contentStyle}>{children}</ScrollView>
       ) : (
         <View style={contentStyle}>{children}</View>
       )}
