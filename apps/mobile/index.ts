@@ -1,4 +1,9 @@
 import { registerRootComponent } from 'expo';
+import { Platform, UIManager } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 import App from './App';
 

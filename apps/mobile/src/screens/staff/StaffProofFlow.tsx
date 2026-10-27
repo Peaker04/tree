@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Image,
   LayoutAnimation,
@@ -1450,93 +1450,56 @@ function TreeCheckinMap({
   onCheckIn: () => void;
 }) {
   const [mapsModule, setMapsModule] = useState<typeof import('react-native-maps') | null>(cachedMapsModule ?? null);
-  const [nativeMapAvailable, setNativeMapAvailable] = useState<boolean>(
-    cachedMapsModule !== null && cachedMapsModule !== undefined,
-  );
   const distance = getDistanceMeters(userLat, userLng, tree.lat, tree.lng);
   const distanceLabel = distance >= 1000 ? `${(distance / 1000).toFixed(1)} km` : `${distance.toFixed(1)} m`;
   const effectiveRadius = Math.max(15, locationAccuracyMeters ?? 15) + 5;
   const verified = distance <= effectiveRadius;
-  const mapRegion = useMemo(() => {
-    if (!locationCapturedAt) {
-      return {
-        latitude: tree.lat,
-        longitude: tree.lng,
-        latitudeDelta: 0.003,
-        longitudeDelta: 0.003,
-      };
-    }
+  const mapRegion = {
+    latitude: tree.lat,
+    longitude: tree.lng,
+    latitudeDelta: 0.003,
+    longitudeDelta: 0.003,
+  };
 
-    const minLat = Math.min(userLat, tree.lat);
-    const maxLat = Math.max(userLat, tree.lat);
-    const minLng = Math.min(userLng, tree.lng);
-    const maxLng = Math.max(userLng, tree.lng);
-    const midLat = (minLat + maxLat) / 2;
-    const midLng = (minLng + maxLng) / 2;
-    // Tự động mở rộng khung nhìn bao quát cả người dùng và cây với padding an toàn
-    const latDelta = Math.max(0.0028, (maxLat - minLat) * 1.55);
-    const lngDelta = Math.max(0.0028, (maxLng - minLng) * 1.55);
+  const MapView = mapsModule?.default as React.ComponentType<Record<string, unknown>> | undefined;
+  const Circle = mapsModule?.Circle as React.ComponentType<Record<string, unknown>> | undefined;
+  const Marker = mapsModule?.Marker as React.ComponentType<Record<string, unknown>> | undefined;
+  const Polyline = mapsModule?.Polyline as React.ComponentType<Record<string, unknown>> | undefined;
+  const shouldRenderWebMap = true;
 
-    return {
-      latitude: midLat,
-      longitude: midLng,
-      latitudeDelta: latDelta,
-      longitudeDelta: lngDelta,
-    };
-  }, [locationCapturedAt, userLat, userLng, tree.lat, tree.lng]);
-
-  const MapView = mapsModule?.default;
-  const Circle = mapsModule?.Circle;
-  const Marker = mapsModule?.Marker;
-  const Polyline = mapsModule?.Polyline;
   const locationAgeSeconds = locationCapturedAt
     ? Math.max(0, Math.round((Date.now() - new Date(locationCapturedAt).getTime()) / 1000))
     : null;
 
   useEffect(() => {
     let mounted = true;
-
     if (cachedMapsModule !== undefined) {
-      if (mounted) {
-        setMapsModule(cachedMapsModule);
-        setNativeMapAvailable(cachedMapsModule !== null);
-      }
+      if (mounted) setMapsModule(cachedMapsModule);
       return () => {
         mounted = false;
       };
     }
-
     import('react-native-maps')
-      .then((loadedMapsModule) => {
-        cachedMapsModule = loadedMapsModule;
-        if (mounted) {
-          setMapsModule(loadedMapsModule);
-          setNativeMapAvailable(true);
-        }
+      .then((loaded) => {
+        cachedMapsModule = loaded;
+        if (mounted) setMapsModule(loaded);
       })
       .catch(() => {
         cachedMapsModule = null;
-        if (mounted) {
-          setMapsModule(null);
-          setNativeMapAvailable(false);
-        }
+        if (mounted) setMapsModule(null);
       });
-
     return () => {
       mounted = false;
     };
   }, []);
 
-  // iOS uses native MapKit vector maps out of the box with zero keys. Android testbed uses Google Roadmap tiles fallback.
-  const isIos = Platform.OS === 'ios';
-  const shouldRenderWebMap = !isIos || !nativeMapAvailable || !MapView || !Circle || !Marker;
   const { height: windowHeight } = useWindowDimensions();
   const adaptiveMapHeight = Math.min(340, Math.max(260, windowHeight - 350));
 
   return (
     <View style={styles.mapPanel}>
       <View style={[styles.mapFrame, { height: adaptiveMapHeight }]}>
-        {shouldRenderWebMap ? (
+        {shouldRenderWebMap || !MapView ? (
           <WebMapView
             treeLat={tree.lat}
             treeLng={tree.lng}
@@ -1550,41 +1513,18 @@ function TreeCheckinMap({
             initialEngine="leaflet"
           />
         ) : (
-          <MapView
-            style={styles.realMap}
-            region={mapRegion}
-            showsUserLocation
-            showsMyLocationButton={Platform.OS === 'android'}
-            showsCompass={Platform.OS === 'ios'}
-          >
-            <Circle
-              center={{ latitude: tree.lat, longitude: tree.lng }}
-              radius={effectiveRadius}
-              strokeColor="rgba(63,159,72,0.75)"
-              fillColor="rgba(63,159,72,0.16)"
-            />
-            <Marker
-              coordinate={{ latitude: tree.lat, longitude: tree.lng }}
-              title={tree.name}
-              description="Vị trí cây được giao"
-            />
+          <MapView style={styles.realMap} region={mapRegion}>
+            <Circle center={{ latitude: tree.lat, longitude: tree.lng }} radius={effectiveRadius} />
+            <Marker coordinate={{ latitude: tree.lat, longitude: tree.lng }} title={tree.name} />
             {locationCapturedAt ? (
-              <Marker
-                coordinate={{ latitude: userLat, longitude: userLng }}
-                title="Vị trí thiết bị"
-                description={`GPS sai số ${locationAccuracyMeters?.toFixed(0) ?? '—'}m`}
-                pinColor="#2563eb"
-              />
+              <Marker coordinate={{ latitude: userLat, longitude: userLng }} title="Vị trí thiết bị" />
             ) : null}
-            {locationCapturedAt && Polyline && !verified ? (
+            {locationCapturedAt && Polyline ? (
               <Polyline
                 coordinates={[
                   { latitude: userLat, longitude: userLng },
                   { latitude: tree.lat, longitude: tree.lng },
                 ]}
-                strokeColor="#2563eb"
-                strokeWidth={2}
-                lineDashPattern={[6, 4]}
               />
             ) : null}
           </MapView>
