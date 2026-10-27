@@ -14,6 +14,7 @@ export class DrizzleUserRepository implements IUserRepository {
       id: row.id,
       version: row.version,
       email: row.email,
+      fullName: row.fullName,
       phone: row.phone,
       initialRole: row.initialRole as HumanRole,
       role: row.role as HumanRole,

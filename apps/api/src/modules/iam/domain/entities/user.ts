@@ -4,6 +4,7 @@ export interface UserAccount {
   id: string;
   version: number;
   email: string;
+  fullName?: string | null;
   phone: string | null;
   initialRole: HumanRole;
   role: HumanRole;

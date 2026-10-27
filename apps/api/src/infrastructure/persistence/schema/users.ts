@@ -10,6 +10,7 @@ export const users = pgTable('users', {
   id: varchar('id', { length: 128 }).primaryKey(),
   version: integer('version').notNull().default(0),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  fullName: varchar('full_name', { length: 255 }),
   phone: varchar('phone', { length: 30 }),
   initialRole: varchar('initial_role', { length: 20 }).notNull(),
   role: varchar('role', { length: 20 }).notNull().default('staff'),

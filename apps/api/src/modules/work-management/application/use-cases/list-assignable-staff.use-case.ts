@@ -21,7 +21,7 @@ export class ListAssignableStaffUseCase {
     const staff = await this.userRepo.listActiveStaff();
     return staff.map((user) => ({
       id: user.id,
-      displayName: user.email.split('@')[0] || user.id,
+      displayName: user.fullName || user.email.split('@')[0] || user.id,
       email: user.email,
     }));
   }
