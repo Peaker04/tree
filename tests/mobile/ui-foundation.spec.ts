@@ -841,4 +841,15 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(proofFlow).toContain('shutterRing');
     expect(proofFlow).toContain('shutterInner');
   });
+
+  it('enforces UI-056: SegmentedFilterBar 42dp explicit geometry and native Pressable tab flex', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+
+    expect(primitives).toContain('height: 42');
+    expect(primitives).toContain('Animated.createAnimatedComponent(Pressable)');
+    expect(primitives).toContain("height: '100%'");
+  });
 });
