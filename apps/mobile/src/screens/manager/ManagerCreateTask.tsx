@@ -274,13 +274,13 @@ export function ManagerCreateTask({
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScreenHeader title="Tạo việc" subtitle="Phân công nhiệm vụ chăm sóc cây xanh" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.page}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <ScreenHeader title="Tạo việc" subtitle="Phân công nhiệm vụ chăm sóc cây xanh" />
 
         {/* 1. THỜI GIAN & CA LÀM VIỆC */}
         <View style={styles.section}>

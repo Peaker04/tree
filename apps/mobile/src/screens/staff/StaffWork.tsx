@@ -39,29 +39,30 @@ export function StaffWork({
   );
 
   return (
-    <FlatList
-      data={visibleTasks}
-      keyExtractor={(task) => task.id}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.screen}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={Boolean(loading)}
-            onRefresh={() => void onRefresh()}
-            tintColor={colors.primaryDark}
-          />
-        ) : undefined
-      }
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-      removeClippedSubviews={Platform.OS === 'android'}
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      initialNumToRender={8}
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <ScreenHeader title="Công việc" subtitle={`${openTaskCount} việc đang mở`} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+    <View style={styles.container}>
+      <ScreenHeader title="Công việc" subtitle={`${openTaskCount} việc đang mở`} />
+      <FlatList
+        data={visibleTasks}
+        keyExtractor={(task) => task.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.screen}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={Boolean(loading)}
+              onRefresh={() => void onRefresh()}
+              tintColor={colors.primaryDark}
+            />
+          ) : undefined
+        }
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        removeClippedSubviews={Platform.OS === 'android'}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={8}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
             {TASK_FILTER_OPTIONS.map((option) => {
               const active = activeFilter === option.id;
               return (
@@ -96,6 +97,7 @@ export function StaffWork({
       }
       renderItem={renderItem}
     />
+    </View>
   );
 }
 
@@ -154,6 +156,7 @@ function StaffTaskRow({ task, onPress }: { task: Task; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   screen: { padding: layout.screenPadding, paddingBottom: layout.bottomNavClearance + spacing.xl },
   header: { gap: spacing.lg, marginBottom: spacing.lg },
   separator: { height: spacing.md },

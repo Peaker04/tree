@@ -98,30 +98,31 @@ export function StaffTrees({
   );
 
   return (
-    <FlatList
-      data={visibleAssignedTrees}
-      keyExtractor={(tree) => tree.id}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.screen}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={Boolean(loading)}
-            onRefresh={() => void onRefresh()}
-            tintColor={colors.primaryDark}
-          />
-        ) : undefined
-      }
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-      removeClippedSubviews={Platform.OS === 'android'}
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      initialNumToRender={8}
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <ScreenHeader title="Cây của tôi" subtitle={`${assignedTrees.length} cây có quan hệ phân công`} />
-          {assignedTrees.length > 0 ? (
+    <View style={styles.container}>
+      <ScreenHeader title="Cây của tôi" subtitle={`${assignedTrees.length} cây có quan hệ phân công`} />
+      <FlatList
+        data={visibleAssignedTrees}
+        keyExtractor={(tree) => tree.id}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.screen}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={Boolean(loading)}
+              onRefresh={() => void onRefresh()}
+              tintColor={colors.primaryDark}
+            />
+          ) : undefined
+        }
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        removeClippedSubviews={Platform.OS === 'android'}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={8}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            {assignedTrees.length > 0 ? (
             <>
               <Field
                 label="Tìm cây"
@@ -166,6 +167,7 @@ export function StaffTrees({
       }
       renderItem={renderItem}
     />
+    </View>
   );
 }
 
@@ -273,6 +275,7 @@ function StaffTreeRow({
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   screen: { padding: layout.screenPadding, paddingBottom: layout.bottomNavClearance + spacing.xl },
   header: { gap: spacing.lg, marginBottom: spacing.lg },
   separator: { height: spacing.md },

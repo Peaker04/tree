@@ -78,15 +78,7 @@ export function StaffHome({
             };
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.screen}
-      refreshControl={
-        onRetry ? (
-          <RefreshControl refreshing={Boolean(loading)} onRefresh={onRetry} tintColor={colors.primaryDark} />
-        ) : undefined
-      }
-    >
+    <View style={styles.container}>
       <ScreenHeader
         title="Trang chủ"
         subtitle={isOffline ? 'Ca làm việc · dữ liệu đã lưu' : 'Ca làm việc hiện tại'}
@@ -96,6 +88,15 @@ export function StaffHome({
           </Button>
         }
       />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.screen}
+        refreshControl={
+          onRetry ? (
+            <RefreshControl refreshing={Boolean(loading)} onRefresh={onRetry} tintColor={colors.primaryDark} />
+          ) : undefined
+        }
+      >
 
       {isOffline ? (
         <Notice
@@ -173,7 +174,8 @@ export function StaffHome({
           />
         ) : null}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -199,6 +201,7 @@ function Metric({ label, value }: { label: string; value: number | string }) {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   screen: {
     padding: layout.screenPadding,
     paddingBottom: layout.bottomNavClearance + spacing.xl,

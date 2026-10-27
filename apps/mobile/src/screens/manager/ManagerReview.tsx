@@ -70,30 +70,30 @@ export function ManagerReview(props: ManagerAreaProps) {
   }
 
   return (
-    <FlatList
-      data={visible}
-      keyExtractor={(task) => task.id}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.screen}
-      refreshControl={
-        props.onRefreshData ? (
-          <RefreshControl
-            refreshing={pullRefreshing}
-            onRefresh={handlePullRefresh}
-            tintColor={colors.primaryDark}
-          />
-        ) : undefined
-      }
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-      removeClippedSubviews={Platform.OS === 'android'}
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      initialNumToRender={8}
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <ScreenHeader title="Duyệt báo cáo" subtitle={`${pending.length} báo cáo đang chờ nghiệm thu`} />
-
-          {props.dataSource?.source !== 'rest' ? (
+    <View style={styles.container}>
+      <ScreenHeader title="Duyệt báo cáo" subtitle={`${pending.length} báo cáo đang chờ nghiệm thu`} />
+      <FlatList
+        data={visible}
+        keyExtractor={(task) => task.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.screen}
+        refreshControl={
+          props.onRefreshData ? (
+            <RefreshControl
+              refreshing={pullRefreshing}
+              onRefresh={handlePullRefresh}
+              tintColor={colors.primaryDark}
+            />
+          ) : undefined
+        }
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        removeClippedSubviews={Platform.OS === 'android'}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={8}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            {props.dataSource?.source !== 'rest' ? (
             <Notice
               tone={props.dataSource?.source === 'cache' ? 'warning' : 'danger'}
               title={props.dataSource?.source === 'cache' ? 'Đang xem hàng chờ đã lưu' : 'Không tải được hàng chờ'}
@@ -170,6 +170,7 @@ export function ManagerReview(props: ManagerAreaProps) {
         );
       }}
     />
+    </View>
   );
 }
 
@@ -489,6 +490,7 @@ function DecisionOption({
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   screen: { padding: layout.screenPadding, paddingBottom: layout.bottomNavClearance + spacing.xl },
   detailScreen: { padding: layout.screenPadding, paddingBottom: spacing.xxl, gap: spacing.xl },
   header: { gap: spacing.lg, marginBottom: spacing.lg },

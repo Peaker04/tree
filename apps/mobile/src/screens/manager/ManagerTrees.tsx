@@ -164,7 +164,22 @@ export function ManagerTrees(props: ManagerAreaProps) {
   };
 
   return (
-    <>
+    <View style={styles.container}>
+      <ScreenHeader
+        title="Hồ sơ cây"
+        subtitle={`${props.trees.length} cây trong phạm vi vận hành`}
+        action={
+          <Button
+            size="compact"
+            icon={addingTree ? 'close-outline' : 'add-outline'}
+            onPress={() => {
+              setAddingTree(!addingTree);
+            }}
+          >
+            {addingTree ? 'Đóng' : 'Thêm cây'}
+          </Button>
+        }
+      />
       <FlatList
         data={visibleTrees}
         keyExtractor={(tree) => tree.id}
@@ -187,22 +202,6 @@ export function ManagerTrees(props: ManagerAreaProps) {
         initialNumToRender={8}
         ListHeaderComponent={
           <View style={styles.header}>
-            <ScreenHeader
-              title="Hồ sơ cây"
-              subtitle={`${props.trees.length} cây trong phạm vi vận hành`}
-              action={
-                <Button
-                  size="compact"
-                  icon={addingTree ? 'close-outline' : 'add-outline'}
-                  onPress={() => {
-                    setAddingTree(!addingTree);
-                  }}
-                >
-                  {addingTree ? 'Đóng' : 'Thêm cây'}
-                </Button>
-              }
-            />
-
             {addingTree ? (
               <View style={styles.createTreePanel}>
                 <SectionTitle icon="leaf-outline">Khởi tạo cây tại hiện trường</SectionTitle>
@@ -413,7 +412,7 @@ export function ManagerTrees(props: ManagerAreaProps) {
         }}
       />
       <TreeQrModal tree={qrTree} onClose={() => setQrTree(null)} />
-    </>
+    </View>
   );
 }
 
@@ -520,6 +519,10 @@ function ManagerTreeRow({
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   screen: {
     padding: layout.screenPadding,
     paddingBottom: layout.bottomNavClearance + spacing.xl,

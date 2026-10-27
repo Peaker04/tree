@@ -99,20 +99,21 @@ export function ManagerDashboard(props: ManagerAreaProps) {
   };
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.screen}
-      refreshControl={
-        props.onRefreshData ? (
-          <RefreshControl
-            refreshing={pullRefreshing}
-            onRefresh={handlePullRefresh}
-            tintColor={colors.primaryDark}
-          />
-        ) : undefined
-      }
-    >
+    <View style={styles.container}>
       <ScreenHeader title="Tổng quan" subtitle="Ưu tiên vận hành cần xử lý" />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.screen}
+        refreshControl={
+          props.onRefreshData ? (
+            <RefreshControl
+              refreshing={pullRefreshing}
+              onRefresh={handlePullRefresh}
+              tintColor={colors.primaryDark}
+            />
+          ) : undefined
+        }
+      >
 
       {props.dataSource?.source !== 'rest' ? (
         <Notice
@@ -439,7 +440,8 @@ export function ManagerDashboard(props: ManagerAreaProps) {
           onPress={() => props.setActiveStep('TREES')}
         />
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -495,6 +497,10 @@ function MetricPill({
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   screen: {
     padding: layout.screenPadding,
     paddingBottom: layout.bottomNavClearance + spacing.xl,
