@@ -413,6 +413,7 @@ function HeaderLabel() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   screenPad: {
     padding: 16,
     paddingBottom: 104,
