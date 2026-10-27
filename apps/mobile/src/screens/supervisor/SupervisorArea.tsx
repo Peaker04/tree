@@ -93,6 +93,16 @@ export function SupervisorArea(props: {
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread'>('all');
   const [mapReturnStep, setMapReturnStep] = useState<StaffStep>('MY_TREES');
   const [markingNotifications, setMarkingNotifications] = useState(false);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+
+  const handlePullRefresh = async () => {
+    setPullRefreshing(true);
+    try {
+      await props.onRefreshData?.();
+    } finally {
+      setPullRefreshing(false);
+    }
+  };
 
   const supervisorTasks = useMemo(
     () =>
@@ -153,33 +163,34 @@ export function SupervisorArea(props: {
     const isOffline = props.dataSource?.source === 'cache';
     return (
       <AnimatedScreenTransition key="HOME" screenKey="HOME">
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.screen}
-          refreshControl={
-            props.onRefreshData ? (
-              <RefreshControl
-                refreshing={Boolean(props.dataSource?.loading)}
-                onRefresh={() => void props.onRefreshData?.()}
-                tintColor={colors.primaryDark}
-              />
-            ) : undefined
-          }
-        >
-        <ScreenHeader
-          title="Giám sát hiện trường"
-          subtitle={isOffline ? 'Ca giám sát · dữ liệu đã lưu' : 'Ca giám sát hiện tại'}
-          action={
-            <Button
-              size="compact"
-              variant="ghost"
-              icon="notifications-outline"
-              onPress={() => props.setStep('NOTIFICATIONS')}
-            >
-              {unreadNotifications.length > 0 ? `${unreadNotifications.length} mới` : 'Thông báo'}
-            </Button>
-          }
-        />
+        <View style={styles.flex}>
+          <ScreenHeader
+            title="Giám sát hiện trường"
+            subtitle={isOffline ? 'Ca giám sát · dữ liệu đã lưu' : 'Ca giám sát hiện tại'}
+            action={
+              <Button
+                size="compact"
+                variant="ghost"
+                icon="notifications-outline"
+                onPress={() => props.setStep('NOTIFICATIONS')}
+              >
+                {unreadNotifications.length > 0 ? `${unreadNotifications.length} mới` : 'Thông báo'}
+              </Button>
+            }
+          />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.screen}
+            refreshControl={
+              props.onRefreshData ? (
+                <RefreshControl
+                  refreshing={pullRefreshing}
+                  onRefresh={handlePullRefresh}
+                  tintColor={colors.primaryDark}
+                />
+              ) : undefined
+            }
+          >
 
         {isOffline ? (
           <Notice
@@ -286,7 +297,8 @@ export function SupervisorArea(props: {
             }}
           />
         </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </AnimatedScreenTransition>
     );
   }
@@ -323,32 +335,33 @@ export function SupervisorArea(props: {
   if (props.step === 'WORK') {
     return (
       <AnimatedScreenTransition key="WORK" screenKey="WORK">
-        <FlatList
-          data={visibleTasks}
-          keyExtractor={(task) => task.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.screen}
-          refreshControl={
-            props.onRefreshData ? (
-              <RefreshControl
-                refreshing={Boolean(props.dataSource?.loading)}
-                onRefresh={() => void props.onRefreshData?.()}
-                tintColor={colors.primaryDark}
-              />
-            ) : undefined
-          }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        removeClippedSubviews={Platform.OS === 'android'}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        initialNumToRender={8}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <ScreenHeader
-              title="Công việc giám sát"
-              subtitle={`${awaitingCaptureTasks.length} việc chờ chụp bằng chứng`}
-            />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+        <View style={styles.flex}>
+          <ScreenHeader
+            title="Công việc giám sát"
+            subtitle={`${awaitingCaptureTasks.length} việc chờ chụp bằng chứng`}
+          />
+          <FlatList
+            data={visibleTasks}
+            keyExtractor={(task) => task.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.screen}
+            refreshControl={
+              props.onRefreshData ? (
+                <RefreshControl
+                  refreshing={pullRefreshing}
+                  onRefresh={handlePullRefresh}
+                  tintColor={colors.primaryDark}
+                />
+              ) : undefined
+            }
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          removeClippedSubviews={Platform.OS === 'android'}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={8}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
               {TASK_FILTER_OPTIONS.map((option) => {
                 const active = taskFilter === option.id;
                 return (
@@ -426,6 +439,7 @@ export function SupervisorArea(props: {
           );
         }}
       />
+      </View>
     </AnimatedScreenTransition>
     );
   }

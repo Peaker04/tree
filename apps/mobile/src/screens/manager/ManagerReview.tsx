@@ -279,8 +279,9 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
   };
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScreen} automaticallyAdjustKeyboardInsets>
+    <View style={styles.container}>
       <ScreenHeader title="Duyệt bằng chứng" subtitle={task.title} onBack={() => props.setActiveStep('REVIEW')} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScreen} automaticallyAdjustKeyboardInsets>
 
       <Notice
         tone={gaps.length ? 'warning' : 'success'}
@@ -438,7 +439,8 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
           Xác nhận quyết định
         </Button>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

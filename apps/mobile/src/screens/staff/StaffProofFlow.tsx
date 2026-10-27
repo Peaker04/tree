@@ -724,12 +724,13 @@ export function StaffProofFlow(props: {
       : null;
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, { paddingBottom: 148 }]}>
+      <View style={styles.flex}>
         <Header
           title="Quét QR cây"
           subtitle="Tra cứu hồ sơ, vị trí và công việc liên quan"
           onBack={() => props.setStep('HOME')}
         />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, { paddingBottom: 148 }]}>
         {!scannedTree ? (
           <>
             <Card tone="dark" style={styles.qrContextCard}>
@@ -826,7 +827,8 @@ export function StaffProofFlow(props: {
             onTrees={() => props.setStep('MY_TREES')}
           />
         ) : null}
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 

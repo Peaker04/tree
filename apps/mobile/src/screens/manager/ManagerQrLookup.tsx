@@ -65,13 +65,13 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
   const previewHeight = Math.min(420, Math.max(300, windowHeight - 390));
 
   return (
-    <>
+    <View style={styles.container}>
+      <ScreenHeader
+        title="Tra cứu QR cây"
+        subtitle="Quét mã để xem hồ sơ và công việc liên quan"
+        onBack={() => props.setActiveStep('HOME')}
+      />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
-        <ScreenHeader
-          title="Tra cứu QR cây"
-          subtitle="Quét mã để xem hồ sơ và công việc liên quan"
-          onBack={() => props.setActiveStep('HOME')}
-        />
 
         {!tree ? (
           <>
@@ -213,11 +213,12 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
         trees={props.trees}
         onSelectTreeCode={(code) => void lookup(code)}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   screen: { padding: layout.screenPadding, paddingBottom: spacing.xxl, gap: spacing.xl },
   flex: { flex: 1 },
   camera: { borderRadius: radius.card, overflow: 'hidden', backgroundColor: colors.ink },
