@@ -36,12 +36,13 @@ export const healthRoutes: FastifyPluginAsync<HealthRouteOptions> = async (
   <div class="card">
     <h1>NOVYX GreenOps</h1>
     <p>Chạm nút bên dưới để mở ứng dụng trong Expo Go:</p>
-    <a class="btn" href="exp://4fcn7he-peaker-8082.exp.direct">Mở trong Expo Go</a>
-    <div class="hint">Đang tự động chuyển hướng...</div>
+    <a class="btn" href="exp://10.12.64.53:8082">Mở qua Wi-Fi / LAN</a>
+    <a class="btn" style="background:#2c6a45;margin-top:12px" href="exp://172.20.10.6:8082">Mở qua Hotspot iPhone</a>
+    <div class="hint">Đang tự động chuyển tiếp qua mạng cục bộ...</div>
   </div>
   <script>
     setTimeout(function() {
-      window.location.href = "exp://4fcn7he-peaker-8082.exp.direct";
+      window.location.href = "exp://10.12.64.53:8082";
     }, 400);
   </script>
 </body>

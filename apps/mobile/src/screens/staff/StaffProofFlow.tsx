@@ -37,8 +37,6 @@ import {
 
 type CameraModule = typeof import('expo-camera');
 
-let cachedMapsModule: typeof import('react-native-maps') | null | undefined;
-
 export function StaffProofFlow(props: {
   step: StaffStep;
   setStep: (step: StaffStep) => void;
@@ -1444,49 +1442,14 @@ function TreeCheckinMap({
   onRequestException?: () => void;
   onCheckIn: () => void;
 }) {
-  const [mapsModule, setMapsModule] = useState<typeof import('react-native-maps') | null>(cachedMapsModule ?? null);
   const distance = getDistanceMeters(userLat, userLng, tree.lat, tree.lng);
   const distanceLabel = distance >= 1000 ? `${(distance / 1000).toFixed(1)} km` : `${distance.toFixed(1)} m`;
   const effectiveRadius = Math.max(15, locationAccuracyMeters ?? 15) + 5;
   const verified = distance <= effectiveRadius;
-  const mapRegion = {
-    latitude: tree.lat,
-    longitude: tree.lng,
-    latitudeDelta: 0.003,
-    longitudeDelta: 0.003,
-  };
-
-  const MapView = mapsModule?.default as React.ComponentType<Record<string, unknown>> | undefined;
-  const Circle = mapsModule?.Circle as React.ComponentType<Record<string, unknown>> | undefined;
-  const Marker = mapsModule?.Marker as React.ComponentType<Record<string, unknown>> | undefined;
-  const Polyline = mapsModule?.Polyline as React.ComponentType<Record<string, unknown>> | undefined;
-  const shouldRenderWebMap = true;
 
   const locationAgeSeconds = locationCapturedAt
     ? Math.max(0, Math.round((Date.now() - new Date(locationCapturedAt).getTime()) / 1000))
     : null;
-
-  useEffect(() => {
-    let mounted = true;
-    if (cachedMapsModule !== undefined) {
-      if (mounted) setMapsModule(cachedMapsModule);
-      return () => {
-        mounted = false;
-      };
-    }
-    import('react-native-maps')
-      .then((loaded) => {
-        cachedMapsModule = loaded;
-        if (mounted) setMapsModule(loaded);
-      })
-      .catch(() => {
-        cachedMapsModule = null;
-        if (mounted) setMapsModule(null);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const { height: windowHeight } = useWindowDimensions();
   const adaptiveMapHeight = Math.min(340, Math.max(260, windowHeight - 350));
@@ -1494,36 +1457,18 @@ function TreeCheckinMap({
   return (
     <View style={styles.mapPanel}>
       <View style={[styles.mapFrame, { height: adaptiveMapHeight }]}>
-        {shouldRenderWebMap || !MapView ? (
-          <WebMapView
-            treeLat={tree.lat}
-            treeLng={tree.lng}
-            treeName={tree.name}
-            userLat={userLat}
-            userLng={userLng}
-            locationAccuracyMeters={locationAccuracyMeters}
-            locationCapturedAt={locationCapturedAt}
-            effectiveRadiusMeters={effectiveRadius}
-            trees={trees}
-            initialEngine="leaflet"
-          />
-        ) : MapView && Circle && Marker ? (
-          <MapView style={styles.realMap} region={mapRegion}>
-            <Circle center={{ latitude: tree.lat, longitude: tree.lng }} radius={effectiveRadius} />
-            <Marker coordinate={{ latitude: tree.lat, longitude: tree.lng }} title={tree.name} />
-            {locationCapturedAt ? (
-              <Marker coordinate={{ latitude: userLat, longitude: userLng }} title="Vị trí thiết bị" />
-            ) : null}
-            {locationCapturedAt && Polyline ? (
-              <Polyline
-                coordinates={[
-                  { latitude: userLat, longitude: userLng },
-                  { latitude: tree.lat, longitude: tree.lng },
-                ]}
-              />
-            ) : null}
-          </MapView>
-        ) : null}
+        <WebMapView
+          treeLat={tree.lat}
+          treeLng={tree.lng}
+          treeName={tree.name}
+          userLat={userLat}
+          userLng={userLng}
+          locationAccuracyMeters={locationAccuracyMeters}
+          locationCapturedAt={locationCapturedAt}
+          effectiveRadiusMeters={effectiveRadius}
+          trees={trees}
+          initialEngine="leaflet"
+        />
       </View>
       <Card style={styles.mapCheckinCard} tone={verified ? 'green' : 'amber'}>
         <View style={styles.rowBetween}>

@@ -241,8 +241,7 @@ describe('NOVYX mobile UI foundation contract', () => {
 
     expect(proofFlow).toContain('<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>');
     expect(proofFlow).not.toContain('provider={providerGoogle}');
-    expect(proofFlow).toContain('region={mapRegion}');
-    expect(proofFlow).toContain('title="Vị trí thiết bị"');
+    expect(proofFlow).toContain('<WebMapView');
     expect(proofFlow).toContain('Khoảng cách tới cây');
     expect(proofFlow).toContain('Sai số GPS');
     expect(proofFlow).toContain('setScannedTree(matchedTree);');
