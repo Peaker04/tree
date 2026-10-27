@@ -293,6 +293,7 @@ function startMetroTunnel(publicApiUrl) {
   console.log(' 4. Bật 4G/5G và đăng nhập tài khoản thực địa:');
   console.log('    - Nhân viên: staff@novyx.local / NovyxDev123!');
   console.log('    - Quản lý:   manager@novyx.local / NovyxDev123!');
+  console.log(' [Lưu ý iOS] Khi quét bằng Camera iPhone, sử dụng link an toàn ATS: exps://<tunnel>.exp.direct');
   console.log('═'.repeat(70) + '\n');
 
   const metroEnv = {

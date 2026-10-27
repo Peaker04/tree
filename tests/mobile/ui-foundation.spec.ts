@@ -692,4 +692,12 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(primitives).toContain('PanResponder.create');
     expect(primitives).toContain('Animated.spring(sheetAnim');
   });
+
+  it('enforces UI-047: secure exps HTTPS scheme for tunnel QR codes and registers app scheme in app.json', () => {
+    const appJson = fs.readFileSync(path.resolve(process.cwd(), 'apps/mobile/app.json'), 'utf8');
+    const tunnelScript = fs.readFileSync(path.resolve(process.cwd(), 'scripts/field-tunnel.cjs'), 'utf8');
+
+    expect(appJson).toContain('"scheme": "novyx-greenops"');
+    expect(tunnelScript).toContain('exps://');
+  });
 });

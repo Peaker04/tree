@@ -3,6 +3,7 @@
     "name": "NOVYX",
     "owner": "peakers-team",
     "slug": "novyx-greenops",
+    "scheme": "novyx-greenops",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/novyx-app-icon.png",
