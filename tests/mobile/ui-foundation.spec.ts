@@ -797,4 +797,15 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(scopeSheet).toContain('maxToRenderPerBatch={10}');
     expect(scopeSheet).toContain('windowSize={5}');
   });
+
+  it('enforces UI-053: BottomSheetModal uses 280ms Apple HIG deceleration curve and synchronized backdrop', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+
+    expect(primitives).toContain('Easing.bezier(0.16, 1, 0.3, 1)');
+    expect(primitives).toContain('duration: 280');
+    expect(primitives).toContain('duration: 200');
+  });
 });

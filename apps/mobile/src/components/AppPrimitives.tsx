@@ -458,8 +458,8 @@ export function BottomSheetModal({
           } else {
             Animated.spring(sheetAnim, {
               toValue: 0,
-              bounciness: 4,
-              speed: 14,
+              bounciness: 0,
+              speed: 12,
               useNativeDriver: true,
             }).start();
           }
@@ -474,14 +474,14 @@ export function BottomSheetModal({
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 1,
-          duration: 160,
+          duration: 280,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.spring(sheetAnim, {
+        Animated.timing(sheetAnim, {
           toValue: 0,
-          bounciness: 3,
-          speed: 14,
+          duration: 280,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
           useNativeDriver: true,
         }),
       ]).start();
@@ -489,13 +489,13 @@ export function BottomSheetModal({
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 0,
-          duration: 140,
+          duration: 180,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(sheetAnim, {
           toValue: screenHeight,
-          duration: 180,
+          duration: 200,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
