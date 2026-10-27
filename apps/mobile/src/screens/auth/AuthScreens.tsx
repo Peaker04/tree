@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, StatusBar, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandMark, Button, Card, Field } from '../../components/AppPrimitives';
 import { NovyxMark } from '../../components/NovyxMark';
 import { colors, spacing } from '../../theme/tokens';
@@ -20,6 +20,8 @@ export function LoginScreen({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
+  const insets = useSafeAreaInsets();
+
   const submit = () => {
     if (!email.trim()) {
       setError('Vui lòng nhập Email hoặc Số điện thoại.');
@@ -34,7 +36,7 @@ export function LoginScreen({
   };
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardAvoider}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -90,13 +92,14 @@ export function LoginScreen({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 export function SessionRestoreScreen() {
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
       <View style={[styles.screenPad, styles.centerJustified]}>
         <BrandMark />
         <Card tone="green" style={styles.sessionRestoreCard}>
@@ -105,7 +108,7 @@ export function SessionRestoreScreen() {
           <Text style={styles.bodyText}>NOVYX đang kiểm tra session bảo mật trên thiết bị.</Text>
         </Card>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthSessionError } from '../services/authSessionManager';
 import { DataSourceStatus } from '../services/greenOpsService';
 import { getSharedMobileRuntime } from '../infrastructure/runtime';
@@ -65,6 +65,7 @@ const mapSessionRole = (role: string): Role | 'UNSUPPORTED' => {
 };
 
 export default function MobileApp() {
+  const insets = useSafeAreaInsets();
   const [runtime] = useState(() => getSharedMobileRuntime());
   const greenOpsService = runtime.greenOpsService;
   const [data, setData] = useState(() => greenOpsService.getSnapshot());
@@ -661,7 +662,16 @@ export default function MobileApp() {
   const showManagerNav = role === 'Manager' && !['REVIEW_DETAIL', 'QR_LOOKUP'].includes(managerStep);
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.root}>
+    <View
+      style={[
+        styles.root,
+        {
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <View style={styles.appShell}>
         {isStaff ? (
           <StaffArea
@@ -800,7 +810,7 @@ export default function MobileApp() {
           }}
         />
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
