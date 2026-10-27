@@ -12,6 +12,7 @@ const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || '';
 
 module.exports = {
   ...mobileConfig,
+  sdkVersion: '58.0.0',
   plugins: [
     ...(mobileConfig.plugins || []),
     'expo-secure-store',
