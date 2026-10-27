@@ -20,6 +20,8 @@ type DeviceCameraViewProps = {
   permissionState: DevicePermissionUiState;
   cameraModule?: CameraModule | null;
   cameraRef?: React.Ref<DeviceCameraViewHandle>;
+  facing?: 'back' | 'front';
+  enableTorch?: boolean;
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
   onBarcodeScanned?: (result: BarcodeScanningResult) => void;
@@ -35,6 +37,8 @@ export function DeviceCameraView({
   permissionState,
   cameraModule,
   cameraRef,
+  facing = 'back',
+  enableTorch = false,
   style,
   children,
   onBarcodeScanned,
@@ -65,7 +69,8 @@ export function DeviceCameraView({
       <CameraView
         ref={cameraRef as React.Ref<CameraView>}
         style={StyleSheet.absoluteFill}
-        facing="back"
+        facing={facing}
+        enableTorch={enableTorch}
         barcodeScannerSettings={onBarcodeScanned ? { barcodeTypes: ['qr'] } : undefined}
         onBarcodeScanned={onBarcodeScanned}
       />

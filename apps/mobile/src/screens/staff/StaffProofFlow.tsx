@@ -10,9 +10,10 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { StatusBar } from 'expo-status-bar';
 import * as ExpoCamera from 'expo-camera';
 import * as Location from 'expo-location';
-import { Badge, Button, Card, EmptyState, Field, SectionTitle } from '../../components/AppPrimitives';
+import { Badge, Button, Card, EmptyState, Field, PressableScale, SectionTitle } from '../../components/AppPrimitives';
 import { DeviceCameraView, type DeviceCameraViewHandle } from '../../components/DeviceCameraView';
 import { DevicePermissionState } from '../../components/DevicePermissionState';
 import { ManualTreeCodeModal } from '../../components/ManualTreeCodeModal';
@@ -68,6 +69,8 @@ export function StaffProofFlow(props: {
   const isSupervisor = actorRole === 'Supervisor';
   const { height: windowHeight } = useWindowDimensions();
   const [locating, setLocating] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
+  const [torchOn, setTorchOn] = useState(false);
   const [locationMessage, setLocationMessage] = useState('Chưa có vị trí hiện trường.');
   const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<number | null>(null);
   const [locationCapturedAt, setLocationCapturedAt] = useState<string | null>(null);
@@ -967,6 +970,7 @@ export function StaffProofFlow(props: {
 
     return (
       <View style={[styles.cameraScreen, styles.flex]}>
+        <StatusBar style="light" />
         <Header
           title={isBefore ? 'Chụp ảnh trước xử lý' : 'Chụp ảnh sau xử lý'}
           subtitle={props.activeTask.treeName}
@@ -978,7 +982,7 @@ export function StaffProofFlow(props: {
           dark
         />
         {capturedPhoto && /^(https?:|file:|content:|data:)/i.test(capturedPhoto) ? (
-          <View style={[styles.cameraPreview, { flex: 0, height: Math.min(windowHeight * 0.56, 560) }]}>
+          <View style={[styles.cameraPreview, styles.flex]}>
             <Image source={{ uri: capturedPhoto }} style={styles.cameraPreviewImage} />
             <View style={styles.photoPreviewBadge}>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.primaryDark} />
@@ -986,7 +990,7 @@ export function StaffProofFlow(props: {
             </View>
           </View>
         ) : capturedPhoto ? (
-          <View style={[styles.cameraPreview, styles.storedPhotoPlaceholder, { flex: 0, height: 280 }]}>
+          <View style={[styles.cameraPreview, styles.storedPhotoPlaceholder, styles.flex]}>
             <Ionicons name="cloud-done-outline" size={38} color={colors.primaryDark} />
             <Text style={styles.successTitle}>Ảnh cũ đã lưu trên máy chủ</Text>
             <Text style={styles.bodyText}>Chụp lại để thay thế bằng chứng bị yêu cầu sửa.</Text>
@@ -998,49 +1002,76 @@ export function StaffProofFlow(props: {
             permissionState={getPermissionStateForPurpose(photoCameraPurpose)}
             cameraModule={cameraModule}
             cameraRef={cameraRef}
-            style={[styles.cameraPreview, { flex: 0, height: Math.min(windowHeight * 0.56, 560) }]}
+            facing={cameraFacing}
+            enableTorch={torchOn}
+            style={[styles.cameraPreview, styles.flex]}
             runtimeMessage={cameraRuntimeMessage || getRuntimeMessageForPurpose(photoCameraPurpose)}
             onRequestPermission={() => void requestCameraForPurpose(photoCameraPurpose)}
             onOpenSettings={() => void openDeviceSettings()}
             onCancel={() => props.setStep(isSupervisor ? (isBefore ? 'GPS' : 'BEFORE') : isBefore ? 'QR' : 'CHECKLIST')}
           >
-            <View style={styles.nativeCameraOverlay}>
-              <Ionicons name="camera-outline" size={64} color="#e2e8f0" />
-              <Text style={styles.cameraText}>{isBefore ? 'Ảnh trước xử lý' : 'Ảnh sau xử lý'}</Text>
+            <View style={styles.cameraStageBadge}>
+              <Ionicons name="leaf-outline" size={13} color="#ffffff" />
+              <Text style={styles.cameraStageText}>{isBefore ? 'Trước xử lý' : 'Sau xử lý'}</Text>
             </View>
           </DeviceCameraView>
         )}
         {!capturedPhoto && cameraRuntimeMessage ? <Text style={styles.cameraHint}>{cameraRuntimeMessage}</Text> : null}
-        {capturedPhoto ? (
-          <View style={styles.photoMetaPanel}>
-            <Text style={styles.metricLabel}>Thông tin ảnh</Text>
-            <Text style={styles.cameraHint}>
-              {isBefore ? 'Trước xử lý' : 'Sau xử lý'} · GPS{' '}
-              {activeGpsCheck?.accuracyMeters
-                ? `sai số ${activeGpsCheck.accuracyMeters.toFixed(0)}m`
-                : 'chưa có độ chính xác'}
-            </Text>
-          </View>
-        ) : null}
-        <View style={styles.cameraActions}>
-          {capturedPhoto ? (
-            <>
-              <Button variant="outline" icon="refresh-outline" onPress={retakeEvidencePhoto}>
-                Chụp lại
-              </Button>
-              <Button
-                icon="arrow-forward-outline"
-                onPress={() => props.setStep(isRework ? 'REVIEW' : isBefore ? 'AFTER' : 'REVIEW')}
-              >
-                Dùng ảnh này
-              </Button>
-            </>
-          ) : (
-            <Button icon="radio-button-on-outline" onPress={captureEvidencePhoto}>
-              Chụp ảnh
-            </Button>
-          )}
+
+        <View style={styles.cameraGpsBar}>
+          <Ionicons name="location-outline" size={14} color="#94a3b8" />
+          <Text style={styles.cameraGpsText}>
+            GPS {activeGpsCheck?.accuracyMeters ? `sai số ±${activeGpsCheck.accuracyMeters.toFixed(0)}m` : 'chưa xác thực'} · {props.activeTask.treeName}
+          </Text>
         </View>
+
+        {capturedPhoto ? (
+          <View style={styles.cameraActionRow}>
+            <Button variant="outline" icon="refresh-outline" style={styles.flex} onPress={retakeEvidencePhoto}>
+              Chụp lại
+            </Button>
+            <Button
+              variant="forest"
+              icon="arrow-forward-outline"
+              style={styles.flex}
+              onPress={() => props.setStep(isRework ? 'REVIEW' : isBefore ? 'AFTER' : 'REVIEW')}
+            >
+              Dùng ảnh này
+            </Button>
+          </View>
+        ) : (
+          <View style={styles.shutterDock}>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={torchOn ? 'Tắt đèn flash' : 'Bật đèn flash'}
+              onPress={() => setTorchOn(!torchOn)}
+              scaleTo={0.9}
+              style={styles.auxShutterBtn}
+            >
+              <Ionicons name={torchOn ? 'flash' : 'flash-off-outline'} size={22} color={torchOn ? colors.amber : '#ffffff'} />
+            </PressableScale>
+
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Chụp ảnh"
+              onPress={captureEvidencePhoto}
+              scaleTo={0.92}
+              style={styles.shutterRing}
+            >
+              <View style={styles.shutterInner} />
+            </PressableScale>
+
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Đổi camera trước sau"
+              onPress={() => setCameraFacing(cameraFacing === 'back' ? 'front' : 'back')}
+              scaleTo={0.9}
+              style={styles.auxShutterBtn}
+            >
+              <Ionicons name="camera-reverse-outline" size={24} color="#ffffff" />
+            </PressableScale>
+          </View>
+        )}
       </View>
     );
   }
@@ -1372,7 +1403,7 @@ export function StaffProofFlow(props: {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={label}
-          style={styles.nativeCameraOverlay}
+          style={styles.qrScannerOverlay}
           onPress={() => {
             if (__DEV__) {
               const code = activeTree?.qrCode ?? activeTree?.id ?? 'TRE-DEV-01';
@@ -1800,7 +1831,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1e293b',
   },
-  nativeCameraOverlay: {
+  qrScannerOverlay: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1882,6 +1913,74 @@ const styles = StyleSheet.create({
   cameraActions: {
     gap: 12,
     paddingBottom: 10,
+  },
+  cameraStageBadge: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(2, 6, 23, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  cameraStageText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cameraGpsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  cameraGpsText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  cameraActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  shutterDock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+    paddingBottom: 28,
+  },
+  auxShutterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shutterRing: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 4,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  shutterInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ffffff',
   },
   checkPress: {
     flexDirection: 'row',

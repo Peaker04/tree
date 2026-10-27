@@ -829,4 +829,16 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(primitives).toContain('export function SelectableItemRow');
     expect(primitives).toContain('export function MetricStatTile');
   });
+
+  it('enforces UI-055: clean camera viewfinder, light status bar, and bottom circular shutter dock', () => {
+    const proofFlow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffProofFlow.tsx'),
+      'utf8',
+    );
+
+    expect(proofFlow).not.toContain('nativeCameraOverlay');
+    expect(proofFlow).toContain('style="light"');
+    expect(proofFlow).toContain('shutterRing');
+    expect(proofFlow).toContain('shutterInner');
+  });
 });
