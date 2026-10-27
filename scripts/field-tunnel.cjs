@@ -306,12 +306,9 @@ function startMetroTunnel(publicApiUrl) {
     EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS: process.env.GOOGLE_MAPS_API_KEY_IOS || '',
   };
 
-  const useMetroTunnel = rawArgs.includes('--metro-tunnel');
-  const metroHostArgs = useMetroTunnel ? ['--tunnel'] : ['--host', 'lan'];
-
   const metroProc = spawn(
     process.execPath,
-    ['scripts/expo-mobile.cjs', 'start', '--go', ...metroHostArgs, '--port', String(METRO_PORT)],
+    ['scripts/expo-mobile.cjs', 'start', '--go', '--tunnel', '--clear', '--port', String(METRO_PORT)],
     {
       cwd: repoRoot,
       env: metroEnv,
