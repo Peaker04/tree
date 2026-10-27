@@ -808,4 +808,14 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(primitives).toContain('duration: 280');
     expect(primitives).toContain('duration: 200');
   });
+
+  it('enforces tactile micro-press choreography on selector widgets', () => {
+    const createTask = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerCreateTask.tsx'),
+      'utf8',
+    );
+
+    expect(createTask).toContain('scaleAnim');
+    expect(createTask).toContain('toValue: 0.98');
+  });
 });

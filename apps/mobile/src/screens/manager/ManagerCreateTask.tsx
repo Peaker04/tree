@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -649,70 +650,93 @@ function SelectionField({
   error?: string;
   onPress: () => void;
 }) {
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.98,
+      duration: 60,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      bounciness: 0,
+      speed: 16,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
     <View style={[styles.selectionFieldGroup, grouped && styles.selectionFieldGroupGrouped]}>
       {!grouped ? <Text style={styles.fieldLabel}>{label}</Text> : null}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${label}: ${value ?? 'chưa chọn'}`}
-        accessibilityHint="Mở danh sách để chọn hoặc thay đổi"
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.selectionField,
-          grouped && styles.selectionFieldGrouped,
-          disabled && styles.selectionFieldDisabled,
-          error && styles.selectionFieldInvalid,
-          pressed && styles.pressed,
-        ]}
-      >
-        {icon ? (
-          <View
-            style={[
-              styles.selectionIcon,
-              tone === 'success'
-                ? styles.selectionIconSuccess
-                : tone === 'info'
-                  ? styles.selectionIconInfo
-                  : tone === 'warning'
-                    ? styles.selectionIconWarning
-                    : styles.selectionIconNeutral,
-            ]}
-          >
-            <Ionicons
-              name={icon}
-              size={20}
-              color={
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${label}: ${value ?? 'chưa chọn'}`}
+          accessibilityHint="Mở danh sách để chọn hoặc thay đổi"
+          accessibilityState={{ disabled }}
+          disabled={disabled}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.selectionField,
+            grouped && styles.selectionFieldGrouped,
+            disabled && styles.selectionFieldDisabled,
+            error && styles.selectionFieldInvalid,
+            pressed && styles.pressed,
+          ]}
+        >
+          {icon ? (
+            <View
+              style={[
+                styles.selectionIcon,
                 tone === 'success'
-                  ? colors.successText
+                  ? styles.selectionIconSuccess
                   : tone === 'info'
-                    ? colors.infoText
+                    ? styles.selectionIconInfo
                     : tone === 'warning'
-                      ? colors.warningText
-                      : colors.neutralText
-              }
-            />
+                      ? styles.selectionIconWarning
+                      : styles.selectionIconNeutral,
+              ]}
+            >
+              <Ionicons
+                name={icon}
+                size={20}
+                color={
+                  tone === 'success'
+                    ? colors.successText
+                    : tone === 'info'
+                      ? colors.infoText
+                      : tone === 'warning'
+                        ? colors.warningText
+                        : colors.neutralText
+                }
+              />
+            </View>
+          ) : null}
+          <View style={styles.flex}>
+            {grouped ? <Text style={styles.groupedFieldLabel}>{label}</Text> : null}
+            <Text style={value ? styles.selectionValue : styles.selectionPlaceholder} numberOfLines={1}>
+              {value ?? placeholder}
+            </Text>
+            {detail ? (
+              <Text style={styles.selectionDetail} numberOfLines={1}>
+                {detail}
+              </Text>
+            ) : null}
+            {error ? (
+              <Text accessibilityRole="alert" style={styles.selectionError}>
+                {error}
+              </Text>
+            ) : null}
           </View>
-        ) : null}
-        <View style={styles.flex}>
-          {grouped ? <Text style={styles.groupedFieldLabel}>{label}</Text> : null}
-          <Text style={value ? styles.selectionValue : styles.selectionPlaceholder} numberOfLines={1}>
-            {value ?? placeholder}
-          </Text>
-          {detail ? (
-            <Text style={styles.selectionDetail} numberOfLines={1}>
-              {detail}
-            </Text>
-          ) : null}
-          {error ? (
-            <Text accessibilityRole="alert" style={styles.selectionError}>
-              {error}
-            </Text>
-          ) : null}
-        </View>
-        <Ionicons name="chevron-forward" size={19} color={colors.pewter} />
-      </Pressable>
+          <Ionicons name="chevron-forward" size={19} color={colors.pewter} />
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
