@@ -81,17 +81,17 @@
 **Files:**
 - Entire repository
 
-- [ ] **Step 1: Run mobile typecheck**
+- [x] **Step 1: Run mobile typecheck**
   `npm run typecheck --workspace @novyx/mobile`
   Expected: 0 errors.
-- [ ] **Step 2: Run monorepo lint**
+- [x] **Step 2: Run monorepo lint**
   `npm run lint`
   Expected: 0 errors.
-- [ ] **Step 3: Run full Vitest suite**
+- [x] **Step 3: Run full Vitest suite**
   `npm run test`
   Expected: 348+ tests pass.
-- [ ] **Step 4: Capture live screenshot from Samsung Galaxy Note 20 Ultra**
+- [x] **Step 4: Capture live screenshot from Samsung Galaxy Note 20 Ultra**
   Capture `screencap -p` and audit live camera screen for contrast, ergonomics, and absence of obstructions.
-- [ ] **Step 5: Test iOS bundle export**
+- [x] **Step 5: Test iOS bundle export**
   `npm run mobile:export:ios`
   Expected: 0 errors, clean Hermes bytecode.
