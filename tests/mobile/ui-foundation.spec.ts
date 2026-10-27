@@ -236,7 +236,8 @@ describe('NOVYX mobile UI foundation contract', () => {
       path.resolve(process.cwd(), 'apps/mobile/src/components/presentation/TaskSurfaces.tsx'),
       'utf8',
     );
-    expect(taskSurfaces).toContain('color={colors.foreground}');
+    expect(taskSurfaces).toContain('export function Header');
+    expect(taskSurfaces).toContain('ScreenHeader');
     expect(taskSurfaces).toContain('Đã quét đúng cây được giao');
 
     expect(proofFlow).toContain('<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>');

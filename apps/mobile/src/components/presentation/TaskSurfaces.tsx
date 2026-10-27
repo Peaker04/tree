@@ -24,7 +24,6 @@ export function Header({
   onBack?: () => void;
   dark?: boolean;
 }) {
-  // Back navigation icon uses color={colors.foreground}
   return <ScreenHeader title={title} subtitle={subtitle} onBack={onBack} dark={dark} />;
 }
 
