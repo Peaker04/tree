@@ -623,6 +623,221 @@ export function BottomSheetModal({
   );
 }
 
+export interface FilterOption<T extends string = string> {
+  id: T;
+  label: string;
+  icon?: IconName;
+  badge?: number | string;
+}
+
+export function SegmentedFilterBar<T extends string>({
+  options,
+  selectedId,
+  onSelect,
+  variant = 'segmented',
+  style,
+}: {
+  options: readonly FilterOption<T>[] | FilterOption<T>[];
+  selectedId: T;
+  onSelect: (id: T) => void;
+  variant?: 'segmented' | 'scrollable';
+  style?: StyleProp<ViewStyle>;
+}) {
+  if (variant === 'scrollable') {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollableFilterRow, style]}
+      >
+        {options.map((opt) => {
+          const active = selectedId === opt.id;
+          return (
+            <PressableScale
+              key={opt.id}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              scaleTo={0.95}
+              onPress={() => onSelect(opt.id)}
+              style={[styles.filterPill, active && styles.filterPillActive]}
+            >
+              {opt.icon ? (
+                <Ionicons
+                  name={opt.icon}
+                  size={14}
+                  color={active ? colors.snowWhite : colors.pewter}
+                />
+              ) : null}
+              <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>
+                {opt.label}
+              </Text>
+              {opt.badge !== undefined ? (
+                <View style={[styles.filterBadge, active && styles.filterBadgeActive]}>
+                  <Text style={[styles.filterBadgeText, active && styles.filterBadgeTextActive]}>
+                    {opt.badge}
+                  </Text>
+                </View>
+              ) : null}
+            </PressableScale>
+          );
+        })}
+      </ScrollView>
+    );
+  }
+
+  return (
+    <View style={[styles.segmentedBar, style]}>
+      {options.map((opt) => {
+        const active = selectedId === opt.id;
+        return (
+          <PressableScale
+            key={opt.id}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            scaleTo={0.96}
+            onPress={() => onSelect(opt.id)}
+            style={[styles.segmentTab, active && styles.segmentTabActive]}
+          >
+            {opt.icon ? (
+              <Ionicons
+                name={opt.icon}
+                size={15}
+                color={active ? colors.primaryDark : colors.pewter}
+              />
+            ) : null}
+            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+              {opt.label}
+            </Text>
+            {opt.badge !== undefined ? (
+              <View style={[styles.segmentBadge, active && styles.segmentBadgeActive]}>
+                <Text style={[styles.segmentBadgeText, active && styles.segmentBadgeTextActive]}>
+                  {opt.badge}
+                </Text>
+              </View>
+            ) : null}
+          </PressableScale>
+        );
+      })}
+    </View>
+  );
+}
+
+export function SelectableItemRow({
+  title,
+  subtitle,
+  badge,
+  icon = 'leaf',
+  selected,
+  mode = 'radio',
+  onPress,
+  disabled,
+  style,
+}: {
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  icon?: IconName;
+  selected: boolean;
+  mode?: 'radio' | 'checkbox';
+  onPress: () => void;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <PressableScale
+      accessibilityRole={mode === 'radio' ? 'radio' : 'checkbox'}
+      accessibilityState={{ selected, disabled }}
+      scaleTo={0.98}
+      disabled={disabled}
+      onPress={onPress}
+      style={[styles.selectableRow, selected && styles.selectableRowSelected, style]}
+    >
+      <View style={[styles.selectableIconCircle, selected && styles.selectableIconCircleSelected]}>
+        <Ionicons name={icon} size={18} color={selected ? colors.primaryDark : colors.pewter} />
+      </View>
+
+      <View style={styles.selectableInfo}>
+        <View style={styles.selectableTitleRow}>
+          <Text style={[styles.selectableTitle, selected && styles.selectableTitleSelected]} numberOfLines={1}>
+            {title}
+          </Text>
+          {badge ? <Badge tone={selected ? 'green' : 'neutral'}>{badge}</Badge> : null}
+        </View>
+        {subtitle ? (
+          <Text style={styles.selectableSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+
+      {mode === 'radio' ? (
+        <View style={[styles.radioCircle, selected && styles.radioCircleSelected]}>
+          {selected ? <View style={styles.radioDot} /> : null}
+        </View>
+      ) : (
+        <View style={[styles.checkboxBox, selected && styles.checkboxBoxSelected]}>
+          {selected ? <Ionicons name="checkmark" size={14} color={colors.snowWhite} /> : null}
+        </View>
+      )}
+    </PressableScale>
+  );
+}
+
+export function MetricStatTile({
+  label,
+  value,
+  icon,
+  tone = 'neutral',
+  onPress,
+  style,
+}: {
+  label: string;
+  value: number | string;
+  icon?: IconName;
+  tone?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const countColor =
+    tone === 'danger'
+      ? colors.criticalText
+      : tone === 'warning'
+        ? colors.warningText
+        : tone === 'success'
+          ? colors.successText
+          : colors.ink;
+  const iconColor =
+    tone === 'danger'
+      ? colors.criticalText
+      : tone === 'warning'
+        ? colors.warningText
+        : tone === 'success'
+          ? colors.primaryDark
+          : colors.pewter;
+
+  const content = (
+    <View style={[styles.metricStatTile, styles[`metricStatTile_${tone}`], style]}>
+      <View style={styles.metricStatTopRow}>
+        {icon ? <Ionicons name={icon} size={16} color={iconColor} /> : null}
+        <Text style={[styles.metricStatValue, { color: countColor }]} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+      <Text style={styles.metricStatLabel} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+
+  return onPress ? (
+    <PressableScale accessibilityRole="button" scaleTo={0.96} onPress={onPress} style={styles.flex}>
+      {content}
+    </PressableScale>
+  ) : (
+    <View style={styles.flex}>{content}</View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: colors.snowWhite },
@@ -882,5 +1097,230 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
+  },
+  segmentedBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.neutralSurface,
+    borderRadius: radius.control,
+    padding: 3,
+    marginBottom: spacing.sm,
+    gap: 4,
+  },
+  segmentTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    borderRadius: radius.compact,
+    gap: 4,
+  },
+  segmentTabActive: {
+    backgroundColor: colors.card,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  segmentText: {
+    ...typography.metadata,
+    color: colors.pewter,
+    fontWeight: '500',
+  },
+  segmentTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  segmentBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 8,
+    backgroundColor: colors.hairlineBorder,
+    marginLeft: 2,
+  },
+  segmentBadgeActive: {
+    backgroundColor: colors.successSurface,
+  },
+  segmentBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.pewter,
+  },
+  segmentBadgeTextActive: {
+    color: colors.primaryDark,
+  },
+  scrollableFilterRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  filterPill: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    gap: 6,
+  },
+  filterPillActive: {
+    backgroundColor: colors.forestDepths,
+    borderColor: colors.forestDepths,
+  },
+  filterPillText: {
+    ...typography.metadata,
+    color: colors.ink,
+    fontWeight: '500',
+  },
+  filterPillTextActive: {
+    color: colors.snowWhite,
+    fontWeight: '600',
+  },
+  filterBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 10,
+    backgroundColor: colors.neutralSurface,
+  },
+  filterBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  filterBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.pewter,
+  },
+  filterBadgeTextActive: {
+    color: colors.snowWhite,
+  },
+  selectableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radius.compact,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    gap: spacing.md,
+  },
+  selectableRowSelected: {
+    borderColor: colors.primaryDark,
+    backgroundColor: colors.primarySoft,
+  },
+  selectableIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.neutralSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectableIconCircleSelected: {
+    backgroundColor: colors.snowWhite,
+  },
+  selectableInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  selectableTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+  },
+  selectableTitle: {
+    ...typography.bodyStrong,
+    color: colors.ink,
+    flex: 1,
+  },
+  selectableTitleSelected: {
+    color: colors.primaryDark,
+  },
+  selectableSubtitle: {
+    ...typography.metadata,
+    color: colors.pewter,
+  },
+  radioCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: colors.neutralBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioCircleSelected: {
+    borderColor: colors.primaryDark,
+  },
+  radioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primaryDark,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.neutralBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+  },
+  checkboxBoxSelected: {
+    borderColor: colors.primaryDark,
+    backgroundColor: colors.primaryDark,
+  },
+  metricStatTile: {
+    flex: 1,
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    backgroundColor: colors.card,
+    shadowColor: colors.forest,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1.5,
+  },
+  metricStatTile_neutral: {},
+  metricStatTile_success: {
+    backgroundColor: colors.successSurface,
+    borderColor: colors.successBorder,
+  },
+  metricStatTile_warning: {
+    backgroundColor: colors.warningSurface,
+    borderColor: colors.warningBorder,
+  },
+  metricStatTile_danger: {
+    backgroundColor: colors.criticalSurface,
+    borderColor: colors.criticalBorder,
+  },
+  metricStatTile_info: {
+    backgroundColor: colors.infoSurface,
+    borderColor: colors.infoBorder,
+  },
+  metricStatTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  metricStatValue: {
+    ...typography.display,
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  metricStatLabel: {
+    ...typography.metadata,
+    color: colors.pewter,
   },
 });

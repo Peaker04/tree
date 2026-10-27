@@ -818,4 +818,15 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(createTask).toContain('scaleAnim');
     expect(createTask).toContain('toValue: 0.98');
   });
+
+  it('enforces UI-054: AppPrimitives exports SegmentedFilterBar, SelectableItemRow, and MetricStatTile', () => {
+    const primitives = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/AppPrimitives.tsx'),
+      'utf8',
+    );
+
+    expect(primitives).toContain('export function SegmentedFilterBar');
+    expect(primitives).toContain('export function SelectableItemRow');
+    expect(primitives).toContain('export function MetricStatTile');
+  });
 });
