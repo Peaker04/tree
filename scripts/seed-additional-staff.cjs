@@ -1,5 +1,4 @@
 const { Client } = require('pg');
-const crypto = require('crypto');
 
 const client = new Client({
   connectionString: process.env.DATABASE_MIGRATION_URL || 'postgresql://novyx_migrator:123456789@localhost:5432/novyx',

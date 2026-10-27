@@ -36,16 +36,16 @@
 - Modify: `apps/api/src/modules/work-management/application/use-cases/list-assignable-staff.use-case.ts`
 - Verify: PostgreSQL `users` table via `psql` / node script
 
-- [ ] **Step 1: Verify PostgreSQL column `full_name` in `users` table**
+- [x] **Step 1: Verify PostgreSQL column `full_name` in `users` table**
   Confirm `full_name` column exists and contains `'Ngọc Diễm'`, `'Duy Hưng'`, `'Duy Phong'`, `'Nhân viên hiện trường'`.
-- [ ] **Step 2: Verify `ListAssignableStaffUseCase` queries database directly**
+- [x] **Step 2: Verify `ListAssignableStaffUseCase` queries database directly**
   Ensure `user.fullName` is returned in `displayName` property without any dictionary mocks.
-- [ ] **Step 3: Run dev seed to assert idempotency**
+- [x] **Step 3: Run dev seed to assert idempotency**
   Execute: `npm run db:seed:dev --workspace @novyx/api`
   Expected: All 6 accounts verified/updated with `fullName`.
-- [ ] **Step 4: Execute HTTP check against `GET /v1/operational/assignable-staff`**
+- [x] **Step 4: Execute HTTP check against `GET /v1/operational/assignable-staff`**
   Assert HTTP 200 with all 4 staff members returning their authentic Vietnamese names.
-- [ ] **Step 5: Commit Task 1 changes**
+- [x] **Step 5: Commit Task 1 changes**
   Commit message: `feat(api): persist authentic staff full names in PostgreSQL and operational catalogs`
 
 ---
