@@ -50,7 +50,8 @@ export class DefaultEvidenceBinaryReader implements IEvidenceBinaryReader {
 
     // 2. Standard Expo FileSystem runtime
     try {
-      const FileSystem = await import('expo-file-system/legacy');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const FileSystem: typeof import('expo-file-system/legacy') = require('expo-file-system/legacy');
       const base64 = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
       });

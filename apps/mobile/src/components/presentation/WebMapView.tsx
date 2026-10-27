@@ -65,6 +65,7 @@ export function WebMapView(props: WebMapViewProps) {
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    ::-webkit-scrollbar { display: none !important; width: 0px !important; height: 0px !important; background: transparent !important; }
     html, body, #map { width: 100%; height: 100%; background: #e5e3df; overflow: hidden; }
     .tree-pin {
       width: 32px;
@@ -312,6 +313,8 @@ export function WebMapView(props: WebMapViewProps) {
         javaScriptEnabled
         domStorageEnabled
         scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         androidLayerType="hardware"
         mixedContentMode="always"
         style={styles.webView}

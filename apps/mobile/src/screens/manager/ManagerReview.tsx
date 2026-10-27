@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  FlatList,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Badge,
@@ -12,7 +22,12 @@ import {
   SectionTitle,
 } from '../../components/AppPrimitives';
 import { ChecklistLine, PhotoPair } from '../../components/presentation/TaskSurfaces';
-import { getTaskProofCount, getTaskProofGaps, matchesTaskQuery } from '../../domain/mobileWorkflow';
+import {
+  formatActorDisplayName,
+  getTaskProofCount,
+  getTaskProofGaps,
+  matchesTaskQuery,
+} from '../../domain/mobileWorkflow';
 import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
 import { Task, TaskStatus } from '../../types';
 import type { ManagerAreaProps } from './ManagerArea';
@@ -36,16 +51,18 @@ const decisionToneColor: Record<DecisionTone, string> = {
 
 export function ManagerReview(props: ManagerAreaProps) {
   const [query, setQuery] = useState('');
-  const refreshedOnEntry = useRef(false);
+  const prevStepRef = useRef<string | null>(null);
   const refreshData = props.onRefreshData;
-  const pending = props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW);
+  const pending = [...props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW)].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
   const visible = pending.filter((task) => matchesTaskQuery(task, query));
 
   useEffect(() => {
-    if (!refreshedOnEntry.current && props.activeStep === 'REVIEW') {
-      refreshedOnEntry.current = true;
+    if (props.activeStep === 'REVIEW' && prevStepRef.current !== 'REVIEW') {
       void refreshData?.();
     }
+    prevStepRef.current = props.activeStep;
   }, [props.activeStep, refreshData]);
 
   if (props.activeStep === 'REVIEW_DETAIL' && props.reviewTask) {
@@ -56,7 +73,17 @@ export function ManagerReview(props: ManagerAreaProps) {
     <FlatList
       data={visible}
       keyExtractor={(task) => task.id}
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.screen}
+      refreshControl={
+        props.onRefreshData ? (
+          <RefreshControl
+            refreshing={Boolean(props.dataSource?.loading)}
+            onRefresh={() => void props.onRefreshData?.()}
+            tintColor={colors.primaryDark}
+          />
+        ) : undefined
+      }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       removeClippedSubviews={Platform.OS === 'android'}
       maxToRenderPerBatch={10}
@@ -127,7 +154,7 @@ export function ManagerReview(props: ManagerAreaProps) {
                 {task.title}
               </Text>
               <Text numberOfLines={1} style={styles.reportMeta}>
-                {task.treeName}
+                {task.treeName} · <Text style={styles.reportAge}>{formatReviewAge(task.updatedAt)}</Text>
               </Text>
               <View style={styles.reportFooter}>
                 <Text numberOfLines={1} style={[styles.reportMeta, styles.reportAssignee]}>
@@ -137,7 +164,6 @@ export function ManagerReview(props: ManagerAreaProps) {
                   {gaps.length ? `Thiếu ${gaps.length}` : `Đủ ${getTaskProofCount(task)}/5`}
                 </Badge>
               </View>
-              <Text style={styles.reportAge}>{formatReviewAge(task.updatedAt)}</Text>
             </View>
             <Ionicons name="chevron-forward" size={19} color={colors.pewter} />
           </Pressable>
@@ -165,9 +191,9 @@ const getReviewStaffLabel = (
   const staff = staffCatalog.find((item) => item.id === assignedStaffId);
   if (staff) {
     const displayName = staff.displayName.trim();
-    return displayName && !/^staff$/i.test(displayName) ? displayName : staff.email;
+    return displayName && !/^staff$/i.test(displayName) ? displayName : formatActorDisplayName(staff.email);
   }
-  return /^staff$/i.test(assignedStaffName.trim()) ? 'Nhân viên được giao' : assignedStaffName;
+  return formatActorDisplayName(assignedStaffName);
 };
 
 const formatReviewAge = (updatedAt: string) => {
@@ -203,6 +229,7 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
 
   const selectDecision = (nextDecision: Decision) => {
     if (nextDecision !== decision) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setDecision(nextDecision);
       setReason('');
       setTouched(false);
@@ -252,7 +279,7 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.detailScreen} automaticallyAdjustKeyboardInsets>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScreen} automaticallyAdjustKeyboardInsets>
       <ScreenHeader title="Duyệt bằng chứng" subtitle={task.title} onBack={() => props.setActiveStep('REVIEW')} />
 
       <Notice
@@ -269,10 +296,17 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
           title="Người thực hiện"
           subtitle={getReviewStaffLabel(task.assignedStaffId, task.assignedStaffName, props.assignableStaff)}
         />
+        <ListRow
+          icon="camera-outline"
+          title="Giám sát hiện trường"
+          subtitle={formatActorDisplayName(
+            task.supervisorName || task.assignedSupervisorName || 'Giám sát hiện trường',
+          )}
+        />
       </View>
 
       <View style={styles.section}>
-        <SectionTitle icon="navigate-outline">Xác minh hiện trường</SectionTitle>
+        <SectionTitle icon="navigate-outline">Xác minh hiện trường (Nhân viên)</SectionTitle>
         <VerificationRow
           label="GPS"
           value={task.gpsCheck?.verified ? `${task.gpsCheck.distance.toFixed(1)} m` : 'Chưa đạt'}
@@ -283,11 +317,26 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
           value={task.qrCheck?.verified ? 'Đúng cây' : 'Chưa đạt'}
           done={Boolean(task.qrCheck?.verified)}
         />
+        {task.staffCompletedAt ? (
+          <VerificationRow
+            label="Hoàn tất tại cây"
+            value={new Date(task.staffCompletedAt).toLocaleString('vi-VN')}
+            done
+          />
+        ) : null}
       </View>
 
       <View style={styles.section}>
-        <SectionTitle icon="images-outline">Ảnh bằng chứng</SectionTitle>
+        <SectionTitle icon="images-outline">Ảnh bằng chứng (Giám sát)</SectionTitle>
+        {task.supervisorGpsCheck ? (
+          <VerificationRow
+            label="GPS giám sát"
+            value={task.supervisorGpsCheck.verified ? `${task.supervisorGpsCheck.distance.toFixed(1)} m` : 'Chưa đạt'}
+            done={Boolean(task.supervisorGpsCheck.verified)}
+          />
+        ) : null}
         <PhotoPair task={task} />
+        {task.supervisorNotes ? <Text style={styles.notes}>Ghi chú giám sát: {task.supervisorNotes}</Text> : null}
       </View>
 
       <View style={styles.section}>
@@ -450,7 +499,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   reportRow: {
-    minHeight: 104,
+    minHeight: 84,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,

@@ -10,6 +10,7 @@ import {
   TREE_FILTER_OPTIONS,
   TaskFilter,
   TreeFilter,
+  formatActorDisplayName,
   formatTreeAge,
   getTaskStatusMeta,
 } from '../../domain/mobileWorkflow';
@@ -30,7 +31,7 @@ export function TreeSearchFilters({
   totalCount: number;
 }) {
   return (
-    <Card style={styles.treeFilterPanel}>
+    <View style={styles.treeFilterPanel}>
       <Field
         label="Tìm cây"
         value={query}
@@ -63,7 +64,7 @@ export function TreeSearchFilters({
           {resultCount}/{totalCount} cây
         </Text>
       </View>
-    </Card>
+    </View>
   );
 }
 
@@ -79,7 +80,7 @@ export function TaskStatusFilters({
   totalCount: number;
 }) {
   return (
-    <Card style={styles.taskFilterPanel}>
+    <View style={styles.taskFilterPanel}>
       <View style={styles.rowBetween}>
         <SectionTitle icon="funnel-outline">Lọc trạng thái</SectionTitle>
         <Text style={styles.resultText}>
@@ -104,7 +105,7 @@ export function TaskStatusFilters({
           );
         })}
       </ScrollView>
-    </Card>
+    </View>
   );
 }
 
@@ -326,7 +327,7 @@ function CareHistoryPreview({ items, loading }: { items: CareHistory[]; loading?
         </View>
         <Text style={styles.itemTitle}>{latest.taskTitle}</Text>
         <Text style={styles.bodyText}>
-          {latest.staffName} | {completedDate} | {evidenceCount} ảnh
+          {formatActorDisplayName(latest.staffName)} | {completedDate} | {evidenceCount} ảnh
         </Text>
         <View style={styles.historyProofRow}>
           <HistoryProofPill icon="location-outline" text={latest.gpsCheck?.verified ? 'GPS hợp lệ' : 'GPS thiếu'} />
@@ -336,7 +337,9 @@ function CareHistoryPreview({ items, loading }: { items: CareHistory[]; loading?
         {latest.gpsCheck ? (
           <Text style={styles.monoSmall}>GPS: {latest.gpsCheck.distance.toFixed(1)}m từ gốc</Text>
         ) : null}
-        {latest.notes ? <Text style={styles.bodyText}>Ghi chú: {latest.notes}</Text> : null}
+        {latest.notes && !latest.notes.startsWith('Fixture ') ? (
+          <Text style={styles.bodyText}>Ghi chú: {latest.notes}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -376,13 +379,9 @@ const styles = StyleSheet.create({
   },
   treeFilterPanel: {
     gap: 12,
-    backgroundColor: colors.cardWarm,
-    borderColor: colors.primaryBorder,
   },
   taskFilterPanel: {
-    gap: 12,
-    backgroundColor: colors.cardWarm,
-    borderColor: colors.border,
+    gap: 10,
   },
   filterMetaRow: {
     gap: 10,
@@ -392,31 +391,31 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   filterChip: {
-    minHeight: 36,
+    minHeight: 44,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.neutralBorder,
     backgroundColor: colors.card,
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filterChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
+    borderColor: colors.successBorder,
+    backgroundColor: colors.successSurface,
   },
   filterChipText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
+    color: colors.neutralText,
+    fontSize: 13,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: colors.primaryDark,
+    color: colors.successText,
   },
   resultText: {
-    color: colors.subtle,
-    fontSize: 11,
-    fontWeight: '600',
+    color: colors.pewter,
+    fontSize: 12,
+    fontWeight: '500',
   },
   treeAssignmentCard: {
     gap: 12,
@@ -433,29 +432,29 @@ const styles = StyleSheet.create({
     right: 10,
   },
   itemTitle: {
-    color: colors.foreground,
-    fontSize: 14,
+    color: colors.ink,
+    fontSize: 15,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 21,
   },
   itemSub: {
-    color: colors.muted,
-    fontSize: 12,
+    color: colors.pewter,
+    fontSize: 13,
     marginTop: 1,
   },
   bodyText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
-    lineHeight: 18,
+    color: colors.pewter,
+    fontSize: 13,
+    lineHeight: 19,
   },
   monoSmall: {
-    color: colors.muted,
-    fontSize: 10,
+    color: colors.pewter,
+    fontSize: 12,
     fontWeight: '500',
   },
   metricLabel: {
-    color: colors.mutedForeground,
-    fontSize: 10,
+    color: colors.pewter,
+    fontSize: 12,
     fontWeight: '600',
   },
   treeMetaGrid: {
@@ -465,14 +464,14 @@ const styles = StyleSheet.create({
   treeMetaBox: {
     flex: 1,
     borderRadius: radius.md,
-    backgroundColor: colors.mineral,
+    backgroundColor: colors.snowWhite,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.hairlineBorder,
     padding: 11,
   },
   treeMetaValue: {
-    color: colors.foreground,
-    fontSize: 12,
+    color: colors.ink,
+    fontSize: 13,
     fontWeight: '600',
     marginTop: 5,
   },
@@ -480,8 +479,8 @@ const styles = StyleSheet.create({
     gap: 5,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardWarm,
+    borderColor: colors.hairlineBorder,
+    backgroundColor: colors.snowWhite,
     padding: 12,
   },
   historyPreview: {
@@ -489,8 +488,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.primaryBorder,
-    backgroundColor: colors.primarySoft,
+    borderColor: colors.successBorder,
+    backgroundColor: colors.successSurface,
     padding: 12,
   },
   historyIcon: {
@@ -508,32 +507,32 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   historyProofPill: {
-    minHeight: 26,
+    minHeight: 28,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.primaryBorder,
+    borderColor: colors.successBorder,
     backgroundColor: colors.card,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   historyProofText: {
-    color: colors.primaryDark,
-    fontSize: 10,
-    fontWeight: '600',
+    color: colors.successText,
+    fontSize: 12,
+    fontWeight: '500',
   },
   treeCode: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.successSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   treeCodeText: {
-    color: colors.primaryDark,
+    color: colors.successText,
     fontWeight: '600',
-    fontSize: 11,
+    fontSize: 12,
   },
 });

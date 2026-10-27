@@ -21,6 +21,51 @@ export interface RequestOptions {
   skipAuth?: boolean;
 }
 
+const DEV_FALLBACK_BASES = ['http://127.0.0.1:3000', 'http://192.168.0.103:3000'];
+let resolvedDevBaseUrl: string | null = null;
+
+export async function fetchWithDevFallback(baseUrl: string, path: string, init: RequestInit): Promise<Response> {
+  const isDevRuntime = typeof __DEV__ !== 'undefined' && Boolean(__DEV__);
+  const isFullUrl = path.startsWith('http://') || path.startsWith('https://');
+  if (!isDevRuntime || isFullUrl) {
+    const url = isFullUrl ? path : `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+    return await fetch(url, init);
+  }
+
+  const normalizedPath = `${path.startsWith('/') ? '' : '/'}${path}`;
+  const isLocalDevBase =
+    baseUrl.startsWith('http://127.0.0.1:') ||
+    baseUrl.startsWith('http://localhost:') ||
+    baseUrl.startsWith('http://192.168.');
+
+  const candidates = isLocalDevBase
+    ? Array.from(new Set([resolvedDevBaseUrl, baseUrl, ...DEV_FALLBACK_BASES].filter((v): v is string => Boolean(v))))
+    : [baseUrl];
+
+  let lastError: unknown;
+  for (let i = 0; i < candidates.length; i++) {
+    const candidateBase = candidates[i]!;
+    const timeoutMs = candidates.length > 1 && i < candidates.length - 1 ? 2500 : 8000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${candidateBase}${normalizedPath}`, {
+        ...init,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (isLocalDevBase) {
+        resolvedDevBaseUrl = candidateBase;
+      }
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 export class MobileApiClient {
   private apiBaseUrl: string;
   private sessionManager: IAuthSessionManager;
@@ -46,11 +91,6 @@ export class MobileApiClient {
     options?: RequestOptions,
     isRetry = false,
   ): Promise<TResponse> {
-    const url =
-      path.startsWith('http://') || path.startsWith('https://')
-        ? path
-        : `${this.apiBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
-
     const headers: Record<string, string> = {
       'ngrok-skip-browser-warning': 'true',
       ...(options?.headers ?? {}),
@@ -73,7 +113,7 @@ export class MobileApiClient {
 
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await fetchWithDevFallback(this.apiBaseUrl, path, {
         method,
         headers,
         body: body !== undefined ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,

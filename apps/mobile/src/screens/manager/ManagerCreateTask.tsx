@@ -275,6 +275,7 @@ export function ManagerCreateTask({
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.page}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
@@ -751,7 +752,7 @@ export function DateTimePickerModal({
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.datePickerScrollContent}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.datePickerScrollContent}>
           <View style={styles.monthHeader}>
             <Pressable
               accessibilityRole="button"
@@ -885,6 +886,7 @@ function SearchSelector({
       </View>
 
       <FlatList
+        showsVerticalScrollIndicator={false}
         data={filtered}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"

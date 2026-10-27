@@ -1,12 +1,14 @@
-import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { FlatList, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, EmptyState, ScreenHeader } from '../../components/AppPrimitives';
 import {
   TASK_FILTER_OPTIONS,
   TaskFilter,
   formatTaskDate,
-  getTaskProofCount,
+  getTaskProofWorkflowState,
   getTaskStatusMeta,
+  isTaskAwaitingSupervisor,
   isTaskOverdue,
 } from '../../domain/mobileWorkflow';
 import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
@@ -17,6 +19,8 @@ export function StaffWork({
   visibleTasks,
   totalTasks,
   activeFilter,
+  loading = false,
+  onRefresh,
   onFilterChange,
   onOpenTask,
 }: {
@@ -24,14 +28,31 @@ export function StaffWork({
   visibleTasks: Task[];
   totalTasks: number;
   activeFilter: TaskFilter;
+  loading?: boolean;
+  onRefresh?: () => Promise<void> | void;
   onFilterChange: (value: TaskFilter) => void;
   onOpenTask: (task: Task) => void;
 }) {
+  const renderItem = useCallback(
+    ({ item: task }: { item: Task }) => <StaffTaskRow task={task} onPress={() => onOpenTask(task)} />,
+    [onOpenTask],
+  );
+
   return (
     <FlatList
       data={visibleTasks}
       keyExtractor={(task) => task.id}
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.screen}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={Boolean(loading)}
+            onRefresh={() => void onRefresh()}
+            tintColor={colors.primaryDark}
+          />
+        ) : undefined
+      }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       removeClippedSubviews={Platform.OS === 'android'}
       maxToRenderPerBatch={10}
@@ -73,7 +94,7 @@ export function StaffWork({
           ) : null}
         </View>
       }
-      renderItem={({ item: task }) => <StaffTaskRow task={task} onPress={() => onOpenTask(task)} />}
+      renderItem={renderItem}
     />
   );
 }
@@ -81,7 +102,8 @@ export function StaffWork({
 function StaffTaskRow({ task, onPress }: { task: Task; onPress: () => void }) {
   const status = getTaskStatusMeta(task.status);
   const overdue = isTaskOverdue(task);
-  const proofCount = getTaskProofCount(task);
+  const wState = getTaskProofWorkflowState(task, 'Staff');
+  const awaitingSupervisor = isTaskAwaitingSupervisor(task);
   const nextHint =
     task.status === TaskStatus.REWORK_REQUIRED
       ? 'Mở để xem phần cần làm lại'
@@ -89,7 +111,9 @@ function StaffTaskRow({ task, onPress }: { task: Task; onPress: () => void }) {
         ? 'Đã nộp, đang chờ quản lý duyệt'
         : task.status === TaskStatus.COMPLETED
           ? 'Đã hoàn thành'
-          : 'Mở để tiếp tục bước bằng chứng';
+          : awaitingSupervisor
+            ? 'Đã xác nhận hiện trường, chờ giám sát chụp ảnh'
+            : 'Mở để tiếp tục bước xác nhận';
 
   return (
     <Pressable
@@ -120,7 +144,9 @@ function StaffTaskRow({ task, onPress }: { task: Task; onPress: () => void }) {
         </View>
       ) : null}
       <View style={styles.rowBetween}>
-        <Text style={styles.proof}>Bằng chứng {proofCount}/5</Text>
+        <Text style={styles.proof}>
+          Bằng chứng {wState.proofCount}/{wState.totalRequired}
+        </Text>
         <Text style={styles.nextHint}>{nextHint}</Text>
       </View>
     </Pressable>

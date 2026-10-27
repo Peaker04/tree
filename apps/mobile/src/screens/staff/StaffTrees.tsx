@@ -1,5 +1,15 @@
-import { useState } from 'react';
-import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import {
+  FlatList,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, EmptyState, Field, ScreenHeader } from '../../components/AppPrimitives';
 import {
@@ -18,6 +28,8 @@ export function StaffTrees({
   staffTasks,
   query,
   activeFilter,
+  loading = false,
+  onRefresh,
   getCareHistoryByTree,
   loadCareHistoryByTree,
   onQueryChange,
@@ -30,6 +42,8 @@ export function StaffTrees({
   staffTasks: Task[];
   query: string;
   activeFilter: TreeFilter;
+  loading?: boolean;
+  onRefresh?: () => Promise<void> | void;
   getCareHistoryByTree: (treeId: string) => CareHistory[];
   loadCareHistoryByTree: (treeId: string) => Promise<CareHistory[]>;
   onQueryChange: (value: string) => void;
@@ -42,30 +56,65 @@ export function StaffTrees({
   const [historyErrorTreeId, setHistoryErrorTreeId] = useState<string | null>(null);
   const filtered = Boolean(query.trim()) || activeFilter !== 'all';
 
-  const toggle = async (treeId: string) => {
-    if (expandedTreeId === treeId) {
-      setExpandedTreeId(null);
-      return;
-    }
-    setExpandedTreeId(treeId);
-    setHistoryErrorTreeId(null);
-    if (getCareHistoryByTree(treeId).length > 0) return;
-    setHistoryLoadingTreeId(treeId);
-    try {
-      await loadCareHistoryByTree(treeId);
-    } catch {
-      setHistoryErrorTreeId(treeId);
-    } finally {
-      setHistoryLoadingTreeId(null);
-    }
-  };
+  const toggle = useCallback(
+    async (treeId: string) => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      if (expandedTreeId === treeId) {
+        setExpandedTreeId(null);
+        return;
+      }
+      setExpandedTreeId(treeId);
+      setHistoryErrorTreeId(null);
+      if (getCareHistoryByTree(treeId).length > 0) return;
+      setHistoryLoadingTreeId(treeId);
+      try {
+        await loadCareHistoryByTree(treeId);
+      } catch {
+        setHistoryErrorTreeId(treeId);
+      } finally {
+        setHistoryLoadingTreeId(null);
+      }
+    },
+    [expandedTreeId, getCareHistoryByTree, loadCareHistoryByTree],
+  );
+
+  const renderItem = useCallback(
+    ({ item: tree }: { item: Tree }) => {
+      const related = staffTasks.filter((task) => task.treeId === tree.id);
+      const activeTask = getNextActionTask(related);
+      return (
+        <StaffTreeRow
+          tree={tree}
+          task={activeTask}
+          history={getCareHistoryByTree(tree.id)}
+          expanded={expandedTreeId === tree.id}
+          loading={historyLoadingTreeId === tree.id}
+          error={historyErrorTreeId === tree.id}
+          onToggle={() => void toggle(tree.id)}
+          onOpenTask={activeTask ? () => onOpenTask(activeTask) : undefined}
+          onMap={activeTask ? () => onMap(activeTask) : undefined}
+        />
+      );
+    },
+    [expandedTreeId, getCareHistoryByTree, historyErrorTreeId, historyLoadingTreeId, onMap, onOpenTask, staffTasks, toggle],
+  );
 
   return (
     <FlatList
       data={visibleAssignedTrees}
       keyExtractor={(tree) => tree.id}
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.screen}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={Boolean(loading)}
+            onRefresh={() => void onRefresh()}
+            tintColor={colors.primaryDark}
+          />
+        ) : undefined
+      }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       removeClippedSubviews={Platform.OS === 'android'}
       maxToRenderPerBatch={10}
@@ -117,23 +166,7 @@ export function StaffTrees({
           ) : null}
         </View>
       }
-      renderItem={({ item: tree }) => {
-        const related = staffTasks.filter((task) => task.treeId === tree.id);
-        const activeTask = getNextActionTask(related);
-        return (
-          <StaffTreeRow
-            tree={tree}
-            task={activeTask}
-            history={getCareHistoryByTree(tree.id)}
-            expanded={expandedTreeId === tree.id}
-            loading={historyLoadingTreeId === tree.id}
-            error={historyErrorTreeId === tree.id}
-            onToggle={() => void toggle(tree.id)}
-            onOpenTask={activeTask ? () => onOpenTask(activeTask) : undefined}
-            onMap={activeTask ? () => onMap(activeTask) : undefined}
-          />
-        );
-      }}
+      renderItem={renderItem}
     />
   );
 }
@@ -180,10 +213,11 @@ function StaffTreeRow({
             <Text style={styles.name}>{tree.name}</Text>
             <Badge tone={healthTone}>{tree.healthStatus}</Badge>
           </View>
-          <Text style={styles.species}>{tree.species}</Text>
-          <Text style={styles.address}>{tree.address}</Text>
+          <Text style={styles.species} numberOfLines={1}>
+            {tree.species} · {tree.address}
+          </Text>
           {task ? (
-            <Text style={styles.taskRelation} numberOfLines={2}>
+            <Text style={styles.taskRelation} numberOfLines={1}>
               {getTaskStatusMeta(task.status).label}: {task.title}
             </Text>
           ) : (
@@ -197,8 +231,8 @@ function StaffTreeRow({
         <View style={styles.detail}>
           <View style={styles.facts}>
             <View style={styles.flex}>
-              <Text style={styles.factLabel}>Mã nhận diện</Text>
-              <Text style={styles.factValue}>Đã gắn mã QR</Text>
+              <Text style={styles.factLabel}>Địa điểm</Text>
+              <Text style={styles.factValue}>{tree.address}</Text>
             </View>
             <View style={styles.flex}>
               <Text style={styles.factLabel}>Tuổi cây</Text>
@@ -265,7 +299,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     backgroundColor: colors.card,
   },
-  summary: { minHeight: 112, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  summary: { minHeight: 84, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   icon: {
     width: 44,
     height: 44,
@@ -280,9 +314,8 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   name: { ...typography.section, color: colors.ink, flex: 1 },
   species: { ...typography.body, color: colors.pewter, marginTop: 2 },
-  address: { ...typography.body, color: colors.neutralText, marginTop: spacing.xs },
-  taskRelation: { ...typography.label, color: colors.infoText, marginTop: spacing.sm },
-  noTask: { ...typography.label, color: colors.pewter, marginTop: spacing.sm },
+  taskRelation: { ...typography.label, color: colors.infoText, marginTop: spacing.xs },
+  noTask: { ...typography.label, color: colors.pewter, marginTop: spacing.xs },
   detail: {
     gap: spacing.md,
     padding: spacing.md,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { BackHandler, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthSessionError } from '../services/authSessionManager';
 import { DataSourceStatus } from '../services/greenOpsService';
@@ -34,6 +34,7 @@ import {
   type ManagerStep,
 } from './manager/ManagerArea';
 import { StaffArea } from './staff/StaffArea';
+import { SupervisorArea } from './supervisor/SupervisorArea';
 import { LoginScreen, SessionRestoreScreen } from './auth/AuthScreens';
 import { type StaffStep } from '../domain/mobileWorkflow';
 
@@ -58,6 +59,7 @@ type ManagerCatalogState = {
 
 const mapSessionRole = (role: string): Role | 'UNSUPPORTED' => {
   if (role === 'staff') return 'Staff';
+  if (role === 'supervisor') return 'Supervisor';
   if (role === 'manager') return 'Manager';
   return 'UNSUPPORTED';
 };
@@ -167,6 +169,8 @@ export default function MobileApp() {
       await runtime.taskRepo.cacheTasks(result.data.tasks);
     }
     setData(result.data);
+    setActiveTask((current) => (current ? (result.data.tasks.find((t) => t.id === current.id) ?? current) : null));
+    setReviewTask((current) => (current ? (result.data.tasks.find((t) => t.id === current.id) ?? current) : null));
     setDataSource({
       source: result.source,
       loading: false,
@@ -183,9 +187,11 @@ export default function MobileApp() {
       }
 
       const hasLocationException = Boolean(
-        task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
+        task.notes?.includes('Ngoại lệ GPS:') ||
+        task.supervisorNotes?.includes('Ngoại lệ GPS:') ||
+        (task as unknown as { locationException?: unknown }).locationException,
       );
-      const gpsVerified = Boolean(task.gpsCheck?.verified);
+      const gpsVerified = Boolean(task.gpsCheck?.verified || task.supervisorGpsCheck?.verified);
 
       if (
         (!gpsVerified && !hasLocationException) ||
@@ -198,6 +204,9 @@ export default function MobileApp() {
         throw new Error('INCOMPLETE_PROOF');
       }
 
+      if (!runtime.outboxRepo || !runtime.taskRepo) {
+        await runtime.start();
+      }
       if (!runtime.outboxRepo || !runtime.taskRepo) {
         throw new Error('OUTBOX_NOT_READY');
       }
@@ -228,8 +237,9 @@ export default function MobileApp() {
         expectedVersion: task.version ?? 0,
         siteVerification: {
           ...(gpsVerified && task.gpsCheck ? { gpsCheck: task.gpsCheck } : {}),
-          qrCheck: task.qrCheck,
+          qrCheck: task.qrCheck!,
         },
+        ...(task.supervisorGpsCheck ? { supervisorGpsCheck: task.supervisorGpsCheck } : {}),
         ...(hasLocationException
           ? {
               locationException: {
@@ -260,7 +270,10 @@ export default function MobileApp() {
       });
 
       const syncResults = await runtime.triggerSync();
-      const itemResult = syncResults.find((r) => r.outboxId === outboxItem.id);
+      let itemResult = syncResults.find((r) => r.outboxId === outboxItem.id);
+      if (!itemResult && runtime.coordinator) {
+        itemResult = (await runtime.coordinator.processItemById(outboxItem.id)) ?? undefined;
+      }
 
       if (itemResult?.success) {
         await refreshData();
@@ -276,6 +289,66 @@ export default function MobileApp() {
       return task;
     },
     [applyMutationSource, greenOpsService, runtime, refreshData],
+  );
+
+  const submitStaffCheckin = useCallback(
+    async (task: Task) => {
+      const hasLocationException = Boolean(
+        task.notes?.includes('Ngoại lệ GPS:') ||
+        task.supervisorNotes?.includes('Ngoại lệ GPS:') ||
+        (task as unknown as { locationException?: unknown }).locationException,
+      );
+      const gpsVerified = Boolean(task.gpsCheck?.verified || task.supervisorGpsCheck?.verified);
+      if ((!gpsVerified && !hasLocationException) || !task.qrCheck?.verified || task.checklist.some((c) => !c.done)) {
+        applyMutationSource('rest', 'Thiếu xác nhận GPS, QR hoặc checklist.');
+        throw new Error('INCOMPLETE_STAFF_CHECKIN');
+      }
+      const parsedGpsReason =
+        task.notes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() || 'Tán cây rậm rạp làm trôi tín hiệu GPS';
+      let expectedVersion = task.version ?? 0;
+      if (task.status === TaskStatus.PENDING || expectedVersion === 0) {
+        try {
+          const started = await greenOpsService.startTask({ taskId: task.id, expectedVersion });
+          expectedVersion = started.data.version ?? expectedVersion + 1;
+        } catch {
+          const refreshed = await greenOpsService.loadSnapshot();
+          const latest = refreshed.data.tasks.find((t) => t.id === task.id);
+          if (latest?.version !== undefined) {
+            expectedVersion = latest.version;
+          }
+        }
+      }
+      const result = await greenOpsService.submitStaffCheckin({
+        taskId: task.id,
+        expectedVersion,
+        siteVerification: {
+          ...(gpsVerified && task.gpsCheck ? { gpsCheck: task.gpsCheck } : {}),
+          qrCheck: task.qrCheck,
+        },
+        ...(hasLocationException
+          ? {
+              locationException: {
+                reason: parsedGpsReason,
+                distanceMeters: Math.max(1, Math.round(task.gpsCheck?.distance ?? 11)),
+                explanationPhotoUri: 'storage://exception/gps-staff',
+                recordedLat: task.gpsCheck?.lat ?? 10.774,
+                recordedLng: task.gpsCheck?.lng ?? 106.691,
+                timestamp: task.gpsCheck?.timestamp ?? new Date().toISOString(),
+              },
+            }
+          : {}),
+        checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: c.done as true })),
+        notes: task.notes,
+      });
+      if (runtime.taskRepo) {
+        await runtime.taskRepo.cacheTasks([result.data]);
+      }
+      setCareHistoryByTree({});
+      setData(greenOpsService.getSnapshot());
+      applyMutationSource(result.source, result.message);
+      return result.data;
+    },
+    [applyMutationSource, greenOpsService, runtime],
   );
 
   const startTask = useCallback(
@@ -436,7 +509,7 @@ export default function MobileApp() {
         setAuthenticatedUser(session.user);
         setAuthenticatedStaffId(restoredRole === 'Staff' ? session.user.id : null);
 
-        if (restoredRole === 'Staff') {
+        if (restoredRole === 'Staff' || restoredRole === 'Supervisor') {
           setStaffStep('HOME');
           await refreshData();
           if (mounted) setScreen('Main');
@@ -486,7 +559,7 @@ export default function MobileApp() {
       }
       setRole(result.role);
 
-      if (result.role === 'Staff') {
+      if (result.role === 'Staff' || result.role === 'Supervisor') {
         setStaffStep('HOME');
         await refreshData();
         setScreen('Main');
@@ -529,6 +602,50 @@ export default function MobileApp() {
     setScreen('Login');
   };
 
+  useEffect(() => {
+    if (screen !== 'Main') return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (role === 'Staff' || role === 'Supervisor') {
+        if (['GPS', 'BEFORE', 'AFTER', 'CHECKLIST', 'REVIEW'].includes(staffStep)) {
+          setStaffStep('DETAIL');
+          return true;
+        }
+        if (staffStep === 'QR' && activeTask) {
+          setStaffStep('DETAIL');
+          return true;
+        }
+        if (staffStep === 'DETAIL' || staffStep === 'SUCCESS' || staffStep === 'MAP') {
+          setStaffStep('WORK');
+          return true;
+        }
+        if (staffStep !== 'HOME') {
+          setActiveTask(null);
+          setStaffStep('HOME');
+          return true;
+        }
+        return false;
+      }
+
+      if (role === 'Manager') {
+        if (managerStep === 'REVIEW_DETAIL') {
+          setReviewTask(null);
+          setManagerStep('REVIEW');
+          return true;
+        }
+        if (managerStep !== 'HOME') {
+          setManagerStep('HOME');
+          return true;
+        }
+        return false;
+      }
+
+      return false;
+    });
+
+    return () => subscription.remove();
+  }, [activeTask, managerStep, role, screen, staffStep]);
+
   if (authRestoring && screen === 'Login') {
     return <SessionRestoreScreen />;
   }
@@ -538,16 +655,49 @@ export default function MobileApp() {
   }
 
   const isStaff = role === 'Staff';
-  const showStaffNav = isStaff && ['HOME', 'MY_TREES', 'WORK', 'QR', 'NOTIFICATIONS', 'ACCOUNT'].includes(staffStep);
+  const isSupervisor = role === 'Supervisor';
+  const showStaffNav =
+    (isStaff || isSupervisor) && ['HOME', 'MY_TREES', 'WORK', 'QR', 'NOTIFICATIONS', 'ACCOUNT'].includes(staffStep);
   const showManagerNav = role === 'Manager' && !['REVIEW_DETAIL', 'QR_LOOKUP'].includes(managerStep);
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.root}>
       <View style={styles.appShell}>
         {isStaff ? (
           <StaffArea
             authenticatedUser={authenticatedUser}
             authenticatedStaffId={authenticatedStaffId}
+            tasks={data.tasks}
+            trees={data.trees}
+            notifications={data.notifications}
+            userLat={userLat}
+            userLng={userLng}
+            setUserLat={setUserLat}
+            setUserLng={setUserLng}
+            activeTask={activeTask}
+            setActiveTask={setActiveTask}
+            step={staffStep}
+            setStep={setStaffStep}
+            updateTasks={updateTasks}
+            updateNotifications={updateNotifications}
+            getCareHistoryByTree={getCareHistoryByTree}
+            loadCareHistoryByTree={loadCareHistoryByTree}
+            lookupTreeByQr={lookupTreeByQr}
+            startTask={startTask}
+            submitTaskEvidence={submitTaskEvidence}
+            submitStaffCheckin={submitStaffCheckin}
+            reportFieldIssue={reportFieldIssue}
+            resubmitRework={resubmitRework}
+            createNotification={createNotification}
+            markNotificationsRead={markNotificationsRead}
+            dataSource={dataSource}
+            onRefreshData={refreshData}
+            onLogout={logout}
+          />
+        ) : isSupervisor ? (
+          <SupervisorArea
+            authenticatedUser={authenticatedUser}
+            authenticatedSupervisorId={authenticatedUser?.id ?? null}
             tasks={data.tasks}
             trees={data.trees}
             notifications={data.notifications}
@@ -645,7 +795,9 @@ export default function MobileApp() {
           rightItems={[...MANAGER_NAV_RIGHT_ITEMS]}
           fabItem={MANAGER_NAV_FAB_ITEM}
           activeId={managerStep}
-          onPress={(id) => setManagerStep(id as ManagerStep)}
+          onPress={(id) => {
+            setManagerStep(id as ManagerStep);
+          }}
         />
       ) : null}
     </SafeAreaView>

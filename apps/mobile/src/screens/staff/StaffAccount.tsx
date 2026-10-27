@@ -22,7 +22,7 @@ export function StaffAccount({
   const email = authenticatedUser?.email ?? 'Không có thông tin phiên';
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
       <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
 
       <View style={styles.identity}>

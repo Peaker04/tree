@@ -139,11 +139,15 @@ export function TaskSummary({ task, tree }: { task: Task; tree?: Tree | null }) 
   );
 }
 
-export function ProofChainCard({ task }: { task: Task }) {
+export function ProofChainCard({ task, role }: { task: Task; role?: 'Staff' | 'Supervisor' }) {
   const gpsTime = task.gpsCheck?.timestamp
     ? new Date(task.gpsCheck.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     : '';
-  const checks = [
+  const supGpsTime = task.supervisorGpsCheck?.timestamp
+    ? new Date(task.supervisorGpsCheck.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  const staffChecks = [
     {
       id: 'gps',
       label: 'GPS',
@@ -161,6 +165,38 @@ export function ProofChainCard({ task }: { task: Task }) {
       icon: 'qr-code-outline' as const,
     },
     {
+      id: 'checklist',
+      label: 'Checklist',
+      body: task.checklist.every((item) => item.done) ? 'Tất cả hạng mục đã tick' : 'Còn hạng mục chưa hoàn thành',
+      done: task.checklist.every((item) => item.done),
+      icon: 'checkbox-outline' as const,
+    },
+  ];
+
+  const supervisorChecks = [
+    {
+      id: 'staff-checkin',
+      label: 'Xác nhận NV hiện trường',
+      body: task.staffCompletedAt
+        ? `NV ${task.assignedStaffName} đã xác nhận GPS, QR & Checklist`
+        : 'Đang chờ nhân viên hiện trường xác nhận tại cây',
+      done: Boolean(task.staffCompletedAt),
+      icon: 'person-circle-outline' as const,
+    },
+    {
+      id: 'sup-gps',
+      label: 'Vị trí GPS Giám sát',
+      body: task.supervisorGpsCheck?.verified
+        ? `${task.supervisorGpsCheck.distance.toFixed(1)}m từ gốc${supGpsTime ? `, ${supGpsTime}` : ''}`
+        : task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified
+          ? 'Đã xác minh vị trí tại hiện trường'
+          : 'Chưa xác minh vị trí giám sát hiện trường',
+      done: Boolean(
+        task.supervisorGpsCheck?.verified || (task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified),
+      ),
+      icon: 'location-outline' as const,
+    },
+    {
       id: 'before',
       label: 'Ảnh trước',
       body: task.beforePhoto ? 'Đã có ảnh trước xử lý' : 'Thiếu ảnh trước xử lý',
@@ -174,20 +210,32 @@ export function ProofChainCard({ task }: { task: Task }) {
       done: Boolean(task.afterPhoto),
       icon: 'images-outline' as const,
     },
-    {
-      id: 'checklist',
-      label: 'Checklist',
-      body: task.checklist.every((item) => item.done) ? 'Tất cả hạng mục đã tick' : 'Còn hạng mục chưa hoàn thành',
-      done: task.checklist.every((item) => item.done),
-      icon: 'checkbox-outline' as const,
-    },
   ];
+
+  const defaultChecks = [staffChecks[0], staffChecks[1], supervisorChecks[2], supervisorChecks[3], staffChecks[2]];
+
+  const checks = role === 'Staff' ? staffChecks : role === 'Supervisor' ? supervisorChecks : defaultChecks;
+  const doneCount =
+    role === 'Staff'
+      ? staffChecks.filter((c) => c.done).length
+      : role === 'Supervisor'
+        ? [supervisorChecks[1], supervisorChecks[2], supervisorChecks[3]].filter((c) => c.done).length
+        : getTaskProofCount(task);
+  const totalCount = role === 'Staff' || role === 'Supervisor' ? 3 : 5;
+  const allDone =
+    role === 'Staff'
+      ? doneCount === 3
+      : role === 'Supervisor'
+        ? doneCount === 3 && Boolean(task.staffCompletedAt)
+        : getTaskProofGaps(task).length === 0;
 
   return (
     <Card>
       <View style={styles.rowBetween}>
         <SectionTitle icon="shield-checkmark-outline">Chuỗi bằng chứng</SectionTitle>
-        <Badge tone={getTaskProofGaps(task).length === 0 ? 'green' : 'amber'}>{getTaskProofCount(task)}/5</Badge>
+        <Badge tone={allDone ? 'green' : 'amber'}>
+          {doneCount}/{totalCount}
+        </Badge>
       </View>
       {checks.map((item) => (
         <View key={item.id} style={styles.proofChainRow}>
@@ -396,7 +444,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   header: {
-    minHeight: 44,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -407,13 +455,14 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cardWarm,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.hairlineBorder,
   },
   headerTitle: {
-    color: colors.foreground,
+    color: colors.ink,
     fontSize: 22,
+    lineHeight: 28,
     fontWeight: '600',
     letterSpacing: 0,
   },
@@ -421,10 +470,11 @@ const styles = StyleSheet.create({
     color: colors.snowWhite,
   },
   headerSub: {
-    color: colors.mutedForeground,
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 18,
+    color: colors.pewter,
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 20,
+    marginTop: 2,
   },
   headerSubDark: {
     color: colors.pewter,
@@ -433,32 +483,34 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   itemTitle: {
-    color: colors.foreground,
-    fontSize: 14,
+    color: colors.ink,
+    fontSize: 15,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 21,
   },
   itemSub: {
-    color: colors.muted,
-    fontSize: 12,
+    color: colors.pewter,
+    fontSize: 13,
+    lineHeight: 18,
     marginTop: 1,
   },
   bodyText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
-    lineHeight: 18,
+    color: colors.pewter,
+    fontSize: 13,
+    lineHeight: 19,
   },
   monoSmall: {
-    color: colors.muted,
-    fontSize: 10,
+    color: colors.pewter,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: '500',
   },
   metricLabel: {
-    color: colors.mutedForeground,
-    fontSize: 11,
+    color: colors.pewter,
+    fontSize: 12,
     fontWeight: '500',
     flex: 1,
-    lineHeight: 15,
+    lineHeight: 16,
   },
   taskMetaRow: {
     flexDirection: 'row',
@@ -466,46 +518,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 8,
+    borderTopColor: colors.hairlineBorder,
+    paddingTop: 10,
     marginTop: 2,
   },
   taskSignalRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 7,
+    gap: 8,
     marginTop: 4,
   },
   taskSignalPill: {
-    minHeight: 28,
+    minHeight: 30,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardWarm,
-    paddingHorizontal: 9,
+    borderColor: colors.hairlineBorder,
+    backgroundColor: colors.snowWhite,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
   },
   taskSignalPillDone: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primaryBorder,
+    backgroundColor: colors.successSurface,
+    borderColor: colors.successBorder,
   },
   taskSignalPillDanger: {
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: colors.criticalSurface,
     borderColor: colors.criticalBorder,
   },
   taskSignalText: {
-    color: colors.mutedForeground,
-    fontSize: 10,
-    fontWeight: '600',
+    color: colors.pewter,
+    fontSize: 12,
+    fontWeight: '500',
   },
   taskSignalTextDone: {
-    color: colors.primaryDark,
+    color: colors.successText,
   },
   taskSignalTextDanger: {
-    color: colors.danger,
+    color: colors.criticalText,
   },
   taskProofPills: {
     flexDirection: 'row',
@@ -513,27 +565,27 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   taskProofPill: {
-    minHeight: 26,
+    minHeight: 28,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.mineral,
-    paddingHorizontal: 8,
+    borderColor: colors.hairlineBorder,
+    backgroundColor: colors.snowWhite,
+    paddingHorizontal: 9,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   taskProofPillDone: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primaryBorder,
+    backgroundColor: colors.successSurface,
+    borderColor: colors.successBorder,
   },
   taskProofText: {
-    color: colors.mutedForeground,
-    fontSize: 10,
-    fontWeight: '600',
+    color: colors.pewter,
+    fontSize: 12,
+    fontWeight: '500',
   },
   taskProofTextDone: {
-    color: colors.primaryDark,
+    color: colors.successText,
   },
   reworkReasonBox: {
     flexDirection: 'row',
@@ -541,62 +593,65 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.criticalBorder,
-    backgroundColor: colors.dangerSoft,
-    padding: 11,
+    backgroundColor: colors.criticalSurface,
+    padding: 12,
   },
   proofChainRow: {
-    minHeight: 52,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.mineral,
-    padding: 10,
-    marginTop: 8,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.hairlineBorder,
+    paddingVertical: 10,
+    marginTop: 6,
   },
   proofChainIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 12,
-    backgroundColor: colors.card,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.hairlineBorder,
+    backgroundColor: colors.snowWhite,
     alignItems: 'center',
     justifyContent: 'center',
   },
   proofChainIconDone: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.successSurface,
+    borderColor: colors.successBorder,
   },
   checkLine: {
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-start',
-    paddingVertical: 7,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.hairlineBorder,
   },
   checkIndex: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.backgroundAlt,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.neutralSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkIndexDone: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.successSurface,
   },
   checkIndexText: {
-    color: colors.mutedForeground,
-    fontSize: 10,
+    color: colors.pewter,
+    fontSize: 12,
     fontWeight: '600',
   },
   checkIndexTextDone: {
-    color: colors.primaryDark,
+    color: colors.successText,
   },
   checkText: {
     flex: 1,
-    color: colors.mutedForeground,
-    fontSize: 12,
-    lineHeight: 18,
+    color: colors.ink,
+    fontSize: 13,
+    lineHeight: 19,
   },
   photoRow: {
     flexDirection: 'row',
@@ -628,14 +683,14 @@ const styles = StyleSheet.create({
   },
   photoLabelBefore: {
     textAlign: 'center',
-    color: colors.amber,
-    fontSize: 10,
+    color: colors.warningText,
+    fontSize: 12,
     fontWeight: '600',
   },
   photoLabelAfter: {
     textAlign: 'center',
-    color: colors.primary,
-    fontSize: 10,
+    color: colors.successText,
+    fontSize: 12,
     fontWeight: '600',
   },
   photoPreviewBackdrop: {

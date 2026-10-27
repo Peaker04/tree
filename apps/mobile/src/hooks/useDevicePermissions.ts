@@ -127,13 +127,16 @@ export function useDevicePermissions() {
 
   const requestLocationForPurpose = useCallback(
     async (purpose: Extract<DevicePermissionPurpose, 'staff-gps' | 'manager-tree-gps'> = 'staff-gps') => {
-      setPrompt({ kind: 'location', purpose, state: 'rationale' });
       try {
         const response = await requestForegroundLocationPermission();
         setLocationPermission(response);
         clearRuntimeUnavailable('location');
         const nextState = classifyPermissionResponse(response);
-        setPrompt({ kind: 'location', purpose, state: nextState });
+        if (nextState === 'granted') {
+          setPrompt(null);
+        } else {
+          setPrompt({ kind: 'location', purpose, state: nextState });
+        }
         return response;
       } catch (error) {
         setRuntimeUnavailable('location', error);

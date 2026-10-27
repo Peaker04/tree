@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ExpoCamera from 'expo-camera';
 import { Badge, Button, ListRow, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
 import { DeviceCameraView } from '../../components/DeviceCameraView';
+import { ManualTreeCodeModal } from '../../components/ManualTreeCodeModal';
 import { TreeQrModal } from '../../components/presentation/TreeQrModal';
 import { formatTreeAge, getTaskStatusMeta } from '../../domain/mobileWorkflow';
 import { useDevicePermissions } from '../../hooks/useDevicePermissions';
@@ -18,6 +19,7 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
   const { height: windowHeight } = useWindowDimensions();
   const [tree, setTree] = useState<Tree | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
+  const [manualCodeModalVisible, setManualCodeModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const scanLock = useRef(0);
@@ -64,7 +66,7 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
 
   return (
     <>
-      <ScrollView contentContainerStyle={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <ScreenHeader
           title="Tra cứu QR cây"
           subtitle="Quét mã để xem hồ sơ và công việc liên quan"
@@ -90,19 +92,23 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
                 void lookup(result.data);
               }}
             >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Khung quét mã QR"
-                onPress={__DEV__ ? () => void lookup('TRE-DEV-01') : undefined}
-                style={styles.cameraOverlay}
-              >
+              <View style={styles.cameraOverlay}>
                 <View style={styles.scanFrame}>
                   <Ionicons name="qr-code-outline" size={42} color={colors.snowWhite} />
                 </View>
                 <Text style={styles.cameraTitle}>Đặt mã QR cây trong khung</Text>
                 <Text style={styles.cameraBody}>Chỉ tra cứu, không thay đổi công việc.</Text>
-              </Pressable>
+              </View>
             </DeviceCameraView>
+
+            <Button
+              variant="outline"
+              icon="keypad-outline"
+              onPress={() => setManualCodeModalVisible(true)}
+              accessibilityLabel="Nhập mã cây bằng tay"
+            >
+              Nhập mã cây bằng tay
+            </Button>
 
             {loading ? (
               <Notice tone="info" title="Đang tra cứu hồ sơ cây" body="Vui lòng giữ nguyên thiết bị trong giây lát." />
@@ -171,6 +177,13 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
               )}
             </View>
 
+            <Button
+              variant="primary"
+              icon="add-circle-outline"
+              onPress={() => props.setActiveStep('CREATE')}
+            >
+              Giao việc cho cây này
+            </Button>
             <Button icon="leaf-outline" onPress={() => props.setActiveStep('TREES')}>
               Mở hồ sơ cây
             </Button>
@@ -194,6 +207,12 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
         )}
       </ScrollView>
       <TreeQrModal tree={qrVisible ? tree : null} onClose={() => setQrVisible(false)} />
+      <ManualTreeCodeModal
+        visible={manualCodeModalVisible}
+        onClose={() => setManualCodeModalVisible(false)}
+        trees={props.trees}
+        onSelectTreeCode={(code) => void lookup(code)}
+      />
     </>
   );
 }

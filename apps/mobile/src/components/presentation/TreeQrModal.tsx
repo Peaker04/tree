@@ -1,9 +1,8 @@
 import React from 'react';
-import { Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Share, StyleSheet, Text, View } from 'react-native';
 import { create } from 'qrcode';
 import Svg, { Rect } from 'react-native-svg';
-import { Button } from '../AppPrimitives';
+import { BottomSheetModal, Button } from '../AppPrimitives';
 import { colors, radius, spacing, typography } from '../../theme/tokens';
 import type { Tree } from '../../types';
 
@@ -38,44 +37,35 @@ export function TreeQrModal({ tree, onClose }: { tree: Tree | null; onClose: () 
   const cell = QR_SIZE / qr.size;
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <View style={styles.flex}>
-              <Text style={styles.title}>Mã QR của cây</Text>
-              <Text style={styles.subtitle}>{tree.name}</Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Đóng mã QR"
-              onPress={onClose}
-              style={styles.close}
-            >
-              <Ionicons name="close" size={24} color={colors.ink} />
-            </Pressable>
-          </View>
+    <BottomSheetModal
+      visible={Boolean(tree)}
+      onClose={onClose}
+      title="Mã QR của cây"
+      subtitle={tree.name}
+      maxHeight="85%"
+    >
+      <View style={styles.content}>
+        <View style={styles.qrSurface}>
+          <Svg ref={qrRef} width="100%" height="100%" viewBox={`-2 -2 ${QR_SIZE + 4} ${QR_SIZE + 4}`}>
+            <Rect x={-2} y={-2} width={QR_SIZE + 4} height={QR_SIZE + 4} fill="#ffffff" />
+            {qr.cells.map(({ x, y }) => (
+              <Rect
+                key={`${x}-${y}`}
+                x={x * cell}
+                y={y * cell}
+                width={cell + 0.02}
+                height={cell + 0.02}
+                fill="#13231a"
+              />
+            ))}
+          </Svg>
+        </View>
 
-          <View style={styles.qrSurface}>
-            <Svg ref={qrRef} width="100%" height="100%" viewBox={`-2 -2 ${QR_SIZE + 4} ${QR_SIZE + 4}`}>
-              <Rect x={-2} y={-2} width={QR_SIZE + 4} height={QR_SIZE + 4} fill="#ffffff" />
-              {qr.cells.map(({ x, y }) => (
-                <Rect
-                  key={`${x}-${y}`}
-                  x={x * cell}
-                  y={y * cell}
-                  width={cell + 0.02}
-                  height={cell + 0.02}
-                  fill="#13231a"
-                />
-              ))}
-            </Svg>
-          </View>
-
-          <Text style={styles.help}>
-            Dùng mã này để in hoặc lưu nhãn, sau đó gắn nhãn vào đúng cây ngoài hiện trường.
-          </Text>
-          {shareError ? <Text style={styles.error}>{shareError}</Text> : null}
+        <Text style={styles.help}>
+          Dùng mã này để in hoặc lưu nhãn, sau đó gắn nhãn vào đúng cây ngoài hiện trường.
+        </Text>
+        {shareError ? <Text style={styles.error}>{shareError}</Text> : null}
+        <View style={styles.actionRow}>
           <Button
             icon="download-outline"
             loading={sharing}
@@ -105,36 +95,40 @@ export function TreeQrModal({ tree, onClose }: { tree: Tree | null; onClose: () 
           </Button>
         </View>
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.cameraOverlay },
-  sheet: {
-    gap: spacing.lg,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxl,
-    borderTopLeftRadius: radius.container,
-    borderTopRightRadius: radius.container,
-    backgroundColor: colors.card,
+  content: {
+    gap: spacing.md,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
   },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  flex: { flex: 1 },
-  title: { ...typography.title, color: colors.ink },
-  subtitle: { ...typography.body, color: colors.pewter, marginTop: spacing.xs },
-  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   qrSurface: {
-    width: 260,
-    height: 260,
+    width: 240,
+    height: 240,
     maxWidth: '100%',
     alignSelf: 'center',
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.hairlineBorder,
-    borderRadius: radius.card,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     backgroundColor: '#ffffff',
   },
-  help: { ...typography.body, color: colors.neutralText, textAlign: 'center' },
-  error: { ...typography.body, color: colors.criticalText, textAlign: 'center' },
+  help: {
+    ...typography.body,
+    color: colors.neutralText,
+    textAlign: 'center',
+  },
+  error: {
+    ...typography.body,
+    color: colors.criticalText,
+    textAlign: 'center',
+  },
+  actionRow: {
+    width: '100%',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
 });

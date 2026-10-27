@@ -10,7 +10,8 @@ async function getSecureStore(): Promise<SecureStoreModule | null> {
     return cachedSecureStore;
   }
   try {
-    cachedSecureStore = await import('expo-secure-store');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    cachedSecureStore = require('expo-secure-store') as SecureStoreModule;
     return cachedSecureStore;
   } catch {
     return null;
@@ -31,7 +32,10 @@ const isStoredAuthSession = (value: unknown): value is AuthSession => {
     typeof value.expiresAt === 'string' &&
     typeof value.user.id === 'string' &&
     typeof value.user.email === 'string' &&
-    (value.user.role === 'staff' || value.user.role === 'manager' || value.user.role === 'admin')
+    (value.user.role === 'staff' ||
+      value.user.role === 'supervisor' ||
+      value.user.role === 'manager' ||
+      value.user.role === 'admin')
   );
 };
 

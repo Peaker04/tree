@@ -338,7 +338,7 @@ export function StaffProofFlow(props: {
 
   if (props.step === 'MAP') {
     return (
-      <ScrollView contentContainerStyle={[styles.screenPad, styles.mapScreen]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>
         <Header
           title="Bản đồ check-in"
           subtitle="Xác minh vị trí thiết bị trước khi quét mã QR hoặc chụp ảnh"
@@ -392,7 +392,7 @@ export function StaffProofFlow(props: {
         ].filter((item): item is string => Boolean(item));
 
     return (
-      <ScrollView contentContainerStyle={styles.screenPad}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         <Header title="Chi tiết công việc" onBack={() => props.setStep('WORK')} />
 
         <View style={styles.taskOrientation}>
@@ -600,7 +600,7 @@ export function StaffProofFlow(props: {
 
   if (props.step === 'GPS' && props.activeTask) {
     return (
-      <ScrollView contentContainerStyle={styles.screenPad}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         <Header title="Xác minh GPS" subtitle={props.activeTask.treeName} onBack={() => props.setStep('DETAIL')} />
         {activeTree ? (
           <TreeCheckinMap
@@ -725,7 +725,7 @@ export function StaffProofFlow(props: {
       : null;
 
     return (
-      <ScrollView contentContainerStyle={[styles.screenPad, { paddingBottom: 148 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, { paddingBottom: 148 }]}>
         <Header
           title="Quét QR cây"
           subtitle="Tra cứu hồ sơ, vị trí và công việc liên quan"
@@ -1047,7 +1047,7 @@ export function StaffProofFlow(props: {
   if (props.step === 'CHECKLIST' && props.activeTask) {
     const checklist = props.activeTask.checklist;
     return (
-      <ScrollView contentContainerStyle={styles.screenPad}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
         <Header
           title="Checklist tác nghiệp"
           subtitle={props.activeTask.title}
@@ -1113,7 +1113,7 @@ export function StaffProofFlow(props: {
     const visibleNotes = props.activeTask.notes?.startsWith('Fixture ') ? '' : (props.activeTask.notes ?? '');
 
     return (
-      <ScrollView contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
         {isSupervisor ? (
           <Header title="Xem lại bằng chứng giám sát" onBack={() => props.setStep(isRework ? 'DETAIL' : 'AFTER')} />
         ) : (

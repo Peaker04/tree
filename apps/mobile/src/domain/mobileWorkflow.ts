@@ -17,9 +17,25 @@ export type StaffStep =
   | 'ACCOUNT';
 
 export type TreeFilter = 'all' | TreeRiskStatus;
-export type TaskFilter = 'all' | 'open' | TaskStatus;
+export type TaskFilter = 'all' | 'open' | 'overdue' | TaskStatus;
 
 export const formatTreeAge = (ageYears: number) => (ageYears > 0 ? `${ageYears} năm` : 'Chưa xác định');
+
+export const formatActorDisplayName = (value?: string | null): string => {
+  const raw = (value ?? '').trim();
+  if (!raw) return 'Nhân viên hiện trường';
+  const lower = raw.toLowerCase();
+  if (lower === 'staff@novyx.local' || lower === 'staff') return 'Nhân viên hiện trường';
+  if (lower === 'supervisor@novyx.local' || lower === 'supervisor') return 'Giám sát hiện trường';
+  if (lower === 'manager@novyx.local' || lower === 'manager') return 'Quản lý điều phối';
+  return raw;
+};
+
+export const sanitizeNotificationText = (value: string): string =>
+  value
+    .replace(/staff@novyx\.local/gi, 'Nhân viên hiện trường')
+    .replace(/supervisor@novyx\.local/gi, 'Giám sát hiện trường')
+    .replace(/manager@novyx\.local/gi, 'Quản lý điều phối');
 
 export const TREE_FILTER_OPTIONS: { id: TreeFilter; label: string }[] = [
   { id: 'all', label: 'Tất cả' },
@@ -31,6 +47,7 @@ export const TREE_FILTER_OPTIONS: { id: TreeFilter; label: string }[] = [
 export const TASK_FILTER_OPTIONS: { id: TaskFilter; label: string }[] = [
   { id: 'open', label: 'Việc mở' },
   { id: 'all', label: 'Tất cả' },
+  { id: 'overdue', label: 'Quá hạn' },
   { id: TaskStatus.PENDING, label: 'Chờ bắt đầu' },
   { id: TaskStatus.IN_PROGRESS, label: 'Đang làm' },
   { id: TaskStatus.WAITING_REVIEW, label: 'Chờ duyệt' },
@@ -72,6 +89,9 @@ export const filterTasks = (tasks: Task[], filter: TaskFilter) => {
   if (filter === 'open') {
     return tasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED');
   }
+  if (filter === 'overdue') {
+    return tasks.filter(isTaskOverdue);
+  }
   return tasks.filter((task) => task.status === filter);
 };
 
@@ -104,10 +124,9 @@ export const formatTaskDateTime = (value: string) =>
   });
 
 export const isTaskOverdue = (task: Task) => {
-  if (task.status === TaskStatus.COMPLETED) return false;
+  if (task.status === TaskStatus.COMPLETED || task.status === 'CANCELLED') return false;
   const deadline = new Date(task.deadline);
   if (Number.isNaN(deadline.getTime())) return false;
-  deadline.setHours(23, 59, 59, 999);
   return deadline.getTime() < Date.now();
 };
 
@@ -167,7 +186,7 @@ const inferReworkStep = (task: Task): StaffStep | null => {
   if (target === 'QR') return 'QR';
   if (target === 'BEFORE') return 'BEFORE';
   if (target === 'CHECKLIST') return 'CHECKLIST';
-  if (target === 'AFTER') return 'AFTER';
+  if (target === 'AFTER' || target === 'EVIDENCE') return 'AFTER';
 
   const reason = normalizeSearch(task.rejectReason ?? '');
   if (reason.includes('gps')) return 'GPS';
@@ -178,12 +197,42 @@ const inferReworkStep = (task: Task): StaffStep | null => {
   return 'DETAIL';
 };
 
-export const getNextProofStep = (task: Task): StaffStep => {
+export const STAFF_STEPS = ['GPS', 'QR', 'CHECKLIST', 'REVIEW'] as const;
+export const SUPERVISOR_STEPS = ['GPS', 'BEFORE', 'AFTER', 'REVIEW'] as const;
+
+export const isTaskAwaitingSupervisor = (task: Task): boolean =>
+  task.status === TaskStatus.IN_PROGRESS && Boolean(task.staffCompletedAt) && (!task.beforePhoto || !task.afterPhoto);
+
+export const getNextProofStep = (task: Task, role?: 'Staff' | 'Supervisor'): StaffStep => {
   const reworkStep = inferReworkStep(task);
-  if (reworkStep) return reworkStep;
   const hasLocationEx = Boolean(
     task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
   );
+
+  if (role === 'Staff') {
+    if (reworkStep === 'GPS' || reworkStep === 'QR' || reworkStep === 'CHECKLIST') {
+      return reworkStep;
+    }
+    if (!task.gpsCheck?.verified && !hasLocationEx) return 'GPS';
+    if (!task.qrCheck?.verified) return 'QR';
+    if (task.checklist.some((item) => !item.done)) return 'CHECKLIST';
+    return 'REVIEW';
+  }
+
+  if (role === 'Supervisor') {
+    if (reworkStep === 'BEFORE' || reworkStep === 'AFTER') {
+      return reworkStep;
+    }
+    const supGpsVerified = Boolean(
+      task.supervisorGpsCheck?.verified || (task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified),
+    );
+    if (!supGpsVerified) return 'GPS';
+    if (!task.beforePhoto) return 'BEFORE';
+    if (!task.afterPhoto) return 'AFTER';
+    return 'REVIEW';
+  }
+
+  if (reworkStep) return reworkStep;
   if (!task.gpsCheck?.verified && !hasLocationEx) return 'GPS';
   if (!task.qrCheck?.verified) return 'QR';
   if (!task.beforePhoto) return 'BEFORE';
@@ -210,25 +259,148 @@ export interface TaskProofWorkflowState {
   isComplete: boolean;
   isSubmittedOrCompleted: boolean;
   proofCount: number;
+  completedCount: number;
   totalRequired: number;
+  readyToSubmit: boolean;
   activeActionText: string;
   steps: TaskProofStepInfo[];
 }
 
-export const getTaskProofWorkflowState = (task: Task): TaskProofWorkflowState => {
+export const getTaskProofWorkflowState = (task: Task, role?: 'Staff' | 'Supervisor'): TaskProofWorkflowState => {
   const isSubmittedOrCompleted = task.status === TaskStatus.WAITING_REVIEW || task.status === TaskStatus.COMPLETED;
 
   const hasLocationEx = Boolean(
-    task.notes?.includes('Ngoại lệ GPS:') || (task as unknown as { locationException?: unknown }).locationException,
+    task.notes?.includes('Ngoại lệ GPS:') ||
+    task.supervisorNotes?.includes('Ngoại lệ GPS:') ||
+    (task as unknown as { locationException?: unknown }).locationException,
   );
   const isGpsDone = Boolean(task.gpsCheck?.verified || hasLocationEx);
   const isQrDone = Boolean(task.qrCheck?.verified);
   const isBeforeDone = Boolean(task.beforePhoto);
   const isChecklistDone = task.checklist.length > 0 && task.checklist.every((item) => item.done);
   const isAfterDone = Boolean(task.afterPhoto);
+  const isSupervisorGpsDone = Boolean(
+    task.supervisorGpsCheck?.verified ||
+    task.supervisorNotes?.includes('Ngoại lệ GPS:') ||
+    hasLocationEx ||
+    (task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified),
+  );
 
-  const rawNextStep = getNextProofStep(task);
+  const rawNextStep = getNextProofStep(task, role);
   const nextStep: StaffStep | null = isSubmittedOrCompleted ? null : rawNextStep;
+
+  if (role === 'Staff') {
+    const reworkStep = inferReworkStep(task);
+    const isStaffRework =
+      task.status === TaskStatus.REWORK_REQUIRED &&
+      (reworkStep === 'GPS' || reworkStep === 'QR' || reworkStep === 'CHECKLIST');
+    const completedCount = [isGpsDone, isQrDone, isChecklistDone].filter(Boolean).length;
+    const isStaffSubmitted = isSubmittedOrCompleted || (Boolean(task.staffCompletedAt) && !isStaffRework);
+    const steps: TaskProofStepInfo[] = [
+      {
+        key: 'GPS',
+        label: 'Định vị GPS',
+        done: isGpsDone && reworkStep !== 'GPS',
+        isCurrent: !isStaffSubmitted && rawNextStep === 'GPS',
+        status:
+          isGpsDone && reworkStep !== 'GPS'
+            ? 'done'
+            : rawNextStep === 'GPS' && !isStaffSubmitted
+              ? 'current'
+              : 'pending',
+        actionText: reworkStep === 'GPS' ? 'Xác minh lại vị trí GPS tại gốc cây' : 'Xác thực vị trí GPS tại gốc cây',
+      },
+      {
+        key: 'QR',
+        label: 'Mã QR',
+        done: isQrDone && reworkStep !== 'QR',
+        isCurrent: !isStaffSubmitted && rawNextStep === 'QR',
+        status:
+          isQrDone && reworkStep !== 'QR' ? 'done' : rawNextStep === 'QR' && !isStaffSubmitted ? 'current' : 'pending',
+        actionText: reworkStep === 'QR' ? 'Quét lại mã QR thân cây' : 'Quét mã QR thân cây',
+      },
+      {
+        key: 'CHECKLIST',
+        label: 'Nhiệm vụ',
+        done: isChecklistDone && reworkStep !== 'CHECKLIST',
+        isCurrent: !isStaffSubmitted && rawNextStep === 'CHECKLIST',
+        status:
+          isChecklistDone && reworkStep !== 'CHECKLIST'
+            ? 'done'
+            : rawNextStep === 'CHECKLIST' && !isStaffSubmitted
+              ? 'current'
+              : 'pending',
+        actionText:
+          reworkStep === 'CHECKLIST' ? 'Kiểm tra lại danh mục công việc' : 'Thực hiện kiểm tra danh mục công việc',
+      },
+    ];
+    const activeActionText = isStaffSubmitted
+      ? 'Đã gửi định vị — Chờ Giám sát chụp ảnh'
+      : rawNextStep === 'REVIEW'
+        ? isStaffRework
+          ? 'Nộp lại xác nhận hiện trường'
+          : 'Gửi định vị GPS & Xác nhận hoàn thành'
+        : (steps.find((s) => s.isCurrent)?.actionText ?? 'Tiếp tục thực hiện nhiệm vụ');
+
+    return {
+      nextStep: isStaffSubmitted ? null : nextStep,
+      isComplete: completedCount === 3,
+      isSubmittedOrCompleted: isStaffSubmitted,
+      proofCount: completedCount,
+      completedCount,
+      totalRequired: 3,
+      readyToSubmit: completedCount === 3 && (!task.staffCompletedAt || isStaffRework),
+      activeActionText,
+      steps,
+    };
+  }
+
+  if (role === 'Supervisor') {
+    const completedCount = [isSupervisorGpsDone, isBeforeDone, isAfterDone].filter(Boolean).length;
+    const steps: TaskProofStepInfo[] = [
+      {
+        key: 'GPS',
+        label: 'Vị trí GS',
+        done: isSupervisorGpsDone,
+        isCurrent: !isSubmittedOrCompleted && rawNextStep === 'GPS',
+        status: isSupervisorGpsDone ? 'done' : rawNextStep === 'GPS' && !isSubmittedOrCompleted ? 'current' : 'pending',
+        actionText: 'Xác thực vị trí GPS Giám sát',
+      },
+      {
+        key: 'BEFORE',
+        label: 'Ảnh trước',
+        done: isBeforeDone,
+        isCurrent: !isSubmittedOrCompleted && rawNextStep === 'BEFORE',
+        status: isBeforeDone ? 'done' : rawNextStep === 'BEFORE' && !isSubmittedOrCompleted ? 'current' : 'pending',
+        actionText: 'Chụp ảnh hiện trạng trước xử lý',
+      },
+      {
+        key: 'AFTER',
+        label: 'Ảnh sau',
+        done: isAfterDone,
+        isCurrent: !isSubmittedOrCompleted && rawNextStep === 'AFTER',
+        status: isAfterDone ? 'done' : rawNextStep === 'AFTER' && !isSubmittedOrCompleted ? 'current' : 'pending',
+        actionText: 'Chụp ảnh nghiệm thu sau xử lý',
+      },
+    ];
+    const activeActionText = isSubmittedOrCompleted
+      ? 'Đã gửi bằng chứng cho Quản lý'
+      : rawNextStep === 'REVIEW'
+        ? 'Gửi bằng chứng giám sát'
+        : (steps.find((s) => s.isCurrent)?.actionText ?? 'Chụp bằng chứng giám sát');
+
+    return {
+      nextStep,
+      isComplete: completedCount === 3,
+      isSubmittedOrCompleted,
+      proofCount: completedCount,
+      completedCount,
+      totalRequired: 3,
+      readyToSubmit: Boolean(task.staffCompletedAt) && completedCount === 3,
+      activeActionText,
+      steps,
+    };
+  }
 
   const proofCount = [isGpsDone, isQrDone, isBeforeDone, isChecklistDone, isAfterDone].filter(Boolean).length;
 
@@ -303,7 +475,9 @@ export const getTaskProofWorkflowState = (task: Task): TaskProofWorkflowState =>
     isComplete: proofCount === 5,
     isSubmittedOrCompleted,
     proofCount,
+    completedCount: proofCount,
     totalRequired: 5,
+    readyToSubmit: proofCount === 5,
     activeActionText,
     steps,
   };

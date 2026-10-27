@@ -1,5 +1,6 @@
 import type { AuthSession, LoginRequest, LoginResponse, RefreshTokenRequest } from '@novyx/contracts';
 import { loadStoredAuthSession, saveAuthSession, clearAuthSession } from './authSessionStore';
+import { fetchWithDevFallback } from './mobileApiClient';
 
 export interface ISecureSessionStorage {
   loadSession(): Promise<AuthSession | null>;
@@ -102,10 +103,9 @@ export class AuthSessionManager implements IAuthSessionManager {
   }
 
   async login(request: LoginRequest): Promise<AuthSession> {
-    const url = `${this.apiBaseUrl}/v1/auth/login`;
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await fetchWithDevFallback(this.apiBaseUrl, '/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,14 +160,13 @@ export class AuthSessionManager implements IAuthSessionManager {
           throw new AuthSessionError('No refresh token available to rotate', 'UNAUTHENTICATED', 401);
         }
 
-        const url = `${this.apiBaseUrl}/v1/auth/refresh`;
         const body: RefreshTokenRequest = {
           refreshToken: currentSession.refreshToken,
         };
 
         let response: Response;
         try {
-          response = await fetch(url, {
+          response = await fetchWithDevFallback(this.apiBaseUrl, '/v1/auth/refresh', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

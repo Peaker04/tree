@@ -74,6 +74,86 @@ export class OutboxCoordinator {
     this.db = db;
   }
 
+  private async dispatchSingleItem(item: OutboxItem): Promise<OutboxDispatchResult> {
+    // Mark status as SYNCING before dispatch
+    await this.repository.updateItemSyncStatus(item.id, 'SYNCING');
+
+    try {
+      const response = await this.dispatcher.dispatch(item);
+
+      if (response.success) {
+        // Section 21 & 30: Success reconciliation
+        if (this.taskRepo && response.serverTask) {
+          await this.taskRepo.cacheTasks([response.serverTask as TaskDto]);
+        }
+
+        if (this.db) {
+          await this.db.withTransactionAsync(async () => {
+            const now = new Date().toISOString();
+            await this.db!.runAsync(
+              `UPDATE local_drafts SET submission_status = 'IDLE', updated_at = ? WHERE task_id = ?;`,
+              [now, item.taskId],
+            );
+            await this.db!.runAsync(`UPDATE local_evidence SET sync_status = 'SYNCED' WHERE task_id = ?;`, [
+              item.taskId,
+            ]);
+            await this.repository.markCompleted(item.id);
+          });
+        } else {
+          await this.repository.markCompleted(item.id);
+        }
+
+        return {
+          outboxId: item.id,
+          idempotencyKey: item.idempotencyKey,
+          success: true,
+          httpStatus: response.status ?? 200,
+          serverTask: response.serverTask,
+        };
+      } else {
+        // Dispatcher reported failure
+        const classification = classifyError(response);
+
+        // Section 27: Conflict reconciliation (409)
+        // If serverTask was provided from authoritative fetch/conflict, reconcile cached task state
+        if (classification === 'CONFLICT' && this.taskRepo && response.serverTask) {
+          await this.taskRepo.cacheTasks([response.serverTask as TaskDto]);
+        }
+
+        await this.repository.updateItemSyncStatus(
+          item.id,
+          'SYNC_FAILED',
+          response.error ?? 'Unknown dispatch failure',
+          classification,
+        );
+
+        // P13W5A-N09 Invariant: Local evidence metadata is NEVER deleted on sync failure
+        return {
+          outboxId: item.id,
+          idempotencyKey: item.idempotencyKey,
+          success: false,
+          httpStatus: response.status,
+          error: response.error,
+          classification,
+        };
+      }
+    } catch (dispatchErr) {
+      const classification = classifyError(dispatchErr);
+      const errorMessage = dispatchErr instanceof Error ? dispatchErr.message : String(dispatchErr);
+
+      await this.repository.updateItemSyncStatus(item.id, 'SYNC_FAILED', errorMessage, classification);
+
+      // P13W5A-N09 Invariant: Local evidence is preserved
+      return {
+        outboxId: item.id,
+        idempotencyKey: item.idempotencyKey,
+        success: false,
+        error: errorMessage,
+        classification,
+      };
+    }
+  }
+
   /**
    * Serialized single executor:
    * Enforces that only one worker/execution processes an outbox item at a time.
@@ -92,83 +172,27 @@ export class OutboxCoordinator {
         return null;
       }
 
-      // Mark status as SYNCING before dispatch
-      await this.repository.updateItemSyncStatus(item.id, 'SYNCING');
+      return await this.dispatchSingleItem(item);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
 
-      try {
-        const response = await this.dispatcher.dispatch(item);
+  /**
+   * Process a specific outbox item by ID when FIFO queue is blocked by an older task's failure.
+   */
+  async processItemById(outboxId: string): Promise<OutboxDispatchResult | null> {
+    if (this.isProcessing) {
+      return null;
+    }
 
-        if (response.success) {
-          // Section 21 & 30: Success reconciliation
-          if (this.taskRepo && response.serverTask) {
-            await this.taskRepo.cacheTasks([response.serverTask as TaskDto]);
-          }
-
-          if (this.db) {
-            await this.db.withTransactionAsync(async () => {
-              const now = new Date().toISOString();
-              await this.db!.runAsync(
-                `UPDATE local_drafts SET submission_status = 'IDLE', updated_at = ? WHERE task_id = ?;`,
-                [now, item.taskId],
-              );
-              await this.db!.runAsync(`UPDATE local_evidence SET sync_status = 'SYNCED' WHERE task_id = ?;`, [
-                item.taskId,
-              ]);
-              await this.repository.markCompleted(item.id);
-            });
-          } else {
-            await this.repository.markCompleted(item.id);
-          }
-
-          return {
-            outboxId: item.id,
-            idempotencyKey: item.idempotencyKey,
-            success: true,
-            httpStatus: response.status ?? 200,
-            serverTask: response.serverTask,
-          };
-        } else {
-          // Dispatcher reported failure
-          const classification = classifyError(response);
-
-          // Section 27: Conflict reconciliation (409)
-          // If serverTask was provided from authoritative fetch/conflict, reconcile cached task state
-          if (classification === 'CONFLICT' && this.taskRepo && response.serverTask) {
-            await this.taskRepo.cacheTasks([response.serverTask as TaskDto]);
-          }
-
-          await this.repository.updateItemSyncStatus(
-            item.id,
-            'SYNC_FAILED',
-            response.error ?? 'Unknown dispatch failure',
-            classification,
-          );
-
-          // P13W5A-N09 Invariant: Local evidence metadata is NEVER deleted on sync failure
-          return {
-            outboxId: item.id,
-            idempotencyKey: item.idempotencyKey,
-            success: false,
-            httpStatus: response.status,
-            error: response.error,
-            classification,
-          };
-        }
-      } catch (dispatchErr) {
-        const classification = classifyError(dispatchErr);
-        const errorMessage = dispatchErr instanceof Error ? dispatchErr.message : String(dispatchErr);
-
-        await this.repository.updateItemSyncStatus(item.id, 'SYNC_FAILED', errorMessage, classification);
-
-        // P13W5A-N09 Invariant: Local evidence is preserved
-        return {
-          outboxId: item.id,
-          idempotencyKey: item.idempotencyKey,
-          success: false,
-          error: errorMessage,
-          classification,
-        };
+    this.isProcessing = true;
+    try {
+      const item = await this.repository.getItemById(outboxId);
+      if (!item || item.syncStatus === 'SYNCED') {
+        return null;
       }
+      return await this.dispatchSingleItem(item);
     } finally {
       this.isProcessing = false;
     }

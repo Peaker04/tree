@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, ListRow, Notice, ScreenHeader } from '../../components/AppPrimitives';
 import { colors, layout, radius, spacing, typography } from '../../theme/tokens';
@@ -48,7 +48,7 @@ export function StaffHome({
   onStartTaskProof,
 }: StaffHomeProps) {
   const actionable = actionableTaskCount ?? Math.max(0, openTaskCount - waitingReviewCount);
-  const workflow = nextTask ? getTaskProofWorkflowState(nextTask) : null;
+  const workflow = nextTask ? getTaskProofWorkflowState(nextTask, 'Staff') : null;
   const hasAssignments = totalTasks > 0;
 
   const summary = loading
@@ -78,7 +78,15 @@ export function StaffHome({
             };
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.screen}
+      refreshControl={
+        onRetry ? (
+          <RefreshControl refreshing={Boolean(loading)} onRefresh={onRetry} tintColor={colors.primaryDark} />
+        ) : undefined
+      }
+    >
       <ScreenHeader
         title="Trang chủ"
         subtitle={isOffline ? 'Ca làm việc · dữ liệu đã lưu' : 'Ca làm việc hiện tại'}

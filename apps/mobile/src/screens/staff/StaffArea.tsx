@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, Card, EmptyState } from '../../components/AppPrimitives';
@@ -8,6 +8,8 @@ import {
   filterTrees,
   getNextActionTask,
   getNextProofStep,
+  isTaskAwaitingSupervisor,
+  sanitizeNotificationText,
   StaffStep,
   TaskFilter,
   TreeFilter,
@@ -59,6 +61,7 @@ export function StaffArea(props: {
   reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<Task>;
   resubmitRework: (request: ResubmitReworkRequest) => Promise<Task>;
   submitTaskEvidence: (task: Task) => Promise<Task>;
+  submitStaffCheckin?: (task: Task) => Promise<Task>;
   createNotification: (request: CreateNotificationRequest) => Promise<AppNotification>;
   markNotificationsRead: (
     notificationIds: string[],
@@ -78,27 +81,67 @@ export function StaffArea(props: {
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread'>('all');
   const [mapReturnStep, setMapReturnStep] = useState<StaffStep>('MY_TREES');
   const [markingNotifications, setMarkingNotifications] = useState(false);
-  const staffTasks = props.authenticatedStaffId
-    ? props.tasks.filter((task) => task.assignedStaffId === props.authenticatedStaffId)
-    : [];
-  const openTasks = staffTasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED');
-  const completedTasks = staffTasks.filter((task) => task.status === TaskStatus.COMPLETED);
-  const waitingReviewTasks = staffTasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW);
-  const actionableTasks = staffTasks.filter(
-    (task) =>
-      task.status === TaskStatus.PENDING ||
-      task.status === TaskStatus.IN_PROGRESS ||
-      task.status === TaskStatus.REWORK_REQUIRED,
+  const isStaffActionableTask = useCallback(
+    (task: Task) =>
+      ((task.status === TaskStatus.PENDING || task.status === TaskStatus.IN_PROGRESS) &&
+        !task.staffCompletedAt &&
+        !isTaskAwaitingSupervisor(task)) ||
+      (task.status === TaskStatus.REWORK_REQUIRED && ['GPS', 'QR', 'CHECKLIST'].includes(task.reworkTarget ?? '')),
+    [],
   );
-  const visibleTasks = filterTasks(staffTasks, taskFilter);
+
+  const staffTasks = useMemo(
+    () => (props.authenticatedStaffId ? props.tasks.filter((task) => task.assignedStaffId === props.authenticatedStaffId) : []),
+    [props.authenticatedStaffId, props.tasks],
+  );
+
+  const openTasks = useMemo(
+    () => staffTasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED'),
+    [staffTasks],
+  );
+
+  const completedTasks = useMemo(
+    () => staffTasks.filter((task) => task.status === TaskStatus.COMPLETED),
+    [staffTasks],
+  );
+
+  const waitingReviewTasks = useMemo(
+    () => staffTasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW),
+    [staffTasks],
+  );
+
+  const actionableTasks = useMemo(
+    () => staffTasks.filter(isStaffActionableTask),
+    [isStaffActionableTask, staffTasks],
+  );
+
+  const visibleTasks = useMemo(
+    () =>
+      [...filterTasks(staffTasks, taskFilter)].sort((a, b) => {
+        const aActionable = isStaffActionableTask(a) ? 0 : 1;
+        const bActionable = isStaffActionableTask(b) ? 0 : 1;
+        if (aActionable !== bActionable) return aActionable - bActionable;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }),
+    [isStaffActionableTask, staffTasks, taskFilter],
+  );
+
   const completed = completedTasks.length;
-  const assignedTreeIds = new Set(staffTasks.map((task) => task.treeId));
-  const assignedTrees = props.trees.filter((tree) => assignedTreeIds.has(tree.id));
-  const visibleAssignedTrees = filterTrees(assignedTrees, staffTreeQuery, staffTreeFilter);
+
+  const assignedTrees = useMemo(() => {
+    const assignedTreeIds = new Set(staffTasks.map((task) => task.treeId));
+    return props.trees.filter((tree) => assignedTreeIds.has(tree.id));
+  }, [props.trees, staffTasks]);
+
+  const visibleAssignedTrees = useMemo(
+    () => filterTrees(assignedTrees, staffTreeQuery, staffTreeFilter),
+    [assignedTrees, staffTreeFilter, staffTreeQuery],
+  );
+
   const waitingReview = waitingReviewTasks.length;
   const completionRate = Math.round((completed / Math.max(staffTasks.length, 1)) * 100);
-  const nextTask = getNextActionTask(staffTasks);
-  const unreadNotifications = props.notifications.filter((notification) => !notification.read);
+  const nextTask = useMemo(() => getNextActionTask(actionableTasks), [actionableTasks]);
+  const unreadNotifications = useMemo(() => props.notifications.filter((notification) => !notification.read), [props.notifications]);
   const visibleNotifications = notificationFilter === 'unread' ? unreadNotifications : props.notifications;
 
   if (props.step === 'HOME') {
@@ -141,7 +184,7 @@ export function StaffArea(props: {
             }
           }
           props.setActiveTask(currentTask);
-          props.setStep(getNextProofStep(currentTask));
+          props.setStep(getNextProofStep(currentTask, 'Staff'));
         }}
       />
     );
@@ -155,6 +198,8 @@ export function StaffArea(props: {
         staffTasks={staffTasks}
         query={staffTreeQuery}
         activeFilter={staffTreeFilter}
+        loading={props.dataSource?.loading}
+        onRefresh={props.onRefreshData}
         getCareHistoryByTree={props.getCareHistoryByTree}
         loadCareHistoryByTree={props.loadCareHistoryByTree}
         onQueryChange={setStaffTreeQuery}
@@ -179,6 +224,8 @@ export function StaffArea(props: {
         visibleTasks={visibleTasks}
         totalTasks={staffTasks.length}
         activeFilter={taskFilter}
+        loading={props.dataSource?.loading}
+        onRefresh={props.onRefreshData}
         onFilterChange={setTaskFilter}
         onOpenTask={(task) => {
           props.setActiveTask(task);
@@ -203,9 +250,13 @@ export function StaffArea(props: {
 
   if (props.step === 'NOTIFICATIONS') {
     return (
-      <ScrollView contentContainerStyle={styles.screenPad}>
-        <Header title="Thông báo" subtitle="Cập nhật nhiệm vụ và kiểm duyệt hiện trường" />
-        <Card style={styles.taskFilterPanel}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
+        <Header
+          title="Thông báo"
+          subtitle="Cập nhật nhiệm vụ và kiểm duyệt hiện trường"
+          onBack={() => props.setStep('HOME')}
+        />
+        <View style={styles.taskFilterPanel}>
           <View style={styles.rowBetween}>
             <HeaderLabel />
             {unreadNotifications.length > 0 ? (
@@ -247,7 +298,7 @@ export function StaffArea(props: {
               </Pressable>
             ))}
           </View>
-        </Card>
+        </View>
         {props.notifications.length === 0 ? (
           <EmptyState
             title="Không có thông báo mới"
@@ -285,7 +336,7 @@ export function StaffArea(props: {
                     {NOTIFICATION_TYPE_META[notification.type]?.label ?? 'Thông báo'}
                   </Badge>
                 </View>
-                <Text style={styles.bodyText}>{notification.body}</Text>
+                <Text style={styles.bodyText}>{sanitizeNotificationText(notification.body)}</Text>
                 <Text style={styles.monoSmall}>
                   {new Date(notification.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                 </Text>
@@ -300,6 +351,7 @@ export function StaffArea(props: {
 
   const proof = (
     <StaffProofFlow
+      role="Staff"
       step={props.step}
       setStep={props.setStep}
       activeTask={props.activeTask}
@@ -320,6 +372,7 @@ export function StaffArea(props: {
       lookupTreeByQr={props.lookupTreeByQr}
       startTask={props.startTask}
       submitTaskEvidence={props.submitTaskEvidence}
+      submitStaffCheckin={props.submitStaffCheckin}
       reportFieldIssue={props.reportFieldIssue}
       resubmitRework={props.resubmitRework}
       createNotification={props.createNotification}
@@ -363,9 +416,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   taskFilterPanel: {
-    gap: 12,
-    backgroundColor: colors.cardWarm,
-    borderColor: colors.border,
+    gap: 10,
   },
   reasonChips: {
     flexDirection: 'row',
@@ -373,26 +424,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
-    minHeight: 36,
+    minHeight: 44,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.hairlineBorder,
     backgroundColor: colors.card,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filterChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
+    borderColor: colors.successBorder,
+    backgroundColor: colors.successSurface,
   },
   filterChipText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
+    color: colors.pewter,
+    fontSize: 13,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: colors.primaryDark,
+    color: colors.successText,
   },
   sectionTitle: {
     flexDirection: 'row',
@@ -400,32 +451,32 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   sectionTitleText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
+    color: colors.pewter,
+    fontSize: 13,
     fontWeight: '600',
   },
   listCard: {
     gap: 10,
   },
   itemTitle: {
-    color: colors.foreground,
-    fontSize: 14,
+    color: colors.ink,
+    fontSize: 15,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 21,
   },
   bodyText: {
-    color: colors.mutedForeground,
-    fontSize: 12,
-    lineHeight: 18,
+    color: colors.pewter,
+    fontSize: 13,
+    lineHeight: 19,
   },
   monoSmall: {
-    color: colors.muted,
-    fontSize: 10,
+    color: colors.pewter,
+    fontSize: 12,
     fontWeight: '500',
   },
   linkText: {
     color: colors.primaryDark,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

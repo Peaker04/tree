@@ -25,6 +25,7 @@ import type {
   ReassignTaskRequest,
   ResubmitReworkRequest,
   StartTaskRequest,
+  StaffExecutionSubmitRequest,
 } from '@novyx/contracts';
 import { readPublicRuntimeConfig } from '@novyx/config';
 import type { IAuthSessionManager } from './authSessionManager';
@@ -57,6 +58,7 @@ export interface GreenOpsService {
   createTask: (request: CanonicalCreateTaskRequest) => Promise<TaskMutationResult>;
   createTree: (request: CreateTreeInput) => Promise<Tree>;
   startTask: (request: StartTaskRequest) => Promise<TaskMutationResult>;
+  submitStaffCheckin: (request: StaffExecutionSubmitRequest & { taskId: string }) => Promise<TaskMutationResult>;
   reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<TaskMutationResult>;
   resumeBlockedTask: (request: ResumeBlockedTaskRequest) => Promise<TaskMutationResult>;
   reassignTask: (request: ReassignTaskRequest) => Promise<TaskMutationResult>;
@@ -113,6 +115,7 @@ export interface GreenOpsRestService {
   createTask: (request: CanonicalCreateTaskRequest) => Promise<TaskDto>;
   createTree: (request: CreateTreeInput) => Promise<TreeDto>;
   startTask: (request: StartTaskRequest) => Promise<TaskDto>;
+  submitStaffCheckin: (request: StaffExecutionSubmitRequest & { taskId: string }) => Promise<TaskDto>;
   reportFieldIssue: (request: ReportFieldIssueRequest) => Promise<TaskDto>;
   resumeBlockedTask: (request: ResumeBlockedTaskRequest) => Promise<TaskDto>;
   reassignTask: (request: ReassignTaskRequest) => Promise<TaskDto>;
@@ -245,6 +248,7 @@ const cloneTasks = (tasks: Task[]): Task[] =>
     ...task,
     status: normalizeMobileTaskStatus(task.status),
     ...(task.gpsCheck ? { gpsCheck: cloneGpsCheck(task.gpsCheck) } : {}),
+    ...(task.supervisorGpsCheck ? { supervisorGpsCheck: cloneGpsCheck(task.supervisorGpsCheck) } : {}),
     ...(task.qrCheck ? { qrCheck: cloneQrCheck(task.qrCheck) } : {}),
     ...(task.evidence ? { evidence: buildTaskEvidenceItems(task) } : {}),
     checklist: (task.checklist ?? []).map((check) => ({ ...check })),
@@ -295,6 +299,7 @@ const findTreeInSnapshot = (snapshot: AppData, payload: string) =>
 
 const mapSessionRole = (session: AuthSession): Role | 'UNSUPPORTED' => {
   if (session.user.role === 'staff') return 'Staff';
+  if (session.user.role === 'supervisor') return 'Supervisor';
   if (session.user.role === 'manager') return 'Manager';
   return 'UNSUPPORTED';
 };
@@ -366,6 +371,34 @@ export function createHybridGreenOpsService(
                 read: false,
                 type: needsRework ? 'warning' : 'success',
                 taskId: latestReviewedTask.id,
+              },
+              ...notifications,
+            ];
+          }
+        } else if (activeSession?.user.role === 'supervisor') {
+          const latestSupervisorTask = nextTasks
+            .filter(
+              (task) =>
+                (task.status === TaskStatus.IN_PROGRESS &&
+                  Boolean(task.staffCompletedAt) &&
+                  (!task.beforePhoto || !task.afterPhoto)) ||
+                task.status === TaskStatus.REWORK_REQUIRED,
+            )
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+
+          if (latestSupervisorTask && !notifications.some((item) => item.taskId === latestSupervisorTask.id)) {
+            const needsRework = latestSupervisorTask.status === TaskStatus.REWORK_REQUIRED;
+            notifications = [
+              {
+                id: `sup-${latestSupervisorTask.id}-${latestSupervisorTask.version}`,
+                title: needsRework ? 'Yêu cầu chụp lại bằng chứng' : 'Chờ Giám sát chụp ảnh Trước & Sau',
+                body: needsRework
+                  ? `${latestSupervisorTask.title}: ${latestSupervisorTask.rejectReason ?? 'Quản lý yêu cầu chụp bổ sung bằng chứng.'}`
+                  : `Nhân viên ${latestSupervisorTask.assignedStaffName} đã xác nhận GPS & Checklist cho "${latestSupervisorTask.title}".`,
+                timestamp: latestSupervisorTask.updatedAt,
+                read: false,
+                type: needsRework ? 'warning' : 'info',
+                taskId: latestSupervisorTask.id,
               },
               ...notifications,
             ];
@@ -469,6 +502,11 @@ export function createHybridGreenOpsService(
     },
     startTask: async (request) => {
       const task = await restService.startTask(request);
+      snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
+      return { data: cloneTasks([task])[0], source: 'rest' };
+    },
+    submitStaffCheckin: async (request) => {
+      const task = await restService.submitStaffCheckin(request);
       snapshot = { ...snapshot, tasks: upsertTask(snapshot.tasks, task) };
       return { data: cloneTasks([task])[0], source: 'rest' };
     },
@@ -584,6 +622,8 @@ export function createGreenOpsRestService(
         description: request.description,
         treeId: request.treeId,
         assignedStaffId: request.assignedStaffId,
+        ...(request.assignedSupervisorId ? { assignedSupervisorId: request.assignedSupervisorId } : {}),
+        ...(request.assignedSupervisorName ? { assignedSupervisorName: request.assignedSupervisorName } : {}),
         deadline: request.deadline,
         ...(request.dateRange ? { dateRange: request.dateRange } : {}),
         ...(request.scope ? { scope: request.scope } : {}),
@@ -601,6 +641,12 @@ export function createGreenOpsRestService(
     startTask: async (request) => {
       const { taskId, ...body } = request;
       return await client.post<TaskDto>(`/v1/tasks/${taskId}/start`, body, { idempotencyKey: generateSecureUuid() });
+    },
+    submitStaffCheckin: async (request) => {
+      const { taskId, ...body } = request;
+      return await client.post<TaskDto>(`/v1/tasks/${taskId}/staff-checkin`, body, {
+        idempotencyKey: generateSecureUuid(),
+      });
     },
     reportFieldIssue: async (request) => {
       const { taskId, ...body } = request;

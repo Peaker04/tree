@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, Field, ListRow, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
 import { getTaskProofGaps, getTreeRiskStatus, isTaskOverdue } from '../../domain/mobileWorkflow';
@@ -16,6 +16,7 @@ export function ManagerDashboard(props: ManagerAreaProps) {
   const pendingReview = props.tasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW);
   const blocked = props.tasks.filter((task) => task.status === 'BLOCKED');
   const overdue = props.tasks.filter(isTaskOverdue);
+  const actionableOverdue = overdue.filter((task) => task.status !== TaskStatus.WAITING_REVIEW);
   const riskyTrees = props.trees.filter((tree) => getTreeRiskStatus(tree) !== 'healthy');
   const incompleteReview = pendingReview.filter((task) => getTaskProofGaps(task).length > 0);
   const open = props.tasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED').length;
@@ -88,7 +89,19 @@ export function ManagerDashboard(props: ManagerAreaProps) {
             };
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.screen}
+      refreshControl={
+        props.onRefreshData ? (
+          <RefreshControl
+            refreshing={Boolean(props.dataSource?.loading)}
+            onRefresh={() => void props.onRefreshData?.()}
+            tintColor={colors.primaryDark}
+          />
+        ) : undefined
+      }
+    >
       <ScreenHeader title="Tổng quan" subtitle="Ưu tiên vận hành cần xử lý" />
 
       {props.dataSource?.source !== 'rest' ? (
@@ -374,10 +387,10 @@ export function ManagerDashboard(props: ManagerAreaProps) {
         </View>
       ) : null}
 
-      {(riskyTrees.length > 0 || overdue.length > 0) && (
+      {(riskyTrees.length > 0 || actionableOverdue.length > 0) && (
         <View style={styles.section}>
           <SectionTitle icon="alert-circle-outline">Ngoại lệ cần chú ý</SectionTitle>
-          {overdue.slice(0, 2).map((task) => (
+          {actionableOverdue.slice(0, 2).map((task) => (
             <ListRow
               key={`overdue-${task.id}`}
               icon="time-outline"
@@ -603,8 +616,8 @@ const styles = StyleSheet.create({
   },
   metricPillLabel: {
     ...typography.metadata,
-    fontSize: 11,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 15,
     color: colors.pewter,
     textAlign: 'center',
   },

@@ -104,7 +104,8 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
   }
 
   async persistEvidence(input: SaveEvidenceInput): Promise<PersistedEvidenceFile> {
-    const FileSystem = await import('expo-file-system/legacy');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem: typeof import('expo-file-system/legacy') = require('expo-file-system/legacy');
 
     const docDir = FileSystem.documentDirectory;
     if (!docDir) {
@@ -152,7 +153,8 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
   }
 
   async fileExists(fileUri: string): Promise<boolean> {
-    const FileSystem = await import('expo-file-system/legacy');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem: typeof import('expo-file-system/legacy') = require('expo-file-system/legacy');
     const info = await FileSystem.getInfoAsync(fileUri);
     return info.exists;
   }
@@ -165,7 +167,8 @@ export class ExpoEvidenceFileStore implements IEvidenceFileStore {
     if (!this.canSafelyDeleteEvidence(params)) {
       return false;
     }
-    const FileSystem = await import('expo-file-system/legacy');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem: typeof import('expo-file-system/legacy') = require('expo-file-system/legacy');
     await FileSystem.deleteAsync(fileUri, { idempotent: true });
     return true;
   }

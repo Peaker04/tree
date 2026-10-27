@@ -100,7 +100,8 @@ export class NodeEvidenceHasher implements IEvidenceHasher {
  */
 export class ExpoEvidenceHasher implements IEvidenceHasher {
   async hashBytes(data: Uint8Array | ArrayBuffer | Buffer): Promise<string> {
-    const Crypto = await import('expo-crypto');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Crypto: typeof import('expo-crypto') = require('expo-crypto');
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
     const digestArrayBuffer = await Crypto.digest(
       Crypto.CryptoDigestAlgorithm.SHA256,
@@ -110,7 +111,8 @@ export class ExpoEvidenceHasher implements IEvidenceHasher {
   }
 
   async hashFile(fileUri: string): Promise<string> {
-    const FileSystem = await import('expo-file-system/legacy');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem: typeof import('expo-file-system/legacy') = require('expo-file-system/legacy');
     // Read file as Base64 to transport binary data from OS sandbox safely
     const base64 = await FileSystem.readAsStringAsync(fileUri, {
       encoding: FileSystem.EncodingType.Base64,

@@ -46,49 +46,25 @@ export class SqliteMobileTaskRepository implements IMobileTaskRepository {
   }
 
   async cacheTasks(tasks: Array<TaskDto | CanonicalTaskDto>): Promise<void> {
+    if (tasks.length === 0) return;
     const now = new Date().toISOString();
-    await this.db.withTransactionAsync(async () => {
-      for (const task of tasks) {
-        const raw = task as unknown as Record<string, unknown>;
-        const taskTypeId = (raw.taskTypeId ?? raw.taskType ?? null) as string | null;
-        const taskTypeName = (raw.taskTypeName ?? raw.taskType ?? null) as string | null;
-        const proofProfile = (raw.proofProfile ?? null) as string | null;
-        const priority = (raw.priority ?? null) as string | null;
+    const CHUNK_SIZE = 25;
 
-        await this.db.runAsync(
-          `INSERT INTO cached_tasks (
-            id,
-            tree_id,
-            task_type_id,
-            task_type_name,
-            status,
-            assigned_staff_id,
-            assigned_staff_name,
-            deadline,
-            version,
-            proof_profile,
-            title,
-            description,
-            priority,
-            raw_json,
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET
-            tree_id = excluded.tree_id,
-            task_type_id = excluded.task_type_id,
-            task_type_name = excluded.task_type_name,
-            status = excluded.status,
-            assigned_staff_id = excluded.assigned_staff_id,
-            assigned_staff_name = excluded.assigned_staff_name,
-            deadline = excluded.deadline,
-            version = excluded.version,
-            proof_profile = excluded.proof_profile,
-            title = excluded.title,
-            description = excluded.description,
-            priority = excluded.priority,
-            raw_json = excluded.raw_json,
-            updated_at = excluded.updated_at;`,
-          [
+    await this.db.withTransactionAsync(async () => {
+      for (let i = 0; i < tasks.length; i += CHUNK_SIZE) {
+        const chunk = tasks.slice(i, i + CHUNK_SIZE);
+        const valuePlaceholders: string[] = [];
+        const params: unknown[] = [];
+
+        for (const task of chunk) {
+          const raw = task as unknown as Record<string, unknown>;
+          const taskTypeId = (raw.taskTypeId ?? raw.taskType ?? null) as string | null;
+          const taskTypeName = (raw.taskTypeName ?? raw.taskType ?? null) as string | null;
+          const proofProfile = (raw.proofProfile ?? null) as string | null;
+          const priority = (raw.priority ?? null) as string | null;
+
+          valuePlaceholders.push('(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+          params.push(
             task.id,
             task.treeId,
             taskTypeId,
@@ -104,8 +80,45 @@ export class SqliteMobileTaskRepository implements IMobileTaskRepository {
             priority,
             JSON.stringify(task),
             now,
-          ],
-        );
+          );
+        }
+
+        const query = `
+          INSERT INTO cached_tasks (
+            id,
+            tree_id,
+            task_type_id,
+            task_type_name,
+            status,
+            assigned_staff_id,
+            assigned_staff_name,
+            deadline,
+            version,
+            proof_profile,
+            title,
+            description,
+            priority,
+            raw_json,
+            updated_at
+          ) VALUES ${valuePlaceholders.join(', ')}
+          ON CONFLICT(id) DO UPDATE SET
+            tree_id = excluded.tree_id,
+            task_type_id = excluded.task_type_id,
+            task_type_name = excluded.task_type_name,
+            status = excluded.status,
+            assigned_staff_id = excluded.assigned_staff_id,
+            assigned_staff_name = excluded.assigned_staff_name,
+            deadline = excluded.deadline,
+            version = excluded.version,
+            proof_profile = excluded.proof_profile,
+            title = excluded.title,
+            description = excluded.description,
+            priority = excluded.priority,
+            raw_json = excluded.raw_json,
+            updated_at = excluded.updated_at;
+        `;
+
+        await this.db.runAsync(query, params);
       }
     });
   }

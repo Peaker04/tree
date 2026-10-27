@@ -239,7 +239,7 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(taskSurfaces).toContain('color={colors.foreground}');
     expect(taskSurfaces).toContain('Đã quét đúng cây được giao');
 
-    expect(proofFlow).toContain('<ScrollView contentContainerStyle={[styles.screenPad, styles.mapScreen]}>');
+    expect(proofFlow).toContain('<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>');
     expect(proofFlow).not.toContain('provider={providerGoogle}');
     expect(proofFlow).toContain('region={mapRegion}');
     expect(proofFlow).toContain('title="Vị trí thiết bị"');
@@ -633,5 +633,34 @@ describe('NOVYX mobile UI foundation contract', () => {
 
     expect(bottomNav).toContain("BASE_BAR_HEIGHT = Platform.OS === 'ios' ? 56 : 64");
     expect(bottomNav).not.toContain("BASE_BAR_HEIGHT = Platform.OS === 'ios' ? 82 : 72");
+  });
+
+  it('enforces UI-043: eliminates raw scrollbars across all mobile scrollviews, lists and webviews', () => {
+    const staffHome = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffHome.tsx'),
+      'utf8',
+    );
+    const staffWork = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffWork.tsx'),
+      'utf8',
+    );
+    const staffTrees = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffTrees.tsx'),
+      'utf8',
+    );
+    const managerCreate = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/manager/ManagerCreateTask.tsx'),
+      'utf8',
+    );
+    const webMapView = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/presentation/WebMapView.tsx'),
+      'utf8',
+    );
+
+    expect(staffHome).toContain('showsVerticalScrollIndicator={false}');
+    expect(staffWork).toContain('showsVerticalScrollIndicator={false}');
+    expect(staffTrees).toContain('showsVerticalScrollIndicator={false}');
+    expect(managerCreate).toContain('showsVerticalScrollIndicator={false}');
+    expect(webMapView).toContain('::-webkit-scrollbar { display: none');
   });
 });

@@ -37,6 +37,7 @@ export function LoginScreen({
     <SafeAreaView style={styles.root}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardAvoider}>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.loginWrap}
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
@@ -111,7 +112,7 @@ export function SessionRestoreScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.snowWhite,
   },
   screenPad: {
     padding: spacing.screen,
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 20 + (StatusBar.currentHeight ?? 0) * 0.35 : 22,
     paddingBottom: 16,
     justifyContent: 'flex-start',
-    backgroundColor: colors.background,
+    backgroundColor: colors.snowWhite,
   },
   hero: {
     alignItems: 'flex-start',
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
   },
   brandKicker: {
     color: colors.primaryDark,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   brandBody: {
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   alertText: {
     flex: 1,
     color: colors.danger,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
   },
 
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     color: colors.mutedForeground,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
   },
   successTitle: {

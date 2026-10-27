@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, LayoutAnimation, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, EmptyState, Field, Notice, ScreenHeader, SectionTitle } from '../../components/AppPrimitives';
@@ -134,6 +134,7 @@ export function ManagerTrees(props: ManagerAreaProps) {
   };
 
   const toggleTree = async (treeId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (expandedTreeId === treeId) {
       setExpandedTreeId(null);
       return;
@@ -159,7 +160,17 @@ export function ManagerTrees(props: ManagerAreaProps) {
         data={visibleTrees}
         keyExtractor={(tree) => tree.id}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.screen}
+        refreshControl={
+          props.onRefreshData ? (
+            <RefreshControl
+              refreshing={Boolean(props.dataSource?.loading)}
+              onRefresh={() => void props.onRefreshData?.()}
+              tintColor={colors.primaryDark}
+            />
+          ) : undefined
+        }
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         removeClippedSubviews={Platform.OS === 'android'}
         maxToRenderPerBatch={10}
@@ -174,7 +185,10 @@ export function ManagerTrees(props: ManagerAreaProps) {
                 <Button
                   size="compact"
                   icon={addingTree ? 'close-outline' : 'add-outline'}
-                  onPress={() => setAddingTree(!addingTree)}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setAddingTree(!addingTree);
+                  }}
                 >
                   {addingTree ? 'Đóng' : 'Thêm cây'}
                 </Button>
@@ -353,9 +367,7 @@ export function ManagerTrees(props: ManagerAreaProps) {
                 title={filtered ? 'Không tìm thấy cây phù hợp' : 'Chưa có cây trong phạm vi'}
                 body={filtered ? 'Thử đổi từ khóa hoặc bộ lọc.' : 'Cây sẽ xuất hiện khi được cấp vào phạm vi.'}
               />
-            ) : (
-              <Text style={styles.resultLabel}>{visibleTrees.length} hồ sơ</Text>
-            )}
+            ) : null}
           </View>
         }
         renderItem={({ item: tree }) => {
@@ -439,13 +451,11 @@ function ManagerTreeRow({
             <Text style={styles.treeName}>{tree.name}</Text>
             <Badge tone={healthTone}>{tree.healthStatus}</Badge>
           </View>
-          <Text style={styles.treeSpecies}>{tree.species}</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={15} color={colors.pewter} />
-            <Text style={styles.treeAddress}>{tree.address}</Text>
-          </View>
+          <Text style={styles.treeSpecies} numberOfLines={1}>
+            {tree.species} · {tree.address}
+          </Text>
           {task ? (
-            <Text style={styles.taskRelation} numberOfLines={2}>
+            <Text style={styles.taskRelation} numberOfLines={1}>
               {getTaskStatusMeta(task.status).label}: {task.title}
             </Text>
           ) : (
@@ -457,6 +467,10 @@ function ManagerTreeRow({
 
       {expanded ? (
         <View style={styles.treeDetail}>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={15} color={colors.pewter} />
+            <Text style={styles.treeAddress}>{tree.address}</Text>
+          </View>
           <View style={styles.factRow}>
             <View style={styles.fact}>
               <Text style={styles.factLabel}>Nhãn nhận dạng</Text>
@@ -540,7 +554,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   treeSummary: {
-    minHeight: 112,
+    minHeight: 84,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -559,10 +573,10 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   treeName: { ...typography.section, color: colors.ink, flex: 1 },
   treeSpecies: { ...typography.body, color: colors.pewter, marginTop: 2 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   treeAddress: { ...typography.body, color: colors.neutralText, flex: 1 },
-  taskRelation: { ...typography.label, color: colors.infoText, marginTop: spacing.sm },
-  noTask: { ...typography.label, color: colors.pewter, marginTop: spacing.sm },
+  taskRelation: { ...typography.label, color: colors.infoText, marginTop: spacing.xs },
+  noTask: { ...typography.label, color: colors.pewter, marginTop: spacing.xs },
   treeDetail: {
     gap: spacing.md,
     padding: spacing.md,

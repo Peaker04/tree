@@ -101,6 +101,7 @@ export function TreeScopeSelectorSheet({
           data={filteredTrees}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.treeList}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

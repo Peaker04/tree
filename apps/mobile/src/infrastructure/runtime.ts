@@ -30,7 +30,7 @@ export interface MobileRuntimeOptions {
 }
 
 function isOperationalMobileRole(role?: string): boolean {
-  return role === 'staff' || role === 'manager';
+  return role === 'staff' || role === 'supervisor' || role === 'manager';
 }
 
 export class MobileSyncRuntime {
@@ -117,7 +117,8 @@ export class MobileSyncRuntime {
 
       // 5. Establish NetInfo subscription
       try {
-        const NetInfo = await import('@react-native-community/netinfo');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const NetInfo = require('@react-native-community/netinfo');
         const netInfoMod =
           (
             NetInfo as unknown as {

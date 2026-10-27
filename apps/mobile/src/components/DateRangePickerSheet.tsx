@@ -380,12 +380,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   presetChip: {
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.pill,
     backgroundColor: colors.neutralSurface,
     borderWidth: 1,
     borderColor: colors.hairlineBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   presetChipActive: {
     backgroundColor: colors.successSurface,
@@ -419,8 +422,8 @@ const styles = StyleSheet.create({
     color: colors.forestDepths,
   },
   monthNavBtn: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -515,6 +518,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   shiftCard: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

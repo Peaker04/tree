@@ -2,8 +2,12 @@ import React from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   DimensionValue,
+  Easing,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleProp,
@@ -366,8 +370,9 @@ export function BottomSheetModal({
   maxHeight?: DimensionValue;
 }) {
   const [modalVisible, setModalVisible] = React.useState(visible);
+  const screenHeight = Dimensions.get('window').height || 900;
   const backdropAnim = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const sheetAnim = React.useRef(new Animated.Value(visible ? 0 : 450)).current;
+  const sheetAnim = React.useRef(new Animated.Value(visible ? 0 : screenHeight)).current;
 
   React.useEffect(() => {
     if (visible) {
@@ -376,11 +381,13 @@ export function BottomSheetModal({
         Animated.timing(backdropAnim, {
           toValue: 1,
           duration: 180,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(sheetAnim, {
           toValue: 0,
           duration: 220,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
@@ -388,12 +395,14 @@ export function BottomSheetModal({
       Animated.parallel([
         Animated.timing(backdropAnim, {
           toValue: 0,
-          duration: 100,
+          duration: 140,
+          easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(sheetAnim, {
-          toValue: 450,
-          duration: 140,
+          toValue: screenHeight,
+          duration: 180,
+          easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start(({ finished }) => {
@@ -402,7 +411,7 @@ export function BottomSheetModal({
         }
       });
     }
-  }, [visible, modalVisible, backdropAnim, sheetAnim]);
+  }, [visible, modalVisible, backdropAnim, sheetAnim, screenHeight]);
 
   if (!modalVisible) return null;
 
@@ -437,7 +446,17 @@ export function BottomSheetModal({
               </Pressable>
             </View>
           ) : null}
-          <View style={styles.sheetBody}>{children}</View>
+          {Platform.OS === 'ios' ? (
+            <KeyboardAvoidingView
+              behavior="padding"
+              keyboardVerticalOffset={24}
+              style={styles.sheetBody}
+            >
+              {children}
+            </KeyboardAvoidingView>
+          ) : (
+            <View style={styles.sheetBody}>{children}</View>
+          )}
         </Animated.View>
       </View>
     </Modal>
@@ -485,7 +504,7 @@ const styles = StyleSheet.create({
   textOnDarkMuted: { color: colors.honeydew },
   button: {
     minHeight: controlSize.default,
-    borderRadius: radius.control,
+    borderRadius: radius.card,
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -494,12 +513,12 @@ const styles = StyleSheet.create({
   },
   button_primary: { backgroundColor: colors.primaryDark },
   button_forest: { backgroundColor: colors.forestDepths },
-  button_secondary: { backgroundColor: colors.warningSurface, borderWidth: 1, borderColor: colors.warningBorder },
+  button_secondary: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairlineBorder },
   button_outline: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.neutralBorder },
   button_ghost: { backgroundColor: 'transparent' },
   button_danger: { backgroundColor: colors.criticalSurface, borderWidth: 1, borderColor: colors.criticalBorder },
   buttonSize_default: { minHeight: controlSize.default },
-  buttonSize_compact: { minHeight: controlSize.compact, paddingHorizontal: spacing.md },
+  buttonSize_compact: { minHeight: controlSize.compact, paddingHorizontal: spacing.md, borderRadius: radius.compact },
   buttonSize_field: { minHeight: controlSize.field },
   buttonText: {
     flexShrink: 1,
@@ -670,8 +689,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sheetCloseButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     backgroundColor: colors.neutralSurface,
     alignItems: 'center',

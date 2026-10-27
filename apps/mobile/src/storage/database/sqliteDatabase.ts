@@ -3,6 +3,7 @@ import { runMigrations } from './migrations';
 
 export class ExpoSqliteAdapter implements IDatabaseConnection {
   private db: import('expo-sqlite').SQLiteDatabase;
+  private txQueue: Promise<unknown> = Promise.resolve();
 
   constructor(db: import('expo-sqlite').SQLiteDatabase) {
     this.db = db;
@@ -29,11 +30,19 @@ export class ExpoSqliteAdapter implements IDatabaseConnection {
   }
 
   async withTransactionAsync<T>(action: () => Promise<T>): Promise<T> {
-    let result: T;
-    await this.db.withTransactionAsync(async () => {
-      result = await action();
-    });
-    return result!;
+    const run = async (): Promise<T> => {
+      let result!: T;
+      await this.db.withTransactionAsync(async () => {
+        result = await action();
+      });
+      return result;
+    };
+    const next = this.txQueue.then(run, run);
+    this.txQueue = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    return next;
   }
 
   async closeAsync(): Promise<void> {
@@ -90,12 +99,14 @@ export class BetterSqliteAdapter implements IDatabaseConnection {
 }
 
 export async function openAppDatabase(dbName = 'novyx_greenops_v1.db'): Promise<IDatabaseConnection> {
-  const SQLite = await import('expo-sqlite');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const SQLite: typeof import('expo-sqlite') = require('expo-sqlite');
   const db = await SQLite.openDatabaseAsync(dbName);
   const adapter = new ExpoSqliteAdapter(db);
   await runMigrations(adapter);
   // Correction B: Automatically recover any interrupted SYNCING items on startup
-  const { SqliteOutboxRepository } = await import('../outbox/outboxRepository');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { SqliteOutboxRepository }: typeof import('../outbox/outboxRepository') = require('../outbox/outboxRepository');
   const outboxRepo = new SqliteOutboxRepository(adapter);
   await outboxRepo.recoverInterruptedSyncs();
   return adapter;
