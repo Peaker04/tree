@@ -119,17 +119,23 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Android Debug APK
+      - name: Build Android Release APK
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://cannot-gutter-retry.ngrok-free.dev
+          EXPO_PUBLIC_APP_ENV: production
+          EXPO_PUBLIC_DATA_SOURCE: rest
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY || 'AIzaSyAUZzJiwd3Ols2Dtnb_Lys4zY1YeDEpCLU' }}
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID: ${{ secrets.GOOGLE_MAPS_API_KEY_ANDROID || 'AIzaSyAUZzJiwd3Ols2Dtnb_Lys4zY1YeDEpCLU' }}
         run: |
           cd apps/mobile/android
           chmod +x gradlew
-          ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: novyx-greenops-android-apk
-          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
           retention-days: 14
 
   build-ios:

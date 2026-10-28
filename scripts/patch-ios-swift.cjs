@@ -54,11 +54,18 @@ const rsPath = path.resolve(
 );
 if (fs.existsSync(rsPath)) {
   let c = fs.readFileSync(rsPath, 'utf8');
-  if (!c.includes('createRuntimeScheduler')) {
-    c = c.replace(
-      '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);',
-      '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);\n\ninline RuntimeScheduler *createRuntimeScheduler() { return new RuntimeScheduler(); }\ninline RuntimeScheduler *createRuntimeScheduler(void *scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }',
-    );
+  if (!c.includes('_Nullable createRuntimeScheduler')) {
+    if (c.includes('createRuntimeScheduler')) {
+      c = c.replace(
+        /inline RuntimeScheduler \*createRuntimeScheduler[\s\S]*?fn\); \}/,
+        'inline RuntimeScheduler * _Nullable createRuntimeScheduler() { return new RuntimeScheduler(); }\ninline RuntimeScheduler * _Nullable createRuntimeScheduler(void * _Nullable scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }',
+      );
+    } else {
+      c = c.replace(
+        '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);',
+        '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);\n\ninline RuntimeScheduler * _Nullable createRuntimeScheduler() { return new RuntimeScheduler(); }\ninline RuntimeScheduler * _Nullable createRuntimeScheduler(void * _Nullable scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }',
+      );
+    }
     fs.writeFileSync(rsPath, c);
     console.log('Patched RuntimeScheduler.h');
   }
@@ -69,11 +76,18 @@ const hfPath = path.resolve(
 );
 if (fs.existsSync(hfPath)) {
   let c = fs.readFileSync(hfPath, 'utf8');
-  if (!c.includes('createHostFunctionClosure')) {
-    c = c.replace(
-      '} SWIFT_IMMORTAL_REFERENCE;',
-      '} SWIFT_IMMORTAL_REFERENCE;\n\ninline HostFunctionClosure *createHostFunctionClosure(Context context, HostFunctionClosure::Closure closure, Deallocator deallocator) { return new HostFunctionClosure(context, closure, deallocator); }',
-    );
+  if (!c.includes('_Nullable createHostFunctionClosure')) {
+    if (c.includes('createHostFunctionClosure')) {
+      c = c.replace(
+        /inline HostFunctionClosure \*createHostFunctionClosure[\s\S]*?deallocator\); \}/,
+        'inline HostFunctionClosure * _Nullable createHostFunctionClosure(HostFunctionClosure::Context context, HostFunctionClosure::Closure closure, HostFunctionClosure::Deallocator deallocator) { return new HostFunctionClosure(context, closure, deallocator); }',
+      );
+    } else {
+      c = c.replace(
+        '} SWIFT_IMMORTAL_REFERENCE;',
+        '} SWIFT_IMMORTAL_REFERENCE;\n\ninline HostFunctionClosure * _Nullable createHostFunctionClosure(HostFunctionClosure::Context context, HostFunctionClosure::Closure closure, HostFunctionClosure::Deallocator deallocator) { return new HostFunctionClosure(context, closure, deallocator); }',
+      );
+    }
     fs.writeFileSync(hfPath, c);
     console.log('Patched HostFunctionClosure.h');
   }
