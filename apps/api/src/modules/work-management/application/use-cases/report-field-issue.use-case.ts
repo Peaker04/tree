@@ -17,7 +17,7 @@ export class ReportFieldIssueUseCase {
 
   async execute(
     request: ReportFieldIssueRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<Task> {
     if (context.actorRole !== 'staff') {
       throw new ForbiddenError('Only Field Staff may report field issues');

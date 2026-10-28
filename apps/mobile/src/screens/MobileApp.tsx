@@ -229,7 +229,10 @@ export default function MobileApp() {
       ];
 
       const parsedGpsReason =
-        task.notes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() || 'Tán cây rậm rạp làm trôi tín hiệu GPS';
+        (task as unknown as { locationException?: { reason?: string } }).locationException?.reason ||
+        task.supervisorNotes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() ||
+        task.notes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() ||
+        'Tán cây rậm rạp làm trôi tín hiệu GPS';
 
       const request: SubmitEvidenceRequest = {
         taskId: task.id,
@@ -303,7 +306,10 @@ export default function MobileApp() {
         throw new Error('INCOMPLETE_STAFF_CHECKIN');
       }
       const parsedGpsReason =
-        task.notes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() || 'Tán cây rậm rạp làm trôi tín hiệu GPS';
+        (task as unknown as { locationException?: { reason?: string } }).locationException?.reason ||
+        task.supervisorNotes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() ||
+        task.notes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() ||
+        'Tán cây rậm rạp làm trôi tín hiệu GPS';
       let expectedVersion = task.version ?? 0;
       if (task.status === TaskStatus.PENDING || expectedVersion === 0) {
         try {

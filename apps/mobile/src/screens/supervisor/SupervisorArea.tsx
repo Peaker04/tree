@@ -11,14 +11,15 @@ import {
   Notice,
   ScreenHeader,
   SectionTitle,
+  SegmentedFilterBar,
 } from '../../components/AppPrimitives';
 import { UserAvatar } from '../../components/UserAvatar';
 import { Header } from '../../components/presentation/TaskSurfaces';
 import {
-  TASK_FILTER_OPTIONS,
   TaskFilter,
   TreeFilter,
   StaffStep,
+  createSupervisorFilterOptions,
   filterTasks,
   filterTrees,
   formatActorDisplayName,
@@ -89,7 +90,7 @@ export function SupervisorArea(props: {
 }) {
   const [treeQuery, setTreeQuery] = useState('');
   const [treeFilter, setTreeFilter] = useState<TreeFilter>('all');
-  const [taskFilter, setTaskFilter] = useState<TaskFilter>('open');
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>('awaiting_capture');
   const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread'>('all');
   const [mapReturnStep, setMapReturnStep] = useState<StaffStep>('MY_TREES');
   const [markingNotifications, setMarkingNotifications] = useState(false);
@@ -113,10 +114,7 @@ export function SupervisorArea(props: {
   );
 
   const openTasks = useMemo(
-    () =>
-      supervisorTasks.filter(
-        (task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED',
-      ),
+    () => supervisorTasks.filter((task) => task.status !== TaskStatus.COMPLETED && task.status !== 'CANCELLED'),
     [supervisorTasks],
   );
 
@@ -132,9 +130,7 @@ export function SupervisorArea(props: {
 
   const awaitingCaptureTasks = useMemo(
     () =>
-      supervisorTasks.filter(
-        (task) => isTaskAwaitingSupervisor(task) || task.status === TaskStatus.REWORK_REQUIRED,
-      ),
+      supervisorTasks.filter((task) => isTaskAwaitingSupervisor(task) || task.status === TaskStatus.REWORK_REQUIRED),
     [supervisorTasks],
   );
 
@@ -155,7 +151,10 @@ export function SupervisorArea(props: {
     [props.trees, treeFilter, treeQuery],
   );
   const nextTask = useMemo(() => awaitingCaptureTasks[0] ?? null, [awaitingCaptureTasks]);
-  const unreadNotifications = useMemo(() => props.notifications.filter((notification) => !notification.read), [props.notifications]);
+  const unreadNotifications = useMemo(
+    () => props.notifications.filter((notification) => !notification.read),
+    [props.notifications],
+  );
   const visibleNotifications = notificationFilter === 'unread' ? unreadNotifications : props.notifications;
 
   if (props.step === 'HOME') {
@@ -191,115 +190,114 @@ export function SupervisorArea(props: {
               ) : undefined
             }
           >
+            {isOffline ? (
+              <Notice
+                tone="warning"
+                title="Đang dùng dữ liệu đã lưu"
+                body="Dữ liệu có thể chưa mới. Kết nối lại để tải."
+                action={
+                  props.onRefreshData ? (
+                    <Button size="compact" variant="outline" onPress={props.onRefreshData}>
+                      Thử lại
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : null}
 
-        {isOffline ? (
-          <Notice
-            tone="warning"
-            title="Đang dùng dữ liệu đã lưu"
-            body="Dữ liệu có thể chưa mới. Kết nối lại để tải."
-            action={
-              props.onRefreshData ? (
-                <Button size="compact" variant="outline" onPress={props.onRefreshData}>
-                  Thử lại
+            <View
+              style={[
+                styles.nextAction,
+                awaitingCaptureTasks.length > 0 ? styles.nextAction_success : styles.nextAction_neutral,
+              ]}
+            >
+              <Text style={styles.kicker}>Việc cần chụp bằng chứng tiếp theo</Text>
+              <Text style={styles.nextTitle}>
+                {nextTask && workflow ? workflow.activeActionText : 'Chưa có công việc chờ giám sát chụp bằng chứng'}
+              </Text>
+              <Text style={styles.body}>
+                {nextTask
+                  ? `${nextTask.title} · ${nextTask.treeName} (${formatActorDisplayName(nextTask.assignedStaffName)})`
+                  : 'Khi nhân viên hiện trường hoàn tất xác nhận GPS, QR và danh mục việc, nhiệm vụ sẽ hiển thị tại đây.'}
+              </Text>
+              {nextTask && workflow ? (
+                <Button
+                  icon="camera-outline"
+                  onPress={() => {
+                    props.setActiveTask(nextTask);
+                    props.setStep(getNextProofStep(nextTask, 'Supervisor'));
+                  }}
+                >
+                  {workflow.activeActionText}
                 </Button>
-              ) : undefined
-            }
-          />
-        ) : null}
-
-        <View
-          style={[
-            styles.nextAction,
-            awaitingCaptureTasks.length > 0 ? styles.nextAction_success : styles.nextAction_neutral,
-          ]}
-        >
-          <Text style={styles.kicker}>Việc cần chụp bằng chứng tiếp theo</Text>
-          <Text style={styles.nextTitle}>
-            {nextTask && workflow ? workflow.activeActionText : 'Chưa có công việc chờ giám sát chụp bằng chứng'}
-          </Text>
-          <Text style={styles.body}>
-            {nextTask
-              ? `${nextTask.title} · ${nextTask.treeName} (${formatActorDisplayName(nextTask.assignedStaffName)})`
-              : 'Khi nhân viên hiện trường hoàn tất xác nhận GPS, QR và danh mục việc, nhiệm vụ sẽ hiển thị tại đây.'}
-          </Text>
-          {nextTask && workflow ? (
-            <Button
-              icon="camera-outline"
-              onPress={() => {
-                props.setActiveTask(nextTask);
-                props.setStep(getNextProofStep(nextTask, 'Supervisor'));
-              }}
-            >
-              {workflow.activeActionText}
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              icon="clipboard-outline"
-              onPress={() => {
-                props.setActiveTask(null);
-                props.setStep('WORK');
-              }}
-            >
-              Xem danh sách việc
-            </Button>
-          )}
-        </View>
-
-        <View style={styles.metrics}>
-          <View style={styles.metric}>
-            <View style={styles.metricHeader}>
-              <Ionicons name="camera-outline" size={15} color={colors.primaryDark} />
-              <Text numberOfLines={1} style={styles.metricLabel}>
-                Chờ chụp ảnh
-              </Text>
+              ) : (
+                <Button
+                  variant="outline"
+                  icon="clipboard-outline"
+                  onPress={() => {
+                    props.setActiveTask(null);
+                    props.setStep('WORK');
+                  }}
+                >
+                  Xem danh sách việc
+                </Button>
+              )}
             </View>
-            <Text style={styles.metricValue}>{awaitingCaptureTasks.length}</Text>
-          </View>
-          <View style={styles.metric}>
-            <View style={styles.metricHeader}>
-              <Ionicons name="shield-checkmark-outline" size={15} color={colors.primaryDark} />
-              <Text numberOfLines={1} style={styles.metricLabel}>
-                Chờ duyệt
-              </Text>
-            </View>
-            <Text style={styles.metricValue}>{waitingReviewTasks.length}</Text>
-          </View>
-          <View style={styles.metric}>
-            <View style={styles.metricHeader}>
-              <Ionicons name="checkmark-circle-outline" size={15} color={colors.primaryDark} />
-              <Text numberOfLines={1} style={styles.metricLabel}>
-                Hoàn thành
-              </Text>
-            </View>
-            <Text style={styles.metricValue}>{completed}</Text>
-          </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Đi tới</Text>
-          <ListRow
-            icon="clipboard-outline"
-            title="Công việc cần giám sát"
-            subtitle={`${awaitingCaptureTasks.length} việc chờ chụp ảnh · ${openTasks.length} việc đang mở`}
-            onPress={() => {
-              props.setActiveTask(null);
-              props.setStep('WORK');
-            }}
-          />
-          <ListRow
-            icon="leaf-outline"
-            title="Cây xanh khu vực"
-            subtitle={`${props.trees.length} cây trong khu vực phụ trách`}
-            onPress={() => {
-              props.setActiveTask(null);
-              props.setStep('MY_TREES');
-            }}
-          />
+            <View style={styles.metrics}>
+              <View style={styles.metric}>
+                <View style={styles.metricHeader}>
+                  <Ionicons name="camera-outline" size={15} color={colors.primaryDark} />
+                  <Text numberOfLines={1} style={styles.metricLabel}>
+                    Chờ chụp ảnh
+                  </Text>
+                </View>
+                <Text style={styles.metricValue}>{awaitingCaptureTasks.length}</Text>
+              </View>
+              <View style={styles.metric}>
+                <View style={styles.metricHeader}>
+                  <Ionicons name="shield-checkmark-outline" size={15} color={colors.primaryDark} />
+                  <Text numberOfLines={1} style={styles.metricLabel}>
+                    Chờ duyệt
+                  </Text>
+                </View>
+                <Text style={styles.metricValue}>{waitingReviewTasks.length}</Text>
+              </View>
+              <View style={styles.metric}>
+                <View style={styles.metricHeader}>
+                  <Ionicons name="checkmark-circle-outline" size={15} color={colors.primaryDark} />
+                  <Text numberOfLines={1} style={styles.metricLabel}>
+                    Hoàn thành
+                  </Text>
+                </View>
+                <Text style={styles.metricValue}>{completed}</Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Đi tới</Text>
+              <ListRow
+                icon="clipboard-outline"
+                title="Công việc cần giám sát"
+                subtitle={`${awaitingCaptureTasks.length} việc chờ chụp ảnh · ${openTasks.length} việc đang mở`}
+                onPress={() => {
+                  props.setActiveTask(null);
+                  props.setStep('WORK');
+                }}
+              />
+              <ListRow
+                icon="leaf-outline"
+                title="Cây xanh khu vực"
+                subtitle={`${props.trees.length} cây trong khu vực phụ trách`}
+                onPress={() => {
+                  props.setActiveTask(null);
+                  props.setStep('MY_TREES');
+                }}
+              />
+            </View>
+          </ScrollView>
         </View>
-        </ScrollView>
-      </View>
-    </AnimatedScreenTransition>
+      </AnimatedScreenTransition>
     );
   }
 
@@ -354,93 +352,83 @@ export function SupervisorArea(props: {
                 />
               ) : undefined
             }
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          removeClippedSubviews={Platform.OS === 'android'}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          initialNumToRender={8}
-          ListHeaderComponent={
-            <View style={styles.header}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-              {TASK_FILTER_OPTIONS.map((option) => {
-                const active = taskFilter === option.id;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    key={option.id}
-                    onPress={() => setTaskFilter(option.id)}
-                    style={[styles.filter, active && styles.filterActive]}
-                  >
-                    <Text style={[styles.filterText, active && styles.filterTextActive]}>{option.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <Text style={styles.resultLabel}>
-              {visibleTasks.length}/{supervisorTasks.length} công việc
-            </Text>
-            {supervisorTasks.length === 0 ? (
-              <EmptyState
-                icon="camera-outline"
-                title="Chưa có công việc giám sát"
-                body="Công việc trong khu vực phụ trách sẽ hiển thị tại đây."
-              />
-            ) : visibleTasks.length === 0 ? (
-              <EmptyState
-                icon="camera-outline"
-                title="Không có việc trong bộ lọc"
-                body="Chọn một trạng thái khác để xem công việc giám sát."
-              />
-            ) : null}
-          </View>
-        }
-        renderItem={({ item: task }) => {
-          const status = getTaskStatusMeta(task.status);
-          const overdue = isTaskOverdue(task);
-          const wState = getTaskProofWorkflowState(task, 'Supervisor');
-          const readyForSupervisor = isTaskAwaitingSupervisor(task);
-          const actionHint =
-            !readyForSupervisor && task.status !== TaskStatus.REWORK_REQUIRED && !wState.isSubmittedOrCompleted
-              ? 'Chờ NV hiện trường xác nhận'
-              : wState.activeActionText;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Mở công việc ${task.title}`}
-              onPress={() => {
-                props.setActiveTask(task);
-                props.setStep('DETAIL');
-              }}
-              style={({ pressed }) => [styles.taskRow, pressed && styles.pressed]}
-            >
-              <View style={styles.rowBetween}>
-                <Badge tone={readyForSupervisor ? 'green' : status.tone}>
-                  {readyForSupervisor ? 'Chờ chụp ảnh' : status.label}
-                </Badge>
-                <Text style={[styles.deadline, overdue && styles.deadlineOverdue]}>
-                  {overdue ? 'Quá hạn' : `Hạn ${formatTaskDate(task.deadline)}`}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            removeClippedSubviews={Platform.OS === 'android'}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            initialNumToRender={8}
+            ListHeaderComponent={
+              <View style={styles.header}>
+                <SegmentedFilterBar
+                  variant="scrollable"
+                  options={createSupervisorFilterOptions(supervisorTasks)}
+                  selectedId={taskFilter}
+                  onSelect={(id) => setTaskFilter(id)}
+                />
+                <Text style={styles.resultLabel}>
+                  {visibleTasks.length}/{supervisorTasks.length} công việc
                 </Text>
+                {supervisorTasks.length === 0 ? (
+                  <EmptyState
+                    icon="camera-outline"
+                    title="Chưa có công việc giám sát"
+                    body="Công việc trong khu vực phụ trách sẽ hiển thị tại đây."
+                  />
+                ) : visibleTasks.length === 0 ? (
+                  <EmptyState
+                    icon="camera-outline"
+                    title="Không có việc trong bộ lọc"
+                    body="Chọn một trạng thái khác để xem công việc giám sát."
+                  />
+                ) : null}
               </View>
-              <Text style={styles.taskTitle}>{task.title}</Text>
-              <View style={styles.treeRow}>
-                <Ionicons name="leaf-outline" size={16} color={colors.primaryDark} />
-                <Text style={styles.treeName}>
-                  {task.treeName} · NV: {formatActorDisplayName(task.assignedStaffName)}
-                </Text>
-              </View>
-              <View style={styles.rowBetween}>
-                <Text style={styles.proof}>
-                  Bằng chứng giám sát {wState.proofCount}/{wState.totalRequired}
-                </Text>
-                <Text style={styles.nextHint}>{actionHint}</Text>
-              </View>
-            </Pressable>
-          );
-        }}
-      />
-      </View>
-    </AnimatedScreenTransition>
+            }
+            renderItem={({ item: task }) => {
+              const status = getTaskStatusMeta(task.status);
+              const overdue = isTaskOverdue(task);
+              const wState = getTaskProofWorkflowState(task, 'Supervisor');
+              const readyForSupervisor = isTaskAwaitingSupervisor(task);
+              const actionHint =
+                !readyForSupervisor && task.status !== TaskStatus.REWORK_REQUIRED && !wState.isSubmittedOrCompleted
+                  ? 'Chờ NV hiện trường xác nhận'
+                  : wState.activeActionText;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Mở công việc ${task.title}`}
+                  onPress={() => {
+                    props.setActiveTask(task);
+                    props.setStep('DETAIL');
+                  }}
+                  style={({ pressed }) => [styles.taskRow, pressed && styles.pressed]}
+                >
+                  <View style={styles.rowBetween}>
+                    <Badge tone={readyForSupervisor ? 'green' : status.tone}>
+                      {readyForSupervisor ? 'Chờ chụp ảnh' : status.label}
+                    </Badge>
+                    <Text style={[styles.deadline, overdue && styles.deadlineOverdue]}>
+                      {overdue ? 'Quá hạn' : `Hạn ${formatTaskDate(task.deadline)}`}
+                    </Text>
+                  </View>
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <View style={styles.treeRow}>
+                    <Ionicons name="leaf-outline" size={16} color={colors.primaryDark} />
+                    <Text style={styles.treeName}>
+                      {task.treeName} · NV: {formatActorDisplayName(task.assignedStaffName)}
+                    </Text>
+                  </View>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.proof}>
+                      Bằng chứng giám sát {wState.proofCount}/{wState.totalRequired}
+                    </Text>
+                    <Text style={styles.nextHint}>{actionHint}</Text>
+                  </View>
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      </AnimatedScreenTransition>
     );
   }
 
@@ -452,34 +440,36 @@ export function SupervisorArea(props: {
           <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
             <View style={styles.identity}>
-          <UserAvatar email={email} />
-          <View style={styles.flex}>
-            <Text style={styles.emailText}>{email}</Text>
-            <Text style={styles.roleText}>Giám sát hiện trường</Text>
-            <Badge tone="green">Đang đăng nhập</Badge>
-          </View>
-        </View>
-        <View style={styles.section}>
-          <SectionTitle icon="id-card-outline">Phiên làm việc</SectionTitle>
-          <ListRow icon="mail-outline" title="Email" subtitle={email} />
-          <ListRow icon="people-outline" title="Vai trò" subtitle="Giám sát hiện trường" />
-          <ListRow
-            icon="clipboard-outline"
-            title="Công việc"
-            subtitle={`${completed}/${supervisorTasks.length} đã hoàn thành`}
-          />
-          <ListRow
-            icon="notifications-outline"
-            title="Thông báo"
-            subtitle={
-              unreadNotifications.length ? `${unreadNotifications.length} cập nhật chưa đọc` : 'Không có cập nhật mới'
-            }
-            onPress={() => props.setStep('NOTIFICATIONS')}
-          />
-        </View>
-        <Button variant="danger" icon="log-out-outline" onPress={props.onLogout}>
-          Đăng xuất
-        </Button>
+              <UserAvatar email={email} />
+              <View style={styles.flex}>
+                <Text style={styles.emailText}>{email}</Text>
+                <Text style={styles.roleText}>Giám sát hiện trường</Text>
+                <Badge tone="green">Đang đăng nhập</Badge>
+              </View>
+            </View>
+            <View style={styles.section}>
+              <SectionTitle icon="id-card-outline">Phiên làm việc</SectionTitle>
+              <ListRow icon="mail-outline" title="Email" subtitle={email} />
+              <ListRow icon="people-outline" title="Vai trò" subtitle="Giám sát hiện trường" />
+              <ListRow
+                icon="clipboard-outline"
+                title="Công việc"
+                subtitle={`${completed}/${supervisorTasks.length} đã hoàn thành`}
+              />
+              <ListRow
+                icon="notifications-outline"
+                title="Thông báo"
+                subtitle={
+                  unreadNotifications.length
+                    ? `${unreadNotifications.length} cập nhật chưa đọc`
+                    : 'Không có cập nhật mới'
+                }
+                onPress={() => props.setStep('NOTIFICATIONS')}
+              />
+            </View>
+            <Button variant="danger" icon="log-out-outline" onPress={props.onLogout}>
+              Đăng xuất
+            </Button>
           </ScrollView>
         </View>
       </AnimatedScreenTransition>
@@ -496,98 +486,106 @@ export function SupervisorArea(props: {
             onBack={() => props.setStep('HOME')}
           />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
-        <View style={styles.taskFilterPanel}>
-          <View style={styles.rowBetween}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="notifications-outline" size={15} color={colors.primaryDark} />
-              <Text style={styles.sectionTitleText}>Bộ lọc</Text>
-            </View>
-            {unreadNotifications.length > 0 ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={markingNotifications}
-                onPress={async () => {
-                  setMarkingNotifications(true);
-                  const fallbackNotifications = props.notifications.map((notification) => ({
-                    ...notification,
-                    read: true,
-                  }));
-                  const savedNotifications = await props.markNotificationsRead(
-                    unreadNotifications.map((notification) => notification.id),
-                    fallbackNotifications,
-                  );
-                  props.updateNotifications(savedNotifications);
-                  setMarkingNotifications(false);
-                }}
-              >
-                <Text style={styles.linkText}>{markingNotifications ? 'Đang lưu...' : 'Đánh dấu đã đọc'}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          <View style={styles.reasonChips}>
-            {[
-              { id: 'all' as const, label: `Tất cả (${props.notifications.length})` },
-              { id: 'unread' as const, label: `Chưa đọc (${unreadNotifications.length})` },
-            ].map((option) => (
-              <Pressable
-                accessibilityRole="button"
-                key={option.id}
-                onPress={() => setNotificationFilter(option.id)}
-                style={[styles.filterChip, notificationFilter === option.id && styles.filterChipActive]}
-              >
-                <Text style={[styles.filterChipText, notificationFilter === option.id && styles.filterChipTextActive]}>
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-        {props.notifications.length === 0 ? (
-          <EmptyState
-            title="Không có thông báo mới"
-            body="Các cập nhật giám sát hiện trường sẽ xuất hiện tại đây."
-            icon="notifications-outline"
-          />
-        ) : visibleNotifications.length === 0 ? (
-          <EmptyState
-            title="Không có thông báo chưa đọc"
-            body="Các cập nhật mới sẽ xuất hiện tại đây."
-            icon="mail-open-outline"
-          />
-        ) : (
-          visibleNotifications.map((notification) => (
-            <Pressable
-              accessibilityRole="button"
-              key={notification.id}
-              onPress={async () => {
-                const fallbackNotifications = props.notifications.map((item) =>
-                  item.id === notification.id ? { ...item, read: true } : item,
-                );
-                const savedNotifications = await props.markNotificationsRead([notification.id], fallbackNotifications);
-                props.updateNotifications(savedNotifications);
-                const task = props.tasks.find((item) => item.id === notification.taskId);
-                if (task) {
-                  props.setActiveTask(task);
-                  props.setStep('DETAIL');
-                }
-              }}
-            >
-              <Card style={styles.listCard} tone={notification.read ? 'default' : 'green'}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.itemTitle}>{notification.title}</Text>
-                  <Badge tone={NOTIFICATION_TYPE_META[notification.type]?.tone ?? 'sky'}>
-                    {NOTIFICATION_TYPE_META[notification.type]?.label ?? 'Thông báo'}
-                  </Badge>
+            <View style={styles.taskFilterPanel}>
+              <View style={styles.rowBetween}>
+                <View style={styles.sectionTitleRow}>
+                  <Ionicons name="notifications-outline" size={15} color={colors.primaryDark} />
+                  <Text style={styles.sectionTitleText}>Bộ lọc</Text>
                 </View>
-                <Text style={styles.body}>{sanitizeNotificationText(notification.body)}</Text>
-                <Text style={styles.deadline}>
-                  {new Date(notification.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-                {notification.taskId ? <Text style={styles.linkText}>Mở công việc liên quan</Text> : null}
-              </Card>
-            </Pressable>
-          ))
-        )}
+                {unreadNotifications.length > 0 ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={markingNotifications}
+                    onPress={async () => {
+                      setMarkingNotifications(true);
+                      const fallbackNotifications = props.notifications.map((notification) => ({
+                        ...notification,
+                        read: true,
+                      }));
+                      const savedNotifications = await props.markNotificationsRead(
+                        unreadNotifications.map((notification) => notification.id),
+                        fallbackNotifications,
+                      );
+                      props.updateNotifications(savedNotifications);
+                      setMarkingNotifications(false);
+                    }}
+                  >
+                    <Text style={styles.linkText}>{markingNotifications ? 'Đang lưu...' : 'Đánh dấu đã đọc'}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              <View style={styles.reasonChips}>
+                {[
+                  { id: 'all' as const, label: `Tất cả (${props.notifications.length})` },
+                  { id: 'unread' as const, label: `Chưa đọc (${unreadNotifications.length})` },
+                ].map((option) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={option.id}
+                    onPress={() => setNotificationFilter(option.id)}
+                    style={[styles.filterChip, notificationFilter === option.id && styles.filterChipActive]}
+                  >
+                    <Text
+                      style={[styles.filterChipText, notificationFilter === option.id && styles.filterChipTextActive]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            {props.notifications.length === 0 ? (
+              <EmptyState
+                title="Không có thông báo mới"
+                body="Các cập nhật giám sát hiện trường sẽ xuất hiện tại đây."
+                icon="notifications-outline"
+              />
+            ) : visibleNotifications.length === 0 ? (
+              <EmptyState
+                title="Không có thông báo chưa đọc"
+                body="Các cập nhật mới sẽ xuất hiện tại đây."
+                icon="mail-open-outline"
+              />
+            ) : (
+              visibleNotifications.map((notification) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={notification.id}
+                  onPress={async () => {
+                    const fallbackNotifications = props.notifications.map((item) =>
+                      item.id === notification.id ? { ...item, read: true } : item,
+                    );
+                    const savedNotifications = await props.markNotificationsRead(
+                      [notification.id],
+                      fallbackNotifications,
+                    );
+                    props.updateNotifications(savedNotifications);
+                    const task = props.tasks.find((item) => item.id === notification.taskId);
+                    if (task) {
+                      props.setActiveTask(task);
+                      props.setStep('DETAIL');
+                    }
+                  }}
+                >
+                  <Card style={styles.listCard} tone={notification.read ? 'default' : 'green'}>
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.itemTitle}>{notification.title}</Text>
+                      <Badge tone={NOTIFICATION_TYPE_META[notification.type]?.tone ?? 'sky'}>
+                        {NOTIFICATION_TYPE_META[notification.type]?.label ?? 'Thông báo'}
+                      </Badge>
+                    </View>
+                    <Text style={styles.body}>{sanitizeNotificationText(notification.body)}</Text>
+                    <Text style={styles.deadline}>
+                      {new Date(notification.timestamp).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    {notification.taskId ? <Text style={styles.linkText}>Mở công việc liên quan</Text> : null}
+                  </Card>
+                </Pressable>
+              ))
+            )}
           </ScrollView>
         </View>
       </AnimatedScreenTransition>
@@ -623,7 +621,12 @@ export function SupervisorArea(props: {
     />
   );
 
-  if (proof) return <AnimatedScreenTransition key={props.step} screenKey={props.step}>{proof}</AnimatedScreenTransition>;
+  if (proof)
+    return (
+      <AnimatedScreenTransition key={props.step} screenKey={props.step}>
+        {proof}
+      </AnimatedScreenTransition>
+    );
 
   return (
     <View style={[styles.screen, styles.centerJustified]}>

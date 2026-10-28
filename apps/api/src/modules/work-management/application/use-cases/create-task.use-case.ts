@@ -7,7 +7,7 @@ import type { IOperationalUnitOfWork } from '../ports/operational-unit-of-work.p
 import type { ResolveTaskTypePolicyUseCase } from '../../../policy-template-governance/application/use-cases/resolve-task-type-policy.use-case';
 import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import { NotFoundError, ValidationError, ForbiddenError } from '../../../../core/errors';
-import type { CanonicalCreateTaskRequest } from '@novyx/contracts';
+import type { CanonicalCreateTaskRequest, HumanRole } from '@novyx/contracts';
 import { randomUUID } from 'node:crypto';
 
 export class CreateTaskUseCase {
@@ -23,7 +23,7 @@ export class CreateTaskUseCase {
 
   async execute(
     request: CanonicalCreateTaskRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: HumanRole },
   ): Promise<Task> {
     // 1. Role enforcement
     if (context.actorRole !== 'manager') {
@@ -68,6 +68,29 @@ export class CreateTaskUseCase {
       throw new ValidationError(`User ${request.assignedStaffId} is not ACTIVE (status: ${staffUser.accountStatus})`);
     }
 
+    let resolvedSupervisorName = request.assignedSupervisorName;
+    if (request.assignedSupervisorId) {
+      if (request.assignedSupervisorId === request.assignedStaffId) {
+        throw new ValidationError(
+          'Separation of Duties (DR-HARD-02): assignedSupervisorId cannot be the same as assignedStaffId',
+        );
+      }
+      const supervisorUser = await this.userRepo.findById(request.assignedSupervisorId);
+      if (supervisorUser) {
+        if (supervisorUser.role !== 'supervisor') {
+          throw new ValidationError(`User ${request.assignedSupervisorId} does not have role 'supervisor'`);
+        }
+        if (supervisorUser.accountStatus !== 'ACTIVE') {
+          throw new ValidationError(
+            `Supervisor ${request.assignedSupervisorId} is not ACTIVE (status: ${supervisorUser.accountStatus})`,
+          );
+        }
+        if (!resolvedSupervisorName) {
+          resolvedSupervisorName = supervisorUser.email.split('@')[0] || supervisorUser.id;
+        }
+      }
+    }
+
     // 6. TaskType & Policy deterministic resolution (DR-MVP-02 / Section 16 / W4-C04)
     const policy = await this.resolvePolicy.execute(request.taskTypeId);
 
@@ -87,6 +110,8 @@ export class CreateTaskUseCase {
       treeAddress: tree.address,
       assignedStaffId: staffUser.id,
       assignedStaffName: staffUser.email.split('@')[0] || staffUser.id,
+      assignedSupervisorId: request.assignedSupervisorId,
+      assignedSupervisorName: resolvedSupervisorName,
       deadline: request.deadline,
       status: 'PENDING',
       checklistSnapshot: policy.checklistSnapshot,

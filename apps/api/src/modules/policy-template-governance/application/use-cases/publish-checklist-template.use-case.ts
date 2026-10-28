@@ -17,7 +17,7 @@ export class PublishChecklistTemplateVersionUseCase {
 
   async execute(
     request: PublishChecklistTemplateVersionRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<ChecklistTemplateVersion> {
     const run = async (repos: {
       taskTypeRepo: ITaskTypeRepository;

@@ -14,7 +14,7 @@ export class CreateTreeUseCase {
 
   async execute(
     request: CreateTreeRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<Tree> {
     const run = async (repos: { treeRepo: ITreeRepository; auditService: AuditService }): Promise<Tree> => {
       const existingById = await repos.treeRepo.findById(request.treeId);

@@ -15,7 +15,7 @@ export const colors = {
   foreground: '#13231a',
   foregroundSoft: '#2b3c31',
   card: '#fffffb',
-  cardWarm: '#fbfff5',
+  cardWarm: '#f7faf5',
   muted: '#94a3b8',
   mutedForeground: '#64748b',
   subtle: '#7a8b80',
@@ -75,7 +75,7 @@ export const radius = {
   xl: 22,
   full: 999,
   // Constrained Vocabulary (Seed + Linear)
-  control: 8,
+  control: 12,
   compact: 12,
   card: 16,
   container: 24,
@@ -111,7 +111,7 @@ export const layout = {
   sectionGap: 16,
   contentGap: 12,
   compactGap: 8,
-  bottomNavClearance: 104,
+  bottomNavClearance: 120,
 } as const;
 
 export const controlSize = {

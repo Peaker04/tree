@@ -240,7 +240,9 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(taskSurfaces).toContain('ScreenHeader');
     expect(taskSurfaces).toContain('Đã quét đúng cây được giao');
 
-    expect(proofFlow).toContain('<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>');
+    expect(proofFlow).toContain(
+      '<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, styles.mapScreen]}>',
+    );
     expect(proofFlow).not.toContain('provider={providerGoogle}');
     expect(proofFlow).toContain('<WebMapView');
     expect(proofFlow).toContain('Khoảng cách tới cây');
@@ -530,9 +532,8 @@ describe('NOVYX mobile UI foundation contract', () => {
   });
 
   it('accurately detects exact-hour overdue tasks and supports overdue filtering', async () => {
-    const { isTaskOverdue, filterTasks, TASK_FILTER_OPTIONS } = await import(
-      '../../apps/mobile/src/domain/mobileWorkflow'
-    );
+    const { isTaskOverdue, filterTasks, TASK_FILTER_OPTIONS } =
+      await import('../../apps/mobile/src/domain/mobileWorkflow');
     const { TaskStatus } = await import('@novyx/contracts');
     type MobileTask = import('../../apps/mobile/src/types').Task;
 
@@ -869,10 +870,7 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(taskSurfaces).toContain('formatActorDisplayName(task.assignedStaffName)');
     expect(taskSurfaces).toContain('locationExReason');
 
-    const workflow = fs.readFileSync(
-      path.resolve(process.cwd(), 'apps/mobile/src/domain/mobileWorkflow.ts'),
-      'utf8',
-    );
+    const workflow = fs.readFileSync(path.resolve(process.cwd(), 'apps/mobile/src/domain/mobileWorkflow.ts'), 'utf8');
     expect(workflow).toContain('createSupervisorFilterOptions');
     expect(workflow).toContain('createStaffFilterOptions');
     expect(workflow).toContain('awaiting_capture');

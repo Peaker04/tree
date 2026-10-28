@@ -110,10 +110,7 @@ export async function processEvidencePhoto(
     const resizeAction = calculateTargetResizeAction(dimensions.width, dimensions.height, maxDimension);
     const actions = resizeAction ? [resizeAction] : [];
 
-    const saveFormat =
-      format === 'png'
-        ? ImageManipulator.SaveFormat.PNG
-        : ImageManipulator.SaveFormat.JPEG;
+    const saveFormat = format === 'png' ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG;
 
     const manipulated = await ImageManipulator.manipulateAsync(rawUri, actions, {
       compress: quality,

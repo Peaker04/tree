@@ -14,29 +14,29 @@ export function ManagerAccount(props: ManagerAreaProps) {
       <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <View style={styles.identity}>
-        <UserAvatar email={email} />
-        <View style={styles.flex}>
-          <Text style={styles.email}>{email}</Text>
-          <Text style={styles.role}>Quản lý vận hành</Text>
-          <Badge tone="green">Đang đăng nhập</Badge>
+          <UserAvatar email={email} />
+          <View style={styles.flex}>
+            <Text style={styles.email}>{email}</Text>
+            <Text style={styles.role}>Quản lý vận hành</Text>
+            <Badge tone="green">Đang đăng nhập</Badge>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <SectionTitle icon="id-card-outline">Phiên làm việc</SectionTitle>
-        <ListRow icon="mail-outline" title="Email" subtitle={email} />
-        <ListRow icon="people-outline" title="Vai trò" subtitle="Quản lý vận hành" />
-        <ListRow
-          icon="checkmark-done-outline"
-          title="Hàng chờ nghiệm thu"
-          subtitle={pending ? `${pending} báo cáo cần kiểm tra` : 'Không có báo cáo đang chờ'}
-          onPress={() => props.setActiveStep('REVIEW')}
-        />
-      </View>
+        <View style={styles.section}>
+          <SectionTitle icon="id-card-outline">Phiên làm việc</SectionTitle>
+          <ListRow icon="mail-outline" title="Email" subtitle={email} />
+          <ListRow icon="people-outline" title="Vai trò" subtitle="Quản lý vận hành" />
+          <ListRow
+            icon="checkmark-done-outline"
+            title="Hàng chờ nghiệm thu"
+            subtitle={pending ? `${pending} báo cáo cần kiểm tra` : 'Không có báo cáo đang chờ'}
+            onPress={() => props.setActiveStep('REVIEW')}
+          />
+        </View>
 
-      <Button variant="danger" icon="log-out-outline" onPress={props.onLogout}>
-        Đăng xuất
-      </Button>
+        <Button variant="danger" icon="log-out-outline" onPress={props.onLogout}>
+          Đăng xuất
+        </Button>
       </ScrollView>
     </View>
   );

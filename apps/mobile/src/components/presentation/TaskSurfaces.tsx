@@ -5,6 +5,7 @@ import { Badge, Card, ScreenHeader, SectionTitle } from '../AppPrimitives';
 import { colors, radius } from '../../theme/tokens';
 import { ChecklistItem, Task, TaskStatus, Tree } from '../../types';
 import {
+  formatActorDisplayName,
   formatTaskDate,
   formatTaskDateTime,
   getTaskProofCount,
@@ -135,14 +136,27 @@ export function ProofChainCard({ task, role }: { task: Task; role?: 'Staff' | 'S
     ? new Date(task.supervisorGpsCheck.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     : '';
 
+  const hasLocationEx = Boolean(
+    task.notes?.includes('Ngoại lệ GPS:') ||
+    task.supervisorNotes?.includes('Ngoại lệ GPS:') ||
+    (task as unknown as { locationException?: { reason?: string } }).locationException,
+  );
+  const locationExReason =
+    (task as unknown as { locationException?: { reason?: string } }).locationException?.reason ||
+    task.supervisorNotes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() ||
+    task.notes?.split('Ngoại lệ GPS:')[1]?.split('\n')[0]?.trim() ||
+    'Có ngoại lệ được duyệt';
+
   const staffChecks = [
     {
       id: 'gps',
       label: 'GPS',
       body: task.gpsCheck?.verified
         ? `${task.gpsCheck.distance.toFixed(1)}m từ gốc${task.gpsCheck.accuracyMeters ? `, sai số ${task.gpsCheck.accuracyMeters.toFixed(0)}m` : ''}${gpsTime ? `, ${gpsTime}` : ''}`
-        : 'Chưa xác minh trong bán kính hợp lệ',
-      done: Boolean(task.gpsCheck?.verified),
+        : hasLocationEx
+          ? `Ngoại lệ: ${locationExReason}`
+          : 'Chưa xác minh trong bán kính hợp lệ',
+      done: Boolean(task.gpsCheck?.verified || hasLocationEx),
       icon: 'location-outline' as const,
     },
     {
@@ -166,8 +180,8 @@ export function ProofChainCard({ task, role }: { task: Task; role?: 'Staff' | 'S
       id: 'staff-checkin',
       label: 'Xác nhận NV hiện trường',
       body: task.staffCompletedAt
-        ? `NV ${task.assignedStaffName} đã xác nhận GPS, QR & Checklist`
-        : 'Đang chờ nhân viên hiện trường xác nhận tại cây',
+        ? `${formatActorDisplayName(task.assignedStaffName)} đã xác nhận tại cây`
+        : 'Đang chờ nhân viên hiện trường xác nhận',
       done: Boolean(task.staffCompletedAt),
       icon: 'person-circle-outline' as const,
     },
@@ -176,11 +190,15 @@ export function ProofChainCard({ task, role }: { task: Task; role?: 'Staff' | 'S
       label: 'Vị trí GPS Giám sát',
       body: task.supervisorGpsCheck?.verified
         ? `${task.supervisorGpsCheck.distance.toFixed(1)}m từ gốc${supGpsTime ? `, ${supGpsTime}` : ''}`
-        : task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified
-          ? 'Đã xác minh vị trí tại hiện trường'
-          : 'Chưa xác minh vị trí giám sát hiện trường',
+        : hasLocationEx
+          ? `Ngoại lệ: ${locationExReason}`
+          : task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified
+            ? 'Đã xác minh vị trí tại hiện trường'
+            : 'Chưa xác minh vị trí giám sát',
       done: Boolean(
-        task.supervisorGpsCheck?.verified || (task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified),
+        task.supervisorGpsCheck?.verified ||
+        hasLocationEx ||
+        (task.status === TaskStatus.REWORK_REQUIRED && task.gpsCheck?.verified),
       ),
       icon: 'location-outline' as const,
     },

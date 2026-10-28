@@ -282,7 +282,6 @@ export function ManagerCreateTask({
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-
         {/* 1. THỜI GIAN & CA LÀM VIỆC */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thời gian & ca làm việc</Text>

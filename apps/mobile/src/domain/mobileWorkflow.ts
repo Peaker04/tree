@@ -17,7 +17,7 @@ export type StaffStep =
   | 'ACCOUNT';
 
 export type TreeFilter = 'all' | TreeRiskStatus;
-export type TaskFilter = 'all' | 'open' | 'overdue' | TaskStatus;
+export type TaskFilter = 'all' | 'open' | 'overdue' | 'awaiting_capture' | TaskStatus;
 
 export const formatTreeAge = (ageYears: number) => (ageYears > 0 ? `${ageYears} năm` : 'Chưa xác định');
 
@@ -55,6 +55,36 @@ export const TASK_FILTER_OPTIONS: { id: TaskFilter; label: string }[] = [
   { id: TaskStatus.COMPLETED, label: 'Hoàn thành' },
 ];
 
+export const createSupervisorFilterOptions = (tasks: Task[]): { id: TaskFilter; label: string; badge?: number }[] => {
+  const awaitingCount = tasks.filter(isTaskAwaitingSupervisor).length;
+  const waitingReviewCount = tasks.filter((t) => t.status === TaskStatus.WAITING_REVIEW).length;
+  const reworkCount = tasks.filter((t) => t.status === TaskStatus.REWORK_REQUIRED).length;
+  return [
+    { id: 'awaiting_capture', label: 'Chờ chụp ảnh', badge: awaitingCount > 0 ? awaitingCount : undefined },
+    { id: 'all', label: 'Tất cả', badge: tasks.length },
+    {
+      id: TaskStatus.WAITING_REVIEW,
+      label: 'Chờ duyệt',
+      badge: waitingReviewCount > 0 ? waitingReviewCount : undefined,
+    },
+    { id: TaskStatus.REWORK_REQUIRED, label: 'Cần làm lại', badge: reworkCount > 0 ? reworkCount : undefined },
+    { id: TaskStatus.COMPLETED, label: 'Hoàn thành' },
+  ];
+};
+
+export const createStaffFilterOptions = (tasks: Task[]): { id: TaskFilter; label: string; badge?: number }[] => {
+  const openCount = tasks.filter((t) => t.status !== TaskStatus.COMPLETED && t.status !== 'CANCELLED').length;
+  const reworkCount = tasks.filter((t) => t.status === TaskStatus.REWORK_REQUIRED).length;
+  const overdueCount = tasks.filter(isTaskOverdue).length;
+  return [
+    { id: 'open', label: 'Việc mở', badge: openCount > 0 ? openCount : undefined },
+    { id: TaskStatus.REWORK_REQUIRED, label: 'Cần làm lại', badge: reworkCount > 0 ? reworkCount : undefined },
+    { id: 'overdue', label: 'Quá hạn', badge: overdueCount > 0 ? overdueCount : undefined },
+    { id: 'all', label: 'Tất cả', badge: tasks.length },
+    { id: TaskStatus.COMPLETED, label: 'Hoàn thành' },
+  ];
+};
+
 export const normalizeSearch = (value: string) =>
   value
     .toLowerCase()
@@ -91,6 +121,9 @@ export const filterTasks = (tasks: Task[], filter: TaskFilter) => {
   }
   if (filter === 'overdue') {
     return tasks.filter(isTaskOverdue);
+  }
+  if (filter === 'awaiting_capture') {
+    return tasks.filter(isTaskAwaitingSupervisor);
   }
   return tasks.filter((task) => task.status === filter);
 };

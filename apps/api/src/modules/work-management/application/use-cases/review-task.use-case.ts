@@ -7,6 +7,7 @@ import type { AuditService } from '../../../audit-compliance/application/service
 import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../../../core/errors';
 import { CareHistoryRecord } from '../../../tree-asset-registry/domain/care-history.entity';
 import type { Task } from '../../domain/task.entity';
+import type { HumanRole } from '@novyx/contracts';
 import { randomUUID } from 'node:crypto';
 
 export interface ReviewTaskCommand {
@@ -29,10 +30,7 @@ export class ReviewTaskUseCase {
     private readonly uow?: IOperationalUnitOfWork,
   ) {}
 
-  async execute(
-    command: ReviewTaskCommand,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
-  ): Promise<Task> {
+  async execute(command: ReviewTaskCommand, context: { actorId: string; actorRole: HumanRole }): Promise<Task> {
     if (context.actorRole !== 'manager') {
       throw new ForbiddenError('Only Operations Managers may review tasks');
     }

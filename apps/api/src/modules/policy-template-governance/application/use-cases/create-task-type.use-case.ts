@@ -15,7 +15,7 @@ export class CreateTaskTypeUseCase {
 
   async execute(
     request: CreateTaskTypeRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<TaskType> {
     const run = async (repos: { taskTypeRepo: ITaskTypeRepository; auditService: AuditService }): Promise<TaskType> => {
       const existing = await repos.taskTypeRepo.findByName(request.name);

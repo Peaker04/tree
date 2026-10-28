@@ -49,9 +49,9 @@ export type TaskStatus = CanonicalTaskStatus | LegacyTaskStatus;
 /**
  * @deprecated TRANSITIONAL_COMPAT
  * Legacy PascalCase role used by apps/mobile.
- * Canonical roles are in HumanRoleSchema ('staff' | 'manager' | 'admin').
+ * Canonical roles are in HumanRoleSchema ('staff' | 'supervisor' | 'manager' | 'admin').
  */
-export type Role = 'Staff' | 'Manager';
+export type Role = 'Staff' | 'Supervisor' | 'Manager';
 
 /**
  * @deprecated TRANSITIONAL_COMPAT
@@ -71,7 +71,7 @@ export interface StaffDto {
   phone: string;
   avatar: string;
   workload: number;
-  role: 'Staff';
+  role: 'Staff' | 'Supervisor';
 }
 
 /**
@@ -126,6 +126,8 @@ export interface TaskDto {
   treeAddress: string;
   assignedStaffId: string;
   assignedStaffName: string;
+  assignedSupervisorId?: string;
+  assignedSupervisorName?: string;
   deadline: string;
   dateRange?: {
     startDate: string;
@@ -141,6 +143,12 @@ export interface TaskDto {
   version?: number;
   gpsCheck?: GpsCheckDto;
   qrCheck?: QrCheckDto;
+  staffCompletedAt?: string;
+  supervisorId?: string;
+  supervisorName?: string;
+  supervisorGpsCheck?: GpsCheckDto;
+  supervisorCompletedAt?: string;
+  supervisorNotes?: string;
   beforePhoto?: string;
   afterPhoto?: string;
   beforePhotoDisplayUrl?: string;
@@ -192,10 +200,13 @@ export interface CareHistoryDto {
   taskTitle: string;
   staffId: string;
   staffName: string;
+  supervisorId?: string;
+  supervisorName?: string;
   completedAt: string;
   status: TaskStatus;
   gpsCheck?: GpsCheckDto;
   qrCheck?: QrCheckDto;
+  supervisorGpsCheck?: GpsCheckDto;
   beforePhoto?: string;
   afterPhoto?: string;
   notes?: string;
@@ -214,6 +225,8 @@ export interface CreateTaskRequest {
   description: string;
   treeId: string;
   assignedStaffId: string;
+  assignedSupervisorId?: string;
+  assignedSupervisorName?: string;
   deadline: string;
   checklist: ChecklistItemDto[];
 }

@@ -239,7 +239,10 @@ async function run() {
   console.log('\n--- 6. MOBILE SOURCE CODE & GEOMETRY CONTRACT AUDITS ---');
 
   // UI-038 WebMapView
-  const webMapViewSrc = fs.readFileSync(path.join(repoRoot, 'apps/mobile/src/components/presentation/WebMapView.tsx'), 'utf8');
+  const webMapViewSrc = fs.readFileSync(
+    path.join(repoRoot, 'apps/mobile/src/components/presentation/WebMapView.tsx'),
+    'utf8',
+  );
   assertCheck(
     'UI-038',
     'WebMapView Authentic Google Maps Tiles',
@@ -252,7 +255,9 @@ async function run() {
   assertCheck(
     'UI-040',
     '1-Tap GPS Hardware Check & 20s Satellite Timeout',
-    proofFlowSrc.includes('hasServicesEnabledAsync') && proofFlowSrc.includes('20000') && !proofFlowSrc.includes("showRationaleForPurpose('staff-gps')"),
+    proofFlowSrc.includes('hasServicesEnabledAsync') &&
+      proofFlowSrc.includes('20000') &&
+      !proofFlowSrc.includes("showRationaleForPurpose('staff-gps')"),
     'Direct hardware service check, no rationale modal deadlock, 20,000ms satellite lock timeout',
   );
 
@@ -294,7 +299,9 @@ async function run() {
   assertCheck(
     'UI-044',
     'Micro-spring Button Scale (0.97x) & Animated Tab Transitions',
-    primitivesSrc.includes('AnimatedScreenTransition') && primitivesSrc.includes('toValue: 0.97') && !staffTreesSrc.includes('LayoutAnimation.configureNext'),
+    primitivesSrc.includes('AnimatedScreenTransition') &&
+      primitivesSrc.includes('toValue: 0.97') &&
+      !staffTreesSrc.includes('LayoutAnimation.configureNext'),
     'Micro-spring button press feedback, smooth screen fade, zero LayoutAnimation frame drops',
   );
 
@@ -302,12 +309,17 @@ async function run() {
   assertCheck(
     'UI-045/046',
     'BottomSheetModal 82% Height & Spring Swipe Dismiss',
-    primitivesSrc.includes("height: '82%'") && primitivesSrc.includes('PanResponder.create') && primitivesSrc.includes('Animated.spring(sheetAnim'),
+    primitivesSrc.includes("height: '82%'") &&
+      primitivesSrc.includes('PanResponder.create') &&
+      primitivesSrc.includes('Animated.spring(sheetAnim'),
     'Full 82% viewport height prevents FlatList collapse; PanResponder handles drag-down dismiss',
   );
 
   // UI-039 Honest Tree Selection in Manager Create Task
-  const createTaskSrc = fs.readFileSync(path.join(repoRoot, 'apps/mobile/src/screens/manager/ManagerCreateTask.tsx'), 'utf8');
+  const createTaskSrc = fs.readFileSync(
+    path.join(repoRoot, 'apps/mobile/src/screens/manager/ManagerCreateTask.tsx'),
+    'utf8',
+  );
   assertCheck(
     'UI-039',
     'Honest Tree Selection (No Fake Address Splitting)',

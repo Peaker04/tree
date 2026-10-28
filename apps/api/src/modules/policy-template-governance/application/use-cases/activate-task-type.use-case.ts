@@ -14,7 +14,7 @@ export class ActivateTaskTypeUseCase {
 
   async execute(
     request: ActivateTaskTypeRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<TaskType> {
     const run = async (repos: { taskTypeRepo: ITaskTypeRepository; auditService: AuditService }): Promise<TaskType> => {
       const taskType = await repos.taskTypeRepo.findById(request.taskTypeId);

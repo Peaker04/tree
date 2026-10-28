@@ -225,13 +225,13 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
   // ============================================================================
   // 6. Exact Human Role IDs
   // ============================================================================
-  describe('6. Canonical Human Roles: staff, manager, admin', () => {
-    it('has exactly 3 human roles', () => {
-      expect(HUMAN_ROLES).toHaveLength(3);
-      expect([...HUMAN_ROLES]).toEqual(['staff', 'manager', 'admin']);
+  describe('6. Canonical Human Roles: staff, supervisor, manager, admin', () => {
+    it('has exactly 4 human roles', () => {
+      expect(HUMAN_ROLES).toHaveLength(4);
+      expect([...HUMAN_ROLES]).toEqual(['staff', 'supervisor', 'manager', 'admin']);
     });
 
-    it('parses all 3 human roles', () => {
+    it('parses all 4 human roles', () => {
       for (const role of HUMAN_ROLES) {
         expect(HumanRoleSchema.parse(role)).toBe(role);
       }
@@ -1679,6 +1679,56 @@ describe('Phase 13 Wave 1: Contract-First + Zod Runtime Validation (@novyx/contr
         },
       };
       expect(CreateCareOrderRequestSchema.safeParse(order).success).toBe(true);
+    });
+
+    it('validates StaffExecutionSubmitRequestSchema and SupervisorEvidenceSubmitRequestSchema', () => {
+      const staffSchema = contracts.StaffExecutionSubmitRequestSchema;
+      const supervisorSchema = contracts.SupervisorEvidenceSubmitRequestSchema;
+      expect(staffSchema).toBeDefined();
+      expect(supervisorSchema).toBeDefined();
+
+      const validStaffCheckin = staffSchema.safeParse({
+        version: 2,
+        siteVerification: {
+          gpsCheck: {
+            lat: 10.7769,
+            lng: 106.7009,
+            accuracyMeters: 4.5,
+            distanceMeters: 3.2,
+            timestamp: '2026-10-24T08:00:00.000Z',
+            verified: true,
+          },
+          qrCheck: {
+            scannedCode: 'TREE-001',
+            expectedCode: 'TREE-001',
+            matched: true,
+            timestamp: '2026-10-24T08:01:00.000Z',
+          },
+        },
+        checklist: [{ id: 'chk-1', label: 'Tưới gốc cây', completed: true }],
+        notes: 'Đã hoàn thành tại hiện trường',
+      });
+      expect(validStaffCheckin.success).toBe(true);
+
+      const validSupervisorEvidence = supervisorSchema.safeParse({
+        version: 3,
+        proof: {
+          proofProfile: 'CHANGE_PROOF',
+          beforePhotoUri: 'file:///sandbox/before.jpg',
+          afterPhotoUri: 'file:///sandbox/after.jpg',
+          checklist: [{ id: 'chk-1', text: 'Tưới gốc cây', done: true }],
+        },
+        supervisorGpsCheck: {
+          lat: 10.7769,
+          lng: 106.7009,
+          accuracyMeters: 5.0,
+          distanceMeters: 4.0,
+          timestamp: '2026-10-24T08:15:00.000Z',
+          verified: true,
+        },
+        notes: 'Ảnh chụp rõ nét trước và sau khi thực hiện',
+      });
+      expect(validSupervisorEvidence.success).toBe(true);
     });
   });
 });

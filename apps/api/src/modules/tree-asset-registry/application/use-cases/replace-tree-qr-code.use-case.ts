@@ -14,7 +14,7 @@ export class ReplaceTreeQrCodeUseCase {
 
   async execute(
     request: ReplaceTreeQrCodeRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<Tree> {
     const run = async (repos: { treeRepo: ITreeRepository; auditService: AuditService }): Promise<Tree> => {
       const tree = await repos.treeRepo.findById(request.treeId);

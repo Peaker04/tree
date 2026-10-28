@@ -22,6 +22,14 @@ export interface TaskProps {
   treeAddress: string;
   assignedStaffId: string;
   assignedStaffName: string;
+  assignedSupervisorId?: string | undefined;
+  assignedSupervisorName?: string | undefined;
+  staffCompletedAt?: string | undefined;
+  supervisorId?: string | undefined;
+  supervisorName?: string | undefined;
+  supervisorGpsCheck?: Record<string, unknown> | undefined;
+  supervisorCompletedAt?: string | undefined;
+  supervisorNotes?: string | undefined;
   deadline: string;
   status?: TaskStatus | undefined;
   checklistSnapshot?: ChecklistItem[] | undefined;
@@ -47,6 +55,14 @@ export class Task {
   private readonly _treeAddress: string;
   private _assignedStaffId: string;
   private _assignedStaffName: string;
+  private _assignedSupervisorId?: string | undefined;
+  private _assignedSupervisorName?: string | undefined;
+  private _staffCompletedAt?: string | undefined;
+  private _supervisorId?: string | undefined;
+  private _supervisorName?: string | undefined;
+  private _supervisorGpsCheck?: Record<string, unknown> | undefined;
+  private _supervisorCompletedAt?: string | undefined;
+  private _supervisorNotes?: string | undefined;
   private _deadline: string;
   private _status: TaskStatus;
   private _checklistSnapshot?: ChecklistItem[] | undefined;
@@ -84,6 +100,14 @@ export class Task {
     this._treeAddress = props.treeAddress;
     this._assignedStaffId = props.assignedStaffId;
     this._assignedStaffName = props.assignedStaffName;
+    this._assignedSupervisorId = props.assignedSupervisorId;
+    this._assignedSupervisorName = props.assignedSupervisorName;
+    this._staffCompletedAt = props.staffCompletedAt;
+    this._supervisorId = props.supervisorId;
+    this._supervisorName = props.supervisorName;
+    this._supervisorGpsCheck = props.supervisorGpsCheck;
+    this._supervisorCompletedAt = props.supervisorCompletedAt;
+    this._supervisorNotes = props.supervisorNotes;
     this._deadline = props.deadline;
     this._status = props.status ?? 'PENDING';
     this._checklistSnapshot = props.checklistSnapshot;
@@ -148,6 +172,38 @@ export class Task {
 
   get assignedStaffName(): string {
     return this._assignedStaffName;
+  }
+
+  get assignedSupervisorId(): string | undefined {
+    return this._assignedSupervisorId;
+  }
+
+  get assignedSupervisorName(): string | undefined {
+    return this._assignedSupervisorName;
+  }
+
+  get staffCompletedAt(): string | undefined {
+    return this._staffCompletedAt;
+  }
+
+  get supervisorId(): string | undefined {
+    return this._supervisorId;
+  }
+
+  get supervisorName(): string | undefined {
+    return this._supervisorName;
+  }
+
+  get supervisorGpsCheck(): Record<string, unknown> | undefined {
+    return this._supervisorGpsCheck;
+  }
+
+  get supervisorCompletedAt(): string | undefined {
+    return this._supervisorCompletedAt;
+  }
+
+  get supervisorNotes(): string | undefined {
+    return this._supervisorNotes;
   }
 
   get deadline(): string {
@@ -264,15 +320,55 @@ export class Task {
   }
 
   /**
-   * IN_PROGRESS -> WAITING_REVIEW
-   * Only assigned Staff. Server accepts evidence submission.
+   * Staff check-in: records staffCompletedAt while keeping status IN_PROGRESS
+   * so Supervisor can subsequently capture Before/After photos.
    */
-  submitEvidence(actorId: string): void {
+  recordStaffCheckin(actorId: string, completedAt?: string): void {
+    if (this._status !== 'IN_PROGRESS') {
+      throw new Error(
+        `Cannot record staff check-in in status ${this._status}. Check-in is only valid from IN_PROGRESS.`,
+      );
+    }
+    if (this._assignedStaffId !== actorId) {
+      throw new Error('Only the assigned staff member may submit field check-in for this task');
+    }
+    this._staffCompletedAt = completedAt ?? new Date().toISOString();
+    this._version += 1;
+    this._updatedAt = new Date();
+  }
+
+  /**
+   * IN_PROGRESS -> WAITING_REVIEW
+   * Assigned Staff or Supervisor accepts evidence submission.
+   */
+  submitEvidence(
+    actorId: string,
+    supervisorMeta?: {
+      supervisorId: string;
+      supervisorName?: string | undefined;
+      supervisorGpsCheck?: Record<string, unknown> | undefined;
+      supervisorCompletedAt?: string | undefined;
+      supervisorNotes?: string | undefined;
+    },
+  ): void {
     if (this._status !== 'IN_PROGRESS') {
       throw new Error(`Cannot submit evidence in status ${this._status}. Submissions are only valid from IN_PROGRESS.`);
     }
-    if (this._assignedStaffId !== actorId) {
+    if (!supervisorMeta && this._assignedStaffId !== actorId) {
       throw new Error('Only the assigned staff member may submit evidence for this task');
+    }
+    if (supervisorMeta) {
+      this._supervisorId = supervisorMeta.supervisorId;
+      if (supervisorMeta.supervisorName) {
+        this._supervisorName = supervisorMeta.supervisorName;
+      }
+      if (supervisorMeta.supervisorGpsCheck) {
+        this._supervisorGpsCheck = supervisorMeta.supervisorGpsCheck;
+      }
+      this._supervisorCompletedAt = supervisorMeta.supervisorCompletedAt ?? new Date().toISOString();
+      if (supervisorMeta.supervisorNotes) {
+        this._supervisorNotes = supervisorMeta.supervisorNotes;
+      }
     }
     this._status = 'WAITING_REVIEW';
     this._version += 1;
@@ -333,16 +429,26 @@ export class Task {
 
   /**
    * REWORK_REQUIRED -> WAITING_REVIEW
-   * Assigned staff resubmits rework.
+   * Assigned staff or supervisor resubmits rework.
    */
-  resubmitRework(actorId: string): void {
+  resubmitRework(actorId: string, actorRole: 'staff' | 'supervisor' = 'staff'): void {
     if (this._status !== 'REWORK_REQUIRED') {
       throw new Error(
         `Cannot resubmit rework in status ${this._status}. Resubmissions are only valid from REWORK_REQUIRED.`,
       );
     }
-    if (this._assignedStaffId !== actorId) {
+    if (actorRole === 'staff' && this._assignedStaffId !== actorId) {
       throw new Error('Only the assigned staff member may resubmit rework for this task');
+    }
+    if (actorRole === 'supervisor') {
+      if (this._assignedStaffId === actorId) {
+        throw new Error('Assigned staff member cannot act as supervisor on the same task (DR-HARD-02)');
+      }
+      if (this._assignedSupervisorId && this._assignedSupervisorId !== actorId) {
+        throw new Error('Only the assigned supervisor may resubmit supervisor rework for this task');
+      }
+      this._supervisorId = actorId;
+      this._supervisorCompletedAt = new Date().toISOString();
     }
     this._status = 'WAITING_REVIEW';
     this._version += 1;

@@ -96,83 +96,100 @@ export function StaffHome({
           ) : undefined
         }
       >
-
-      {isOffline ? (
-        <Notice
-          tone="warning"
-          title="Đang dùng dữ liệu đã lưu"
-          body="Dữ liệu có thể chưa mới. Kết nối lại để tải."
-          action={
-            onRetry ? (
-              <Button size="compact" variant="outline" onPress={onRetry}>
-                Thử lại
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : errorMessage ? (
-        <Notice
-          tone="danger"
-          title="Không tải được ca làm việc"
-          body={errorMessage}
-          action={
-            onRetry ? (
-              <Button size="compact" variant="outline" onPress={onRetry}>
-                Thử lại
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : null}
-
-      <View style={[styles.nextAction, styles[`nextAction_${summary.tone}`]]}>
-        <Text style={styles.kicker}>Việc cần làm tiếp theo</Text>
-        <Text style={styles.nextTitle}>{summary.title}</Text>
-        <Text style={styles.body}>{summary.body}</Text>
-        {nextTask && actionable > 0 && workflow ? (
-          <Button
-            icon="arrow-forward-outline"
-            onPress={() => (onStartTaskProof ? onStartTaskProof(nextTask) : onOpenTask?.(nextTask))}
-          >
-            {workflow.activeActionText}
-          </Button>
-        ) : (
-          <Button variant="outline" icon="clipboard-outline" onPress={onOpenWork}>
-            Kiểm tra công việc
-          </Button>
-        )}
-      </View>
-
-      <View style={styles.metrics}>
-        <MetricStatTile label="Cần xử lý" value={actionable} icon="time-outline" tone="warning" onPress={onOpenWork} />
-        <MetricStatTile label="Chờ duyệt" value={waitingReviewCount} icon="shield-checkmark-outline" tone="info" onPress={onOpenWork} />
-        <MetricStatTile label="Hoàn thành" value={hasAssignments ? `${completionRate}%` : '—'} icon="checkmark-circle-outline" tone="success" onPress={onOpenWork} />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Đi tới</Text>
-        <ListRow
-          icon="clipboard-outline"
-          title="Công việc"
-          subtitle={`${openTaskCount} việc đang mở · ${completed}/${totalTasks} hoàn thành`}
-          onPress={onOpenWork}
-        />
-        <ListRow
-          icon="leaf-outline"
-          title="Cây của tôi"
-          subtitle={`${assignedTreeCount} cây có quan hệ phân công`}
-          onPress={onOpenTrees}
-        />
-        {nextTask && onOpenTask ? (
-          <ListRow
-            icon="document-text-outline"
-            title="Chi tiết việc ưu tiên"
-            subtitle={nextTask.title}
-            status={<Badge tone="sky">Mở</Badge>}
-            onPress={() => onOpenTask(nextTask)}
+        {isOffline ? (
+          <Notice
+            tone="warning"
+            title="Đang dùng dữ liệu đã lưu"
+            body="Dữ liệu có thể chưa mới. Kết nối lại để tải."
+            action={
+              onRetry ? (
+                <Button size="compact" variant="outline" onPress={onRetry}>
+                  Thử lại
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : errorMessage ? (
+          <Notice
+            tone="danger"
+            title="Không tải được ca làm việc"
+            body={errorMessage}
+            action={
+              onRetry ? (
+                <Button size="compact" variant="outline" onPress={onRetry}>
+                  Thử lại
+                </Button>
+              ) : undefined
+            }
           />
         ) : null}
-      </View>
+
+        <View style={[styles.nextAction, styles[`nextAction_${summary.tone}`]]}>
+          <Text style={styles.kicker}>Việc cần làm tiếp theo</Text>
+          <Text style={styles.nextTitle}>{summary.title}</Text>
+          <Text style={styles.body}>{summary.body}</Text>
+          {nextTask && actionable > 0 && workflow ? (
+            <Button
+              icon="arrow-forward-outline"
+              onPress={() => (onStartTaskProof ? onStartTaskProof(nextTask) : onOpenTask?.(nextTask))}
+            >
+              {workflow.activeActionText}
+            </Button>
+          ) : (
+            <Button variant="outline" icon="clipboard-outline" onPress={onOpenWork}>
+              Kiểm tra công việc
+            </Button>
+          )}
+        </View>
+
+        <View style={styles.metrics}>
+          <MetricStatTile
+            label="Cần xử lý"
+            value={actionable}
+            icon="time-outline"
+            tone="warning"
+            onPress={onOpenWork}
+          />
+          <MetricStatTile
+            label="Chờ duyệt"
+            value={waitingReviewCount}
+            icon="shield-checkmark-outline"
+            tone="info"
+            onPress={onOpenWork}
+          />
+          <MetricStatTile
+            label="Hoàn thành"
+            value={hasAssignments ? `${completionRate}%` : '—'}
+            icon="checkmark-circle-outline"
+            tone="success"
+            onPress={onOpenWork}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Đi tới</Text>
+          <ListRow
+            icon="clipboard-outline"
+            title="Công việc"
+            subtitle={`${openTaskCount} việc đang mở · ${completed}/${totalTasks} hoàn thành`}
+            onPress={onOpenWork}
+          />
+          <ListRow
+            icon="leaf-outline"
+            title="Cây của tôi"
+            subtitle={`${assignedTreeCount} cây có quan hệ phân công`}
+            onPress={onOpenTrees}
+          />
+          {nextTask && onOpenTask ? (
+            <ListRow
+              icon="document-text-outline"
+              title="Chi tiết việc ưu tiên"
+              subtitle={nextTask.title}
+              status={<Badge tone="sky">Mở</Badge>}
+              onPress={() => onOpenTask(nextTask)}
+            />
+          ) : null}
+        </View>
       </ScrollView>
     </View>
   );

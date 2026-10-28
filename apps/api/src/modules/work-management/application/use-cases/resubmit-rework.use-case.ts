@@ -3,7 +3,7 @@ import type { IEvidenceRepository } from '../ports/evidence-repository.port';
 import type { IOperationalUnitOfWork } from '../ports/operational-unit-of-work.port';
 import type { AuditService } from '../../../audit-compliance/application/services/audit.service';
 import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../../../core/errors';
-import type { ResubmitReworkRequest } from '@novyx/contracts';
+import type { ResubmitReworkRequest, HumanRole } from '@novyx/contracts';
 import type { Task } from '../../domain/task.entity';
 import { randomUUID } from 'node:crypto';
 
@@ -15,12 +15,9 @@ export class ResubmitReworkUseCase {
     private readonly uow?: IOperationalUnitOfWork,
   ) {}
 
-  async execute(
-    request: ResubmitReworkRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
-  ): Promise<Task> {
-    if (context.actorRole !== 'staff') {
-      throw new ForbiddenError('Only Field Staff may resubmit rework');
+  async execute(request: ResubmitReworkRequest, context: { actorId: string; actorRole: HumanRole }): Promise<Task> {
+    if (context.actorRole !== 'staff' && context.actorRole !== 'supervisor') {
+      throw new ForbiddenError('Only Field Staff or Field Supervisors may resubmit rework');
     }
 
     const run = async (repos: {
@@ -33,8 +30,19 @@ export class ResubmitReworkUseCase {
         throw new NotFoundError(`Task with ID ${request.taskId} not found`);
       }
 
-      if (task.assignedStaffId !== context.actorId) {
+      if (context.actorRole === 'staff' && task.assignedStaffId !== context.actorId) {
         throw new ForbiddenError('Cannot resubmit rework on a task assigned to another staff member');
+      }
+
+      if (context.actorRole === 'supervisor') {
+        if (task.assignedStaffId === context.actorId) {
+          throw new ForbiddenError(
+            'Separation of Duties violation (DR-HARD-02): Assigned staff member cannot resubmit supervisor rework',
+          );
+        }
+        if (task.assignedSupervisorId && task.assignedSupervisorId !== context.actorId) {
+          throw new ForbiddenError('Cannot resubmit rework on a task assigned to another supervisor');
+        }
       }
 
       if (task.version !== request.expectedVersion) {
@@ -74,7 +82,7 @@ export class ResubmitReworkUseCase {
       });
 
       // 2. Transition REWORK_REQUIRED -> WAITING_REVIEW
-      task.resubmitRework(context.actorId);
+      task.resubmitRework(context.actorId, context.actorRole as 'staff' | 'supervisor');
 
       const updated = await repos.taskRepo.update(task, request.expectedVersion);
       if (!updated) {

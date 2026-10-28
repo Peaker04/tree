@@ -1,5 +1,5 @@
 import type { IDurableOutboxRepository } from './outboxRepository';
-import type { ErrorClassification, OutboxDispatchResult, OutboxItem } from './types';
+import type { ErrorClassification, OutboxDispatchResult, OutboxItem, SyncStatus } from './types';
 import type { IMobileTaskRepository } from '../task/mobileTaskRepository';
 import type { IDatabaseConnection } from '../database/types';
 import type { TaskDto } from '@novyx/contracts';

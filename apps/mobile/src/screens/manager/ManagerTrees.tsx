@@ -188,11 +188,7 @@ export function ManagerTrees(props: ManagerAreaProps) {
         contentContainerStyle={styles.screen}
         refreshControl={
           props.onRefreshData ? (
-            <RefreshControl
-              refreshing={pullRefreshing}
-              onRefresh={handlePullRefresh}
-              tintColor={colors.primaryDark}
-            />
+            <RefreshControl refreshing={pullRefreshing} onRefresh={handlePullRefresh} tintColor={colors.primaryDark} />
           ) : undefined
         }
         ItemSeparatorComponent={() => <View style={styles.separator} />}

@@ -8,17 +8,21 @@ const outFd = fs.openSync(logFile, 'w');
 
 const env = {
   ...process.env,
-  EXPO_PUBLIC_API_BASE_URL: 'http://127.0.0.1:3000',
+  EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://cannot-gutter-retry.ngrok-free.dev',
   EXPO_PUBLIC_METRO_PORT: '8082',
 };
 
-const proc = spawn('node', ['scripts/expo-mobile.cjs', 'start', '--port', '8082', '--dev-client', '--host', 'localhost', '--clear'], {
-  cwd: repoRoot,
-  env,
-  detached: true,
-  stdio: ['ignore', outFd, outFd],
-  windowsHide: true,
-});
+const proc = spawn(
+  'node',
+  ['scripts/expo-mobile.cjs', 'start', '--port', '8082', '--dev-client', '--host', 'localhost', '--clear'],
+  {
+    cwd: repoRoot,
+    env,
+    detached: true,
+    stdio: ['ignore', outFd, outFd],
+    windowsHide: true,
+  },
+);
 
 proc.unref();
 console.log('Started Android Metro on PID:', proc.pid);

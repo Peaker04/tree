@@ -1,14 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Image,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
 import * as ExpoCamera from 'expo-camera';
@@ -224,7 +215,9 @@ export function StaffProofFlow(props: {
 
       let position: import('expo-location').LocationObject | null = null;
       try {
-        position = (await Location.getLastKnownPositionAsync()) || (await Location.getLastKnownPositionAsync({ maxAge: 120000 }));
+        position =
+          (await Location.getLastKnownPositionAsync()) ||
+          (await Location.getLastKnownPositionAsync({ maxAge: 120000 }));
       } catch {
         // Fall back to active measurement
       }
@@ -398,204 +391,203 @@ export function StaffProofFlow(props: {
       <View style={styles.flex}>
         <Header title="Chi tiết công việc" onBack={() => props.setStep('WORK')} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
-
-        <View style={styles.taskOrientation}>
-          <View style={styles.flex}>
-            <Text style={styles.itemTitle}>{props.activeTask.title}</Text>
-            <Text style={styles.bodyText}>{activeTree?.name ?? props.activeTask.treeName}</Text>
-            <Text style={styles.itemSub}>{props.activeTask.treeAddress}</Text>
-          </View>
-          <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
-        </View>
-
-        {props.activeTask.status === TaskStatus.REWORK_REQUIRED && props.activeTask.rejectReason ? (
-          <View style={styles.correctionPanel}>
-            <Ionicons name="build-outline" size={20} color={colors.danger} />
+          <View style={styles.taskOrientation}>
             <View style={styles.flex}>
-              <Text style={styles.alertText}>Nội dung cần làm lại</Text>
-              <Text style={styles.bodyText}>{props.activeTask.rejectReason}</Text>
+              <Text style={styles.itemTitle}>{props.activeTask.title}</Text>
+              <Text style={styles.bodyText}>{activeTree?.name ?? props.activeTask.treeName}</Text>
+              <Text style={styles.itemSub}>{props.activeTask.treeAddress}</Text>
             </View>
+            <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
           </View>
-        ) : null}
 
-        {!isSupervisor && props.activeTask.staffCompletedAt && props.activeTask.status === TaskStatus.IN_PROGRESS ? (
-          <Card tone="soft" style={styles.alertRow}>
-            <Ionicons name="time-outline" size={20} color={colors.primaryDark} />
-            <View style={styles.flex}>
-              <Text style={styles.successTitle}>Đang chờ Giám sát hiện trường chụp ảnh</Text>
-              <Text style={styles.bodyText}>
-                Bạn đã gửi định vị GPS, mã QR và danh mục công việc. Giám sát hiện trường sẽ chụp ảnh Trước & Sau để
-                hoàn tất hồ sơ trình Quản lý duyệt.
-              </Text>
-            </View>
-          </Card>
-        ) : null}
-
-        {isSupervisor &&
-        !props.activeTask.staffCompletedAt &&
-        props.activeTask.status !== TaskStatus.REWORK_REQUIRED &&
-        props.activeTask.status !== TaskStatus.WAITING_REVIEW &&
-        props.activeTask.status !== TaskStatus.COMPLETED ? (
-          <Card tone="amber" style={styles.alertRow}>
-            <Ionicons name="hourglass-outline" size={20} color={colors.warningText} />
-            <View style={styles.flex}>
-              <Text style={styles.alertText}>Chờ Nhân viên hiện trường xác nhận tại cây</Text>
-              <Text style={styles.bodyText}>
-                Nhân viên {formatActorDisplayName(props.activeTask.assignedStaffName)} cần hoàn tất định vị GPS (≤ 10m),
-                quét mã QR cây và đánh dấu Checklist trước khi Giám sát hiện trường chụp ảnh Trước & Sau.
-              </Text>
-            </View>
-          </Card>
-        ) : null}
-
-        <View style={styles.progressSummary}>
-          <View style={styles.flex}>
-            <Text style={styles.metricLabel}>Bằng chứng</Text>
-            <Text style={styles.itemTitle}>
-              {wState.proofCount}/{wState.totalRequired} bước hoàn thành
-            </Text>
-          </View>
-          <Badge tone={isRework ? 'amber' : proofGaps.length === 0 ? 'green' : 'amber'}>
-            {isRework ? 'Cần cập nhật' : proofGaps.length === 0 ? 'Đã đủ' : `Còn ${proofGaps.length}`}
-          </Badge>
-        </View>
-
-        {proofGaps.length > 0 && !wState.isSubmittedOrCompleted ? (
-          <View style={styles.compactGapList}>
-            {proofGaps.map((gap) => (
-              <View key={gap} style={styles.compactGapRow}>
-                <Ionicons name="ellipse" size={7} color={colors.warningText} />
-                <Text style={styles.bodyText}>{gap}</Text>
+          {props.activeTask.status === TaskStatus.REWORK_REQUIRED && props.activeTask.rejectReason ? (
+            <View style={styles.correctionPanel}>
+              <Ionicons name="build-outline" size={20} color={colors.danger} />
+              <View style={styles.flex}>
+                <Text style={styles.alertText}>Nội dung cần làm lại</Text>
+                <Text style={styles.bodyText}>{props.activeTask.rejectReason}</Text>
               </View>
+            </View>
+          ) : null}
+
+          {!isSupervisor && props.activeTask.staffCompletedAt && props.activeTask.status === TaskStatus.IN_PROGRESS ? (
+            <Card tone="soft" style={styles.alertRow}>
+              <Ionicons name="time-outline" size={20} color={colors.primaryDark} />
+              <View style={styles.flex}>
+                <Text style={styles.successTitle}>Đang chờ Giám sát hiện trường chụp ảnh</Text>
+                <Text style={styles.bodyText}>
+                  Bạn đã gửi định vị GPS, mã QR và danh mục công việc. Giám sát hiện trường sẽ chụp ảnh Trước & Sau để
+                  hoàn tất hồ sơ trình Quản lý duyệt.
+                </Text>
+              </View>
+            </Card>
+          ) : null}
+
+          {isSupervisor &&
+          !props.activeTask.staffCompletedAt &&
+          props.activeTask.status !== TaskStatus.REWORK_REQUIRED &&
+          props.activeTask.status !== TaskStatus.WAITING_REVIEW &&
+          props.activeTask.status !== TaskStatus.COMPLETED ? (
+            <Card tone="amber" style={styles.alertRow}>
+              <Ionicons name="hourglass-outline" size={20} color={colors.warningText} />
+              <View style={styles.flex}>
+                <Text style={styles.alertText}>Chờ Nhân viên hiện trường xác nhận tại cây</Text>
+                <Text style={styles.bodyText}>
+                  Nhân viên {formatActorDisplayName(props.activeTask.assignedStaffName)} cần hoàn tất định vị GPS (≤
+                  10m), quét mã QR cây và đánh dấu Checklist trước khi Giám sát hiện trường chụp ảnh Trước & Sau.
+                </Text>
+              </View>
+            </Card>
+          ) : null}
+
+          <View style={styles.progressSummary}>
+            <View style={styles.flex}>
+              <Text style={styles.metricLabel}>Bằng chứng</Text>
+              <Text style={styles.itemTitle}>
+                {wState.proofCount}/{wState.totalRequired} bước hoàn thành
+              </Text>
+            </View>
+            <Badge tone={isRework ? 'amber' : proofGaps.length === 0 ? 'green' : 'amber'}>
+              {isRework ? 'Cần cập nhật' : proofGaps.length === 0 ? 'Đã đủ' : `Còn ${proofGaps.length}`}
+            </Badge>
+          </View>
+
+          {proofGaps.length > 0 && !wState.isSubmittedOrCompleted ? (
+            <View style={styles.compactGapList}>
+              {proofGaps.map((gap) => (
+                <View key={gap} style={styles.compactGapRow}>
+                  <Ionicons name="ellipse" size={7} color={colors.warningText} />
+                  <Text style={styles.bodyText}>{gap}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          <View style={styles.sectionBlock}>
+            <SectionTitle icon="list-outline">Các bước thực hiện</SectionTitle>
+            {props.activeTask.checklist.map((item, index) => (
+              <ChecklistLine key={item.id} index={index} item={item} />
             ))}
           </View>
-        ) : null}
 
-        <View style={styles.sectionBlock}>
-          <SectionTitle icon="list-outline">Các bước thực hiện</SectionTitle>
-          {props.activeTask.checklist.map((item, index) => (
-            <ChecklistLine key={item.id} index={index} item={item} />
-          ))}
-        </View>
-
-        {(props.activeTask.status === TaskStatus.IN_PROGRESS || props.activeTask.status === 'IN_PROGRESS') &&
-        !reportingIssue ? (
-          <Button
-            variant="danger"
-            size="field"
-            icon="warning-outline"
-            disabled={startingTask}
-            onPress={() => {
-              setReportingIssue(true);
-            }}
-          >
-            Báo cáo sự cố hiện trường
-          </Button>
-        ) : (props.activeTask.status === TaskStatus.IN_PROGRESS || props.activeTask.status === 'IN_PROGRESS') &&
-          reportingIssue ? (
-          <Card tone="danger">
-            <SectionTitle icon="warning-outline">Cung cấp thông tin sự cố</SectionTitle>
-            <Field
-              label="Mô tả sự cố (ít nhất 5 ký tự)"
-              placeholder="Cây bị ngã đổ, khu vực ngập lụt..."
-              value={issueDesc}
-              onChangeText={setIssueDesc}
-              multiline
-            />
-            {!props.activeTask.beforePhoto && (
-              <Text style={[styles.bodyText, { marginTop: 8, color: colors.criticalText, fontWeight: '600' }]}>
-                * Cần có ảnh chụp trước xử lý trước khi báo cáo sự cố. Vui lòng quay lại chụp ảnh trước xử lý.
-              </Text>
-            )}
-            <View style={[styles.twoCols, { marginTop: 12 }]}>
-              <Button
-                variant="outline"
-                size="compact"
-                onPress={() => {
-                  setReportingIssue(false);
-                  setIssueDesc('');
-                }}
-              >
-                Hủy
-              </Button>
-              <Button
-                variant="danger"
-                size="compact"
-                disabled={startingTask || issueDesc.trim().length < 5 || !props.activeTask.beforePhoto}
-                loading={startingTask}
-                onPress={async () => {
-                  if (!props.activeTask || !props.activeTask.beforePhoto) return;
-                  setStartingTask(true);
-                  try {
-                    const blocked = await props.reportFieldIssue({
-                      taskId: props.activeTask.id,
-                      expectedVersion: props.activeTask.version ?? 0,
-                      issueDescription: issueDesc.trim(),
-                      issuePhotoUri: props.activeTask.beforePhoto,
-                    });
-                    props.setActiveTask(blocked);
+          {(props.activeTask.status === TaskStatus.IN_PROGRESS || props.activeTask.status === 'IN_PROGRESS') &&
+          !reportingIssue ? (
+            <Button
+              variant="danger"
+              size="field"
+              icon="warning-outline"
+              disabled={startingTask}
+              onPress={() => {
+                setReportingIssue(true);
+              }}
+            >
+              Báo cáo sự cố hiện trường
+            </Button>
+          ) : (props.activeTask.status === TaskStatus.IN_PROGRESS || props.activeTask.status === 'IN_PROGRESS') &&
+            reportingIssue ? (
+            <Card tone="danger">
+              <SectionTitle icon="warning-outline">Cung cấp thông tin sự cố</SectionTitle>
+              <Field
+                label="Mô tả sự cố (ít nhất 5 ký tự)"
+                placeholder="Cây bị ngã đổ, khu vực ngập lụt..."
+                value={issueDesc}
+                onChangeText={setIssueDesc}
+                multiline
+              />
+              {!props.activeTask.beforePhoto && (
+                <Text style={[styles.bodyText, { marginTop: 8, color: colors.criticalText, fontWeight: '600' }]}>
+                  * Cần có ảnh chụp trước xử lý trước khi báo cáo sự cố. Vui lòng quay lại chụp ảnh trước xử lý.
+                </Text>
+              )}
+              <View style={[styles.twoCols, { marginTop: 12 }]}>
+                <Button
+                  variant="outline"
+                  size="compact"
+                  onPress={() => {
                     setReportingIssue(false);
                     setIssueDesc('');
-                    props.setStep('WORK');
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="danger"
+                  size="compact"
+                  disabled={startingTask || issueDesc.trim().length < 5 || !props.activeTask.beforePhoto}
+                  loading={startingTask}
+                  onPress={async () => {
+                    if (!props.activeTask || !props.activeTask.beforePhoto) return;
+                    setStartingTask(true);
+                    try {
+                      const blocked = await props.reportFieldIssue({
+                        taskId: props.activeTask.id,
+                        expectedVersion: props.activeTask.version ?? 0,
+                        issueDescription: issueDesc.trim(),
+                        issuePhotoUri: props.activeTask.beforePhoto,
+                      });
+                      props.setActiveTask(blocked);
+                      setReportingIssue(false);
+                      setIssueDesc('');
+                      props.setStep('WORK');
+                    } finally {
+                      setStartingTask(false);
+                    }
+                  }}
+                >
+                  Gửi quản lý
+                </Button>
+              </View>
+            </Card>
+          ) : null}
+
+          <Button
+            variant="primary"
+            size="field"
+            icon={
+              wState.nextStep === 'GPS'
+                ? 'location-outline'
+                : wState.nextStep
+                  ? 'play-outline'
+                  : 'checkmark-circle-outline'
+            }
+            disabled={
+              wState.isSubmittedOrCompleted ||
+              startingTask ||
+              (isSupervisor &&
+                !props.activeTask.staffCompletedAt &&
+                props.activeTask.status !== TaskStatus.REWORK_REQUIRED)
+            }
+            loading={startingTask}
+            onPress={async () => {
+              resetQrError();
+              if (props.activeTask) {
+                if (props.activeTask.status === TaskStatus.PENDING || props.activeTask.status === 'PENDING') {
+                  setStartingTask(true);
+                  try {
+                    const started = await props.startTask(props.activeTask);
+                    props.setActiveTask(started);
+                    props.setStep(wState.nextStep ?? 'WORK');
+                  } catch {
+                    // Wait, error banner should be shown. For now, stay on DETAIL.
                   } finally {
                     setStartingTask(false);
                   }
-                }}
-              >
-                Gửi quản lý
-              </Button>
-            </View>
-          </Card>
-        ) : null}
-
-        <Button
-          variant="primary"
-          size="field"
-          icon={
-            wState.nextStep === 'GPS'
-              ? 'location-outline'
-              : wState.nextStep
-                ? 'play-outline'
-                : 'checkmark-circle-outline'
-          }
-          disabled={
-            wState.isSubmittedOrCompleted ||
-            startingTask ||
-            (isSupervisor &&
-              !props.activeTask.staffCompletedAt &&
-              props.activeTask.status !== TaskStatus.REWORK_REQUIRED)
-          }
-          loading={startingTask}
-          onPress={async () => {
-            resetQrError();
-            if (props.activeTask) {
-              if (props.activeTask.status === TaskStatus.PENDING || props.activeTask.status === 'PENDING') {
-                setStartingTask(true);
-                try {
-                  const started = await props.startTask(props.activeTask);
-                  props.setActiveTask(started);
+                } else {
                   props.setStep(wState.nextStep ?? 'WORK');
-                } catch {
-                  // Wait, error banner should be shown. For now, stay on DETAIL.
-                } finally {
-                  setStartingTask(false);
                 }
-              } else {
-                props.setStep(wState.nextStep ?? 'WORK');
               }
-            }
-          }}
-        >
-          {startingTask
-            ? 'Đang thực hiện...'
-            : isSupervisor &&
-                !props.activeTask.staffCompletedAt &&
-                props.activeTask.status !== TaskStatus.REWORK_REQUIRED &&
-                !wState.isSubmittedOrCompleted
-              ? 'Chờ nhân viên hiện trường xác nhận'
-              : wState.activeActionText ||
-                (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
-        </Button>
+            }}
+          >
+            {startingTask
+              ? 'Đang thực hiện...'
+              : isSupervisor &&
+                  !props.activeTask.staffCompletedAt &&
+                  props.activeTask.status !== TaskStatus.REWORK_REQUIRED &&
+                  !wState.isSubmittedOrCompleted
+                ? 'Chờ nhân viên hiện trường xác nhận'
+                : wState.activeActionText ||
+                  (props.activeTask.status === TaskStatus.COMPLETED ? 'Đã hoàn thành' : 'Đang chờ duyệt')}
+          </Button>
         </ScrollView>
       </View>
     );
@@ -606,116 +598,116 @@ export function StaffProofFlow(props: {
       <View style={styles.flex}>
         <Header title="Xác minh GPS" subtitle={props.activeTask.treeName} onBack={() => props.setStep('DETAIL')} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
-        {activeTree ? (
-          <TreeCheckinMap
-            task={props.activeTask}
-            tree={activeTree}
-            trees={props.trees}
-            userLat={props.userLat}
-            userLng={props.userLng}
-            locationMessage={locationMessage}
-            locating={locating}
-            locationAccuracyMeters={locationAccuracyMeters}
-            locationCapturedAt={locationCapturedAt}
-            permissionStateNode={gpsPermissionNode}
-            isSupervisor={isSupervisor}
-            onLocate={refreshDeviceLocation}
-            onRequestException={() => {
-              setReportingLocationException(true);
-            }}
-            onCheckIn={() => {
-              resetQrError();
-              checkInTask(props.activeTask as Task, activeTree);
-            }}
-          />
-        ) : null}
-
-        {reportingLocationException ? (
-          <Card tone="amber" style={styles.exceptionCard}>
-            <SectionTitle icon="warning-outline">Báo ngoại lệ vị trí hiện trường</SectionTitle>
-            <Text style={styles.bodyText}>
-              Thiết bị đang cách cây{' '}
-              {distance >= 1000 ? `${(distance / 1000).toFixed(1)} km` : `${distance.toFixed(1)} m`}. Nếu có chướng ngại
-              vật hoặc tán cây làm trôi sóng, hãy nêu lý do để quản lý duyệt có ngoại lệ:
-            </Text>
-            <View style={styles.reasonChips}>
-              {[
-                'Tán cây rậm rạp làm trôi tín hiệu GPS',
-                'Rào chắn công trình không tiếp cận được gốc cây',
-                'Vị trí cây thực tế lệch so với ghim bản đồ',
-              ].map((reasonOption) => (
-                <Pressable
-                  key={reasonOption}
-                  accessibilityRole="button"
-                  onPress={() => setLocationExceptionReason(reasonOption)}
-                  style={[styles.filterChip, locationExceptionReason === reasonOption && styles.filterChipActive]}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      locationExceptionReason === reasonOption && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {reasonOption}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Field
-              label="Lý do ngoại lệ (ít nhất 5 ký tự)"
-              value={locationExceptionReason}
-              onChangeText={setLocationExceptionReason}
-              placeholder="Mô tả lý do không thể tiếp cận sát gốc cây..."
-              multiline
+          {activeTree ? (
+            <TreeCheckinMap
+              task={props.activeTask}
+              tree={activeTree}
+              trees={props.trees}
+              userLat={props.userLat}
+              userLng={props.userLng}
+              locationMessage={locationMessage}
+              locating={locating}
+              locationAccuracyMeters={locationAccuracyMeters}
+              locationCapturedAt={locationCapturedAt}
+              permissionStateNode={gpsPermissionNode}
+              isSupervisor={isSupervisor}
+              onLocate={refreshDeviceLocation}
+              onRequestException={() => {
+                setReportingLocationException(true);
+              }}
+              onCheckIn={() => {
+                resetQrError();
+                checkInTask(props.activeTask as Task, activeTree);
+              }}
             />
-            <View style={styles.twoCols}>
-              <Button
-                variant="outline"
-                size="compact"
-                onPress={() => {
-                  setReportingLocationException(false);
-                  setLocationExceptionReason('');
-                }}
-              >
-                Hủy
-              </Button>
-              <Button
-                variant="primary"
-                size="compact"
-                disabled={locationExceptionReason.trim().length < 5}
-                onPress={() => {
-                  if (!props.activeTask || !activeTree) return;
-                  const reason = locationExceptionReason.trim();
-                  const exceptionGps = {
-                    verified: false,
-                    distance,
-                    timestamp: locationCapturedAt ?? new Date().toISOString(),
-                    lat: props.userLat,
-                    lng: props.userLng,
-                    accuracyMeters: locationAccuracyMeters ?? undefined,
-                  };
-                  patchTask(
-                    props.activeTask,
-                    isSupervisor
-                      ? {
-                          supervisorGpsCheck: exceptionGps,
-                          supervisorNotes: `${props.activeTask.supervisorNotes ? `${props.activeTask.supervisorNotes}\n` : ''}Ngoại lệ GPS: ${reason}`,
-                        }
-                      : {
-                          gpsCheck: exceptionGps,
-                          notes: `${props.activeTask.notes ? `${props.activeTask.notes}\n` : ''}Ngoại lệ GPS: ${reason}`,
-                        },
-                  );
-                  setReportingLocationException(false);
-                  setLocationExceptionReason('');
-                  props.setStep(isSupervisor ? 'BEFORE' : props.activeTask.qrCheck?.verified ? 'CHECKLIST' : 'QR');
-                }}
-              >
-                Xác nhận ngoại lệ & Tiếp tục
-              </Button>
-            </View>
-          </Card>
-        ) : null}
+          ) : null}
+
+          {reportingLocationException ? (
+            <Card tone="amber" style={styles.exceptionCard}>
+              <SectionTitle icon="warning-outline">Báo ngoại lệ vị trí hiện trường</SectionTitle>
+              <Text style={styles.bodyText}>
+                Thiết bị đang cách cây{' '}
+                {distance >= 1000 ? `${(distance / 1000).toFixed(1)} km` : `${distance.toFixed(1)} m`}. Nếu có chướng
+                ngại vật hoặc tán cây làm trôi sóng, hãy nêu lý do để quản lý duyệt có ngoại lệ:
+              </Text>
+              <View style={styles.reasonChips}>
+                {[
+                  'Tán cây rậm rạp làm trôi tín hiệu GPS',
+                  'Rào chắn công trình không tiếp cận được gốc cây',
+                  'Vị trí cây thực tế lệch so với ghim bản đồ',
+                ].map((reasonOption) => (
+                  <Pressable
+                    key={reasonOption}
+                    accessibilityRole="button"
+                    onPress={() => setLocationExceptionReason(reasonOption)}
+                    style={[styles.filterChip, locationExceptionReason === reasonOption && styles.filterChipActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        locationExceptionReason === reasonOption && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {reasonOption}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Field
+                label="Lý do ngoại lệ (ít nhất 5 ký tự)"
+                value={locationExceptionReason}
+                onChangeText={setLocationExceptionReason}
+                placeholder="Mô tả lý do không thể tiếp cận sát gốc cây..."
+                multiline
+              />
+              <View style={styles.twoCols}>
+                <Button
+                  variant="outline"
+                  size="compact"
+                  onPress={() => {
+                    setReportingLocationException(false);
+                    setLocationExceptionReason('');
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="primary"
+                  size="compact"
+                  disabled={locationExceptionReason.trim().length < 5}
+                  onPress={() => {
+                    if (!props.activeTask || !activeTree) return;
+                    const reason = locationExceptionReason.trim();
+                    const exceptionGps = {
+                      verified: false,
+                      distance,
+                      timestamp: locationCapturedAt ?? new Date().toISOString(),
+                      lat: props.userLat,
+                      lng: props.userLng,
+                      accuracyMeters: locationAccuracyMeters ?? undefined,
+                    };
+                    patchTask(
+                      props.activeTask,
+                      isSupervisor
+                        ? {
+                            supervisorGpsCheck: exceptionGps,
+                            supervisorNotes: `${props.activeTask.supervisorNotes ? `${props.activeTask.supervisorNotes}\n` : ''}Ngoại lệ GPS: ${reason}`,
+                          }
+                        : {
+                            gpsCheck: exceptionGps,
+                            notes: `${props.activeTask.notes ? `${props.activeTask.notes}\n` : ''}Ngoại lệ GPS: ${reason}`,
+                          },
+                    );
+                    setReportingLocationException(false);
+                    setLocationExceptionReason('');
+                    props.setStep(isSupervisor ? 'BEFORE' : props.activeTask.qrCheck?.verified ? 'CHECKLIST' : 'QR');
+                  }}
+                >
+                  Xác nhận ngoại lệ & Tiếp tục
+                </Button>
+              </View>
+            </Card>
+          ) : null}
         </ScrollView>
       </View>
     );
@@ -734,103 +726,106 @@ export function StaffProofFlow(props: {
           subtitle="Tra cứu hồ sơ, vị trí và công việc liên quan"
           onBack={() => props.setStep('HOME')}
         />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.screenPad, { paddingBottom: 148 }]}>
-        {!scannedTree ? (
-          <>
-            <Card tone="dark" style={styles.qrContextCard}>
-              <View style={styles.rowBetween}>
-                <View style={styles.flex}>
-                  <Text style={styles.heroKicker}>Chế độ tra cứu cây</Text>
-                  <Text style={styles.qrPayloadText}>Đưa mã QR cây vào khung</Text>
-                  <Text style={styles.headerSubDark}>Dùng được cả khi chưa có nhiệm vụ đang mở.</Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.screenPad, { paddingBottom: 148 }]}
+        >
+          {!scannedTree ? (
+            <>
+              <Card tone="dark" style={styles.qrContextCard}>
+                <View style={styles.rowBetween}>
+                  <View style={styles.flex}>
+                    <Text style={styles.heroKicker}>Chế độ tra cứu cây</Text>
+                    <Text style={styles.qrPayloadText}>Đưa mã QR cây vào khung</Text>
+                    <Text style={styles.headerSubDark}>Dùng được cả khi chưa có nhiệm vụ đang mở.</Text>
+                  </View>
+                  <Ionicons name="leaf-outline" size={32} color="#d9f7dd" />
                 </View>
-                <Ionicons name="leaf-outline" size={32} color="#d9f7dd" />
-              </View>
-            </Card>
-            {renderQrScanner({
-              purpose: 'staff-free-qr',
-              activeCameraPurpose,
-              permissionState: getPermissionStateForPurpose('staff-free-qr'),
-              cameraModule,
-              cameraRuntimeMessage: cameraRuntimeMessage || getRuntimeMessageForPurpose('staff-free-qr') || '',
-              height: Math.min(460, Math.max(320, windowHeight - 360)),
-              onRequestPermission: () => void requestCameraForPurpose('staff-free-qr'),
-              onBarcodeScanned: (payload) => {
-                const now = Date.now();
-                if (now - qrScanLockRef.current < 1600) return;
-                qrScanLockRef.current = now;
-                void lookupTreeByQr(payload);
-              },
-              label: 'Quét mã trên thân cây',
-            })}
+              </Card>
+              {renderQrScanner({
+                purpose: 'staff-free-qr',
+                activeCameraPurpose,
+                permissionState: getPermissionStateForPurpose('staff-free-qr'),
+                cameraModule,
+                cameraRuntimeMessage: cameraRuntimeMessage || getRuntimeMessageForPurpose('staff-free-qr') || '',
+                height: Math.min(460, Math.max(320, windowHeight - 360)),
+                onRequestPermission: () => void requestCameraForPurpose('staff-free-qr'),
+                onBarcodeScanned: (payload) => {
+                  const now = Date.now();
+                  if (now - qrScanLockRef.current < 1600) return;
+                  qrScanLockRef.current = now;
+                  void lookupTreeByQr(payload);
+                },
+                label: 'Quét mã trên thân cây',
+              })}
+              <Button
+                variant="outline"
+                icon="keypad-outline"
+                onPress={() => setManualCodeModalVisible(true)}
+                accessibilityLabel="Nhập mã cây bằng tay"
+              >
+                Nhập mã cây bằng tay
+              </Button>
+              <ManualTreeCodeModal
+                visible={manualCodeModalVisible}
+                onClose={() => setManualCodeModalVisible(false)}
+                trees={props.trees}
+                onSelectTreeCode={handleManualTreeSelect}
+              />
+            </>
+          ) : (
             <Button
               variant="outline"
-              icon="keypad-outline"
-              onPress={() => setManualCodeModalVisible(true)}
-              accessibilityLabel="Nhập mã cây bằng tay"
+              icon="scan-outline"
+              onPress={() => {
+                setScannedTree(null);
+                setQrLookupMessage('');
+                resetQrError();
+                void requestCameraForPurpose('staff-free-qr');
+              }}
             >
-              Nhập mã cây bằng tay
+              Quét mã khác
             </Button>
-            <ManualTreeCodeModal
-              visible={manualCodeModalVisible}
-              onClose={() => setManualCodeModalVisible(false)}
-              trees={props.trees}
-              onSelectTreeCode={handleManualTreeSelect}
+          )}
+          {renderQrState({
+            cameraRuntimeMessage,
+            qrErrorMessage,
+            qrLookupLoading,
+            qrLookupMessage,
+          })}
+          {scannedTree ? (
+            <TreeLookupResult
+              tree={scannedTree}
+              {...(relatedTask ? { task: relatedTask } : {})}
+              careHistory={props.getCareHistoryByTree(scannedTree.id)}
+              loadCareHistory={props.loadCareHistoryByTree}
+              onOpenTask={
+                relatedTask
+                  ? () => {
+                      const verifiedTask = patchTask(relatedTask, {
+                        qrCheck: {
+                          verified: true,
+                          scannedCode: scannedTree.qrCode,
+                          timestamp: new Date().toISOString(),
+                        },
+                      });
+                      props.setActiveTask(verifiedTask);
+                      props.setStep('DETAIL');
+                    }
+                  : undefined
+              }
+              onMap={
+                relatedTask
+                  ? () => {
+                      props.setMapReturnStep('QR');
+                      props.setActiveTask(relatedTask);
+                      props.setStep('MAP');
+                    }
+                  : undefined
+              }
+              onTrees={() => props.setStep('MY_TREES')}
             />
-          </>
-        ) : (
-          <Button
-            variant="outline"
-            icon="scan-outline"
-            onPress={() => {
-              setScannedTree(null);
-              setQrLookupMessage('');
-              resetQrError();
-              void requestCameraForPurpose('staff-free-qr');
-            }}
-          >
-            Quét mã khác
-          </Button>
-        )}
-        {renderQrState({
-          cameraRuntimeMessage,
-          qrErrorMessage,
-          qrLookupLoading,
-          qrLookupMessage,
-        })}
-        {scannedTree ? (
-          <TreeLookupResult
-            tree={scannedTree}
-            {...(relatedTask ? { task: relatedTask } : {})}
-            careHistory={props.getCareHistoryByTree(scannedTree.id)}
-            loadCareHistory={props.loadCareHistoryByTree}
-            onOpenTask={
-              relatedTask
-                ? () => {
-                    const verifiedTask = patchTask(relatedTask, {
-                      qrCheck: {
-                        verified: true,
-                        scannedCode: scannedTree.qrCode,
-                        timestamp: new Date().toISOString(),
-                      },
-                    });
-                    props.setActiveTask(verifiedTask);
-                    props.setStep('DETAIL');
-                  }
-                : undefined
-            }
-            onMap={
-              relatedTask
-                ? () => {
-                    props.setMapReturnStep('QR');
-                    props.setActiveTask(relatedTask);
-                    props.setStep('MAP');
-                  }
-                : undefined
-            }
-            onTrees={() => props.setStep('MY_TREES')}
-          />
-        ) : null}
+          ) : null}
         </ScrollView>
       </View>
     );
@@ -1027,7 +1022,9 @@ export function StaffProofFlow(props: {
         <View style={styles.cameraGpsBar}>
           <Ionicons name="location-outline" size={14} color="#94a3b8" />
           <Text style={styles.cameraGpsText}>
-            GPS {activeGpsCheck?.accuracyMeters ? `sai số ±${activeGpsCheck.accuracyMeters.toFixed(0)}m` : 'chưa xác thực'} · {props.activeTask.treeName}
+            GPS{' '}
+            {activeGpsCheck?.accuracyMeters ? `sai số ±${activeGpsCheck.accuracyMeters.toFixed(0)}m` : 'chưa xác thực'}{' '}
+            · {props.activeTask.treeName}
           </Text>
         </View>
 
@@ -1054,7 +1051,11 @@ export function StaffProofFlow(props: {
               scaleTo={0.9}
               style={styles.auxShutterBtn}
             >
-              <Ionicons name={torchOn ? 'flash' : 'flash-off-outline'} size={22} color={torchOn ? colors.amber : '#ffffff'} />
+              <Ionicons
+                name={torchOn ? 'flash' : 'flash-off-outline'}
+                size={22}
+                color={torchOn ? colors.amber : '#ffffff'}
+              />
             </PressableScale>
 
             <PressableScale
@@ -1092,36 +1093,36 @@ export function StaffProofFlow(props: {
           onBack={() => props.setStep(isRework ? 'DETAIL' : 'QR')}
         />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
-        <Card>
-          {checklist.map((item, index) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${item.done ? 'Bỏ chọn' : 'Đánh dấu'} ${item.text}`}
-              accessibilityState={{ checked: item.done }}
-              key={item.id}
-              style={styles.checkPress}
-              onPress={() => {
-                triggerTactileFeedback('light');
-                const updated = checklist.map((check) =>
-                  check.id === item.id ? { ...check, done: !check.done } : check,
-                );
-                patchActiveTask({ checklist: updated });
-              }}
-            >
-              <Ionicons
-                name={item.done ? 'checkbox' : 'square-outline'}
-                size={22}
-                color={item.done ? colors.primary : colors.muted}
-              />
-              <Text style={styles.checkText}>
-                {index + 1}. {item.text}
-              </Text>
-            </Pressable>
-          ))}
-        </Card>
-        <Button icon="checkmark-done-outline" onPress={() => props.setStep('REVIEW')}>
-          Xem lại & Gửi xác nhận hiện trường
-        </Button>
+          <Card>
+            {checklist.map((item, index) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${item.done ? 'Bỏ chọn' : 'Đánh dấu'} ${item.text}`}
+                accessibilityState={{ checked: item.done }}
+                key={item.id}
+                style={styles.checkPress}
+                onPress={() => {
+                  triggerTactileFeedback('light');
+                  const updated = checklist.map((check) =>
+                    check.id === item.id ? { ...check, done: !check.done } : check,
+                  );
+                  patchActiveTask({ checklist: updated });
+                }}
+              >
+                <Ionicons
+                  name={item.done ? 'checkbox' : 'square-outline'}
+                  size={22}
+                  color={item.done ? colors.primary : colors.muted}
+                />
+                <Text style={styles.checkText}>
+                  {index + 1}. {item.text}
+                </Text>
+              </Pressable>
+            ))}
+          </Card>
+          <Button icon="checkmark-done-outline" onPress={() => props.setStep('REVIEW')}>
+            Xem lại & Gửi xác nhận hiện trường
+          </Button>
         </ScrollView>
       </View>
     );
@@ -1163,189 +1164,200 @@ export function StaffProofFlow(props: {
             onBack={() => props.setStep(isRework ? 'DETAIL' : 'CHECKLIST')}
           />
         )}
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad} automaticallyAdjustKeyboardInsets={true}>
-        <View style={styles.reviewContent}>
-          {/* Gate */}
-          <View
-            style={[
-              styles.gateBanner,
-              {
-                backgroundColor: proofGaps.length === 0 ? colors.successSurface : colors.criticalSurface,
-                borderColor: proofGaps.length === 0 ? colors.successBorder : colors.criticalBorder,
-              },
-            ]}
-          >
-            <View style={styles.alertRow}>
-              <Ionicons
-                name={proofGaps.length === 0 ? 'checkmark-circle-outline' : 'alert-circle-outline'}
-                size={20}
-                color={proofGaps.length === 0 ? colors.successText : colors.criticalText}
-              />
-              <Text
-                style={[
-                  proofGaps.length === 0 ? styles.successTitle : styles.alertText,
-                  { color: proofGaps.length === 0 ? colors.successText : colors.criticalText },
-                ]}
-              >
-                {proofGaps.length === 0
-                  ? isSupervisor
-                    ? 'Vị trí Giám sát và ảnh Trước/Sau hợp lệ'
-                    : 'Định vị GPS, mã QR và Checklist hợp lệ'
-                  : 'Chưa đủ điều kiện gửi xác nhận'}
-              </Text>
-            </View>
-            {proofGaps.length > 0 ? (
-              <View style={styles.proofGapList}>
-                {proofGaps.map((gap) => (
-                  <Text key={gap} style={styles.bodyText}>
-                    - {gap}
-                  </Text>
-                ))}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.screenPad}
+          automaticallyAdjustKeyboardInsets={true}
+        >
+          <View style={styles.reviewContent}>
+            {/* Gate */}
+            <View
+              style={[
+                styles.gateBanner,
+                {
+                  backgroundColor: proofGaps.length === 0 ? colors.successSurface : colors.criticalSurface,
+                  borderColor: proofGaps.length === 0 ? colors.successBorder : colors.criticalBorder,
+                },
+              ]}
+            >
+              <View style={styles.alertRow}>
+                <Ionicons
+                  name={proofGaps.length === 0 ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+                  size={20}
+                  color={proofGaps.length === 0 ? colors.successText : colors.criticalText}
+                />
+                <Text
+                  style={[
+                    proofGaps.length === 0 ? styles.successTitle : styles.alertText,
+                    { color: proofGaps.length === 0 ? colors.successText : colors.criticalText },
+                  ]}
+                >
+                  {proofGaps.length === 0
+                    ? isSupervisor
+                      ? 'Vị trí Giám sát và ảnh Trước/Sau hợp lệ'
+                      : 'Định vị GPS, mã QR và Checklist hợp lệ'
+                    : 'Chưa đủ điều kiện gửi xác nhận'}
+                </Text>
               </View>
-            ) : (
-              <Text style={styles.bodyText}>
-                {isSupervisor
-                  ? 'Hồ sơ kết hợp giữa Nhân viên hiện trường và Giám sát đã sẵn sàng trình Quản lý duyệt.'
-                  : 'Sau khi bạn gửi xác nhận hiện trường, Giám sát hiện trường sẽ chụp ảnh Trước & Sau để hoàn tất nghiệm thu.'}
-              </Text>
-            )}
-          </View>
-
-          {/* Proof Chain */}
-          <View style={styles.detailSection}>
-            <ProofChainCard task={props.activeTask} role={actorRole} />
-          </View>
-
-          {/* Photos (Supervisor only) */}
-          {isSupervisor ? (
-            <View style={styles.detailSection}>
-              <PhotoPair task={props.activeTask} />
+              {proofGaps.length > 0 ? (
+                <View style={styles.proofGapList}>
+                  {proofGaps.map((gap) => (
+                    <Text key={gap} style={styles.bodyText}>
+                      - {gap}
+                    </Text>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.bodyText}>
+                  {isSupervisor
+                    ? 'Hồ sơ kết hợp giữa Nhân viên hiện trường và Giám sát đã sẵn sàng trình Quản lý duyệt.'
+                    : 'Sau khi bạn gửi xác nhận hiện trường, Giám sát hiện trường sẽ chụp ảnh Trước & Sau để hoàn tất nghiệm thu.'}
+                </Text>
+              )}
             </View>
-          ) : null}
 
-          {/* Checklist */}
-          <Card style={styles.detailCard}>
-            <SectionTitle icon="checkbox-outline">Checklist hiện trường</SectionTitle>
-            {props.activeTask.checklist.map((item, index) => (
-              <ChecklistLine key={item.id} index={index} item={item} />
-            ))}
-          </Card>
+            {/* Proof Chain */}
+            <View style={styles.detailSection}>
+              <ProofChainCard task={props.activeTask} role={actorRole} />
+            </View>
 
-          {/* Notes */}
-          <Card style={styles.detailCard}>
-            <SectionTitle icon="document-text-outline">Ghi chú nghiệm thu</SectionTitle>
-            {isSupervisor && props.activeTask.notes ? (
-              <View style={{ marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.hairlineBorder }}>
-                <Text style={styles.metricLabel}>Ghi chú nhân viên hiện trường:</Text>
-                <Text style={styles.bodyText}>{props.activeTask.notes}</Text>
+            {/* Photos (Supervisor only) */}
+            {isSupervisor ? (
+              <View style={styles.detailSection}>
+                <PhotoPair task={props.activeTask} />
               </View>
             ) : null}
-            <Field
-              label={isSupervisor ? 'Ghi chú giám sát hiện trường' : 'Ghi chú nhân viên hiện trường'}
-              value={isSupervisor ? supervisorNotes : visibleNotes}
-              onChangeText={(notes) => {
-                if (isSupervisor) {
-                  patchActiveTask({ supervisorNotes: notes });
-                } else {
-                  patchActiveTask({ notes });
-                }
-              }}
-              placeholder="Ghi chú thêm nếu cần"
-              multiline
-              style={styles.multilineInput}
-            />
-          </Card>
-        </View>
 
-        {submissionError ? (
-          <View style={styles.submissionError} accessibilityRole="alert">
-            <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
-            <Text style={styles.alertText}>{submissionError}</Text>
+            {/* Checklist */}
+            <Card style={styles.detailCard}>
+              <SectionTitle icon="checkbox-outline">Checklist hiện trường</SectionTitle>
+              {props.activeTask.checklist.map((item, index) => (
+                <ChecklistLine key={item.id} index={index} item={item} />
+              ))}
+            </Card>
+
+            {/* Notes */}
+            <Card style={styles.detailCard}>
+              <SectionTitle icon="document-text-outline">Ghi chú nghiệm thu</SectionTitle>
+              {isSupervisor && props.activeTask.notes ? (
+                <View
+                  style={{
+                    marginBottom: 12,
+                    paddingBottom: 8,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.hairlineBorder,
+                  }}
+                >
+                  <Text style={styles.metricLabel}>Ghi chú nhân viên hiện trường:</Text>
+                  <Text style={styles.bodyText}>{props.activeTask.notes}</Text>
+                </View>
+              ) : null}
+              <Field
+                label={isSupervisor ? 'Ghi chú giám sát hiện trường' : 'Ghi chú nhân viên hiện trường'}
+                value={isSupervisor ? supervisorNotes : visibleNotes}
+                onChangeText={(notes) => {
+                  if (isSupervisor) {
+                    patchActiveTask({ supervisorNotes: notes });
+                  } else {
+                    patchActiveTask({ notes });
+                  }
+                }}
+                placeholder="Ghi chú thêm nếu cần"
+                multiline
+                style={styles.multilineInput}
+              />
+            </Card>
           </View>
-        ) : null}
-        <Button
-          variant="primary"
-          size="field"
-          icon={proofGaps.length === 0 ? 'send-outline' : 'build-outline'}
-          disabled={submittingEvidence}
-          onPress={async () => {
-            const task = props.activeTask;
-            if (!task) return;
-            if (!wState.isComplete && wState.nextStep) {
-              props.setStep(wState.nextStep);
-              return;
-            }
-            setSubmissionError('');
-            setSubmittingEvidence(true);
-            try {
-              if (task.status === TaskStatus.REWORK_REQUIRED) {
-                const savedTask =
-                  task.beforePhoto && task.afterPhoto
-                    ? await props.resubmitRework({
-                        taskId: task.id,
-                        expectedVersion: task.version ?? 0,
-                        reworkedProof: {
-                          proofProfile: 'CHANGE_PROOF',
-                          beforePhotoUri: task.beforePhoto,
-                          afterPhotoUri: task.afterPhoto,
-                          checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: c.done as true })),
-                        },
-                        reworkNotes: task.notes ?? undefined,
-                      })
-                    : !isSupervisor && props.submitStaffCheckin
-                      ? await props.submitStaffCheckin(task)
-                      : await props.submitTaskEvidence(task);
-                props.setActiveTask(savedTask);
-                await props.createNotification({
-                  title: 'Báo cáo đã nộp lại',
-                  body: `Báo cáo "${task.title}" đã nộp lại chờ quản lý duyệt.`,
-                  type: 'success',
-                  taskId: task.id,
-                });
-                props.setStep('SUCCESS');
-              } else if (!isSupervisor && props.submitStaffCheckin) {
-                const savedTask = await props.submitStaffCheckin(task);
-                props.setActiveTask(savedTask);
-                await props.createNotification({
-                  title: 'Đã gửi định vị GPS & Checklist',
-                  body: `Công việc "${task.title}" đang chờ Giám sát hiện trường chụp ảnh nghiệm thu.`,
-                  type: 'info',
-                  taskId: task.id,
-                });
-                props.setStep('SUCCESS');
-              } else {
-                const savedTask = await props.submitTaskEvidence(task);
-                props.setActiveTask(savedTask);
-                await props.createNotification({
-                  title: 'Báo cáo nghiệm thu đã đóng gói',
-                  body: `Báo cáo "${task.title}" đã được đưa vào hàng đợi gửi.`,
-                  type: 'success',
-                  taskId: task.id,
-                });
-                props.setStep('SUCCESS');
+
+          {submissionError ? (
+            <View style={styles.submissionError} accessibilityRole="alert">
+              <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
+              <Text style={styles.alertText}>{submissionError}</Text>
+            </View>
+          ) : null}
+          <Button
+            variant="primary"
+            size="field"
+            icon={proofGaps.length === 0 ? 'send-outline' : 'build-outline'}
+            disabled={submittingEvidence}
+            onPress={async () => {
+              const task = props.activeTask;
+              if (!task) return;
+              if (!wState.isComplete && wState.nextStep) {
+                props.setStep(wState.nextStep);
+                return;
               }
-            } catch (error) {
-              const detail = error instanceof Error ? error.message : '';
-              setSubmissionError(
-                detail.startsWith('PERSIST_')
-                  ? 'Không lưu được ảnh. Ảnh gốc vẫn còn trên thiết bị.'
-                  : detail.startsWith('UPLOAD_')
-                    ? 'Không tải được ảnh. Kiểm tra mạng rồi thử lại.'
-                    : 'Chưa gửi được báo cáo. Ảnh đã được giữ.',
-              );
-            } finally {
-              setSubmittingEvidence(false);
-            }
-          }}
-        >
-          {submittingEvidence
-            ? 'Đang gửi...'
-            : proofGaps.length === 0
-              ? isSupervisor
-                ? 'Gửi bằng chứng giám sát'
-                : 'Gửi định vị GPS & Xác nhận hoàn thành'
-              : wState.activeActionText}
-        </Button>
+              setSubmissionError('');
+              setSubmittingEvidence(true);
+              try {
+                if (task.status === TaskStatus.REWORK_REQUIRED) {
+                  const savedTask =
+                    task.beforePhoto && task.afterPhoto
+                      ? await props.resubmitRework({
+                          taskId: task.id,
+                          expectedVersion: task.version ?? 0,
+                          reworkedProof: {
+                            proofProfile: 'CHANGE_PROOF',
+                            beforePhotoUri: task.beforePhoto,
+                            afterPhotoUri: task.afterPhoto,
+                            checklist: task.checklist.map((c) => ({ id: c.id, text: c.text, done: c.done as true })),
+                          },
+                          reworkNotes: task.notes ?? undefined,
+                        })
+                      : !isSupervisor && props.submitStaffCheckin
+                        ? await props.submitStaffCheckin(task)
+                        : await props.submitTaskEvidence(task);
+                  props.setActiveTask(savedTask);
+                  await props.createNotification({
+                    title: 'Báo cáo đã nộp lại',
+                    body: `Báo cáo "${task.title}" đã nộp lại chờ quản lý duyệt.`,
+                    type: 'success',
+                    taskId: task.id,
+                  });
+                  props.setStep('SUCCESS');
+                } else if (!isSupervisor && props.submitStaffCheckin) {
+                  const savedTask = await props.submitStaffCheckin(task);
+                  props.setActiveTask(savedTask);
+                  await props.createNotification({
+                    title: 'Đã gửi định vị GPS & Checklist',
+                    body: `Công việc "${task.title}" đang chờ Giám sát hiện trường chụp ảnh nghiệm thu.`,
+                    type: 'info',
+                    taskId: task.id,
+                  });
+                  props.setStep('SUCCESS');
+                } else {
+                  const savedTask = await props.submitTaskEvidence(task);
+                  props.setActiveTask(savedTask);
+                  await props.createNotification({
+                    title: 'Báo cáo nghiệm thu đã đóng gói',
+                    body: `Báo cáo "${task.title}" đã được đưa vào hàng đợi gửi.`,
+                    type: 'success',
+                    taskId: task.id,
+                  });
+                  props.setStep('SUCCESS');
+                }
+              } catch (error) {
+                const detail = error instanceof Error ? error.message : '';
+                setSubmissionError(
+                  detail.startsWith('PERSIST_')
+                    ? 'Không lưu được ảnh. Ảnh gốc vẫn còn trên thiết bị.'
+                    : detail.startsWith('UPLOAD_')
+                      ? 'Không tải được ảnh. Kiểm tra mạng rồi thử lại.'
+                      : 'Chưa gửi được báo cáo. Ảnh đã được giữ.',
+                );
+              } finally {
+                setSubmittingEvidence(false);
+              }
+            }}
+          >
+            {submittingEvidence
+              ? 'Đang gửi...'
+              : proofGaps.length === 0
+                ? isSupervisor
+                  ? 'Gửi bằng chứng giám sát'
+                  : 'Gửi định vị GPS & Xác nhận hoàn thành'
+                : wState.activeActionText}
+          </Button>
         </ScrollView>
       </View>
     );
@@ -1540,9 +1552,7 @@ function TreeCheckinMap({
               {tree.address}
             </Text>
           </View>
-          <Badge tone={verified ? 'green' : 'amber'}>
-            Khoảng cách tới cây: {distanceLabel}
-          </Badge>
+          <Badge tone={verified ? 'green' : 'amber'}>Khoảng cách tới cây: {distanceLabel}</Badge>
         </View>
         <View style={styles.checkinStatusRow}>
           <Ionicons
@@ -1561,7 +1571,8 @@ function TreeCheckinMap({
         <View style={styles.signalStatusRow}>
           <Ionicons name="radio-outline" size={15} color={colors.pewter} />
           <Text style={styles.monoSmall}>
-            Sai số GPS: {locationAccuracyMeters === null ? 'Chưa có GPS thật' : `±${locationAccuracyMeters.toFixed(0)}m`}
+            Sai số GPS:{' '}
+            {locationAccuracyMeters === null ? 'Chưa có GPS thật' : `±${locationAccuracyMeters.toFixed(0)}m`}
             {locationCapturedAt && locationAgeSeconds !== null ? ` • Đo ${locationAgeSeconds}s trước` : ''}
           </Text>
         </View>

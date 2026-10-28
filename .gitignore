@@ -58,6 +58,16 @@ scratch/
 .pi/
 .stitch/
 
+# device and session scratch
+.agents/*.png
+.agents/*.db
+.agents/*.sqlite
+.agents/*.xml
+tmp-*.log
+tmp-*.json
+/tmp-*.log
+/tmp-*.json
+
 # python
 __pycache__/
 *.py[cod]

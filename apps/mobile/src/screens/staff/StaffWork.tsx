@@ -3,8 +3,8 @@ import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View }
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, EmptyState, ScreenHeader, SegmentedFilterBar } from '../../components/AppPrimitives';
 import {
-  TASK_FILTER_OPTIONS,
   TaskFilter,
+  createStaffFilterOptions,
   formatTaskDate,
   getTaskProofWorkflowState,
   getTaskStatusMeta,
@@ -19,6 +19,7 @@ export function StaffWork({
   visibleTasks,
   totalTasks,
   activeFilter,
+  allTasks,
   loading = false,
   onRefresh,
   onFilterChange,
@@ -28,6 +29,7 @@ export function StaffWork({
   visibleTasks: Task[];
   totalTasks: number;
   activeFilter: TaskFilter;
+  allTasks?: Task[];
   loading?: boolean;
   onRefresh?: () => Promise<void> | void;
   onFilterChange: (value: TaskFilter) => void;
@@ -64,29 +66,29 @@ export function StaffWork({
           <View style={styles.header}>
             <SegmentedFilterBar
               variant="scrollable"
-              options={TASK_FILTER_OPTIONS}
+              options={createStaffFilterOptions(allTasks && allTasks.length > 0 ? allTasks : visibleTasks)}
               selectedId={activeFilter}
               onSelect={(id) => onFilterChange(id)}
             />
-          <Text style={styles.resultLabel}>
-            {visibleTasks.length}/{totalTasks} công việc
-          </Text>
-          {totalTasks === 0 ? (
-            <EmptyState
-              title="Chưa có công việc được giao"
-              body="Nhiệm vụ mới sẽ xuất hiện sau khi quản lý phân công."
-            />
-          ) : visibleTasks.length === 0 ? (
-            <EmptyState
-              icon="funnel-outline"
-              title="Không có việc trong bộ lọc"
-              body="Chọn một trạng thái khác để xem công việc."
-            />
-          ) : null}
-        </View>
-      }
-      renderItem={renderItem}
-    />
+            <Text style={styles.resultLabel}>
+              {visibleTasks.length}/{totalTasks} công việc
+            </Text>
+            {totalTasks === 0 ? (
+              <EmptyState
+                title="Chưa có công việc được giao"
+                body="Nhiệm vụ mới sẽ xuất hiện sau khi quản lý phân công."
+              />
+            ) : visibleTasks.length === 0 ? (
+              <EmptyState
+                icon="funnel-outline"
+                title="Không có việc trong bộ lọc"
+                body="Chọn một trạng thái khác để xem công việc."
+              />
+            ) : null}
+          </View>
+        }
+        renderItem={renderItem}
+      />
     </View>
   );
 }

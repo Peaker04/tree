@@ -91,7 +91,10 @@ export function StaffArea(props: {
   );
 
   const staffTasks = useMemo(
-    () => (props.authenticatedStaffId ? props.tasks.filter((task) => task.assignedStaffId === props.authenticatedStaffId) : []),
+    () =>
+      props.authenticatedStaffId
+        ? props.tasks.filter((task) => task.assignedStaffId === props.authenticatedStaffId)
+        : [],
     [props.authenticatedStaffId, props.tasks],
   );
 
@@ -100,20 +103,14 @@ export function StaffArea(props: {
     [staffTasks],
   );
 
-  const completedTasks = useMemo(
-    () => staffTasks.filter((task) => task.status === TaskStatus.COMPLETED),
-    [staffTasks],
-  );
+  const completedTasks = useMemo(() => staffTasks.filter((task) => task.status === TaskStatus.COMPLETED), [staffTasks]);
 
   const waitingReviewTasks = useMemo(
     () => staffTasks.filter((task) => task.status === TaskStatus.WAITING_REVIEW),
     [staffTasks],
   );
 
-  const actionableTasks = useMemo(
-    () => staffTasks.filter(isStaffActionableTask),
-    [isStaffActionableTask, staffTasks],
-  );
+  const actionableTasks = useMemo(() => staffTasks.filter(isStaffActionableTask), [isStaffActionableTask, staffTasks]);
 
   const visibleTasks = useMemo(
     () =>
@@ -141,7 +138,10 @@ export function StaffArea(props: {
   const waitingReview = waitingReviewTasks.length;
   const completionRate = Math.round((completed / Math.max(staffTasks.length, 1)) * 100);
   const nextTask = useMemo(() => getNextActionTask(actionableTasks), [actionableTasks]);
-  const unreadNotifications = useMemo(() => props.notifications.filter((notification) => !notification.read), [props.notifications]);
+  const unreadNotifications = useMemo(
+    () => props.notifications.filter((notification) => !notification.read),
+    [props.notifications],
+  );
   const visibleNotifications = notificationFilter === 'unread' ? unreadNotifications : props.notifications;
 
   if (props.step === 'HOME') {
@@ -228,6 +228,7 @@ export function StaffArea(props: {
           openTaskCount={openTasks.length}
           visibleTasks={visibleTasks}
           totalTasks={staffTasks.length}
+          allTasks={staffTasks}
           activeFilter={taskFilter}
           loading={props.dataSource?.loading}
           onRefresh={props.onRefreshData}
@@ -266,95 +267,103 @@ export function StaffArea(props: {
             onBack={() => props.setStep('HOME')}
           />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenPad}>
-        <View style={styles.taskFilterPanel}>
-          <View style={styles.rowBetween}>
-            <HeaderLabel />
-            {unreadNotifications.length > 0 ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={markingNotifications}
-                onPress={async () => {
-                  setMarkingNotifications(true);
-                  const fallbackNotifications = props.notifications.map((notification) => ({
-                    ...notification,
-                    read: true,
-                  }));
-                  const savedNotifications = await props.markNotificationsRead(
-                    unreadNotifications.map((notification) => notification.id),
-                    fallbackNotifications,
-                  );
-                  props.updateNotifications(savedNotifications);
-                  setMarkingNotifications(false);
-                }}
-              >
-                <Text style={styles.linkText}>{markingNotifications ? 'Đang lưu...' : 'Đánh dấu đã đọc'}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          <View style={styles.reasonChips}>
-            {[
-              { id: 'all' as const, label: `Tất cả (${props.notifications.length})` },
-              { id: 'unread' as const, label: `Chưa đọc (${unreadNotifications.length})` },
-            ].map((option) => (
-              <Pressable
-                accessibilityRole="button"
-                key={option.id}
-                onPress={() => setNotificationFilter(option.id)}
-                style={[styles.filterChip, notificationFilter === option.id && styles.filterChipActive]}
-              >
-                <Text style={[styles.filterChipText, notificationFilter === option.id && styles.filterChipTextActive]}>
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-        {props.notifications.length === 0 ? (
-          <EmptyState
-            title="Không có thông báo mới"
-            body="Các cập nhật tác nghiệp sẽ xuất hiện ở đây."
-            icon="notifications-outline"
-          />
-        ) : visibleNotifications.length === 0 ? (
-          <EmptyState
-            title="Không có thông báo chưa đọc"
-            body="Các cập nhật mới sẽ xuất hiện tại đây."
-            icon="mail-open-outline"
-          />
-        ) : (
-          visibleNotifications.map((notification) => (
-            <Pressable
-              accessibilityRole="button"
-              key={notification.id}
-              onPress={async () => {
-                const fallbackNotifications = props.notifications.map((item) =>
-                  item.id === notification.id ? { ...item, read: true } : item,
-                );
-                const savedNotifications = await props.markNotificationsRead([notification.id], fallbackNotifications);
-                props.updateNotifications(savedNotifications);
-                const task = props.tasks.find((item) => item.id === notification.taskId);
-                if (task) {
-                  props.setActiveTask(task);
-                  props.setStep('DETAIL');
-                }
-              }}
-            >
-              <Card style={styles.listCard} tone={notification.read ? 'default' : 'green'}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.itemTitle}>{notification.title}</Text>
-                  <Badge tone={NOTIFICATION_TYPE_META[notification.type]?.tone ?? 'sky'}>
-                    {NOTIFICATION_TYPE_META[notification.type]?.label ?? 'Thông báo'}
-                  </Badge>
-                </View>
-                <Text style={styles.bodyText}>{sanitizeNotificationText(notification.body)}</Text>
-                <Text style={styles.monoSmall}>
-                  {new Date(notification.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-                {notification.taskId ? <Text style={styles.linkText}>Mở công việc liên quan</Text> : null}
-              </Card>
-            </Pressable>
-          ))
-        )}
+            <View style={styles.taskFilterPanel}>
+              <View style={styles.rowBetween}>
+                <HeaderLabel />
+                {unreadNotifications.length > 0 ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={markingNotifications}
+                    onPress={async () => {
+                      setMarkingNotifications(true);
+                      const fallbackNotifications = props.notifications.map((notification) => ({
+                        ...notification,
+                        read: true,
+                      }));
+                      const savedNotifications = await props.markNotificationsRead(
+                        unreadNotifications.map((notification) => notification.id),
+                        fallbackNotifications,
+                      );
+                      props.updateNotifications(savedNotifications);
+                      setMarkingNotifications(false);
+                    }}
+                  >
+                    <Text style={styles.linkText}>{markingNotifications ? 'Đang lưu...' : 'Đánh dấu đã đọc'}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              <View style={styles.reasonChips}>
+                {[
+                  { id: 'all' as const, label: `Tất cả (${props.notifications.length})` },
+                  { id: 'unread' as const, label: `Chưa đọc (${unreadNotifications.length})` },
+                ].map((option) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={option.id}
+                    onPress={() => setNotificationFilter(option.id)}
+                    style={[styles.filterChip, notificationFilter === option.id && styles.filterChipActive]}
+                  >
+                    <Text
+                      style={[styles.filterChipText, notificationFilter === option.id && styles.filterChipTextActive]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            {props.notifications.length === 0 ? (
+              <EmptyState
+                title="Không có thông báo mới"
+                body="Các cập nhật tác nghiệp sẽ xuất hiện ở đây."
+                icon="notifications-outline"
+              />
+            ) : visibleNotifications.length === 0 ? (
+              <EmptyState
+                title="Không có thông báo chưa đọc"
+                body="Các cập nhật mới sẽ xuất hiện tại đây."
+                icon="mail-open-outline"
+              />
+            ) : (
+              visibleNotifications.map((notification) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={notification.id}
+                  onPress={async () => {
+                    const fallbackNotifications = props.notifications.map((item) =>
+                      item.id === notification.id ? { ...item, read: true } : item,
+                    );
+                    const savedNotifications = await props.markNotificationsRead(
+                      [notification.id],
+                      fallbackNotifications,
+                    );
+                    props.updateNotifications(savedNotifications);
+                    const task = props.tasks.find((item) => item.id === notification.taskId);
+                    if (task) {
+                      props.setActiveTask(task);
+                      props.setStep('DETAIL');
+                    }
+                  }}
+                >
+                  <Card style={styles.listCard} tone={notification.read ? 'default' : 'green'}>
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.itemTitle}>{notification.title}</Text>
+                      <Badge tone={NOTIFICATION_TYPE_META[notification.type]?.tone ?? 'sky'}>
+                        {NOTIFICATION_TYPE_META[notification.type]?.label ?? 'Thông báo'}
+                      </Badge>
+                    </View>
+                    <Text style={styles.bodyText}>{sanitizeNotificationText(notification.body)}</Text>
+                    <Text style={styles.monoSmall}>
+                      {new Date(notification.timestamp).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    {notification.taskId ? <Text style={styles.linkText}>Mở công việc liên quan</Text> : null}
+                  </Card>
+                </Pressable>
+              ))
+            )}
           </ScrollView>
         </View>
       </AnimatedScreenTransition>
@@ -392,7 +401,11 @@ export function StaffArea(props: {
   );
 
   if (proof) {
-    return <AnimatedScreenTransition key={props.step} screenKey={props.step}>{proof}</AnimatedScreenTransition>;
+    return (
+      <AnimatedScreenTransition key={props.step} screenKey={props.step}>
+        {proof}
+      </AnimatedScreenTransition>
+    );
   }
 
   return (

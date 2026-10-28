@@ -64,7 +64,7 @@ export interface GovernanceOperationalRouteOptions {
   authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   requireAdmin: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   requireRoles: (
-    ...roles: ('staff' | 'manager' | 'admin')[]
+    ...roles: ('staff' | 'supervisor' | 'manager' | 'admin')[]
   ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 }
 

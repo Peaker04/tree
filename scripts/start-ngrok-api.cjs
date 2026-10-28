@@ -26,11 +26,13 @@ proc.unref();
 
 function httpGet(url) {
   return new Promise((resolve, reject) => {
-    http.get(url, (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => resolve({ status: res.statusCode, data }));
-    }).on('error', reject);
+    http
+      .get(url, (res) => {
+        let data = '';
+        res.on('data', (c) => (data += c));
+        res.on('end', () => resolve({ status: res.statusCode, data }));
+      })
+      .on('error', reject);
   });
 }
 
@@ -42,7 +44,7 @@ async function getTunnel() {
       if (res.status === 200) {
         const payload = JSON.parse(res.data);
         const tunnels = payload.tunnels || [];
-        const httpsTunnel = tunnels.find(t => t.proto === 'https') || tunnels[0];
+        const httpsTunnel = tunnels.find((t) => t.proto === 'https') || tunnels[0];
         if (httpsTunnel && httpsTunnel.public_url) {
           fs.writeFileSync(path.join(repoRoot, 'tmp-ngrok.json'), JSON.stringify(httpsTunnel, null, 2));
           console.log('PUBLIC_URL=' + httpsTunnel.public_url);
@@ -52,7 +54,7 @@ async function getTunnel() {
     } catch {
       // ignore
     }
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 600));
   }
   console.error('Timed out waiting for ngrok tunnel');
   process.exit(1);

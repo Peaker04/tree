@@ -18,7 +18,7 @@ export class ReassignTaskUseCase {
 
   async execute(
     request: ReassignTaskRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<Task> {
     if (context.actorRole !== 'manager') {
       throw new ForbiddenError('Only Operations Managers may reassign tasks');

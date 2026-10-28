@@ -16,7 +16,7 @@ export class ResumeBlockedTaskUseCase {
 
   async execute(
     request: ResumeBlockedTaskRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<Task> {
     if (context.actorRole !== 'manager') {
       throw new ForbiddenError('Only Operations Managers may resume blocked tasks');

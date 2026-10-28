@@ -226,13 +226,15 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
       }
     }
 
+    const changeProofBefore = cloned.proof.proofProfile === 'CHANGE_PROOF' ? cloned.proof.beforePhotoUri : undefined;
+
     if (cloned.locationException?.explanationPhotoUri) {
       const localUri = cloned.locationException.explanationPhotoUri;
       const resolved =
         (uriMap.get(localUri) && !uriMap.get(localUri)!.startsWith('file://') ? uriMap.get(localUri) : undefined) ??
         stageMap.get('EXCEPTION') ??
         stageMap.get('BEFORE') ??
-        cloned.proof.beforePhotoUri;
+        changeProofBefore;
 
       if (resolved && !resolved.startsWith('file://')) {
         cloned.locationException.explanationPhotoUri = resolved;
@@ -245,7 +247,7 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
         (uriMap.get(localUri) && !uriMap.get(localUri)!.startsWith('file://') ? uriMap.get(localUri) : undefined) ??
         stageMap.get('EXCEPTION') ??
         stageMap.get('BEFORE') ??
-        cloned.proof.beforePhotoUri;
+        changeProofBefore;
 
       if (resolved && !resolved.startsWith('file://')) {
         cloned.identityException.damagedQrPhotoUri = resolved;

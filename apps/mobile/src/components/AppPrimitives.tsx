@@ -54,7 +54,9 @@ export function Screen({
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       {scroll ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={contentStyle}>{children}</ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={contentStyle}>
+          {children}
+        </ScrollView>
       ) : (
         <View style={contentStyle}>{children}</View>
       )}
@@ -435,11 +437,7 @@ export function ListRow({
     </>
   );
   return onPress ? (
-    <PressableScale
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[styles.listRow]}
-    >
+    <PressableScale accessibilityRole="button" onPress={onPress} style={[styles.listRow]}>
       {content}
     </PressableScale>
   ) : (
@@ -504,8 +502,7 @@ export function BottomSheetModal({
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          gesture.dy > 5 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+        onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 5 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
         onPanResponderMove: (_, gesture) => {
           if (gesture.dy > 0) {
             sheetAnim.setValue(gesture.dy);
@@ -662,20 +659,12 @@ export function SegmentedFilterBar<T extends string>({
               style={[styles.filterPill, active && styles.filterPillActive]}
             >
               {opt.icon ? (
-                <Ionicons
-                  name={opt.icon}
-                  size={14}
-                  color={active ? colors.snowWhite : colors.pewter}
-                />
+                <Ionicons name={opt.icon} size={14} color={active ? colors.snowWhite : colors.pewter} />
               ) : null}
-              <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>
-                {opt.label}
-              </Text>
+              <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>{opt.label}</Text>
               {opt.badge !== undefined ? (
                 <View style={[styles.filterBadge, active && styles.filterBadgeActive]}>
-                  <Text style={[styles.filterBadgeText, active && styles.filterBadgeTextActive]}>
-                    {opt.badge}
-                  </Text>
+                  <Text style={[styles.filterBadgeText, active && styles.filterBadgeTextActive]}>{opt.badge}</Text>
                 </View>
               ) : null}
             </PressableScale>
@@ -698,20 +687,12 @@ export function SegmentedFilterBar<T extends string>({
             style={[styles.segmentTab, active && styles.segmentTabActive]}
           >
             {opt.icon ? (
-              <Ionicons
-                name={opt.icon}
-                size={16}
-                color={active ? colors.primaryDark : colors.pewter}
-              />
+              <Ionicons name={opt.icon} size={16} color={active ? colors.primaryDark : colors.pewter} />
             ) : null}
-            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-              {opt.label}
-            </Text>
+            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{opt.label}</Text>
             {opt.badge !== undefined ? (
               <View style={[styles.segmentBadge, active && styles.segmentBadgeActive]}>
-                <Text style={[styles.segmentBadgeText, active && styles.segmentBadgeTextActive]}>
-                  {opt.badge}
-                </Text>
+                <Text style={[styles.segmentBadgeText, active && styles.segmentBadgeTextActive]}>{opt.badge}</Text>
               </View>
             ) : null}
           </Pressable>

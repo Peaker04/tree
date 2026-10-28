@@ -23,9 +23,6 @@ if (!isExpoGo && googleMapsApiKey) {
 
 module.exports = {
   ...mobileConfig,
-  sdkVersion: '58.0.0',
-  plugins: [
-    ...(mobileConfig.plugins || []),
-    ...extraPlugins,
-  ],
+  sdkVersion: '57.0.0',
+  plugins: [...(mobileConfig.plugins || []), ...extraPlugins],
 };

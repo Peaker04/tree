@@ -26,26 +26,26 @@ export function StaffAccount({
       <ScreenHeader title="Tài khoản" subtitle="Thông tin từ phiên đăng nhập hiện tại" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
         <View style={styles.identity}>
-        <UserAvatar email={email} />
-        <View style={styles.flex}>
-          <Text style={styles.email}>{email}</Text>
-          <Text style={styles.role}>Nhân viên hiện trường</Text>
-          <Badge tone="green">Đang đăng nhập</Badge>
+          <UserAvatar email={email} />
+          <View style={styles.flex}>
+            <Text style={styles.email}>{email}</Text>
+            <Text style={styles.role}>Nhân viên hiện trường</Text>
+            <Badge tone="green">Đang đăng nhập</Badge>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <SectionTitle icon="id-card-outline">Phiên làm việc</SectionTitle>
-        <ListRow icon="mail-outline" title="Email" subtitle={email} />
-        <ListRow icon="people-outline" title="Vai trò" subtitle="Nhân viên hiện trường" />
-        <ListRow icon="clipboard-outline" title="Công việc" subtitle={`${completed}/${total} đã hoàn thành`} />
-        <ListRow
-          icon="notifications-outline"
-          title="Thông báo"
-          subtitle={notificationsCount ? `${notificationsCount} cập nhật chưa đọc` : 'Không có cập nhật mới'}
-          onPress={onOpenNotifications}
-        />
-      </View>
+        <View style={styles.section}>
+          <SectionTitle icon="id-card-outline">Phiên làm việc</SectionTitle>
+          <ListRow icon="mail-outline" title="Email" subtitle={email} />
+          <ListRow icon="people-outline" title="Vai trò" subtitle="Nhân viên hiện trường" />
+          <ListRow icon="clipboard-outline" title="Công việc" subtitle={`${completed}/${total} đã hoàn thành`} />
+          <ListRow
+            icon="notifications-outline"
+            title="Thông báo"
+            subtitle={notificationsCount ? `${notificationsCount} cập nhật chưa đọc` : 'Không có cập nhật mới'}
+            onPress={onOpenNotifications}
+          />
+        </View>
 
         <Button variant="danger" icon="log-out-outline" onPress={onLogout}>
           Đăng xuất

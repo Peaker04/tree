@@ -1,12 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, BottomSheetModal, Button } from './AppPrimitives';
 import { colors, radius, spacing, typography } from '../theme/tokens';
@@ -43,11 +36,14 @@ export function ManualTreeCodeModal({
     });
   }, [activeTree, trees, trimmedQuery]);
 
-  const handleConfirm = useCallback((tree: Tree) => {
-    onSelectTreeCode(tree.qrCode || tree.id, true);
-    setQuery('');
-    onClose();
-  }, [onClose, onSelectTreeCode]);
+  const handleConfirm = useCallback(
+    (tree: Tree) => {
+      onSelectTreeCode(tree.qrCode || tree.id, true);
+      setQuery('');
+      onClose();
+    },
+    [onClose, onSelectTreeCode],
+  );
 
   const listHeader = useMemo(() => {
     return (

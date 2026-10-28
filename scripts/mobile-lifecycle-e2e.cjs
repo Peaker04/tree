@@ -11,10 +11,11 @@ if (fs.existsSync(envPath)) process.loadEnvFile(envPath);
 const ADB_BIN = process.env.ADB_PATH || 'D:\\androidsdk\\platform-tools\\adb.exe';
 let ADB_DEVICE = process.env.ADB_DEVICE || '192.168.0.106:5555';
 const ANDROID_USER = process.env.ANDROID_USER || '0';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.0.109:3000';
+const API_BASE_URL = process.env.E2E_API_BASE_URL || 'http://127.0.0.1:3000';
 const METRO_PORT = process.env.EXPO_PUBLIC_METRO_PORT || '8082';
 
 const STAFF_EMAIL = process.env.NOVYX_DEV_STAFF_EMAIL || 'staff@novyx.local';
+const SUPERVISOR_EMAIL = process.env.NOVYX_DEV_SUPERVISOR_EMAIL || 'supervisor@novyx.local';
 const MANAGER_EMAIL = process.env.NOVYX_DEV_MANAGER_EMAIL || 'manager@novyx.local';
 const DEV_PASSWORD = process.env.NOVYX_DEV_PASSWORD || 'NovyxDev123!';
 
@@ -23,16 +24,16 @@ if (!fs.existsSync(SMOKE_DIR)) {
   fs.mkdirSync(SMOKE_DIR, { recursive: true });
 }
 
-// Device Resolution (Samsung Galaxy Note 20 Ultra: 1080x2316)
+// Device Resolution (Samsung Galaxy Note 20 Ultra: 1080x2316, App Window [0,0][1080,2249])
 const SCREEN_WIDTH = 1080;
 const SCREEN_HEIGHT = 2316;
 
-// Bottom Navigation Coordinates (Note 20 Ultra: bar height ~72px, bottom edge 2316)
-const NAV_LEFT_1 = { x: 127, y: 2270 }; // Staff Home / Manager Overview
-const NAV_LEFT_2 = { x: 381, y: 2270 }; // Staff Trees / Manager Create Task
-const NAV_CENTER_FAB = { x: 540, y: 2225 }; // Elevated Center QR Scanner FAB
-const NAV_RIGHT_1 = { x: 699, y: 2270 }; // Staff Work / Manager Review Queue
-const NAV_RIGHT_2 = { x: 953, y: 2270 }; // Staff Account / Manager Account
+// Bottom Navigation Coordinates (Verified from uiautomator dump bounds [0,2190][1080,2249])
+const NAV_LEFT_1 = { x: 120, y: 2219 }; // Staff/Supervisor Home / Manager Overview
+const NAV_LEFT_2 = { x: 358, y: 2219 }; // Staff/Supervisor Trees / Manager Create Task
+const NAV_CENTER_FAB = { x: 540, y: 2202 }; // Elevated Center QR Scanner FAB
+const NAV_RIGHT_1 = { x: 722, y: 2219 }; // Staff/Supervisor Work / Manager Review Queue
+const NAV_RIGHT_2 = { x: 961, y: 2219 }; // Staff/Supervisor/Manager Account
 
 // Parse CLI Arguments
 const rawArgs = process.argv.slice(2);
@@ -64,11 +65,13 @@ function sleep(ms) {
 function resolveAvailableDevice() {
   const binary = fs.existsSync(ADB_BIN) ? ADB_BIN : 'adb';
   try {
-    spawnSync(binary, ['start-server'], { timeout: 4000 });
     const output = execFileSync(binary, ['devices'], { encoding: 'utf8' });
     if (output.includes('R3CN70ED57A\tdevice')) return 'R3CN70ED57A';
+    if (output.includes('192.168.0.106:5555\tdevice')) return '192.168.0.106:5555';
+    spawnSync(binary, ['start-server'], { timeout: 4000 });
     spawnSync(binary, ['connect', '192.168.0.106:5555'], { timeout: 4000 });
     const updated = execFileSync(binary, ['devices'], { encoding: 'utf8' });
+    if (updated.includes('R3CN70ED57A\tdevice')) return 'R3CN70ED57A';
     if (updated.includes('192.168.0.106:5555\tdevice')) return '192.168.0.106:5555';
   } catch {
     // Device resolution fallback
@@ -76,13 +79,34 @@ function resolveAvailableDevice() {
   return process.env.ADB_DEVICE || 'R3CN70ED57A';
 }
 
+function ensurePortReverses() {
+  const binary = fs.existsSync(ADB_BIN) ? ADB_BIN : 'adb';
+  const apiPort = new URL(API_BASE_URL).port || '3000';
+  for (const port of [apiPort, METRO_PORT]) {
+    try {
+      execFileSync(binary, ['-s', ADB_DEVICE, 'reverse', `tcp:${port}`, `tcp:${port}`], {
+        stdio: 'ignore',
+      });
+    } catch {
+      // Ignore reverse error if device is transiently reconnecting
+    }
+  }
+}
+
 function reconnectAdb() {
   const binary = fs.existsSync(ADB_BIN) ? ADB_BIN : 'adb';
   try {
+    const output = execFileSync(binary, ['devices'], { encoding: 'utf8' });
+    if (output.includes('R3CN70ED57A\tdevice')) {
+      ADB_DEVICE = 'R3CN70ED57A';
+      ensurePortReverses();
+      return;
+    }
     spawnSync(binary, ['start-server'], { timeout: 4000 });
     spawnSync(binary, ['connect', '192.168.0.106:5555'], { timeout: 4000 });
     sleep(600);
     ADB_DEVICE = resolveAvailableDevice();
+    ensurePortReverses();
   } catch {
     // Reconnect failure handled downstream
   }
@@ -106,30 +130,138 @@ function adbExec(args, options = {}, retries = 2) {
 }
 
 function ensureAdbConnected() {
-  reconnectAdb();
   const binary = fs.existsSync(ADB_BIN) ? ADB_BIN : 'adb';
   try {
     const output = execFileSync(binary, ['devices'], { encoding: 'utf8' });
-    if (!output.includes(ADB_DEVICE) || output.includes(`${ADB_DEVICE}\toffline`)) {
+    if (!output.includes(`${ADB_DEVICE}\tdevice`)) {
       reconnectAdb();
+    } else {
+      ensurePortReverses();
     }
   } catch {
     reconnectAdb();
   }
 }
 
+function grantRuntimePermissions() {
+  const perms = [
+    'android.permission.CAMERA',
+    'android.permission.ACCESS_FINE_LOCATION',
+    'android.permission.ACCESS_COARSE_LOCATION',
+  ];
+  for (const perm of perms) {
+    try {
+      adbExec(['shell', 'pm', 'grant', '--user', ANDROID_USER, 'com.novyx.greenops', perm]);
+    } catch {
+      // Ignore if already granted
+    }
+  }
+  try {
+    adbExec(['shell', 'appops', 'set', '--user', ANDROID_USER, 'com.novyx.greenops', 'SYSTEM_ALERT_WINDOW', 'allow']);
+    adbExec(['shell', 'settings', 'delete', 'secure', 'enabled_accessibility_services']);
+    adbExec(['shell', 'settings', 'put', 'secure', 'accessibility_enabled', '0']);
+    adbExec(['shell', 'settings', 'put', 'global', 'window_animation_scale', '0']);
+    adbExec(['shell', 'settings', 'put', 'global', 'transition_animation_scale', '0']);
+    adbExec(['shell', 'settings', 'put', 'global', 'animator_duration_scale', '0']);
+  } catch {
+    // Ignore if already allowed
+  }
+}
+
+function launchMetroDeepLink(forceStop = false) {
+  ensurePortReverses();
+  if (forceStop) {
+    try {
+      adbExec(['shell', 'am', 'force-stop', 'com.novyx.greenops']);
+      sleep(500);
+    } catch {
+      // Ignore force-stop failure
+    }
+  }
+  adbExec([
+    'shell',
+    'am',
+    'start',
+    '--user',
+    ANDROID_USER,
+    '-a',
+    'android.intent.action.VIEW',
+    '-d',
+    `exp+novyx-greenops://expo-development-client/?url=${encodeURIComponent(`http://127.0.0.1:${METRO_PORT}`)}`,
+    'com.novyx.greenops',
+  ]);
+
+  // Wait up to 48s for bundle load and dismiss onboarding or recover from reload screen
+  for (let i = 0; i < 24; i++) {
+    sleep(2000);
+    ensurePortReverses();
+    const nodes = dumpUiNodes();
+    const continueBtn = findNode(nodes, [/^Continue$/i, 'Continue']);
+    if (continueBtn) {
+      tapPixel(continueBtn.centerX, continueBtn.centerY);
+      sleep(800);
+      continue;
+    }
+    const devMenuClose = findNode(nodes, ['Close']);
+    if (devMenuClose && nodes.some((n) => /Runtime version|Toggle Dev Menu/.test(`${n.text} ${n.contentDesc}`))) {
+      tapPixel(devMenuClose.centerX, devMenuClose.centerY);
+      sleep(800);
+      continue;
+    }
+    const reloadBtn = findNode(nodes, [/^Reload$/i, 'Reload']);
+    if (reloadBtn) {
+      ensurePortReverses();
+      tapPixel(reloadBtn.centerX, reloadBtn.centerY);
+      sleep(1500);
+      continue;
+    }
+    const recentNovyx = findNode(nodes, ['http://127.0.0.1:8082', 'NOVYX']);
+    if (recentNovyx && !findNode(nodes, ['Trang chủ', 'Tổng quan', 'Đăng nhập vào GreenOps'])) {
+      ensurePortReverses();
+      tapPixel(recentNovyx.centerX, recentNovyx.centerY);
+      sleep(1500);
+      continue;
+    }
+    const appReady = findNode(nodes, [
+      'Email hoặc Số điện thoại',
+      'Đăng nhập',
+      'Trang chủ',
+      'Tổng quan',
+      'Công việc',
+      'Tài khoản',
+    ]);
+    if (appReady) {
+      break;
+    }
+  }
+}
+
 function ensureAppForeground() {
   ensureAdbConnected();
   try {
+    adbExec(['shell', 'input', 'keyevent', '224']);
+    adbExec(['shell', 'wm', 'dismiss-keyguard']);
     const focus = adbExec(['shell', 'dumpsys', 'window']);
-    const isFocused = focus.includes('mCurrentFocus=Window{') && focus.includes('com.novyx.greenops');
-    if (!isFocused) {
+    if (focus.includes('com.android.settings')) {
+      try {
+        adbExec(['shell', 'am', 'force-stop', 'com.android.settings']);
+      } catch {
+        // Ignore
+      }
+    }
+    const isMainFocused =
+      focus.includes('mCurrentFocus=Window{') && focus.includes('com.novyx.greenops/com.novyx.greenops.MainActivity');
+    if (!isMainFocused) {
       adbExec(['shell', 'am', 'start', '--user', ANDROID_USER, '-n', 'com.novyx.greenops/.MainActivity']);
-      sleep(2000);
+      sleep(1200);
     }
   } catch {
-    adbExec(['shell', 'am', 'start', '--user', ANDROID_USER, '-n', 'com.novyx.greenops/.MainActivity']);
-    sleep(2000);
+    try {
+      adbExec(['shell', 'am', 'start', '--user', ANDROID_USER, '-n', 'com.novyx.greenops/.MainActivity']);
+      sleep(1200);
+    } catch {
+      // Ignore
+    }
   }
 }
 
@@ -153,27 +285,14 @@ function closeKeyboard() {
   }
 }
 
-function safelyExitToMain() {
-  closeKeyboard();
-  // Scroll up in case inside a scrolled child screen
-  swipe(540, 400, 540, 1800, 200);
-  sleep(300);
-  // Tap top-left header back chevron (x=70, y=135) up to 3 times to exit deep workflows (DETAIL, BEFORE, REVIEW, etc.)
-  for (let i = 0; i < 3; i++) {
-    tapPixel(70, 135);
-    sleep(350);
-  }
-  closeKeyboard();
-  sleep(300);
-}
-
 function tapPixel(x, y) {
-  adbExec(['shell', 'input', 'tap', String(x), String(y)]);
+  adbExec(['shell', 'input', 'tap', String(Math.round(x)), String(Math.round(y))]);
 }
 
-function fastClearInput(count = 40) {
+function fastClearInput(count = 50) {
   const backspaces = Array(count).fill('67');
-  adbExec(['shell', 'input', 'keyevent', ...backspaces]);
+  const forwardDeletes = Array(20).fill('112');
+  adbExec(['shell', 'input', 'keyevent', '123', ...backspaces, '122', ...forwardDeletes]);
 }
 
 function typeText(text) {
@@ -185,7 +304,182 @@ function swipe(x1, y1, x2, y2, durationMs = 300) {
   adbExec(['shell', 'input', 'swipe', String(x1), String(y1), String(x2), String(y2), String(durationMs)]);
 }
 
+function dumpUiNodes() {
+  const binary = fs.existsSync(ADB_BIN) ? ADB_BIN : 'adb';
+  const localXmlPath = path.join(SMOKE_DIR, 'novyx-ui.xml');
+  try {
+    try {
+      fs.unlinkSync(localXmlPath);
+    } catch {
+      // Ignore if local file doesn't exist
+    }
+    const dumpOut = adbExec([
+      'shell',
+      'rm -f /data/local/tmp/novyx-ui.xml && uiautomator dump --compressed /data/local/tmp/novyx-ui.xml',
+    ]);
+    if (dumpOut.includes('ERROR:')) {
+      adbExec([
+        'shell',
+        'settings delete secure enabled_accessibility_services; settings put secure accessibility_enabled 0; rm -f /data/local/tmp/novyx-ui.xml && uiautomator dump --compressed /data/local/tmp/novyx-ui.xml',
+      ]);
+    }
+    execFileSync(binary, ['-s', ADB_DEVICE, 'pull', '/data/local/tmp/novyx-ui.xml', localXmlPath], { stdio: 'ignore' });
+    const xml = fs.readFileSync(localXmlPath, 'utf8');
+    const nodes = [];
+    const nodeRegex = /<node\s+([^>]+?)\/?>/g;
+    let match;
+    while ((match = nodeRegex.exec(xml)) !== null) {
+      const attrs = match[1];
+      const getAttr = (name) => {
+        const m = new RegExp(`${name}="([^"]*)"`).exec(attrs);
+        if (!m) return '';
+        return m[1]
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'");
+      };
+      const boundsStr = getAttr('bounds');
+      const bMatch = /\[(\d+),(\d+)\]\[(\d+),(\d+)\]/.exec(boundsStr);
+      if (!bMatch) continue;
+      const left = Number(bMatch[1]);
+      const top = Number(bMatch[2]);
+      const right = Number(bMatch[3]);
+      const bottom = Number(bMatch[4]);
+      if (right <= left || bottom <= top) continue;
+
+      const text = getAttr('text');
+      const contentDesc = getAttr('content-desc');
+      // Ignore floating Expo Dev Launcher "Tools" button at top-right [947,99][1048,200]
+      if (contentDesc === 'Tools' || (left >= 940 && top <= 210 && right <= 1060 && bottom <= 210)) {
+        continue;
+      }
+
+      nodes.push({
+        text,
+        contentDesc,
+        packageName: getAttr('package'),
+        className: getAttr('class'),
+        clickable: getAttr('clickable') === 'true',
+        enabled: getAttr('enabled') !== 'false',
+        bounds: { left, top, right, bottom },
+        centerX: Math.round((left + right) / 2),
+        centerY: Math.round((top + bottom) / 2),
+      });
+    }
+    return nodes;
+  } catch {
+    return [];
+  }
+}
+
+function matchesPattern(value, pattern) {
+  if (!value) return false;
+  if (pattern instanceof RegExp) return pattern.test(value);
+  return value.toLowerCase().includes(String(pattern).toLowerCase());
+}
+
+function findNode(nodes, patterns, options = {}) {
+  const patternList = Array.isArray(patterns) ? patterns : [patterns];
+  const minY = options.minY ?? 60;
+  const maxY = options.maxY ?? 2249;
+  const allowAnyPackage = Boolean(options.allowAnyPackage);
+
+  for (const pattern of patternList) {
+    // Prefer clickable & enabled nodes inside com.novyx.greenops
+    const candidates = nodes.filter(
+      (n) =>
+        (allowAnyPackage || !n.packageName || n.packageName === 'com.novyx.greenops') &&
+        n.enabled &&
+        n.centerY >= minY &&
+        n.centerY <= maxY &&
+        (matchesPattern(n.text, pattern) || matchesPattern(n.contentDesc, pattern)),
+    );
+    if (candidates.length > 0) {
+      const clickableCandidate = candidates.find((c) => c.clickable);
+      return clickableCandidate || candidates[0];
+    }
+  }
+  return null;
+}
+
+function tapByText(patterns, options = {}) {
+  ensureAppForeground();
+  const maxScrolls = options.scrollIfNeeded === false ? 0 : (options.maxScrolls ?? 3);
+  for (let attempt = 0; attempt <= maxScrolls; attempt++) {
+    const nodes = dumpUiNodes();
+    if (!nodes.some((n) => n.packageName === 'com.novyx.greenops')) {
+      ensureAppForeground();
+    }
+    const found = findNode(nodes, patterns, options);
+    if (found) {
+      console.log(
+        `  [UI Tap] "${found.text || found.contentDesc}" tại (${found.centerX}, ${found.centerY}) [${found.bounds.left},${found.bounds.top}][${found.bounds.right},${found.bounds.bottom}]`,
+      );
+      tapPixel(found.centerX, found.centerY);
+      return found;
+    }
+    if (attempt < maxScrolls) {
+      swipe(540, 1750, 540, 750, 300);
+      sleep(600);
+    }
+  }
+  if (options.fallbackX !== undefined && options.fallbackY !== undefined) {
+    const checkNodes = dumpUiNodes();
+    if (!checkNodes.some((n) => n.packageName === 'com.novyx.greenops')) {
+      console.log(`  [UI Tap Guard] Bỏ qua fallback tap vì com.novyx.greenops không ở tiền cảnh.`);
+      ensureAppForeground();
+      return null;
+    }
+    console.log(
+      `  [UI Tap Fallback] (${options.fallbackX}, ${options.fallbackY}) cho pattern: ${JSON.stringify(patterns)}`,
+    );
+    tapPixel(options.fallbackX, options.fallbackY);
+  }
+  return null;
+}
+
+function safelyExitToMain() {
+  ensureAppForeground();
+  closeKeyboard();
+  for (let i = 0; i < 6; i++) {
+    const nodes = dumpUiNodes();
+    const devClose = findNode(nodes, ['Close']);
+    if (devClose && nodes.some((n) => /Runtime version|Toggle Dev Menu/.test(`${n.text} ${n.contentDesc}`))) {
+      tapPixel(devClose.centerX, devClose.centerY);
+      sleep(1000);
+      continue;
+    }
+    if (findNode(nodes, ['Email hoặc Số điện thoại'])) {
+      break;
+    }
+    const returnListBtn = findNode(nodes, ['Quay lại danh sách']);
+    if (returnListBtn) {
+      tapPixel(returnListBtn.centerX, returnListBtn.centerY);
+      sleep(800);
+      continue;
+    }
+    const backBtn = findNode(nodes, ['Quay lại'], { maxY: 360 });
+    if (backBtn) {
+      tapPixel(backBtn.centerX, backBtn.centerY);
+      sleep(600);
+      continue;
+    }
+    const hasBottomNav = Boolean(findNode(nodes, ['Tài khoản', 'Trang chủ', 'Tổng quan'], { minY: 2120 }));
+    if (hasBottomNav) {
+      break;
+    }
+    // Scroll up to reveal Header back button if inside a scrolled ScrollView
+    swipe(540, 1100, 540, 1600, 250);
+    sleep(500);
+  }
+  closeKeyboard();
+  sleep(300);
+}
+
 function captureMilestone(filename) {
+  ensureAppForeground();
   const devicePath = `/sdcard/${filename}`;
   const localPath = path.join(SMOKE_DIR, filename);
   adbExec(['shell', 'screencap', '-p', devicePath]);
@@ -210,13 +504,15 @@ function apiRequest(method, endpoint, body, token, idempotencyKey) {
       target,
       {
         method,
+        agent: false,
         headers: {
           Accept: 'application/json',
+          Connection: 'close',
           ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
         },
-        timeout: 5000,
+        timeout: 8000,
       },
       (res) => {
         let raw = '';
@@ -250,10 +546,19 @@ function apiRequest(method, endpoint, body, token, idempotencyKey) {
 function loginOnDevice(email, password) {
   ensureAppForeground();
   closeKeyboard();
-  sleep(300);
+  sleep(400);
 
-  // Tap Email field (x=540, y=678)
-  tapPixel(540, 678);
+  const nodes = dumpUiNodes().filter((n) => !n.packageName || n.packageName === 'com.novyx.greenops');
+  const editTexts = nodes.filter((n) => n.className === 'android.widget.EditText');
+  if (editTexts.length < 2 && !findNode(nodes, ['Email hoặc Số điện thoại'])) {
+    console.log('  [Login Guard] Không ở màn hình Đăng nhập, bỏ qua nhập liệu mù.');
+    return;
+  }
+  const emailField = editTexts[0] || { centerX: 540, centerY: 678 };
+  const passwordField = editTexts[1] || { centerX: 540, centerY: 876 };
+
+  // Tap Email field
+  tapPixel(emailField.centerX, emailField.centerY);
   sleep(300);
   fastClearInput(40);
   typeText(email);
@@ -261,8 +566,8 @@ function loginOnDevice(email, password) {
   closeKeyboard();
   sleep(300);
 
-  // Tap Password field (x=540, y=876)
-  tapPixel(540, 876);
+  // Tap Password field
+  tapPixel(passwordField.centerX, passwordField.centerY);
   sleep(300);
   fastClearInput(40);
   typeText(password);
@@ -270,41 +575,45 @@ function loginOnDevice(email, password) {
   closeKeyboard();
   sleep(400);
 
-  // Tap "Đăng nhập" button (x=540, y=1005)
-  tapPixel(540, 1005);
+  // Tap "Đăng nhập" button
+  tapByText([/^Đăng nhập$/, ', Đăng nhập'], { scrollIfNeeded: false, fallbackX: 540, fallbackY: 1005 });
   sleep(3200);
 }
-
-let currentAppRole = 'unknown';
 
 function switchRole(targetRole) {
   console.log(`\n>>> [Role Transition] Chuyển đổi vai trò sang: ${targetRole.toUpperCase()}`);
   ensureAppForeground();
   safelyExitToMain();
-  // Tap Account tab (NAV_RIGHT_2)
-  tapPixel(NAV_RIGHT_2.x, NAV_RIGHT_2.y);
-  sleep(1000);
 
-  // If current role is staff, logout button is at y=1300
-  // If current role is manager, logout button is at y=1180
-  if (currentAppRole === 'staff') {
-    tapPixel(540, 1300);
-  } else if (currentAppRole === 'manager') {
-    tapPixel(540, 1180);
-  } else {
-    // Unknown state: tap staff coordinate first, then manager coordinate
-    tapPixel(540, 1300);
-    sleep(600);
-    tapPixel(540, 1180);
+  // Check if already on Login screen
+  const initialNodes = dumpUiNodes();
+  const isLoginScreen = Boolean(findNode(initialNodes, ['Email hoặc Số điện thoại']));
+  if (!isLoginScreen) {
+    // Tap Account tab (NAV_RIGHT_2)
+    tapByText(['Tài khoản'], {
+      minY: 2150,
+      scrollIfNeeded: false,
+      fallbackX: NAV_RIGHT_2.x,
+      fallbackY: NAV_RIGHT_2.y,
+    });
+    sleep(1000);
+
+    // Tap "Đăng xuất" button via UI hierarchy
+    tapByText(['Đăng xuất'], {
+      scrollIfNeeded: true,
+      maxScrolls: 1,
+      fallbackX: 540,
+      fallbackY: 1247,
+    });
+    sleep(1800);
   }
-  sleep(1800);
 
   if (targetRole === 'manager') {
     loginOnDevice(MANAGER_EMAIL, DEV_PASSWORD);
-    currentAppRole = 'manager';
+  } else if (targetRole === 'supervisor') {
+    loginOnDevice(SUPERVISOR_EMAIL, DEV_PASSWORD);
   } else {
     loginOnDevice(STAFF_EMAIL, DEV_PASSWORD);
-    currentAppRole = 'staff';
   }
 }
 
@@ -312,20 +621,26 @@ async function getOrCreateActionableTask(mgrToken, staffUser) {
   const tasksRes = await apiRequest('GET', 'tasks', undefined, mgrToken);
   const tasks = tasksRes.json?.data || [];
 
-  // Find existing task assigned to staff in PENDING or IN_PROGRESS
-  const candidate = tasks.find(
-    (t) => t.assignedStaffId === staffUser.id && (t.status === 'PENDING' || t.status === 'IN_PROGRESS'),
+  // Prefer a task on TRE-DEV-01 ("Cây sao đen khu A") so initial GPS coordinates (10.77402, 106.69101) are within 0.0m (<10m)
+  const candidateOnDevTree = tasks.find(
+    (t) =>
+      t.assignedStaffId === staffUser.id &&
+      t.treeId === 'TRE-DEV-01' &&
+      (t.status === 'PENDING' || t.status === 'IN_PROGRESS') &&
+      !t.staffCompletedAt &&
+      Array.isArray(t.checklist) &&
+      t.checklist.length > 0,
   );
 
-  if (candidate) {
+  if (candidateOnDevTree) {
     console.log(
-      `[Smart Task Resolver] Tận dụng công việc hiện hữu trong DB: "${candidate.title}" (ID: ${candidate.id}, Trạng thái: ${candidate.status})`,
+      `[Smart Task Resolver] Tận dụng công việc hiện hữu trên TRE-DEV-01: "${candidateOnDevTree.title}" (ID: ${candidateOnDevTree.id}, Trạng thái: ${candidateOnDevTree.status})`,
     );
-    return candidate;
+    return candidateOnDevTree;
   }
 
-  // Only create if DB has no actionable task for staff (Zero unnecessary spam)
-  console.log('[Smart Task Resolver] Chưa có task nào khả dụng cho thợ, tạo 1 task mẫu qua API...');
+  // Create a task on TRE-DEV-01 for deterministic <10m GPS verification
+  console.log('[Smart Task Resolver] Tạo 1 task trên TRE-DEV-01 qua API để kiểm thử E2E...');
   const idempotencyKey = nodeCrypto.randomUUID();
   const payload = {
     title: 'Bảo dưỡng cành sà nguy hiểm',
@@ -333,19 +648,19 @@ async function getOrCreateActionableTask(mgrToken, staffUser) {
     assignedStaffId: staffUser.id,
     taskTypeId: 'TT-DEV-01',
     deadline: new Date(Date.now() + 86400000).toISOString(),
-    description: 'Kiểm tra hiện trạng, chụp ảnh trước sau và hoàn tất checklist',
+    description: 'Kiểm tra hiện trạng, xác nhận định vị GPS/QR/Checklist và chụp ảnh Trước/Sau',
   };
   const createRes = await apiRequest('POST', 'tasks', payload, mgrToken, idempotencyKey);
   return createRes.json?.data;
 }
 
 // =================================================================
-// SCENARIO 1: CLOSED-LOOP FIELD OPERATIONS LIFECYCLE
+// SCENARIO 1: CLOSED-LOOP 3-ROLE FIELD OPERATIONS LIFECYCLE
 // =================================================================
 async function runScenarioLifecycle(context) {
   console.log('\n================================================================');
-  console.log(' [SCENARIO 1] CLOSED-LOOP FIELD OPERATIONS LIFECYCLE             ');
-  console.log(' Thợ làm đủ 5 bước thực địa -> Nộp nghiệm thu -> Quản lý duyệt  ');
+  console.log(' [SCENARIO 1] CLOSED-LOOP 3-ROLE FIELD OPERATIONS LIFECYCLE      ');
+  console.log(' NV hiện trường (GPS+QR+Checklist) -> Giám sát (Ảnh Trước/Sau) -> Quản lý duyệt ');
   console.log('================================================================');
 
   const { mgrToken, staffUser } = context;
@@ -355,222 +670,466 @@ async function runScenarioLifecycle(context) {
   }
 
   // 1.1 Switch to Staff and open task
-  console.log('\n--- 1.1: Thợ đăng nhập và mở chi tiết công việc ---');
+  console.log('\n--- 1.1: Nhân viên hiện trường đăng nhập và mở chi tiết công việc ---');
   const t0StaffStart = Date.now();
   switchRole('staff');
 
   // Tap "Công việc" tab (NAV_RIGHT_1)
-  tapPixel(NAV_RIGHT_1.x, NAV_RIGHT_1.y);
+  tapByText(['Công việc'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_RIGHT_1.x,
+    fallbackY: NAV_RIGHT_1.y,
+  });
   sleep(1500);
 
-  // Tap first actionable task card
-  tapPixel(540, 520);
+  // Tap the target task card on WORK list
+  tapByText([targetTask.title, targetTask.id, 'Cây sao đen khu A'], {
+    maxY: 2100,
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 560,
+  });
   sleep(1500);
 
   const artifactTaskDetail = captureMilestone('milestone-s1-01-staff-task-detail.png');
+  const detailNodes = dumpUiNodes();
+  const has3StepLabel = Boolean(findNode(detailNodes, ['/3 bước hoàn thành']));
   record(
-    'S1.1 Thợ mở chi tiết công việc',
-    true,
+    'S1.1 NV hiện trường mở chi tiết công việc (0/3 bước)',
+    has3StepLabel,
     Date.now() - t0StaffStart,
-    `Mở việc: ${targetTask.title}`,
+    `Mở việc: ${targetTask.title} (${targetTask.id})`,
     artifactTaskDetail,
   );
 
   // 1.2 Start Task or proceed to GPS Check-in
-  console.log('\n--- 1.2: Xác thực GPS hiện trường tại gốc cây ---');
+  console.log('\n--- 1.2: NV hiện trường xác thực định vị GPS tại gốc cây (≤ 10m) ---');
   const t0Gps = Date.now();
-  // Tap primary action button ("Bắt đầu làm việc" or "Tiếp tục xác minh GPS") at bottom (x=540, y=2100)
-  tapPixel(540, 2100);
-  sleep(1500);
+  tapByText(['Xác thực vị trí GPS', 'Bắt đầu công việc'], {
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 1095,
+  });
+  sleep(1800);
 
-  // Inside GPS step: view TreeCheckinMap and check-in
   const artifactGpsMap = captureMilestone('milestone-s1-02-gps-checkin-map.png');
+  const gpsNodes = dumpUiNodes();
+  const onGpsScreen = Boolean(findNode(gpsNodes, ['Xác minh GPS', 'Khoảng cách tới cây']));
   record(
-    'S1.2 Xem bản đồ và vùng định vị GPS',
-    true,
+    'S1.2 NV hiện trường xem bản đồ và vùng định vị GPS',
+    onGpsScreen,
     Date.now() - t0Gps,
     'Độ chính xác GPS đạt chuẩn < 10m',
     artifactGpsMap,
   );
 
-  // Tap "Check-in" button inside map check-in card (x=780, y=1240 or scrollable button x=540, y=2100)
-  tapPixel(780, 1240);
-  sleep(800);
-  tapPixel(540, 2100); // Check-in and proceed to QR
+  // 1.2b Tap "Lấy GPS" to verify live GPS acquisition without flicker or refresh
+  const t0Locate = Date.now();
+  tapByText(['Lấy GPS'], {
+    scrollIfNeeded: false,
+    fallbackX: 300,
+    fallbackY: 1650,
+  });
+  sleep(2500);
+  const afterLocateNodes = dumpUiNodes();
+  const hasGpsUpdate = Boolean(findNode(afterLocateNodes, ['Đã cập nhật GPS thật', 'Sai số GPS', 'Đang tinh chỉnh']));
+  const artifactAfterLocate = captureMilestone('milestone-s1-02b-gps-located.png');
+  record(
+    'S1.2b NV hiện trường bấm "Lấy GPS" cập nhật tọa độ thực địa',
+    hasGpsUpdate,
+    Date.now() - t0Locate,
+    'Tọa độ GPS cập nhật mượt mà, không chớp nháy refresh',
+    artifactAfterLocate,
+  );
+
+  // Tap "Check-in" button inside TreeCheckinMap card
+  tapByText([/^Check-in$/i, 'Check-in'], {
+    maxScrolls: 2,
+    fallbackX: 780,
+    fallbackY: 1380,
+  });
   sleep(1500);
 
   // 1.3 QR Tree Verification
-  console.log('\n--- 1.3: Quét mã QR thân cây xác thực đúng vị trí ---');
+  console.log('\n--- 1.3: NV hiện trường quét mã QR thân cây ---');
   const t0Qr = Date.now();
   const artifactQrScan = captureMilestone('milestone-s1-03-qr-scanner-view.png');
-  record('S1.3 Mở khung quét mã QR cây', true, Date.now() - t0Qr, 'Khung quét mã QR sẵn sàng', artifactQrScan);
+  const qrNodes = dumpUiNodes();
+  const onQrScreen = Boolean(findNode(qrNodes, ['Quét mã QR cây', 'Khung quét mã QR', 'Đưa mã QR vào khung']));
+  record('S1.3 Mở khung quét mã QR cây', onQrScreen, Date.now() - t0Qr, 'Khung quét mã QR sẵn sàng', artifactQrScan);
 
-  // Tap center overlay (x=540, y=550) to simulate QR scan in DEV
-  tapPixel(540, 550);
+  // Tap QR scanner overlay to simulate QR scan in DEV -> transitions directly to CHECKLIST!
+  tapByText(['Khung quét mã QR', 'Đưa mã QR vào khung'], {
+    scrollIfNeeded: false,
+    fallbackX: 540,
+    fallbackY: 950,
+  });
   sleep(1800);
 
-  // 1.4 Take Before Photo
-  console.log('\n--- 1.4: Chụp ảnh hiện trạng Trước khi thi công ---');
-  const t0Before = Date.now();
-  const artifactBeforeCam = captureMilestone('milestone-s1-04-before-viewfinder.png');
+  // 1.4 Checklist Technical Execution (Staff goes directly from QR to CHECKLIST without Before photo)
+  console.log('\n--- 1.4: NV hiện trường thực hiện và đánh dấu Checklist kỹ thuật ---');
+  const t0Checklist = Date.now();
+  const checklistNodes = dumpUiNodes();
+  const uncheckedItems = checklistNodes.filter((n) => n.contentDesc && n.contentDesc.startsWith('Đánh dấu '));
+  if (uncheckedItems.length > 0) {
+    for (const itemNode of uncheckedItems) {
+      console.log(`  [Checklist Tap] "${itemNode.contentDesc}" tại (${itemNode.centerX}, ${itemNode.centerY})`);
+      tapPixel(itemNode.centerX, itemNode.centerY);
+      sleep(450);
+    }
+  } else {
+    // Fallback: tap numbered rows "1. ", "2. ", "3. "
+    tapByText(['1. '], { scrollIfNeeded: false, fallbackX: 540, fallbackY: 310 });
+    sleep(400);
+  }
+  sleep(600);
+
+  const artifactChecklist = captureMilestone('milestone-s1-04-staff-checklist-completed.png');
   record(
-    'S1.4 Viewfinder camera ảnh Trước',
+    'S1.4 NV hiện trường hoàn thành Checklist kỹ thuật',
     true,
+    Date.now() - t0Checklist,
+    'Tích chọn đầy đủ các tiêu chí công việc',
+    artifactChecklist,
+  );
+
+  // Tap "Xem lại & Gửi xác nhận hiện trường"
+  tapByText(['Xem lại & Gửi xác nhận hiện trường', 'Xem lại'], {
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 500,
+  });
+  sleep(1500);
+
+  // 1.5 Staff Review Summary & Submit Check-in (3/3 steps, no photos)
+  console.log('\n--- 1.5: NV hiện trường kiểm tra 3/3 (GPS+QR+Checklist) và Gửi xác nhận ---');
+  const t0StaffSubmit = Date.now();
+  const artifactStaffReview = captureMilestone('milestone-s1-05-staff-review-3of3.png');
+  const staffReviewNodes = dumpUiNodes();
+  const onStaffReview = Boolean(
+    findNode(staffReviewNodes, ['Xem lại xác nhận hiện trường', 'Định vị GPS, mã QR và Checklist hợp lệ']),
+  );
+  record(
+    'S1.5 Xem lại xác nhận hiện trường 3/3 (GPS, QR, Checklist)',
+    onStaffReview,
+    Date.now() - t0StaffSubmit,
+    'Định vị GPS, mã QR và Checklist hợp lệ (3/3)',
+    artifactStaffReview,
+  );
+
+  // Tap "Gửi định vị GPS & Xác nhận hoàn thành" button
+  tapByText(['Gửi định vị GPS & Xác nhận hoàn thành', 'Gửi định vị GPS'], {
+    maxScrolls: 3,
+    fallbackX: 540,
+    fallbackY: 2050,
+  });
+  sleep(2800);
+
+  const artifactStaffSubmitted = captureMilestone('milestone-s1-06-staff-checkin-success.png');
+  const afterStaffRes = await apiRequest('GET', `tasks/${targetTask.id}`, undefined, mgrToken);
+  const taskAfterStaff = afterStaffRes.json?.data;
+  const staffCheckinPersisted = Boolean(taskAfterStaff?.staffCompletedAt);
+  record(
+    'S1.6 NV hiện trường gửi định vị GPS & Checklist thành công',
+    staffCheckinPersisted,
+    Date.now() - t0StaffSubmit,
+    `DB staffCompletedAt=${taskAfterStaff?.staffCompletedAt || 'missing'}, status=${taskAfterStaff?.status}`,
+    artifactStaffSubmitted,
+  );
+
+  // Tap "Quay lại danh sách" on Success screen
+  tapByText(['Quay lại danh sách'], {
+    scrollIfNeeded: false,
+    fallbackX: 540,
+    fallbackY: 1310,
+  });
+  sleep(1500);
+
+  // 1.6 Supervisor logs in, views Home & Work queue, and captures Before/After photos
+  console.log('\n--- 1.6: Giám sát hiện trường đăng nhập và nhận việc Chờ chụp ảnh ---');
+  const t0SupStart = Date.now();
+  switchRole('supervisor');
+
+  const artifactSupHome = captureMilestone('milestone-s1-07-supervisor-home.png');
+  const supHomeNodes = dumpUiNodes();
+  const onSupHome = Boolean(
+    findNode(supHomeNodes, ['Giám sát hiện trường', 'Chờ chụp ảnh', 'Việc cần chụp bằng chứng tiếp theo']),
+  );
+  record(
+    'S1.7 Màn hình Trang chủ Giám sát hiện trường',
+    onSupHome,
+    Date.now() - t0SupStart,
+    'Hiển thị việc cần chụp bằng chứng tiếp theo và thống kê Chờ chụp ảnh',
+    artifactSupHome,
+  );
+
+  // Tap "Công việc" tab (NAV_RIGHT_1)
+  tapByText(['Công việc'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_RIGHT_1.x,
+    fallbackY: NAV_RIGHT_1.y,
+  });
+  sleep(1500);
+
+  const artifactSupWork = captureMilestone('milestone-s1-08-supervisor-work-list.png');
+  const supWorkNodes = dumpUiNodes();
+  const onSupWork = Boolean(findNode(supWorkNodes, ['Công việc giám sát', 'Chờ chụp ảnh']));
+  record(
+    'S1.8 Danh sách Công việc giám sát (Badge Chờ chụp ảnh)',
+    onSupWork,
+    1200,
+    'Ưu tiên việc nhân viên vừa xác nhận GPS/QR/Checklist lên đầu',
+    artifactSupWork,
+  );
+
+  // Tap the task card ("Chờ chụp ảnh")
+  tapByText([targetTask.title, targetTask.id, 'Chờ chụp ảnh'], {
+    maxY: 2100,
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 560,
+  });
+  sleep(1500);
+
+  const artifactSupDetail = captureMilestone('milestone-s1-09-supervisor-task-detail.png');
+  const supDetailNodes = dumpUiNodes();
+  const onSupDetail = Boolean(
+    findNode(supDetailNodes, ['Vị trí GPS Giám sát chưa xác minh', 'Xác thực vị trí GPS Giám sát']),
+  );
+  record(
+    'S1.9 Chi tiết công việc Giám sát hiện trường (0/3 bước)',
+    onSupDetail,
+    1200,
+    'Hiển thị 3 bước của Giám sát: Vị trí GPS, Ảnh trước, Ảnh sau',
+    artifactSupDetail,
+  );
+
+  // Tap primary action button ("Xác thực vị trí GPS Giám sát")
+  tapByText(['Xác thực vị trí GPS Giám sát'], {
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 1095,
+  });
+  sleep(1500);
+
+  // Tap "Check-in" button inside TreeCheckinMap card -> transitions directly to BEFORE photo!
+  tapByText([/^Check-in$/i, 'Check-in'], {
+    maxScrolls: 2,
+    fallbackX: 780,
+    fallbackY: 1380,
+  });
+  sleep(2000);
+
+  // 1.7 Supervisor Takes Before Photo
+  console.log('\n--- 1.7: Giám sát hiện trường chụp ảnh Trước xử lý ---');
+  const t0Before = Date.now();
+  const artifactBeforeCam = captureMilestone('milestone-s1-10-supervisor-before-viewfinder.png');
+  const beforeCamNodes = dumpUiNodes();
+  const onBeforeCam = Boolean(findNode(beforeCamNodes, ['Chụp ảnh trước xử lý', 'Chụp ảnh']));
+  record(
+    'S1.10 Giám sát mở Camera chụp ảnh Trước',
+    onBeforeCam,
     Date.now() - t0Before,
     'Viewfinder camera hoạt động',
     artifactBeforeCam,
   );
 
-  // Tap "Chụp ảnh" button (x=540, y=2120)
-  tapPixel(540, 2120);
-  sleep(1800);
+  // Tap "Chụp ảnh" button
+  tapByText(['Chụp ảnh'], {
+    scrollIfNeeded: false,
+    fallbackX: 540,
+    fallbackY: 2120,
+  });
+  sleep(2200);
 
-  // Inspect preview and tap "Dùng ảnh này" (x=780, y=2120)
-  const artifactBeforePreview = captureMilestone('milestone-s1-05-before-photo-preview.png');
-  record('S1.5 Xem trước ảnh Trước và xác nhận', true, 1800, 'Ảnh Trước ghi nhận thành công', artifactBeforePreview);
-  tapPixel(780, 2120);
-  sleep(1500);
-
-  // 1.5 Checklist Technical Execution
-  console.log('\n--- 1.5: Thực hiện và đánh dấu Checklist kỹ thuật ---');
-  const t0Checklist = Date.now();
-  // Tap Item 1, Item 2, Item 3 in checklist card
-  tapPixel(540, 260);
-  sleep(400);
-  tapPixel(540, 340);
-  sleep(400);
-  tapPixel(540, 420);
-  sleep(600);
-
-  const artifactChecklist = captureMilestone('milestone-s1-06-checklist-completed.png');
+  const artifactBeforePreview = captureMilestone('milestone-s1-11-supervisor-before-preview.png');
+  const beforePrevNodes = dumpUiNodes();
+  const hasBeforePreview = Boolean(findNode(beforePrevNodes, ['Dùng ảnh này', 'Ảnh đã ghi nhận']));
   record(
-    'S1.6 Hoàn thành Checklist kỹ thuật an toàn',
-    true,
-    Date.now() - t0Checklist,
-    'Tích chọn đầy đủ các tiêu chí',
-    artifactChecklist,
+    'S1.11 Giám sát xem trước ảnh Trước và xác nhận',
+    hasBeforePreview,
+    2200,
+    'Ảnh Trước ghi nhận thành công',
+    artifactBeforePreview,
   );
 
-  // Tap "Chụp ảnh sau khi hoàn thành" (x=540, y=580 or x=540, y=2100)
-  tapPixel(540, 580);
-  sleep(800);
-  tapPixel(540, 2100);
-  sleep(1500);
+  // Tap "Dùng ảnh này" -> transitions directly to AFTER photo!
+  tapByText(['Dùng ảnh này'], {
+    scrollIfNeeded: false,
+    fallbackX: 780,
+    fallbackY: 2120,
+  });
+  sleep(2000);
 
-  // 1.6 Take After Photo
-  console.log('\n--- 1.6: Chụp ảnh kết quả Sau khi thi công ---');
+  // 1.8 Supervisor Takes After Photo
+  console.log('\n--- 1.8: Giám sát hiện trường chụp ảnh Sau xử lý ---');
   const t0After = Date.now();
-  // Tap "Chụp ảnh" button (x=540, y=2120)
-  tapPixel(540, 2120);
-  sleep(1800);
+  tapByText(['Chụp ảnh'], {
+    scrollIfNeeded: false,
+    fallbackX: 540,
+    fallbackY: 2120,
+  });
+  sleep(2200);
 
-  // Inspect preview and tap "Dùng ảnh này" (x=780, y=2120)
-  const artifactAfterPreview = captureMilestone('milestone-s1-07-after-photo-preview.png');
+  const artifactAfterPreview = captureMilestone('milestone-s1-12-supervisor-after-preview.png');
+  const afterPrevNodes = dumpUiNodes();
+  const hasAfterPreview = Boolean(findNode(afterPrevNodes, ['Dùng ảnh này', 'Ảnh đã ghi nhận']));
   record(
-    'S1.7 Xem trước ảnh Sau và xác nhận',
-    true,
+    'S1.12 Giám sát xem trước ảnh Sau và xác nhận',
+    hasAfterPreview,
     Date.now() - t0After,
     'Ảnh Sau ghi nhận thành công',
     artifactAfterPreview,
   );
-  tapPixel(780, 2120);
+
+  tapByText(['Dùng ảnh này'], {
+    scrollIfNeeded: false,
+    fallbackX: 780,
+    fallbackY: 2120,
+  });
   sleep(1800);
 
-  // 1.7 Review Summary & Submit Proof
-  console.log('\n--- 1.7: Tổng hợp biên bản 5/5 chứng thực và Nộp nghiệm thu ---');
+  // 1.9 Supervisor Review Summary & Submit Evidence
+  console.log('\n--- 1.9: Giám sát kiểm tra hồ sơ kết hợp và Gửi bằng chứng giám sát ---');
   const t0ReviewSubmit = Date.now();
-  const artifactProofSummary = captureMilestone('milestone-s1-08-proof-summary-5of5.png');
+  const artifactProofSummary = captureMilestone('milestone-s1-13-supervisor-review-summary.png');
+  const supReviewNodes = dumpUiNodes();
+  const onSupReview = Boolean(
+    findNode(supReviewNodes, ['Xem lại bằng chứng giám sát', 'Vị trí Giám sát và ảnh Trước/Sau hợp lệ']),
+  );
   record(
-    'S1.8 Kiểm tra tổng hợp 5/5 chứng thực',
-    true,
+    'S1.13 Xem lại bằng chứng giám sát (3/3 + Xác nhận NV hiện trường)',
+    onSupReview,
     Date.now() - t0ReviewSubmit,
-    'Đủ 5/5 hạng mục chứng thực',
+    'Hồ sơ kết hợp NV hiện trường và Giám sát sẵn sàng trình Quản lý',
     artifactProofSummary,
   );
 
-  // Scroll down to submit button
-  swipe(540, 1800, 540, 800, 300);
-  sleep(800);
+  // Tap "Gửi bằng chứng giám sát" button
+  tapByText(['Gửi bằng chứng giám sát'], {
+    maxScrolls: 3,
+    fallbackX: 540,
+    fallbackY: 2050,
+  });
 
-  // Tap "Nộp nghiệm thu" button (x=540, y=2050)
-  tapPixel(540, 2050);
-  sleep(2500);
+  let taskAfterSup = null;
+  for (let waitAttempt = 0; waitAttempt < 8; waitAttempt++) {
+    sleep(1800);
+    const afterSupRes = await apiRequest('GET', `tasks/${targetTask.id}`, undefined, mgrToken);
+    taskAfterSup = afterSupRes.json?.data;
+    const currentNodes = dumpUiNodes();
+    if (taskAfterSup?.status === 'WAITING_REVIEW' && findNode(currentNodes, ['Quay lại danh sách', 'Báo cáo đã gửi'])) {
+      break;
+    }
+  }
 
-  const artifactSubmitted = captureMilestone('milestone-s1-09-submission-success.png');
+  const artifactSubmitted = captureMilestone('milestone-s1-14-supervisor-submission-success.png');
+  const supEvidencePersisted = taskAfterSup?.status === 'WAITING_REVIEW';
   record(
-    'S1.9 Nộp biên bản nghiệm thu thành công',
-    true,
+    'S1.14 Giám sát gửi bằng chứng nghiệm thu thành công',
+    supEvidencePersisted,
     Date.now() - t0ReviewSubmit,
-    'Biên bản đã gửi lên hệ thống',
+    `DB status=${taskAfterSup?.status}, beforePhoto=${Boolean(taskAfterSup?.beforePhoto)}, afterPhoto=${Boolean(taskAfterSup?.afterPhoto)}`,
     artifactSubmitted,
   );
 
   // Tap "Quay lại danh sách" on Success screen
-  tapPixel(540, 1310);
+  tapByText(['Quay lại danh sách'], {
+    scrollIfNeeded: false,
+    fallbackX: 540,
+    fallbackY: 1310,
+  });
   sleep(1500);
 
-  // 1.8 Manager Review & Approval Decision
-  console.log('\n--- 1.8: Quản lý nghiệm thu và Phê duyệt Hoàn tất ---');
+  // 1.10 Manager Review & Approval Decision
+  console.log('\n--- 1.10: Quản lý đối chiếu hồ sơ kết hợp (NV + Giám sát) và Phê duyệt ---');
   const t0MgrApprove = Date.now();
   switchRole('manager');
 
-  const artifactDashboard = captureMilestone('milestone-s1-10a-manager-dashboard.png');
+  const artifactDashboard = captureMilestone('milestone-s1-15-manager-dashboard.png');
   record(
-    'S1.10a Tổng quan Quản lý (Hero Hub & Metric Pills)',
+    'S1.15 Tổng quan Quản lý (Hero Hub & Metric Pills)',
     true,
     1200,
-    'Hero Focus Card và thanh pill chỉ số thay thế 4 badge quê mùa',
+    'Hero Focus Card và thanh chỉ số vận hành',
     artifactDashboard,
   );
 
   // Tap "Duyệt" tab (NAV_RIGHT_1)
-  tapPixel(NAV_RIGHT_1.x, NAV_RIGHT_1.y);
+  tapByText(['Duyệt'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_RIGHT_1.x,
+    fallbackY: NAV_RIGHT_1.y,
+  });
   sleep(1500);
 
-  const artifactQueue = captureMilestone('milestone-s1-10-manager-review-queue.png');
+  const artifactQueue = captureMilestone('milestone-s1-16-manager-review-queue.png');
+  const mgrQueueNodes = dumpUiNodes();
+  const hasQueueCard = Boolean(
+    findNode(mgrQueueNodes, ['Duyệt báo cáo', 'báo cáo đang chờ nghiệm thu', 'Đủ 5/5', 'Chờ duyệt']),
+  );
   record(
-    'S1.10 Quản lý mở hàng chờ nghiệm thu',
-    true,
+    'S1.16 Quản lý mở hàng chờ nghiệm thu (Hiển thị NV & GS)',
+    hasQueueCard,
     Date.now() - t0MgrApprove,
-    'Danh sách báo cáo chờ duyệt hiển thị',
+    'Danh sách báo cáo chờ duyệt hiển thị cả Nhân viên và Giám sát',
     artifactQueue,
   );
 
-  // Tap first report card to open Review Detail
-  tapPixel(540, 600);
+  // Tap the target report card in queue to open Review Detail
+  tapByText([targetTask.title, targetTask.id, 'Đủ 5/5', 'Cây sao đen khu A', 'Chờ duyệt'], {
+    maxY: 2100,
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 600,
+  });
   sleep(1500);
 
-  const artifactReviewDetail = captureMilestone('milestone-s1-11-manager-photo-pair-inspection.png');
+  const artifactReviewDetail = captureMilestone('milestone-s1-17-manager-combined-review-detail.png');
+  const mgrDetailNodes = dumpUiNodes();
+  const hasCombinedSections = Boolean(
+    findNode(mgrDetailNodes, [
+      'Xác minh hiện trường (Nhân viên)',
+      'Ảnh bằng chứng (Giám sát)',
+      'Duyệt bằng chứng',
+      'Bằng chứng hiện trường',
+    ]),
+  );
   record(
-    'S1.11 Đối chiếu song song ảnh Trước/Sau',
-    true,
+    'S1.17 Quản lý kiểm tra Phần 1 (NV hiện trường) & Phần 2 (Giám sát)',
+    hasCombinedSections,
     1500,
-    'Giao diện so sánh PhotoPair chuẩn xác',
+    'Hiển thị rõ ràng chuỗi xác thực tách biệt của NV và Giám sát',
     artifactReviewDetail,
   );
 
-  // Swipe up to bring Decision section into comfortable view
-  swipe(540, 1800, 540, 900, 300);
+  // Tap "Duyệt nghiệm thu" decision card
+  tapByText(['Duyệt nghiệm thu'], {
+    maxScrolls: 3,
+    fallbackX: 540,
+    fallbackY: 1460,
+  });
   sleep(800);
 
-  // Tap "Duyệt nghiệm thu" decision (Card 1: now at y ~ 1460)
-  tapPixel(540, 1460);
-  sleep(800);
+  // Tap "Xác nhận quyết định" button
+  tapByText(['Xác nhận quyết định'], {
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 2100,
+  });
+  sleep(2800);
 
-  // Swipe up slightly more to ensure submit button is visible
-  swipe(540, 1800, 540, 1300, 300);
-  sleep(600);
-
-  // Tap "Xác nhận quyết định" button (x=540, y=2100)
-  tapPixel(540, 2100);
-  sleep(2500);
-
-  const artifactApproved = captureMilestone('milestone-s1-12-manager-approved-done.png');
+  const artifactApproved = captureMilestone('milestone-s1-18-manager-approved-done.png');
+  const afterMgrRes = await apiRequest('GET', `tasks/${targetTask.id}`, undefined, mgrToken);
+  const taskAfterMgr = afterMgrRes.json?.data;
   record(
-    'S1.12 Quản lý phê duyệt nghiệm thu hoàn tất',
-    true,
+    'S1.18 Quản lý phê duyệt nghiệm thu hoàn tất',
+    taskAfterMgr?.status === 'COMPLETED',
     Date.now() - t0MgrApprove,
-    'Task hoàn thành COMPLETED và cập nhật hồ sơ',
+    `DB status=${taskAfterMgr?.status}`,
     artifactApproved,
   );
 }
@@ -581,15 +1140,106 @@ async function runScenarioLifecycle(context) {
 async function runScenarioRework(context) {
   console.log('\n================================================================');
   console.log(' [SCENARIO 2] FIELD EXCEPTION & REWORK WORKFLOW                  ');
-  console.log(' Quản lý yêu cầu làm lại -> Thợ sửa bằng chứng -> Nộp lại       ');
+  console.log(' Quản lý yêu cầu làm lại -> Giám sát sửa bằng chứng -> Nộp lại  ');
   console.log('================================================================');
 
-  const { mgrToken } = context;
+  const { mgrToken, staffToken, supToken, staffUser } = context;
 
   // Check WAITING_REVIEW tasks for rework scenario
   const tasksRes = await apiRequest('GET', 'tasks', undefined, mgrToken);
   const tasks = tasksRes.json?.data || [];
-  const waiting = tasks.filter((t) => t.status === 'WAITING_REVIEW');
+  let waiting = tasks.filter((t) => t.status === 'WAITING_REVIEW');
+  if (waiting.length === 0 && staffUser) {
+    console.log('[Rework Prep] Hàng chờ duyệt đang trống, tạo 1 báo cáo WAITING_REVIEW qua API...');
+    const created = await getOrCreateActionableTask(mgrToken, staffUser);
+    if (created) {
+      let version = created.version ?? 0;
+      if (created.status === 'PENDING') {
+        const started = await apiRequest(
+          'POST',
+          `tasks/${created.id}/start`,
+          { expectedVersion: version },
+          staffToken,
+          nodeCrypto.randomUUID(),
+        );
+        version = started.json?.data?.version ?? version + 1;
+      }
+      const checkedIn = await apiRequest(
+        'POST',
+        `tasks/${created.id}/staff-checkin`,
+        {
+          taskId: created.id,
+          expectedVersion: version,
+          siteVerification: {
+            gpsCheck: {
+              verified: true,
+              distance: 1.2,
+              timestamp: new Date().toISOString(),
+              lat: 10.77402,
+              lng: 106.69101,
+            },
+            qrCheck: { verified: true, scannedCode: 'QR-DEV-01', timestamp: new Date().toISOString() },
+          },
+          checklist: (created.checklist || [{ id: '1', text: 'Kiểm tra an toàn', done: true }]).map((c) => ({
+            ...c,
+            done: true,
+          })),
+        },
+        staffToken,
+        nodeCrypto.randomUUID(),
+      );
+      version = checkedIn.json?.data?.version ?? version + 1;
+      const presignBefore = await apiRequest(
+        'POST',
+        `tasks/${created.id}/evidence/presign`,
+        { fileName: 'before.jpg', contentType: 'image/jpeg', sizeBytes: 1024, sha256: 'a'.repeat(64) },
+        supToken,
+      );
+      const presignAfter = await apiRequest(
+        'POST',
+        `tasks/${created.id}/evidence/presign`,
+        { fileName: 'after.jpg', contentType: 'image/jpeg', sizeBytes: 1024, sha256: 'b'.repeat(64) },
+        supToken,
+      );
+      await apiRequest(
+        'POST',
+        `tasks/${created.id}/evidence`,
+        {
+          taskId: created.id,
+          expectedVersion: version,
+          siteVerification: {
+            gpsCheck: {
+              verified: true,
+              distance: 1.2,
+              timestamp: new Date().toISOString(),
+              lat: 10.77402,
+              lng: 106.69101,
+            },
+            qrCheck: { verified: true, scannedCode: 'QR-DEV-01', timestamp: new Date().toISOString() },
+          },
+          supervisorGpsCheck: {
+            verified: true,
+            distance: 1.5,
+            timestamp: new Date().toISOString(),
+            lat: 10.77402,
+            lng: 106.69101,
+          },
+          proof: {
+            proofProfile: 'CHANGE_PROOF',
+            beforePhotoUri: presignBefore.json?.data?.storageRef || 's3://novyx-evidence/rework-prep-before.jpg',
+            afterPhotoUri: presignAfter.json?.data?.storageRef || 's3://novyx-evidence/rework-prep-after.jpg',
+            checklist: (created.checklist || [{ id: '1', text: 'Kiểm tra an toàn', done: true }]).map((c) => ({
+              ...c,
+              done: true,
+            })),
+          },
+        },
+        supToken,
+        nodeCrypto.randomUUID(),
+      );
+      waiting = [created];
+    }
+  }
   console.log(`[Rework Prep] Số lượng báo cáo trong hàng chờ duyệt: ${waiting.length}`);
 
   console.log('\n--- 2.1: Quản lý mở báo cáo và Yêu cầu làm lại ---');
@@ -597,27 +1247,37 @@ async function runScenarioRework(context) {
   switchRole('manager');
 
   // Tap "Duyệt" tab (NAV_RIGHT_1)
-  tapPixel(NAV_RIGHT_1.x, NAV_RIGHT_1.y);
+  tapByText(['Duyệt'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_RIGHT_1.x,
+    fallbackY: NAV_RIGHT_1.y,
+  });
   sleep(1500);
 
   // Tap first report card in queue
-  tapPixel(540, 600);
+  tapByText(['Đủ 5/5', 'Cây xanh khu B', 'Cây sao đen khu A', 'Chờ duyệt'], {
+    maxY: 2100,
+    maxScrolls: 1,
+    fallbackX: 540,
+    fallbackY: 600,
+  });
   sleep(1500);
 
-  // Swipe up to bring Decision section into comfortable view
-  swipe(540, 1800, 540, 900, 300);
+  // Tap "Yêu cầu làm lại" option
+  tapByText(['Yêu cầu làm lại'], {
+    maxScrolls: 3,
+    fallbackX: 540,
+    fallbackY: 1680,
+  });
   sleep(800);
 
-  // Tap "Yêu cầu làm lại" option (Card 2: x=540, y=1680)
-  tapPixel(540, 1680);
-  sleep(800);
-
-  // Tap preset reason chip: "Ảnh trước/sau chưa đủ rõ" (x=215, y=2150)
-  tapPixel(215, 2150);
-  sleep(800);
-
-  // Scroll down 600px to reveal the submit button
-  swipe(540, 1800, 540, 1200, 300);
+  // Tap preset reason chip: "Ảnh trước/sau chưa đủ rõ"
+  tapByText(['Ảnh trước/sau chưa đủ rõ'], {
+    maxScrolls: 2,
+    fallbackX: 215,
+    fallbackY: 2150,
+  });
   sleep(800);
 
   const artifactReworkSent = captureMilestone('milestone-s2-01-rework-requested.png');
@@ -625,71 +1285,96 @@ async function runScenarioRework(context) {
     'S2.1 Quản lý gửi yêu cầu làm lại kèm lý do',
     true,
     Date.now() - t0ReworkReq,
-    'Đã chuyển trạng thái REWORK_REQUIRED',
+    'Đã chọn Yêu cầu làm lại kèm lý do Ảnh trước/sau chưa đủ rõ',
     artifactReworkSent,
   );
 
-  // Tap "Xác nhận quyết định" button (x=540, y=2180)
-  tapPixel(540, 2180);
+  // Tap "Xác nhận quyết định" button
+  tapByText(['Xác nhận quyết định'], {
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 2180,
+  });
   sleep(2500);
 
-  // 2.2 Staff opens rework task and inspects guidance
-  console.log('\n--- 2.2: Thợ tiếp nhận thông báo và nội dung cần sửa ---');
-  const t0StaffFix = Date.now();
-  switchRole('staff');
+  // 2.2 Supervisor opens rework task and inspects guidance
+  console.log('\n--- 2.2: Giám sát hiện trường tiếp nhận thông báo và nội dung cần chụp lại ---');
+  const t0SupFix = Date.now();
+  switchRole('supervisor');
 
   // Tap "Công việc" tab (NAV_RIGHT_1)
-  tapPixel(NAV_RIGHT_1.x, NAV_RIGHT_1.y);
+  tapByText(['Công việc'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_RIGHT_1.x,
+    fallbackY: NAV_RIGHT_1.y,
+  });
   sleep(1500);
 
-  // Swipe filter chips left safely away from right-side floating overlays
-  swipe(700, 260, 200, 260, 300);
-  sleep(800);
-
-  // Tap filter chip "Làm lại" (x=685, y=260)
-  tapPixel(685, 260);
-  sleep(1200);
-
-  // Tap rework task card (x=540, y=575)
-  tapPixel(540, 575);
+  // Tap rework task card (already prioritized on top of SupervisorWork, below y=400 filter bar!)
+  tapByText(['Cần làm lại', 'Demo báo cáo chờ duyệt', 'Cây xanh khu B', 'Ảnh trước/sau chưa đủ rõ'], {
+    minY: 400,
+    maxY: 2100,
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 575,
+  });
   sleep(1500);
 
-  const artifactReworkCard = captureMilestone('milestone-s2-02-staff-rework-instructions.png');
+  const artifactReworkCard = captureMilestone('milestone-s2-02-supervisor-rework-instructions.png');
+  const reworkNodes = dumpUiNodes();
+  const hasReworkReason = Boolean(findNode(reworkNodes, ['Nội dung cần làm lại', 'Ảnh trước/sau chưa đủ rõ']));
   record(
-    'S2.2 Thợ xem chỉ dẫn sửa đổi hiện trường',
-    true,
-    Date.now() - t0StaffFix,
-    'Hiển thị chính xác lý do bị từ chối',
+    'S2.2 Giám sát xem chỉ dẫn sửa đổi hiện trường',
+    hasReworkReason,
+    Date.now() - t0SupFix,
+    'Hiển thị chính xác lý do Quản lý yêu cầu chụp lại',
     artifactReworkCard,
   );
 
-  // Tap action button "Chụp lại ảnh trước xử lý" (x=540, y=1025)
-  tapPixel(540, 1025);
+  // Tap action button on Rework Detail ("Chụp ảnh hiện trạng trước xử lý" or "Kiểm tra & Gửi bằng chứng giám sát")
+  tapByText(['Chụp ảnh hiện trạng trước xử lý', 'Kiểm tra & Gửi bằng chứng giám sát', 'Xác thực vị trí GPS Giám sát'], {
+    maxScrolls: 2,
+    fallbackX: 540,
+    fallbackY: 1100,
+  });
   sleep(1500);
 
-  // In retake photo screen: tap "Dùng ảnh này" (x=540, y=1135) to proceed directly to Review
-  tapPixel(540, 1135);
-  sleep(1800);
+  // If on BEFORE camera screen, tap "Dùng ảnh này" or "Chụp ảnh"
+  const reworkStepNodes = dumpUiNodes();
+  if (findNode(reworkStepNodes, ['Dùng ảnh này'])) {
+    tapByText(['Dùng ảnh này'], { scrollIfNeeded: false });
+    sleep(1800);
+  } else if (findNode(reworkStepNodes, ['Chụp ảnh'])) {
+    tapByText(['Chụp ảnh'], { scrollIfNeeded: false });
+    sleep(2000);
+    tapByText(['Dùng ảnh này'], { scrollIfNeeded: false });
+    sleep(1800);
+  }
 
-  // In review report: scroll down to submit button
-  swipe(540, 1800, 540, 800, 300);
-  sleep(800);
-
-  // Tap "Gửi báo cáo nghiệm thu" button (x=540, y=2050)
-  tapPixel(540, 2050);
-  sleep(2500);
+  // In review report: tap "Gửi bằng chứng giám sát" button
+  tapByText(['Gửi bằng chứng giám sát'], {
+    maxScrolls: 3,
+    fallbackX: 540,
+    fallbackY: 2050,
+  });
+  sleep(2800);
 
   const artifactResubmitted = captureMilestone('milestone-s2-03-rework-resubmitted.png');
   record(
-    'S2.3 Thợ nộp lại bằng chứng khắc phục',
+    'S2.3 Giám sát nộp lại bằng chứng khắc phục',
     true,
-    Date.now() - t0StaffFix,
+    Date.now() - t0SupFix,
     'Báo cáo đã gửi lại hàng chờ duyệt',
     artifactResubmitted,
   );
 
-  // Return to work list: tap "Quay lại danh sách" on Success screen (x=540, y=1310)
-  tapPixel(540, 1310);
+  // Return to work list: tap "Quay lại danh sách" on Success screen
+  tapByText(['Quay lại danh sách'], {
+    scrollIfNeeded: false,
+    fallbackX: 540,
+    fallbackY: 1310,
+  });
   sleep(1500);
 }
 
@@ -711,7 +1396,12 @@ async function runScenarioFeatures() {
   ensureAppForeground();
 
   // Tap Center Elevated FAB button (NAV_CENTER_FAB)
-  tapPixel(NAV_CENTER_FAB.x, NAV_CENTER_FAB.y);
+  tapByText(['Quét mã QR'], {
+    minY: 2140,
+    scrollIfNeeded: false,
+    fallbackX: NAV_CENTER_FAB.x,
+    fallbackY: NAV_CENTER_FAB.y,
+  });
   sleep(1500);
 
   const artifactFabCam = captureMilestone('milestone-s3-01-fab-qr-camera.png');
@@ -723,8 +1413,12 @@ async function runScenarioFeatures() {
     artifactFabCam,
   );
 
-  // Tap center overlay (x=540, y=550) to simulate scanning tree code in DEV
-  tapPixel(540, 550);
+  // Tap center overlay to simulate scanning tree code in DEV
+  tapByText(['Khung quét mã QR', 'Quét mã trên thân cây'], {
+    scrollIfNeeded: false,
+    fallbackX: 540,
+    fallbackY: 950,
+  });
   sleep(2000);
 
   const artifactTreeResult = captureMilestone('milestone-s3-02-fab-tree-lookup-result.png');
@@ -740,7 +1434,12 @@ async function runScenarioFeatures() {
   console.log('\n--- 3.2: Kiểm thử Danh Mục Hồ Sơ Cây & Bộ Lọc Sức Khỏe ---');
   const t0Trees = Date.now();
   // Tap Tab 2 ("Cây của tôi" / "Cây": NAV_LEFT_2)
-  tapPixel(NAV_LEFT_2.x, NAV_LEFT_2.y);
+  tapByText(['Cây của tôi', 'Cây'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_LEFT_2.x,
+    fallbackY: NAV_LEFT_2.y,
+  });
   sleep(1500);
 
   const artifactTreesAll = captureMilestone('milestone-s3-03-tree-catalog-all.png');
@@ -752,14 +1451,14 @@ async function runScenarioFeatures() {
     artifactTreesAll,
   );
 
-  // Tap health filter chip: "Khỏe mạnh" (x=360, y=280)
-  tapPixel(360, 280);
+  // Tap health filter chip: "Khỏe mạnh"
+  tapByText(['Khỏe mạnh'], { maxY: 600, scrollIfNeeded: false, fallbackX: 360, fallbackY: 280 });
   sleep(800);
   const artifactTreesHealthy = captureMilestone('milestone-s3-04-tree-filter-healthy.png');
   record('S3.4 Lọc danh mục cây Khỏe mạnh', true, 800, 'Bộ lọc phản hồi tức thì', artifactTreesHealthy);
 
-  // Tap health filter chip: "Cần chăm sóc" (x=600, y=280)
-  tapPixel(600, 280);
+  // Tap health filter chip: "Cần chăm sóc"
+  tapByText(['Cần chăm sóc'], { maxY: 600, scrollIfNeeded: false, fallbackX: 600, fallbackY: 280 });
   sleep(800);
   const artifactTreesCare = captureMilestone('milestone-s3-05-tree-filter-care.png');
   record('S3.5 Lọc danh mục cây Cần chăm sóc', true, 800, 'Bộ lọc phản hồi tức thì', artifactTreesCare);
@@ -768,11 +1467,16 @@ async function runScenarioFeatures() {
   console.log('\n--- 3.3: Kiểm thử Trung Tâm Thông Báo & Đánh Dấu Đã Đọc ---');
   const t0Notif = Date.now();
   // Tap Tab 5 ("Tài khoản": NAV_RIGHT_2)
-  tapPixel(NAV_RIGHT_2.x, NAV_RIGHT_2.y);
+  tapByText(['Tài khoản'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_RIGHT_2.x,
+    fallbackY: NAV_RIGHT_2.y,
+  });
   sleep(1200);
 
-  // Tap "Thông báo" row (x=540, y=1120 on StaffAccount)
-  tapPixel(540, 1120);
+  // Tap "Thông báo" row on StaffAccount
+  tapByText(['Thông báo'], { maxScrolls: 1, fallbackX: 540, fallbackY: 1090 });
   sleep(1500);
 
   const artifactNotifList = captureMilestone('milestone-s3-06-notification-center.png');
@@ -784,15 +1488,20 @@ async function runScenarioFeatures() {
     artifactNotifList,
   );
 
-  // Tap "Đánh dấu đã đọc" (x=820, y=250)
-  tapPixel(820, 250);
+  // Tap "Đánh dấu đã đọc"
+  tapByText(['Đánh dấu đã đọc'], { maxY: 500, scrollIfNeeded: false, fallbackX: 820, fallbackY: 250 });
   sleep(1000);
 
   const artifactNotifRead = captureMilestone('milestone-s3-07-notifications-marked-read.png');
   record('S3.7 Đánh dấu đã đọc toàn bộ thông báo', true, 1000, 'Trạng thái đồng bộ chính xác', artifactNotifRead);
 
   // Tap Account tab to exit Notifications view safely
-  tapPixel(NAV_RIGHT_2.x, NAV_RIGHT_2.y);
+  tapByText(['Tài khoản'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_RIGHT_2.x,
+    fallbackY: NAV_RIGHT_2.y,
+  });
   sleep(1000);
 
   // 3.4 Test DateRangePickerSheet & Continuous Pill Ribbon
@@ -801,11 +1510,16 @@ async function runScenarioFeatures() {
   switchRole('manager');
 
   // Tap "Giao việc" tab (NAV_LEFT_2)
-  tapPixel(NAV_LEFT_2.x, NAV_LEFT_2.y);
+  tapByText(['Giao việc'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_LEFT_2.x,
+    fallbackY: NAV_LEFT_2.y,
+  });
   sleep(1500);
 
-  // Tap "Tùy chọn ngày" preset button (x=880, y=330 in Section 1)
-  tapPixel(880, 330);
+  // Tap "Tùy chọn ngày" preset button
+  tapByText(['Tùy chọn ngày'], { maxScrolls: 1, fallbackX: 880, fallbackY: 330 });
   sleep(1500);
 
   const artifactDateSheet = captureMilestone('milestone-s3-08-date-range-picker-sheet.png');
@@ -817,10 +1531,14 @@ async function runScenarioFeatures() {
     artifactDateSheet,
   );
 
-  // Tap start day (col 2, row 3) and end day (col 5, row 3) on calendar grid
-  tapPixel(275, 1500);
-  sleep(500);
-  tapPixel(675, 1500);
+  // Select multi-day range inside DateRangePickerSheet ("3 ngày tới" or future dates)
+  tapByText(['3 ngày tới', '7 ngày tới'], {
+    minY: 600,
+    maxY: 950,
+    scrollIfNeeded: false,
+    fallbackX: 315,
+    fallbackY: 755,
+  });
   sleep(800);
 
   const artifactRibbon = captureMilestone('milestone-s3-09-date-range-capsule-ribbon.png');
@@ -832,12 +1550,17 @@ async function runScenarioFeatures() {
     artifactRibbon,
   );
 
-  // Tap "Áp dụng" button (x=540, y=2080)
-  tapPixel(540, 2080);
+  // Tap "Áp dụng dải ngày" button
+  tapByText(['Áp dụng dải ngày', 'Áp dụng'], { scrollIfNeeded: false, fallbackX: 540, fallbackY: 1990 });
   sleep(1200);
 
   // Tap back to Overview
-  tapPixel(NAV_LEFT_1.x, NAV_LEFT_1.y);
+  tapByText(['Tổng quan'], {
+    minY: 2150,
+    scrollIfNeeded: false,
+    fallbackX: NAV_LEFT_1.x,
+    fallbackY: NAV_LEFT_1.y,
+  });
   sleep(1000);
 }
 
@@ -873,15 +1596,22 @@ async function run() {
   const staffUser = staffLogin.json?.data?.session?.user || staffLogin.json?.session?.user;
   record('1.3 Staff Auth Contract', staffLogin.ok && staffUser?.role === 'staff', 0, `Role: ${staffUser?.role}`);
 
+  const supLogin = await apiRequest('POST', 'auth/login', { identifier: SUPERVISOR_EMAIL, password: DEV_PASSWORD });
+  const supToken = supLogin.json?.data?.session?.accessToken || supLogin.json?.session?.accessToken;
+  const supUser = supLogin.json?.data?.session?.user || supLogin.json?.session?.user;
+  record('1.4 Supervisor Auth Contract', supLogin.ok && supUser?.role === 'supervisor', 0, `Role: ${supUser?.role}`);
+
   if (isDryRun) {
     console.log('\n[Dry Run] Preflight hoàn tất thành công. Bỏ qua thao tác UI thực tế.');
     return;
   }
 
-  ensureAppForeground();
-  record('1.4 Physical Device Ready', true, 0, `Connected to ${ADB_DEVICE}`);
+  grantRuntimePermissions();
+  ensurePortReverses();
+  launchMetroDeepLink(true);
+  record('1.5 Physical Device Ready', true, 0, `Connected to ${ADB_DEVICE}`);
 
-  const context = { mgrToken, mgrUser, staffToken, staffUser };
+  const context = { mgrToken, mgrUser, staffToken, staffUser, supToken, supUser };
 
   // Dispatch Scenarios
   if (selectedScenario === 'lifecycle' || selectedScenario === 'all') {
@@ -917,7 +1647,47 @@ async function run() {
   }
 }
 
-run().catch((err) => {
-  console.error('\n\x1b[31mFATAL ERROR IN E2E HARNESS:\x1b[0m', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  run().catch((err) => {
+    console.error('\n\x1b[31mFATAL ERROR IN E2E HARNESS:\x1b[0m', err);
+    process.exit(1);
+  });
+}
+
+// Shared device/UI/API helpers for stricter harnesses (e.g. scripts/mobile-role-acceptance-e2e.cjs).
+module.exports = {
+  initDevice: () => {
+    ADB_DEVICE = resolveAvailableDevice();
+    return ADB_DEVICE;
+  },
+  getDevice: () => ADB_DEVICE,
+  constants: {
+    SMOKE_DIR,
+    STAFF_EMAIL,
+    SUPERVISOR_EMAIL,
+    MANAGER_EMAIL,
+    DEV_PASSWORD,
+    NAV_LEFT_1,
+    NAV_LEFT_2,
+    NAV_CENTER_FAB,
+    NAV_RIGHT_1,
+    NAV_RIGHT_2,
+  },
+  sleep,
+  adbExec,
+  grantRuntimePermissions,
+  ensurePortReverses,
+  launchMetroDeepLink,
+  ensureAppForeground,
+  closeKeyboard,
+  tapPixel,
+  fastClearInput,
+  typeText,
+  swipe,
+  dumpUiNodes,
+  findNode,
+  safelyExitToMain,
+  captureMilestone,
+  apiRequest,
+  loginOnDevice,
+};

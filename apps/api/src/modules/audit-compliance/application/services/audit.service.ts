@@ -57,7 +57,7 @@ export class AuditService {
 
   async logEvent(params: {
     actorId: string;
-    actorRole: 'staff' | 'manager' | 'admin';
+    actorRole: 'staff' | 'supervisor' | 'manager' | 'admin';
     action: string;
     targetResourceType: string;
     targetResourceId: string;

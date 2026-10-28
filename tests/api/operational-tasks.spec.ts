@@ -386,7 +386,7 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
         taskTypeId: taskType.id,
         treeId: 'TREE-001',
         assignedStaffId: staff1Id,
-        deadline: '2026-10-15T18:00:00Z',
+        deadline: '2026-12-15T18:00:00Z',
       };
 
       const createTaskRes = await app.inject({
@@ -665,7 +665,7 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
           taskTypeId: tt.id,
           treeId: 'TREE-REWORK-1',
           assignedStaffId: staff1Id,
-          deadline: '2026-10-20T17:00:00Z',
+          deadline: '2026-12-20T17:00:00Z',
         },
       });
       const task = createRes.json().data;
@@ -895,7 +895,7 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
           taskTypeId: tt.id,
           treeId: 'TREE-BLOCKED-1',
           assignedStaffId: staff1Id,
-          deadline: '2026-10-25T17:00:00Z',
+          deadline: '2026-10-30T17:00:00Z',
         },
       });
       const task = createRes.json().data;
@@ -1913,6 +1913,395 @@ describe('Phase 13 Wave 4: Operational Domain API Integration Tests (Sections 63
       });
       expect(res.statusCode).toBe(400);
       expect(res.json().error.code).toBe('VALIDATION_FAILED');
+    });
+  });
+
+  describe('Sequential Staff GPS Check-in -> Supervisor Photo Evidence -> Manager Review workflow', () => {
+    const supervisor1Id = 'supervisor-user-01';
+    const supervisor2Id = 'supervisor-user-02';
+    let supervisor1Token: string;
+    let supervisor2Token: string;
+
+    beforeEach(async () => {
+      await userRepo.create({
+        id: supervisor1Id,
+        version: 1,
+        email: 'supervisor1@novyx.test',
+        initialRole: 'supervisor',
+        role: 'supervisor',
+        accountStatus: 'ACTIVE',
+        authVersion: 1,
+      });
+      await userRepo.create({
+        id: supervisor2Id,
+        version: 1,
+        email: 'supervisor2@novyx.test',
+        initialRole: 'supervisor',
+        role: 'supervisor',
+        accountStatus: 'ACTIVE',
+        authVersion: 1,
+      });
+      supervisor1Token = await createSessionFor(supervisor1Id);
+      supervisor2Token = await createSessionFor(supervisor2Id);
+      await scopeRepo.addScope(managerId, 'GLOBAL');
+    });
+
+    it('enforces sequential Staff GPS/QR/Checklist check-in, Supervisor photo capture, DR-HARD-02 separation of duties, and rework preservation', async () => {
+      const tree = new (await import('../../apps/api/src/modules/tree-asset-registry/domain/tree.entity')).Tree({
+        id: 'TREE-SUP-1',
+        version: 0,
+        name: 'Sao Đen Hiện Trường',
+        species: 'Hopea odorata',
+        lat: 10.7769,
+        lng: 106.7009,
+        address: '12 Nguyễn Huệ, Q1',
+        qrCode: 'QR-SUP-001',
+        healthStatus: 'Khỏe mạnh',
+        ageYears: 8,
+      });
+      await treeRepo.save(tree);
+
+      const tt = new TaskType({
+        id: 'TT-SUP-CHANGE',
+        version: 0,
+        name: 'Cắt tỉa cành định kỳ',
+        defaultProofProfile: 'CHANGE_PROOF',
+        isActive: true,
+      });
+      await taskTypeRepo.save(tt);
+
+      await policyRepo.saveProofPolicyVersion(
+        new ProofPolicyVersion({
+          id: 'PPV-SUP-1',
+          taskTypeId: tt.id,
+          versionNumber: 1,
+          proofProfile: 'CHANGE_PROOF',
+        }),
+      );
+
+      await policyRepo.saveChecklistTemplateVersion(
+        new ChecklistTemplateVersion({
+          id: 'CTV-SUP-1',
+          versionNumber: 1,
+          taskTypeId: tt.id,
+          templateItems: [
+            { text: 'Kiểm tra an toàn khu vực gốc cây', order: 1 },
+            { text: 'Tỉa cành khô và thu gom cành nhánh', order: 2 },
+          ],
+        }),
+      );
+
+      // 1. Manager creates task with assignedStaffId and optional assignedSupervisorId
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/v1/tasks',
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          title: 'Tỉa cành Sao Đen Q1',
+          description: 'Thực hiện tỉa cành và nghiệm thu qua Giám sát hiện trường',
+          taskTypeId: tt.id,
+          treeId: tree.id,
+          assignedStaffId: staff1Id,
+          assignedSupervisorId: supervisor1Id,
+          assignedSupervisorName: 'Phạm Giám Sát',
+          deadline: '2026-10-30T17:00:00Z',
+        },
+      });
+      expect(createRes.statusCode).toBe(201);
+      const createdTask = createRes.json().data;
+      expect(createdTask.assignedSupervisorId).toBe(supervisor1Id);
+
+      // 2. Staff starts task (PENDING -> IN_PROGRESS, version 0 -> 1)
+      const startRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/start`,
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: createdTask.id,
+          expectedVersion: 0,
+        },
+      });
+      expect(startRes.statusCode).toBe(200);
+      expect(startRes.json().data.status).toBe('IN_PROGRESS');
+
+      // 3. Review Focus #2: Premature supervisor submission before staff check-in -> 409 CONFLICT
+      const prematureSupRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/evidence`,
+        headers: {
+          authorization: `Bearer ${supervisor1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: createdTask.id,
+          expectedVersion: 1,
+          proof: {
+            proofProfile: 'CHANGE_PROOF',
+            beforePhotoUri: `tasks/${createdTask.id}/evidence/before.jpg`,
+            afterPhotoUri: `tasks/${createdTask.id}/evidence/after.jpg`,
+            checklist: [
+              { id: 'chk-1', text: 'Kiểm tra an toàn khu vực gốc cây', done: true },
+              { id: 'chk-2', text: 'Tỉa cành khô và thu gom cành nhánh', done: true },
+            ],
+          },
+        },
+      });
+      expect(prematureSupRes.statusCode).toBe(409);
+      expect(prematureSupRes.json().error.message).toContain(
+        'Staff must complete GPS, QR, and checklist check-in before supervisor submits photo evidence',
+      );
+
+      // 4. Review Focus #4: Staff GPS out-of-range (>10m) without locationException -> 400 VALIDATION_FAILED
+      const outOfRangeStaffRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/staff-checkin`,
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: createdTask.id,
+          expectedVersion: 1,
+          siteVerification: {
+            gpsCheck: {
+              lat: 10.7775,
+              lng: 106.7015,
+              distance: 22.0,
+              verified: true,
+              timestamp: new Date().toISOString(),
+            },
+            qrCheck: {
+              scannedCode: 'QR-SUP-001',
+              verified: true,
+              timestamp: new Date().toISOString(),
+            },
+          },
+          checklist: [
+            { id: 'chk-1', text: 'Kiểm tra an toàn khu vực gốc cây', done: true },
+            { id: 'chk-2', text: 'Tỉa cành khô và thu gom cành nhánh', done: true },
+          ],
+        },
+      });
+      expect(outOfRangeStaffRes.statusCode).toBe(400);
+
+      // 5. Staff submits valid GPS (<=10m), QR, and completed checklist check-in -> stays IN_PROGRESS with staffCompletedAt
+      const validStaffCheckinRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/staff-checkin`,
+        headers: {
+          authorization: `Bearer ${staff1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: createdTask.id,
+          expectedVersion: 1,
+          siteVerification: {
+            gpsCheck: {
+              lat: 10.7769,
+              lng: 106.7009,
+              distance: 3.8,
+              accuracyMeters: 4.2,
+              verified: true,
+              timestamp: '2026-10-24T08:00:00.000Z',
+            },
+            qrCheck: {
+              scannedCode: 'QR-SUP-001',
+              verified: true,
+              timestamp: '2026-10-24T08:01:00.000Z',
+            },
+          },
+          checklist: [
+            { id: 'chk-1', text: 'Kiểm tra an toàn khu vực gốc cây', done: true },
+            { id: 'chk-2', text: 'Tỉa cành khô và thu gom cành nhánh', done: true },
+          ],
+          notes: 'Đã hoàn thành tỉa cành tại hiện trường, chờ Giám sát chụp ảnh nghiệm thu',
+        },
+      });
+      expect(validStaffCheckinRes.statusCode).toBe(200);
+      const taskAfterStaff = validStaffCheckinRes.json().data;
+      expect(taskAfterStaff.status).toBe('IN_PROGRESS');
+      expect(taskAfterStaff.staffCompletedAt).toBeDefined();
+      expect(taskAfterStaff.gpsCheck.distance).toBe(3.8);
+      expect(taskAfterStaff.version).toBe(2);
+
+      // 6. Review Focus #3: Assigned supervisor mismatch (supervisor2 tries to presign on supervisor1's assigned task) -> 403 FORBIDDEN
+      const wrongSupPresignRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/evidence/presign`,
+        headers: {
+          authorization: `Bearer ${supervisor2Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          fileName: 'before.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: 12,
+        },
+      });
+      expect(wrongSupPresignRes.statusCode).toBe(403);
+
+      // 7. Supervisor 1 presigns and uploads Before & After photos, then submits Supervisor Evidence -> WAITING_REVIEW
+      const beforeBytes = Buffer.from('before-image-bytes');
+      const afterBytes = Buffer.from('after-image-bytes');
+      const beforeHash = createHash('sha256').update(beforeBytes).digest('hex');
+      const afterHash = createHash('sha256').update(afterBytes).digest('hex');
+
+      const presignBeforeRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/evidence/presign`,
+        headers: {
+          authorization: `Bearer ${supervisor1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          fileName: 'before.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: beforeBytes.length,
+          contentHash: beforeHash,
+        },
+      });
+      expect(presignBeforeRes.statusCode).toBe(200);
+      const beforePresign = presignBeforeRes.json().data;
+
+      const presignAfterRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/evidence/presign`,
+        headers: {
+          authorization: `Bearer ${supervisor1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          fileName: 'after.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: afterBytes.length,
+          contentHash: afterHash,
+        },
+      });
+      expect(presignAfterRes.statusCode).toBe(200);
+      const afterPresign = presignAfterRes.json().data;
+
+      await storagePort.putObjectDirect({
+        objectKey: beforePresign.objectKey,
+        data: beforeBytes,
+        contentType: 'image/jpeg',
+        metadata: { taskId: createdTask.id, uploadedBy: supervisor1Id },
+      });
+      await storagePort.putObjectDirect({
+        objectKey: afterPresign.objectKey,
+        data: afterBytes,
+        contentType: 'image/jpeg',
+        metadata: { taskId: createdTask.id, uploadedBy: supervisor1Id },
+      });
+
+      const supSubmitRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/evidence`,
+        headers: {
+          authorization: `Bearer ${supervisor1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: createdTask.id,
+          expectedVersion: 2,
+          supervisorGpsCheck: {
+            lat: 10.7769,
+            lng: 106.7009,
+            distance: 2.5,
+            accuracyMeters: 3.5,
+            verified: true,
+            timestamp: '2026-10-24T08:15:00.000Z',
+          },
+          proof: {
+            proofProfile: 'CHANGE_PROOF',
+            beforePhotoUri: beforePresign.objectKey,
+            afterPhotoUri: afterPresign.objectKey,
+            checklist: [
+              { id: 'chk-1', text: 'Kiểm tra an toàn khu vực gốc cây', done: true },
+              { id: 'chk-2', text: 'Tỉa cành khô và thu gom cành nhánh', done: true },
+            ],
+          },
+          notes: 'Giám sát đã kiểm tra hiện trường và chụp ảnh Trước/Sau đạt yêu cầu',
+        },
+      });
+      expect(supSubmitRes.statusCode).toBe(200);
+      const taskWaitingReview = supSubmitRes.json().data;
+      expect(taskWaitingReview.status).toBe('WAITING_REVIEW');
+      expect(taskWaitingReview.supervisorId).toBe(supervisor1Id);
+      expect(taskWaitingReview.supervisorGpsCheck.distance).toBe(2.5);
+      expect(taskWaitingReview.gpsCheck.distance).toBe(3.8);
+      expect(taskWaitingReview.staffCompletedAt).toBeDefined();
+      expect(taskWaitingReview.supervisorCompletedAt).toBeDefined();
+      expect(taskWaitingReview.version).toBe(3);
+
+      // 8. Review Focus #5: Manager requests rework targeting AFTER photo -> Staff's gpsCheck, qrCheck, checklist, and staffCompletedAt are preserved
+      const reworkRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/review`,
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          expectedVersion: 3,
+          decision: 'REQUEST_REWORK',
+          targetedArea: 'AFTER',
+          reworkReason: 'Ảnh chụp sau khi tỉa bị ngược sáng, cần Giám sát chụp lại góc rộng hơn',
+        },
+      });
+      expect(reworkRes.statusCode).toBe(200);
+      const reworkedTask = reworkRes.json().data;
+      expect(reworkedTask.status).toBe('REWORK_REQUIRED');
+      expect(reworkedTask.staffCompletedAt).toBeDefined();
+      expect(reworkedTask.gpsCheck.distance).toBe(3.8);
+
+      // Supervisor 1 resubmits rework with new after photo -> WAITING_REVIEW
+      const resubmitRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/rework/resubmit`,
+        headers: {
+          authorization: `Bearer ${supervisor1Token}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          taskId: createdTask.id,
+          expectedVersion: 4,
+          reworkedProof: {
+            proofProfile: 'CHANGE_PROOF',
+            beforePhotoUri: beforePresign.objectKey,
+            afterPhotoUri: afterPresign.objectKey,
+            checklist: [
+              { id: 'chk-1', text: 'Kiểm tra an toàn khu vực gốc cây', done: true },
+              { id: 'chk-2', text: 'Tỉa cành khô và thu gom cành nhánh', done: true },
+            ],
+          },
+          reworkNotes: 'Đã chụp lại ảnh Sau rõ nét',
+        },
+      });
+      expect(resubmitRes.statusCode).toBe(200);
+      expect(resubmitRes.json().data.status).toBe('WAITING_REVIEW');
+
+      // 9. Manager approves combined Staff + Supervisor work -> COMPLETED
+      const approveRes = await app.inject({
+        method: 'POST',
+        url: `/v1/tasks/${createdTask.id}/review`,
+        headers: {
+          authorization: `Bearer ${managerToken}`,
+          'idempotency-key': randomUUID(),
+        },
+        payload: {
+          expectedVersion: 5,
+          decision: 'APPROVE',
+          notes: 'Định vị nhân viên và ảnh giám sát hiện trường đều hợp lệ',
+        },
+      });
+      expect(approveRes.statusCode).toBe(200);
+      expect(approveRes.json().data.status).toBe('COMPLETED');
     });
   });
 });

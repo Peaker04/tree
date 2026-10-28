@@ -260,7 +260,17 @@ export function WebMapView(props: WebMapViewProps) {
   </script>
 </body>
 </html>`;
-  }, [treeLat, treeLng, treeName, userLat, userLng, locationAccuracyMeters, locationCapturedAt, effectiveRadiusMeters, trees]);
+  }, [
+    treeLat,
+    treeLng,
+    treeName,
+    userLat,
+    userLng,
+    locationAccuracyMeters,
+    locationCapturedAt,
+    effectiveRadiusMeters,
+    trees,
+  ]);
 
   useEffect(() => {
     if (!isMapReady || !webViewRef.current || !locationCapturedAt) return;

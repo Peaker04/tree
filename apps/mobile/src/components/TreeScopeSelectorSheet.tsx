@@ -159,7 +159,11 @@ export function TreeScopeSelectorSheet({
   };
 
   const canConfirm =
-    activeMode === 'single_tree' ? Boolean(singleId) : activeMode === 'multi_trees' ? multiIds.size > 0 : Boolean(selectedZoneId);
+    activeMode === 'single_tree'
+      ? Boolean(singleId)
+      : activeMode === 'multi_trees'
+        ? multiIds.size > 0
+        : Boolean(selectedZoneId);
 
   const MODE_OPTIONS: FilterOption<ScopeMode>[] = [
     { id: 'single_tree', label: '1 Cây', icon: 'radio-button-on-outline' },
@@ -177,18 +181,16 @@ export function TreeScopeSelectorSheet({
     >
       <View style={styles.sheetContainer}>
         {/* Mode Segmented Controls */}
-        <SegmentedFilterBar
-          options={MODE_OPTIONS}
-          selectedId={activeMode}
-          onSelect={(mode) => setActiveMode(mode)}
-        />
+        <SegmentedFilterBar options={MODE_OPTIONS} selectedId={activeMode} onSelect={(mode) => setActiveMode(mode)} />
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={18} color={colors.pewter} />
           <TextInput
             style={styles.searchInput}
-            placeholder={activeMode === 'zone' ? 'Tìm theo tên khu vực, tuyến đường...' : 'Tìm tên cây, số hiệu, địa chỉ...'}
+            placeholder={
+              activeMode === 'zone' ? 'Tìm theo tên khu vực, tuyến đường...' : 'Tìm tên cây, số hiệu, địa chỉ...'
+            }
             placeholderTextColor={colors.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}

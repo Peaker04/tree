@@ -51,11 +51,22 @@ export function DeviceCameraView({
   const canRenderPreview = permissionState === 'granted' && activeCameraPurpose === purpose && Boolean(cameraModule);
 
   if (!canRenderPreview) {
+    if (permissionState === 'granted') {
+      return (
+        <View style={[style, { backgroundColor: '#020617' }]}>
+          {children ? (
+            <View pointerEvents={__DEV__ ? 'box-none' : 'none'} style={StyleSheet.absoluteFill}>
+              {children}
+            </View>
+          ) : null}
+        </View>
+      );
+    }
     return (
       <DevicePermissionState
         kind={kind}
         purpose={purpose}
-        state={permissionState === 'granted' && !cameraModule ? 'runtime-unavailable' : permissionState}
+        state={permissionState}
         runtimeMessage={runtimeMessage}
         onRequest={onRequestPermission}
         onOpenSettings={onOpenSettings}

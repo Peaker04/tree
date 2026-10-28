@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
+const nodeCrypto = require('node:crypto');
 
 const repoRoot = path.resolve(__dirname, '..');
 const envPath = path.join(repoRoot, '.env');
@@ -46,7 +47,7 @@ function requestJson(urlStr, method = 'GET', body = null, token = null, extraHea
       const payload = body ? JSON.stringify(body) : null;
 
       const headers = {
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'ngrok-skip-browser-warning': 'true',
         ...extraHeaders,
       };
@@ -231,13 +232,9 @@ async function run() {
     deadline: deadlineIso,
   };
 
-  const create1Res = await requestJson(
-    `${API_BASE_URL}/v1/tasks`,
-    'POST',
-    task1Payload,
-    mgrSession.accessToken,
-    { 'Idempotency-Key': crypto.randomUUID() },
-  );
+  const create1Res = await requestJson(`${API_BASE_URL}/v1/tasks`, 'POST', task1Payload, mgrSession.accessToken, {
+    'Idempotency-Key': crypto.randomUUID(),
+  });
   const task1 = create1Res.json?.data;
 
   assertMatrix(
@@ -257,13 +254,9 @@ async function run() {
     deadline: deadlineIso,
   };
 
-  const create2Res = await requestJson(
-    `${API_BASE_URL}/v1/tasks`,
-    'POST',
-    task2Payload,
-    mgrSession.accessToken,
-    { 'Idempotency-Key': crypto.randomUUID() },
-  );
+  const create2Res = await requestJson(`${API_BASE_URL}/v1/tasks`, 'POST', task2Payload, mgrSession.accessToken, {
+    'Idempotency-Key': crypto.randomUUID(),
+  });
   const task2 = create2Res.json?.data;
 
   assertMatrix(
@@ -283,13 +276,9 @@ async function run() {
     deadline: deadlineIso,
   };
 
-  const create3Res = await requestJson(
-    `${API_BASE_URL}/v1/tasks`,
-    'POST',
-    task3Payload,
-    mgrSession.accessToken,
-    { 'Idempotency-Key': crypto.randomUUID() },
-  );
+  const create3Res = await requestJson(`${API_BASE_URL}/v1/tasks`, 'POST', task3Payload, mgrSession.accessToken, {
+    'Idempotency-Key': crypto.randomUUID(),
+  });
   const task3 = create3Res.json?.data;
 
   assertMatrix(
@@ -323,9 +312,19 @@ async function run() {
 
   // Parallel start tasks
   const [start1Res, start2Res, start3Res] = await Promise.all([
-    requestJson(`${API_BASE_URL}/v1/tasks/${task1.id}/start`, 'POST', { expectedVersion: 0 }, diemSession.accessToken, { 'Idempotency-Key': crypto.randomUUID() }),
-    requestJson(`${API_BASE_URL}/v1/tasks/${task2.id}/start`, 'POST', { expectedVersion: 0 }, hungSession.accessToken, { 'Idempotency-Key': crypto.randomUUID() }),
-    requestJson(`${API_BASE_URL}/v1/tasks/${task3.id}/start`, 'POST', { expectedVersion: 0 }, phongSession.accessToken, { 'Idempotency-Key': crypto.randomUUID() }),
+    requestJson(`${API_BASE_URL}/v1/tasks/${task1.id}/start`, 'POST', { expectedVersion: 0 }, diemSession.accessToken, {
+      'Idempotency-Key': crypto.randomUUID(),
+    }),
+    requestJson(`${API_BASE_URL}/v1/tasks/${task2.id}/start`, 'POST', { expectedVersion: 0 }, hungSession.accessToken, {
+      'Idempotency-Key': crypto.randomUUID(),
+    }),
+    requestJson(
+      `${API_BASE_URL}/v1/tasks/${task3.id}/start`,
+      'POST',
+      { expectedVersion: 0 },
+      phongSession.accessToken,
+      { 'Idempotency-Key': crypto.randomUUID() },
+    ),
   ]);
 
   const allStarted =
@@ -354,24 +353,36 @@ async function run() {
   const jpeg2After = createDummyJpeg('#8b6508', 'HUNG-AFTER-DARK');
   const jpegRework = createDummyJpeg('#2e8b57', 'HUNG-AFTER-BRIGHT');
 
-  const hash1Before = crypto.createHash('sha256').update(jpeg1Before).digest('hex');
-  const hash1After = crypto.createHash('sha256').update(jpeg1After).digest('hex');
-  const hash2Before = crypto.createHash('sha256').update(jpeg2Before).digest('hex');
-  const hash2After = crypto.createHash('sha256').update(jpeg2After).digest('hex');
-  const hashRework = crypto.createHash('sha256').update(jpegRework).digest('hex');
+  const hash1Before = nodeCrypto.createHash('sha256').update(jpeg1Before).digest('hex');
+  const hash1After = nodeCrypto.createHash('sha256').update(jpeg1After).digest('hex');
+  const hash2Before = nodeCrypto.createHash('sha256').update(jpeg2Before).digest('hex');
+  const hash2After = nodeCrypto.createHash('sha256').update(jpeg2After).digest('hex');
+  const hashRework = nodeCrypto.createHash('sha256').update(jpegRework).digest('hex');
 
   // Presign for Task 1
   const [presign1Before, presign1After] = await Promise.all([
     requestJson(
       `${API_BASE_URL}/v1/tasks/${task1.id}/evidence/presign`,
       'POST',
-      { stage: 'BEFORE', contentType: 'image/jpeg', fileName: `before-${task1.id}.jpg`, sizeBytes: jpeg1Before.length, contentHash: hash1Before },
+      {
+        stage: 'BEFORE',
+        contentType: 'image/jpeg',
+        fileName: `before-${task1.id}.jpg`,
+        sizeBytes: jpeg1Before.length,
+        contentHash: hash1Before,
+      },
       diemSession.accessToken,
     ),
     requestJson(
       `${API_BASE_URL}/v1/tasks/${task1.id}/evidence/presign`,
       'POST',
-      { stage: 'AFTER', contentType: 'image/jpeg', fileName: `after-${task1.id}.jpg`, sizeBytes: jpeg1After.length, contentHash: hash1After },
+      {
+        stage: 'AFTER',
+        contentType: 'image/jpeg',
+        fileName: `after-${task1.id}.jpg`,
+        sizeBytes: jpeg1After.length,
+        contentHash: hash1After,
+      },
       diemSession.accessToken,
     ),
   ]);
@@ -381,13 +392,25 @@ async function run() {
     requestJson(
       `${API_BASE_URL}/v1/tasks/${task2.id}/evidence/presign`,
       'POST',
-      { stage: 'BEFORE', contentType: 'image/jpeg', fileName: `before-${task2.id}.jpg`, sizeBytes: jpeg2Before.length, contentHash: hash2Before },
+      {
+        stage: 'BEFORE',
+        contentType: 'image/jpeg',
+        fileName: `before-${task2.id}.jpg`,
+        sizeBytes: jpeg2Before.length,
+        contentHash: hash2Before,
+      },
       hungSession.accessToken,
     ),
     requestJson(
       `${API_BASE_URL}/v1/tasks/${task2.id}/evidence/presign`,
       'POST',
-      { stage: 'AFTER', contentType: 'image/jpeg', fileName: `after-${task2.id}.jpg`, sizeBytes: jpeg2After.length, contentHash: hash2After },
+      {
+        stage: 'AFTER',
+        contentType: 'image/jpeg',
+        fileName: `after-${task2.id}.jpg`,
+        sizeBytes: jpeg2After.length,
+        contentHash: hash2After,
+      },
       hungSession.accessToken,
     ),
   ]);
@@ -395,7 +418,10 @@ async function run() {
   assertMatrix(
     'MAT-08',
     'Cấp 4 Presigned URLs đồng thời cho Ngọc Diễm & Duy Hưng',
-    presign1Before.status === 200 && presign1After.status === 200 && presign2Before.status === 200 && presign2After.status === 200,
+    presign1Before.status === 200 &&
+      presign1After.status === 200 &&
+      presign2Before.status === 200 &&
+      presign2After.status === 200,
     `Keys: ${presign1Before.json?.data?.storageRef?.slice(-35)}, ${presign2Before.json?.data?.storageRef?.slice(-35)}`,
   );
 
@@ -407,7 +433,8 @@ async function run() {
     uploadBinary(presign2After.json?.data?.uploadUrl, jpeg2After),
   ]);
 
-  const allUploads200 = up1Before.status === 200 && up1After.status === 200 && up2Before.status === 200 && up2After.status === 200;
+  const allUploads200 =
+    up1Before.status === 200 && up1After.status === 200 && up2Before.status === 200 && up2After.status === 200;
   assertMatrix(
     'MAT-09',
     'Tải nhị phân 4 ảnh thành công lên Cloudflare R2 bucket (novyx-evidence)',
@@ -445,7 +472,9 @@ async function run() {
   assertMatrix(
     'MAT-10',
     'Ngọc Diễm nộp trọn gói bằng chứng hiện trường (Chuyển WAITING_REVIEW)',
-    submit1Res.status === 200 && submit1Res.json?.data?.status === 'WAITING_REVIEW' && submit1Res.json?.data?.version === 2,
+    submit1Res.status === 200 &&
+      submit1Res.json?.data?.status === 'WAITING_REVIEW' &&
+      submit1Res.json?.data?.version === 2,
     `Task 1 Status: ${submit1Res.json?.data?.status}, Version: ${submit1Res.json?.data?.version}`,
   );
 
@@ -544,7 +573,9 @@ async function run() {
   assertMatrix(
     'MAT-14',
     'Quản lý yêu cầu Duy Hưng làm lại (REWORK_REQUIRED, target: AFTER)',
-    review2Res.status === 200 && review2Res.json?.data?.status === 'REWORK_REQUIRED' && review2Res.json?.data?.version === 3,
+    review2Res.status === 200 &&
+      review2Res.json?.data?.status === 'REWORK_REQUIRED' &&
+      review2Res.json?.data?.version === 3,
     `Task 2 Status: ${review2Res.json?.data?.status}, Version: ${review2Res.json?.data?.version}, Target: AFTER`,
   );
 
@@ -552,14 +583,17 @@ async function run() {
   const presignReworkRes = await requestJson(
     `${API_BASE_URL}/v1/tasks/${task2.id}/evidence/presign`,
     'POST',
-    { stage: 'AFTER', contentType: 'image/jpeg', fileName: `after-rework-${task2.id}.jpg`, sizeBytes: jpegRework.length, contentHash: hashRework },
+    {
+      stage: 'AFTER',
+      contentType: 'image/jpeg',
+      fileName: `after-rework-${task2.id}.jpg`,
+      sizeBytes: jpegRework.length,
+      contentHash: hashRework,
+    },
     hungSession.accessToken,
   );
 
-  const reworkUploadRes = await uploadBinary(
-    presignReworkRes.json?.data?.uploadUrl,
-    jpegRework,
-  );
+  const reworkUploadRes = await uploadBinary(presignReworkRes.json?.data?.uploadUrl, jpegRework);
   if (reworkUploadRes.status !== 200) {
     throw new Error('Upload rework image failed: ' + reworkUploadRes.status);
   }
@@ -586,7 +620,9 @@ async function run() {
   assertMatrix(
     'MAT-15',
     'Duy Hưng tải ảnh mới lên R2 và nộp lại thành công (WAITING_REVIEW, v4)',
-    resubmitRes.status === 200 && resubmitRes.json?.data?.status === 'WAITING_REVIEW' && resubmitRes.json?.data?.version === 4,
+    resubmitRes.status === 200 &&
+      resubmitRes.json?.data?.status === 'WAITING_REVIEW' &&
+      resubmitRes.json?.data?.version === 4,
     `Task 2 Status: ${resubmitRes.json?.data?.status}, Version: ${resubmitRes.json?.data?.version}`,
   );
 
@@ -606,7 +642,9 @@ async function run() {
   assertMatrix(
     'MAT-16',
     'Quản lý phê duyệt nghiệm thu lần 2 cho Duy Hưng (COMPLETED, v5)',
-    review2FinalRes.status === 200 && review2FinalRes.json?.data?.status === 'COMPLETED' && review2FinalRes.json?.data?.version === 5,
+    review2FinalRes.status === 200 &&
+      review2FinalRes.json?.data?.status === 'COMPLETED' &&
+      review2FinalRes.json?.data?.version === 5,
     `Task 2 Status: ${review2FinalRes.json?.data?.status}, Version: ${review2FinalRes.json?.data?.version}`,
   );
 
@@ -617,23 +655,16 @@ async function run() {
 
   // Replay idempotency on Task 1
   const replayKey = crypto.randomUUID();
-  const replay1 = await requestJson(
-    `${API_BASE_URL}/v1/tasks`,
-    'POST',
-    task1Payload,
-    mgrSession.accessToken,
-    { 'Idempotency-Key': replayKey },
-  );
+  const replay1 = await requestJson(`${API_BASE_URL}/v1/tasks`, 'POST', task1Payload, mgrSession.accessToken, {
+    'Idempotency-Key': replayKey,
+  });
 
-  const replay2 = await requestJson(
-    `${API_BASE_URL}/v1/tasks`,
-    'POST',
-    task1Payload,
-    mgrSession.accessToken,
-    { 'Idempotency-Key': replayKey },
-  );
+  const replay2 = await requestJson(`${API_BASE_URL}/v1/tasks`, 'POST', task1Payload, mgrSession.accessToken, {
+    'Idempotency-Key': replayKey,
+  });
 
-  const idempotencyOk = replay1.status === 201 && replay2.status === 201 && replay1.json?.data?.id === replay2.json?.data?.id;
+  const idempotencyOk =
+    replay1.status === 201 && replay2.status === 201 && replay1.json?.data?.id === replay2.json?.data?.id;
 
   assertMatrix(
     'MAT-17',
@@ -643,11 +674,14 @@ async function run() {
   );
 
   // Dual-platform geometry invariants check
-  const bottomNavTsx = fs.readFileSync(path.resolve(repoRoot, 'apps/mobile/src/components/NotchedBottomNav.tsx'), 'utf8');
+  const bottomNavTsx = fs.readFileSync(
+    path.resolve(repoRoot, 'apps/mobile/src/components/NotchedBottomNav.tsx'),
+    'utf8',
+  );
   const primitivesTsx = fs.readFileSync(path.resolve(repoRoot, 'apps/mobile/src/components/AppPrimitives.tsx'), 'utf8');
 
   const dualPlatformOk =
-    bottomNavTsx.includes('Platform.OS === \'ios\' ? 56 : 64') &&
+    bottomNavTsx.includes("Platform.OS === 'ios' ? 56 : 64") &&
     primitivesTsx.includes('Animated.createAnimatedComponent(Pressable)') &&
     primitivesTsx.includes('height: 42') &&
     primitivesTsx.includes('useSafeAreaInsets');

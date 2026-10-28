@@ -123,9 +123,10 @@ export function UsersPage() {
                     backgroundColor: '#fff',
                   }}
                 >
-                  <option>Staff</option>
-                  <option>Manager</option>
-                  <option>Admin</option>
+                  <option value="staff">Staff (Nhân viên hiện trường)</option>
+                  <option value="supervisor">Supervisor (Giám sát hiện trường)</option>
+                  <option value="manager">Manager (Quản lý vận hành)</option>
+                  <option value="admin">Admin (Quản trị hệ thống)</option>
                 </select>
               </div>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>

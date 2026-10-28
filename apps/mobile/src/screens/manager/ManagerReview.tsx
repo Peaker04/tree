@@ -1,14 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  FlatList,
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Badge,
@@ -79,11 +70,7 @@ export function ManagerReview(props: ManagerAreaProps) {
         contentContainerStyle={styles.screen}
         refreshControl={
           props.onRefreshData ? (
-            <RefreshControl
-              refreshing={pullRefreshing}
-              onRefresh={handlePullRefresh}
-              tintColor={colors.primaryDark}
-            />
+            <RefreshControl refreshing={pullRefreshing} onRefresh={handlePullRefresh} tintColor={colors.primaryDark} />
           ) : undefined
         }
         ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -94,82 +81,82 @@ export function ManagerReview(props: ManagerAreaProps) {
         ListHeaderComponent={
           <View style={styles.header}>
             {props.dataSource?.source !== 'rest' ? (
-            <Notice
-              tone={props.dataSource?.source === 'cache' ? 'warning' : 'danger'}
-              title={props.dataSource?.source === 'cache' ? 'Đang xem hàng chờ đã lưu' : 'Không tải được hàng chờ'}
-              body={props.dataSource?.message ?? 'Kiểm tra kết nối rồi thử lại.'}
-              action={
-                <Button size="compact" variant="outline" onPress={() => void props.onRefreshData?.()}>
-                  Thử lại
-                </Button>
-              }
-            />
-          ) : null}
-
-          {pending.length > 0 ? (
-            <View style={styles.searchGroup}>
-              <Field
-                label="Tìm báo cáo"
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Tên việc, cây hoặc nhân viên"
-                autoCapitalize="none"
-                rightIcon={query ? 'close-circle-outline' : 'search-outline'}
-                onRightIconPress={query ? () => setQuery('') : undefined}
+              <Notice
+                tone={props.dataSource?.source === 'cache' ? 'warning' : 'danger'}
+                title={props.dataSource?.source === 'cache' ? 'Đang xem hàng chờ đã lưu' : 'Không tải được hàng chờ'}
+                body={props.dataSource?.message ?? 'Kiểm tra kết nối rồi thử lại.'}
+                action={
+                  <Button size="compact" variant="outline" onPress={() => void props.onRefreshData?.()}>
+                    Thử lại
+                  </Button>
+                }
               />
-              <Text style={styles.resultLabel}>
-                {visible.length}/{pending.length} báo cáo
-              </Text>
-            </View>
-          ) : null}
+            ) : null}
 
-          {pending.length === 0 ? (
-            <EmptyState title="Không có báo cáo chờ duyệt" body="Hàng chờ nghiệm thu đang trống." />
-          ) : visible.length === 0 ? (
-            <EmptyState icon="search-outline" title="Không tìm thấy báo cáo" body="Thử đổi từ khóa tìm kiếm." />
-          ) : null}
-        </View>
-      }
-      renderItem={({ item: task }) => {
-        const gaps = getTaskProofGaps(task);
-        return (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Mở báo cáo ${task.title}`}
-            onPress={() => {
-              props.setReviewTask(task);
-              props.setActiveStep('REVIEW_DETAIL');
-            }}
-            style={({ pressed }) => [styles.reportRow, pressed && styles.pressed]}
-          >
-            <View style={styles.reportIcon}>
-              <Ionicons
-                name={gaps.length ? 'warning-outline' : 'shield-checkmark-outline'}
-                size={21}
-                color={gaps.length ? colors.warningText : colors.successText}
-              />
-            </View>
-            <View style={styles.flex}>
-              <Text numberOfLines={2} style={styles.reportTitle}>
-                {task.title}
-              </Text>
-              <Text numberOfLines={1} style={styles.reportMeta}>
-                {task.treeName} · <Text style={styles.reportAge}>{formatReviewAge(task.updatedAt)}</Text>
-              </Text>
-              <View style={styles.reportFooter}>
-                <Text numberOfLines={1} style={[styles.reportMeta, styles.reportAssignee]}>
-                  {getReviewStaffLabel(task.assignedStaffId, task.assignedStaffName, props.assignableStaff)}
+            {pending.length > 0 ? (
+              <View style={styles.searchGroup}>
+                <Field
+                  label="Tìm báo cáo"
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Tên việc, cây hoặc nhân viên"
+                  autoCapitalize="none"
+                  rightIcon={query ? 'close-circle-outline' : 'search-outline'}
+                  onRightIconPress={query ? () => setQuery('') : undefined}
+                />
+                <Text style={styles.resultLabel}>
+                  {visible.length}/{pending.length} báo cáo
                 </Text>
-                <Badge tone={gaps.length ? 'amber' : 'green'}>
-                  {gaps.length ? `Thiếu ${gaps.length}` : `Đủ ${getTaskProofCount(task)}/5`}
-                </Badge>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={19} color={colors.pewter} />
-          </Pressable>
-        );
-      }}
-    />
+            ) : null}
+
+            {pending.length === 0 ? (
+              <EmptyState title="Không có báo cáo chờ duyệt" body="Hàng chờ nghiệm thu đang trống." />
+            ) : visible.length === 0 ? (
+              <EmptyState icon="search-outline" title="Không tìm thấy báo cáo" body="Thử đổi từ khóa tìm kiếm." />
+            ) : null}
+          </View>
+        }
+        renderItem={({ item: task }) => {
+          const gaps = getTaskProofGaps(task);
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Mở báo cáo ${task.title}`}
+              onPress={() => {
+                props.setReviewTask(task);
+                props.setActiveStep('REVIEW_DETAIL');
+              }}
+              style={({ pressed }) => [styles.reportRow, pressed && styles.pressed]}
+            >
+              <View style={styles.reportIcon}>
+                <Ionicons
+                  name={gaps.length ? 'warning-outline' : 'shield-checkmark-outline'}
+                  size={21}
+                  color={gaps.length ? colors.warningText : colors.successText}
+                />
+              </View>
+              <View style={styles.flex}>
+                <Text numberOfLines={2} style={styles.reportTitle}>
+                  {task.title}
+                </Text>
+                <Text numberOfLines={1} style={styles.reportMeta}>
+                  {task.treeName} · <Text style={styles.reportAge}>{formatReviewAge(task.updatedAt)}</Text>
+                </Text>
+                <View style={styles.reportFooter}>
+                  <Text numberOfLines={1} style={[styles.reportMeta, styles.reportAssignee]}>
+                    {getReviewStaffLabel(task.assignedStaffId, task.assignedStaffName, props.assignableStaff)}
+                  </Text>
+                  <Badge tone={gaps.length ? 'amber' : 'green'}>
+                    {gaps.length ? `Thiếu ${gaps.length}` : `Đủ ${getTaskProofCount(task)}/5`}
+                  </Badge>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={19} color={colors.pewter} />
+            </Pressable>
+          );
+        }}
+      />
     </View>
   );
 }
@@ -281,164 +268,167 @@ function ManagerReviewDetail(props: ManagerAreaProps & { reviewTask: Task }) {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Duyệt bằng chứng" subtitle={task.title} onBack={() => props.setActiveStep('REVIEW')} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScreen} automaticallyAdjustKeyboardInsets>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.detailScreen}
+        automaticallyAdjustKeyboardInsets
+      >
+        <Notice
+          tone={gaps.length ? 'warning' : 'success'}
+          title={gaps.length ? `Thiếu ${gaps.length} hạng mục` : `Đủ ${proofCount}/5 hạng mục`}
+          body={gaps.length ? gaps.join(' · ') : undefined}
+        />
 
-      <Notice
-        tone={gaps.length ? 'warning' : 'success'}
-        title={gaps.length ? `Thiếu ${gaps.length} hạng mục` : `Đủ ${proofCount}/5 hạng mục`}
-        body={gaps.length ? gaps.join(' · ') : undefined}
-      />
-
-      <View style={styles.section}>
-        <SectionTitle icon="person-outline">Thông tin</SectionTitle>
-        <ListRow icon="leaf-outline" title={task.treeName} subtitle={task.treeAddress} />
-        <ListRow
-          icon="person-outline"
-          title="Người thực hiện"
-          subtitle={getReviewStaffLabel(task.assignedStaffId, task.assignedStaffName, props.assignableStaff)}
-        />
-        <ListRow
-          icon="camera-outline"
-          title="Giám sát hiện trường"
-          subtitle={formatActorDisplayName(
-            task.supervisorName || task.assignedSupervisorName || 'Giám sát hiện trường',
-          )}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <SectionTitle icon="navigate-outline">Xác minh hiện trường (Nhân viên)</SectionTitle>
-        <VerificationRow
-          label="GPS"
-          value={task.gpsCheck?.verified ? `${task.gpsCheck.distance.toFixed(1)} m` : 'Chưa đạt'}
-          done={Boolean(task.gpsCheck?.verified)}
-        />
-        <VerificationRow
-          label="QR"
-          value={task.qrCheck?.verified ? 'Đúng cây' : 'Chưa đạt'}
-          done={Boolean(task.qrCheck?.verified)}
-        />
-        {task.staffCompletedAt ? (
-          <VerificationRow
-            label="Hoàn tất tại cây"
-            value={new Date(task.staffCompletedAt).toLocaleString('vi-VN')}
-            done
+        <View style={styles.section}>
+          <SectionTitle icon="person-outline">Thông tin</SectionTitle>
+          <ListRow icon="leaf-outline" title={task.treeName} subtitle={task.treeAddress} />
+          <ListRow
+            icon="person-outline"
+            title="Người thực hiện"
+            subtitle={getReviewStaffLabel(task.assignedStaffId, task.assignedStaffName, props.assignableStaff)}
           />
-        ) : null}
-      </View>
-
-      <View style={styles.section}>
-        <SectionTitle icon="images-outline">Ảnh bằng chứng (Giám sát)</SectionTitle>
-        {task.supervisorGpsCheck ? (
-          <VerificationRow
-            label="GPS giám sát"
-            value={task.supervisorGpsCheck.verified ? `${task.supervisorGpsCheck.distance.toFixed(1)} m` : 'Chưa đạt'}
-            done={Boolean(task.supervisorGpsCheck.verified)}
+          <ListRow
+            icon="camera-outline"
+            title="Giám sát hiện trường"
+            subtitle={formatActorDisplayName(
+              task.supervisorName || task.assignedSupervisorName || 'Giám sát hiện trường',
+            )}
           />
-        ) : null}
-        <PhotoPair task={task} />
-        {task.supervisorNotes ? <Text style={styles.notes}>Ghi chú giám sát: {task.supervisorNotes}</Text> : null}
-      </View>
+        </View>
 
-      <View style={styles.section}>
-        <SectionTitle icon="checkbox-outline">Checklist</SectionTitle>
-        {task.checklist.map((item, index) => (
-          <ChecklistLine key={item.id} item={item} index={index} />
-        ))}
-        {task.notes && !task.notes.startsWith('Fixture ') ? (
-          <Text style={styles.notes}>Ghi chú hiện trường: {task.notes}</Text>
-        ) : null}
-      </View>
-
-      <View style={styles.section}>
-        <SectionTitle icon="shield-checkmark-outline">Quyết định</SectionTitle>
-        <DecisionOption
-          tone="success"
-          label="Duyệt nghiệm thu"
-          description="Hoàn tất công việc."
-          selected={decision === 'APPROVE'}
-          disabled={gaps.length > 0}
-          onPress={() => selectDecision('APPROVE')}
-        />
-        <DecisionOption
-          tone="corrective"
-          label="Yêu cầu làm lại"
-          description="Trả phần cần sửa cho nhân viên."
-          selected={decision === 'REQUEST_REWORK'}
-          onPress={() => selectDecision('REQUEST_REWORK')}
-        />
-        <DecisionOption
-          tone="exceptional"
-          label="Duyệt có ngoại lệ"
-          description="Chấp nhận và ghi rõ ngoại lệ."
-          selected={decision === 'APPROVE_WITH_EXCEPTION'}
-          onPress={() => selectDecision('APPROVE_WITH_EXCEPTION')}
-        />
-        <DecisionOption
-          tone="destructive"
-          label="Hủy công việc"
-          description="Dừng công việc và ghi lý do."
-          selected={decision === 'CANCEL'}
-          onPress={() => selectDecision('CANCEL')}
-        />
-
-        {reasonRequired ? (
-          <>
-            {decision === 'REQUEST_REWORK' ? (
-              <View style={styles.reasonChips}>
-                {REWORK_REASONS.map((option) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: reason === option }}
-                    key={option}
-                    onPress={() => {
-                      setReason(option);
-                      setTouched(true);
-                    }}
-                    style={[styles.reasonChip, reason === option && styles.reasonChipSelected]}
-                  >
-                    <Text style={[styles.reasonChipText, reason === option && styles.reasonChipTextSelected]}>
-                      {option}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-            <Field
-              label={
-                decision === 'REQUEST_REWORK'
-                  ? 'Lý do và phần cần làm lại'
-                  : decision === 'CANCEL'
-                    ? 'Lý do hủy'
-                    : 'Lý do ngoại lệ'
-              }
-              value={reason}
-              onChangeText={(value) => {
-                setReason(value);
-                setTouched(true);
-              }}
-              placeholder="Nêu rõ bước cần xử lý"
-              multiline
+        <View style={styles.section}>
+          <SectionTitle icon="navigate-outline">Xác minh hiện trường (Nhân viên)</SectionTitle>
+          <VerificationRow
+            label="GPS"
+            value={task.gpsCheck?.verified ? `${task.gpsCheck.distance.toFixed(1)} m` : 'Chưa đạt'}
+            done={Boolean(task.gpsCheck?.verified)}
+          />
+          <VerificationRow
+            label="QR"
+            value={task.qrCheck?.verified ? 'Đúng cây' : 'Chưa đạt'}
+            done={Boolean(task.qrCheck?.verified)}
+          />
+          {task.staffCompletedAt ? (
+            <VerificationRow
+              label="Hoàn tất tại cây"
+              value={new Date(task.staffCompletedAt).toLocaleString('vi-VN')}
+              done
             />
-            {!reason.trim() ? (
-              <Text
-                accessibilityRole={touched ? 'alert' : undefined}
-                style={touched ? styles.errorText : styles.helperText}
-              >
-                {touched ? 'Cần nhập lý do.' : 'Nhập lý do để xác nhận.'}
-              </Text>
-            ) : null}
-          </>
-        ) : null}
+          ) : null}
+        </View>
 
-        {approvalBlocked ? (
-          <Notice tone="warning" title="Chưa thể duyệt" body="Bổ sung mục còn thiếu hoặc chọn quyết định khác." />
-        ) : null}
-        {submitError ? <Notice tone="danger" title="Chưa lưu được quyết định" body={submitError} /> : null}
-        <Button loading={submitting} disabled={!canSubmit} icon="send-outline" onPress={() => void submit()}>
-          Xác nhận quyết định
-        </Button>
-      </View>
+        <View style={styles.section}>
+          <SectionTitle icon="images-outline">Ảnh bằng chứng (Giám sát)</SectionTitle>
+          {task.supervisorGpsCheck ? (
+            <VerificationRow
+              label="GPS giám sát"
+              value={task.supervisorGpsCheck.verified ? `${task.supervisorGpsCheck.distance.toFixed(1)} m` : 'Chưa đạt'}
+              done={Boolean(task.supervisorGpsCheck.verified)}
+            />
+          ) : null}
+          <PhotoPair task={task} />
+          {task.supervisorNotes ? <Text style={styles.notes}>Ghi chú giám sát: {task.supervisorNotes}</Text> : null}
+        </View>
+
+        <View style={styles.section}>
+          <SectionTitle icon="checkbox-outline">Checklist</SectionTitle>
+          {task.checklist.map((item, index) => (
+            <ChecklistLine key={item.id} item={item} index={index} />
+          ))}
+          {task.notes && !task.notes.startsWith('Fixture ') ? (
+            <Text style={styles.notes}>Ghi chú hiện trường: {task.notes}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <SectionTitle icon="shield-checkmark-outline">Quyết định</SectionTitle>
+          <DecisionOption
+            tone="success"
+            label="Duyệt nghiệm thu"
+            description="Hoàn tất công việc."
+            selected={decision === 'APPROVE'}
+            disabled={gaps.length > 0}
+            onPress={() => selectDecision('APPROVE')}
+          />
+          <DecisionOption
+            tone="corrective"
+            label="Yêu cầu làm lại"
+            description="Trả phần cần sửa cho nhân viên."
+            selected={decision === 'REQUEST_REWORK'}
+            onPress={() => selectDecision('REQUEST_REWORK')}
+          />
+          <DecisionOption
+            tone="exceptional"
+            label="Duyệt có ngoại lệ"
+            description="Chấp nhận và ghi rõ ngoại lệ."
+            selected={decision === 'APPROVE_WITH_EXCEPTION'}
+            onPress={() => selectDecision('APPROVE_WITH_EXCEPTION')}
+          />
+          <DecisionOption
+            tone="destructive"
+            label="Hủy công việc"
+            description="Dừng công việc và ghi lý do."
+            selected={decision === 'CANCEL'}
+            onPress={() => selectDecision('CANCEL')}
+          />
+
+          {reasonRequired ? (
+            <>
+              {decision === 'REQUEST_REWORK' ? (
+                <View style={styles.reasonChips}>
+                  {REWORK_REASONS.map((option) => (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: reason === option }}
+                      key={option}
+                      onPress={() => {
+                        setReason(option);
+                        setTouched(true);
+                      }}
+                      style={[styles.reasonChip, reason === option && styles.reasonChipSelected]}
+                    >
+                      <Text style={[styles.reasonChipText, reason === option && styles.reasonChipTextSelected]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+              <Field
+                label={
+                  decision === 'REQUEST_REWORK'
+                    ? 'Lý do và phần cần làm lại'
+                    : decision === 'CANCEL'
+                      ? 'Lý do hủy'
+                      : 'Lý do ngoại lệ'
+                }
+                value={reason}
+                onChangeText={(value) => {
+                  setReason(value);
+                  setTouched(true);
+                }}
+                placeholder="Nêu rõ bước cần xử lý"
+                multiline
+              />
+              {!reason.trim() ? (
+                <Text
+                  accessibilityRole={touched ? 'alert' : undefined}
+                  style={touched ? styles.errorText : styles.helperText}
+                >
+                  {touched ? 'Cần nhập lý do.' : 'Nhập lý do để xác nhận.'}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
+
+          {approvalBlocked ? (
+            <Notice tone="warning" title="Chưa thể duyệt" body="Bổ sung mục còn thiếu hoặc chọn quyết định khác." />
+          ) : null}
+          {submitError ? <Notice tone="danger" title="Chưa lưu được quyết định" body={submitError} /> : null}
+          <Button loading={submitting} disabled={!canSubmit} icon="send-outline" onPress={() => void submit()}>
+            Xác nhận quyết định
+          </Button>
+        </View>
       </ScrollView>
     </View>
   );

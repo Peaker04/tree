@@ -16,7 +16,7 @@ export class CancelTaskUseCase {
 
   async execute(
     request: CancelTaskRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<Task> {
     if (context.actorRole !== 'manager') {
       throw new ForbiddenError('Only Operations Managers may cancel tasks');

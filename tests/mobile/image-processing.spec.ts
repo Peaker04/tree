@@ -64,7 +64,9 @@ describe('ImageProcessingService', () => {
     });
 
     it('recognizes sandbox evidence directory URIs as already processed', () => {
-      expect(isAlreadyProcessedEvidence('file:///data/user/0/com.novyx.greenops/files/evidence/task-1/before.jpg')).toBe(true);
+      expect(
+        isAlreadyProcessedEvidence('file:///data/user/0/com.novyx.greenops/files/evidence/task-1/before.jpg'),
+      ).toBe(true);
     });
 
     it('identifies raw camera cache URIs as needing processing', () => {

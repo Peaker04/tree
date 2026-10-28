@@ -7,6 +7,8 @@ import {
   ReassignTaskRequestSchema,
   CancelTaskRequestSchema,
   SubmitEvidenceHttpBodySchema,
+  StaffExecutionSubmitRequestSchema,
+  SupervisorEvidenceSubmitRequestSchema,
   ResubmitReworkRequestSchema,
   PresignedUploadRequestSchema,
   TaskResponseSchema,
@@ -21,12 +23,16 @@ import {
   type ReassignTaskRequest,
   type CancelTaskRequest,
   type SubmitEvidenceRequest,
+  type StaffExecutionSubmitRequest,
+  type SupervisorEvidenceSubmitRequest,
   type ResubmitReworkRequest,
   type PresignedUploadRequest,
   type ListTasksQuery,
   type CanonicalTaskDto,
   type ReviewTaskBody,
+  type HumanRole,
 } from '@novyx/contracts';
+import { z } from 'zod';
 import type { CreateTaskUseCase } from '../../../modules/work-management/application/use-cases/create-task.use-case';
 import type { StartTaskUseCase } from '../../../modules/work-management/application/use-cases/start-task.use-case';
 import type { ReportFieldIssueUseCase } from '../../../modules/work-management/application/use-cases/report-field-issue.use-case';
@@ -77,9 +83,7 @@ export interface TaskRouteOptions {
   idempotencyRepo: IIdempotencyRepository;
   uow?: IOperationalUnitOfWork | undefined;
   authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-  requireRoles: (
-    ...roles: ('staff' | 'manager' | 'admin')[]
-  ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  requireRoles: (...roles: HumanRole[]) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 }
 
 function getObjectKey(storageRef?: string): string | null {
@@ -112,10 +116,27 @@ function toTaskDto(
   review?: TaskReviewRecord,
 ): CanonicalTaskDto {
   const latestAttempt = evidenceAttempts.at(-1);
+  const staffAttempt = [...evidenceAttempts]
+    .reverse()
+    .find(
+      (a) => a.proofData?.['submissionStage'] === 'STAFF_EXECUTION' || a.submittedByUserId === task.assignedStaffId,
+    );
+  const supervisorAttempt = [...evidenceAttempts]
+    .reverse()
+    .find(
+      (a) =>
+        a.proofData?.['submissionStage'] === 'SUPERVISOR_EVIDENCE' ||
+        (a.submittedByUserId !== task.assignedStaffId && Boolean(a.proofData?.['beforePhotoUri'])),
+    );
   const mergedProof = evidenceAttempts.reduce<Record<string, unknown>>(
     (current, attempt) => ({ ...current, ...attempt.proofData }),
     {},
-  ) as { beforePhotoUri?: string; afterPhotoUri?: string; checklist?: CanonicalTaskDto['checklist'] };
+  ) as {
+    beforePhotoUri?: string;
+    afterPhotoUri?: string;
+    checklist?: CanonicalTaskDto['checklist'];
+    supervisorGpsCheck?: CanonicalTaskDto['supervisorGpsCheck'];
+  };
   const mergedSiteVerification = evidenceAttempts.reduce<Record<string, unknown>>(
     (current, attempt) => ({ ...current, ...(attempt.siteVerification ?? {}) }),
     {},
@@ -134,11 +155,20 @@ function toTaskDto(
     treeAddress: task.treeAddress,
     assignedStaffId: task.assignedStaffId,
     assignedStaffName: task.assignedStaffName,
+    assignedSupervisorId: task.assignedSupervisorId,
+    assignedSupervisorName: task.assignedSupervisorName,
     deadline: task.deadline,
     status: task.status,
     checklist: mergedProof.checklist ?? task.checklistSnapshot,
     gpsCheck: mergedSiteVerification.gpsCheck,
     qrCheck: mergedSiteVerification.qrCheck,
+    staffCompletedAt: task.staffCompletedAt ?? staffAttempt?.submittedAt?.toISOString(),
+    supervisorId: task.supervisorId ?? supervisorAttempt?.submittedByUserId,
+    supervisorName: task.supervisorName,
+    supervisorGpsCheck:
+      (task.supervisorGpsCheck as CanonicalTaskDto['supervisorGpsCheck']) ?? mergedProof.supervisorGpsCheck,
+    supervisorCompletedAt: task.supervisorCompletedAt ?? supervisorAttempt?.submittedAt?.toISOString(),
+    supervisorNotes: task.supervisorNotes ?? supervisorAttempt?.notes,
     beforePhoto: mergedProof.beforePhotoUri,
     afterPhoto: mergedProof.afterPhotoUri,
     notes: latestAttempt?.notes,
@@ -156,6 +186,7 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
   const authHandler = options.authenticate;
   const managerOnly = options.requireRoles('manager');
   const staffOnly = options.requireRoles('staff');
+  const staffOrSupervisor = options.requireRoles('staff', 'supervisor');
 
   // OP-03: CreateTask (Manager only)
   fastify.post<{ Body: CanonicalCreateTaskRequest }>(
@@ -398,36 +429,12 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
     },
   );
 
-  // Evidence Presign URL (Staff only)
-  fastify.post<{ Params: { id: string }; Body: PresignedUploadRequest }>(
-    '/v1/tasks/:id/evidence/presign',
+  // Staff Field Check-in: GPS + QR + Checklist (Staff only)
+  fastify.post<{ Params: { id: string }; Body: StaffExecutionSubmitRequest }>(
+    '/v1/tasks/:id/staff-checkin',
     {
       schema: {
-        body: PresignedUploadRequestSchema,
-        response: { 200: PresignedUploadResponseSchema },
-      },
-      preHandler: [authHandler, staffOnly],
-    },
-    async (request, reply) => {
-      const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
-      const result = await options.presignEvidenceUploadUseCase.execute(request.params.id, request.body, actor);
-      return reply.status(200).send({
-        data: {
-          objectKey: result.objectKey,
-          storageRef: result.storageRef,
-          uploadUrl: result.uploadUrl,
-          expiresAt: result.expiresAt.toISOString(),
-        },
-      });
-    },
-  );
-
-  // OP-14: SubmitEvidence (Staff only)
-  fastify.post<{ Params: { id: string }; Body: SubmitEvidenceRequest }>(
-    '/v1/tasks/:id/evidence',
-    {
-      schema: {
-        body: SubmitEvidenceHttpBodySchema,
+        body: StaffExecutionSubmitRequestSchema,
         response: { 200: TaskResponseSchema },
       },
       preHandler: [authHandler, staffOnly],
@@ -444,13 +451,14 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         reply,
         options.idempotencyRepo,
         async () => {
-          const task = await options.submitEvidenceUseCase.execute(
+          const task = await options.submitEvidenceUseCase.submitStaffCheckin(
             { ...request.body, taskId: request.params.id },
             actor,
           );
+          const attempts = await options.evidenceRepo.getEvidenceAttempts(task.id);
           return {
             status: 200,
-            data: { data: toTaskDto(task) },
+            data: { data: toTaskDto(task, attempts) },
           };
         },
         options.uow,
@@ -458,7 +466,97 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
     },
   );
 
-  // OP-21: ResubmitRework (Staff only)
+  // Evidence Presign URL (Staff or Supervisor)
+  fastify.post<{ Params: { id: string }; Body: PresignedUploadRequest }>(
+    '/v1/tasks/:id/evidence/presign',
+    {
+      schema: {
+        body: PresignedUploadRequestSchema,
+        response: { 200: PresignedUploadResponseSchema },
+      },
+      preHandler: [authHandler, staffOrSupervisor],
+    },
+    async (request, reply) => {
+      const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
+      const result = await options.presignEvidenceUploadUseCase.execute(request.params.id, request.body, actor);
+      return reply.status(200).send({
+        data: {
+          objectKey: result.objectKey,
+          storageRef: result.storageRef,
+          uploadUrl: result.uploadUrl,
+          expiresAt: result.expiresAt.toISOString(),
+        },
+      });
+    },
+  );
+
+  // OP-14: SubmitEvidence (Staff or Supervisor)
+  fastify.post<{
+    Params: { id: string };
+    Body: SubmitEvidenceRequest | SupervisorEvidenceSubmitRequest;
+  }>(
+    '/v1/tasks/:id/evidence',
+    {
+      schema: {
+        body: z.union([SubmitEvidenceHttpBodySchema, SupervisorEvidenceSubmitRequestSchema]),
+        response: { 200: TaskResponseSchema },
+      },
+      preHandler: [authHandler, staffOrSupervisor],
+    },
+    async (request, reply) => {
+      if (request.body.taskId && request.body.taskId !== request.params.id) {
+        throw new ValidationError(
+          `Path taskId (${request.params.id}) does not match body taskId (${request.body.taskId})`,
+        );
+      }
+      const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
+      await executeWithIdempotency(
+        request,
+        reply,
+        options.idempotencyRepo,
+        async () => {
+          const bodyRecord = request.body as Record<string, unknown>;
+          const expectedVersion =
+            typeof bodyRecord['expectedVersion'] === 'number'
+              ? (bodyRecord['expectedVersion'] as number)
+              : typeof bodyRecord['version'] === 'number'
+                ? (bodyRecord['version'] as number)
+                : 0;
+          const rawSupGps = bodyRecord['supervisorGpsCheck'] as
+            (SubmitEvidenceRequest['supervisorGpsCheck'] & Record<string, unknown>) | undefined;
+          const normalizedSupGps: SubmitEvidenceRequest['supervisorGpsCheck'] = rawSupGps
+            ? {
+                ...rawSupGps,
+                distance:
+                  typeof rawSupGps['distance'] === 'number'
+                    ? rawSupGps['distance']
+                    : typeof rawSupGps['distanceMeters'] === 'number'
+                      ? rawSupGps['distanceMeters']
+                      : 0,
+              }
+            : undefined;
+
+          const task = await options.submitEvidenceUseCase.execute(
+            {
+              ...(request.body as SubmitEvidenceRequest),
+              expectedVersion,
+              ...(normalizedSupGps ? { supervisorGpsCheck: normalizedSupGps } : {}),
+              taskId: request.params.id,
+            },
+            actor,
+          );
+          const attempts = await options.evidenceRepo.getEvidenceAttempts(task.id);
+          return {
+            status: 200,
+            data: { data: toTaskDto(task, attempts) },
+          };
+        },
+        options.uow,
+      );
+    },
+  );
+
+  // OP-21: ResubmitRework (Staff or Supervisor)
   fastify.post<{ Params: { id: string }; Body: Omit<ResubmitReworkRequest, 'taskId'> }>(
     '/v1/tasks/:id/rework/resubmit',
     {
@@ -466,7 +564,7 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         body: ResubmitReworkRequestSchema.omit({ taskId: true }),
         response: { 200: TaskResponseSchema },
       },
-      preHandler: [authHandler, staffOnly],
+      preHandler: [authHandler, staffOrSupervisor],
     },
     async (request, reply) => {
       const actor = { actorId: request.actor!.id, actorRole: request.actor!.role };
@@ -479,9 +577,10 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
             { ...request.body, taskId: request.params.id },
             actor,
           );
+          const attempts = await options.evidenceRepo.getEvidenceAttempts(task.id);
           return {
             status: 200,
-            data: { data: toTaskDto(task) },
+            data: { data: toTaskDto(task, attempts) },
           };
         },
         options.uow,
@@ -515,9 +614,13 @@ export const taskRoutes: FastifyPluginAsync<TaskRouteOptions> = async (
         options.idempotencyRepo,
         async () => {
           const task = await options.reviewTaskUseCase.execute({ ...request.body, taskId: request.params.id }, actor);
+          const [attempts, reviews] = await Promise.all([
+            options.evidenceRepo.getEvidenceAttempts(task.id),
+            options.evidenceRepo.getTaskReviews(task.id),
+          ]);
           return {
             status: 200,
-            data: { data: toTaskDto(task) },
+            data: { data: toTaskDto(task, attempts, reviews.at(-1)) },
           };
         },
         options.uow,

@@ -4,7 +4,8 @@ const client = new Client({
   connectionString: process.env.DATABASE_MIGRATION_URL || 'postgresql://novyx_migrator:123456789@localhost:5432/novyx',
 });
 
-const passwordHash = '$argon2id$v=19$m=65536,p=1,t=3$BrUA0zRS9veZyLOmaparNQ$ymGRb3yA+MyZHFlX7Tq9cCSbdaYLm9ucVhpm5ZGad4c';
+const passwordHash =
+  '$argon2id$v=19$m=65536,p=1,t=3$BrUA0zRS9veZyLOmaparNQ$ymGRb3yA+MyZHFlX7Tq9cCSbdaYLm9ucVhpm5ZGad4c';
 
 const staffMembers = [
   { email: 'ngocdiem@novyx.local', name: 'Ngọc Diễm' },
@@ -21,7 +22,7 @@ async function seed() {
       await client.query(
         `INSERT INTO users (id, email, initial_role, role, account_status, password_hash, auth_version, version)
          VALUES ($1, $2, 'staff', 'staff', 'ACTIVE', $3, 1, 0)`,
-        [id, s.email, passwordHash]
+        [id, s.email, passwordHash],
       );
       console.log(`[PASS] Created staff account: ${s.name} (${s.email}) -> ID: ${id}`);
     } else {

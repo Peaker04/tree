@@ -1,13 +1,5 @@
 import { useCallback, useState } from 'react';
-import {
-  FlatList,
-  Platform,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, Button, EmptyState, Field, ScreenHeader, SegmentedFilterBar } from '../../components/AppPrimitives';
 import {
@@ -93,7 +85,16 @@ export function StaffTrees({
         />
       );
     },
-    [expandedTreeId, getCareHistoryByTree, historyErrorTreeId, historyLoadingTreeId, onMap, onOpenTask, staffTasks, toggle],
+    [
+      expandedTreeId,
+      getCareHistoryByTree,
+      historyErrorTreeId,
+      historyLoadingTreeId,
+      onMap,
+      onOpenTask,
+      staffTasks,
+      toggle,
+    ],
   );
 
   return (
@@ -122,40 +123,40 @@ export function StaffTrees({
         ListHeaderComponent={
           <View style={styles.header}>
             {assignedTrees.length > 0 ? (
-            <>
-              <Field
-                label="Tìm cây"
-                value={query}
-                onChangeText={onQueryChange}
-                placeholder="Tên, QR, loài hoặc vị trí"
-                autoCapitalize="none"
-                rightIcon={query ? 'close-circle-outline' : 'search-outline'}
-                onRightIconPress={query ? () => onQueryChange('') : undefined}
+              <>
+                <Field
+                  label="Tìm cây"
+                  value={query}
+                  onChangeText={onQueryChange}
+                  placeholder="Tên, QR, loài hoặc vị trí"
+                  autoCapitalize="none"
+                  rightIcon={query ? 'close-circle-outline' : 'search-outline'}
+                  onRightIconPress={query ? () => onQueryChange('') : undefined}
+                />
+                <SegmentedFilterBar
+                  variant="scrollable"
+                  options={TREE_FILTER_OPTIONS}
+                  selectedId={activeFilter}
+                  onSelect={(id) => onFilterChange(id)}
+                />
+                <Text style={styles.resultLabel}>
+                  {visibleAssignedTrees.length}/{assignedTrees.length} cây
+                </Text>
+              </>
+            ) : null}
+            {visibleAssignedTrees.length === 0 ? (
+              <EmptyState
+                icon={filtered ? 'search-outline' : 'leaf-outline'}
+                title={filtered ? 'Không tìm thấy cây phù hợp' : 'Chưa có cây được phân công'}
+                body={
+                  filtered ? 'Thử đổi từ khóa hoặc bộ lọc.' : 'Cây sẽ xuất hiện khi có nhiệm vụ thật được giao cho bạn.'
+                }
               />
-              <SegmentedFilterBar
-                variant="scrollable"
-                options={TREE_FILTER_OPTIONS}
-                selectedId={activeFilter}
-                onSelect={(id) => onFilterChange(id)}
-              />
-              <Text style={styles.resultLabel}>
-                {visibleAssignedTrees.length}/{assignedTrees.length} cây
-              </Text>
-            </>
-          ) : null}
-          {visibleAssignedTrees.length === 0 ? (
-            <EmptyState
-              icon={filtered ? 'search-outline' : 'leaf-outline'}
-              title={filtered ? 'Không tìm thấy cây phù hợp' : 'Chưa có cây được phân công'}
-              body={
-                filtered ? 'Thử đổi từ khóa hoặc bộ lọc.' : 'Cây sẽ xuất hiện khi có nhiệm vụ thật được giao cho bạn.'
-              }
-            />
-          ) : null}
-        </View>
-      }
-      renderItem={renderItem}
-    />
+            ) : null}
+          </View>
+        }
+        renderItem={renderItem}
+      />
     </View>
   );
 }

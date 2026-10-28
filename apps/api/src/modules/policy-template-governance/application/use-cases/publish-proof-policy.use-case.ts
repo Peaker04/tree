@@ -17,7 +17,7 @@ export class PublishProofPolicyVersionUseCase {
 
   async execute(
     request: PublishProofPolicyVersionRequest,
-    context: { actorId: string; actorRole: 'staff' | 'manager' | 'admin' },
+    context: { actorId: string; actorRole: 'staff' | 'supervisor' | 'manager' | 'admin' },
   ): Promise<ProofPolicyVersion> {
     const run = async (repos: {
       taskTypeRepo: ITaskTypeRepository;

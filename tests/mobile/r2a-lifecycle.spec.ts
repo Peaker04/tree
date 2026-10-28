@@ -7,6 +7,7 @@ import { SqliteOutboxRepository } from '../../apps/mobile/src/storage/outbox/out
 import { createInMemoryTestDatabase } from '../../apps/mobile/src/storage/database/sqliteDatabase';
 import { runMigrations } from '../../apps/mobile/src/storage/database/migrations';
 import { SqliteMobileTaskRepository } from '../../apps/mobile/src/storage/task/mobileTaskRepository';
+import * as mobileWorkflow from '../../apps/mobile/src/domain/mobileWorkflow';
 import { getNextProofStep, getTaskProofWorkflowState } from '../../apps/mobile/src/domain/mobileWorkflow';
 import { TaskStatus, type Task } from '../../apps/mobile/src/types';
 import type {
@@ -55,6 +56,7 @@ describe('R2A Lifecycle Tests', () => {
     expect(mobileAppSource).not.toContain('loadStoredAuthSession');
     expect(mobileAppSource).not.toContain('saveAuthSession');
     expect(mobileAppSource).not.toMatch(/useEffect\(\(\) => \{\s*void refreshData\(\)/);
+    expect(mobileAppSource).not.toMatch(/onPress=\{.*void refreshData\(\).*\}/s);
     expect(staffAreaSource).not.toContain("assignedStaffId === 'STF-01'");
     expect(staffAreaSource).toContain('props.authenticatedStaffId');
     expect(mobileAppSource).toContain('error instanceof AuthSessionError');
@@ -161,5 +163,64 @@ describe('R2A Lifecycle Tests', () => {
       reworkedProof: { proofProfile: 'CHANGE_PROOF', beforePhotoUri: 'a', afterPhotoUri: 'b', checklist: [] },
     };
     expect(resubmit.reworkedProof.proofProfile).toBe('CHANGE_PROOF');
+  });
+
+  it('excludes BEFORE and AFTER photo steps for Staff role and requires only GPS, QR, and CHECKLIST', () => {
+    const inProgressTask = {
+      id: 'task-staff-flow',
+      status: TaskStatus.IN_PROGRESS,
+      checklist: [{ id: '1', text: 'Kiểm tra gốc cây', done: false }],
+    } as Task;
+
+    expect(getNextProofStep(inProgressTask, 'Staff')).toBe('GPS');
+
+    const afterGpsQrChecklist = {
+      ...inProgressTask,
+      gpsCheck: { verified: true, distance: 3.5, lat: 10.77, lng: 106.7, timestamp: '2026-10-24T08:00:00Z' },
+      qrCheck: { verified: true, scannedCode: 'QR-T-101', timestamp: '2026-10-24T08:01:00Z' },
+      checklist: [{ id: '1', text: 'Kiểm tra gốc cây', done: true }],
+    } as Task;
+
+    expect(getNextProofStep(afterGpsQrChecklist, 'Staff')).toBe('REVIEW');
+    const staffState = getTaskProofWorkflowState(afterGpsQrChecklist, 'Staff');
+    expect(staffState.totalRequired).toBe(3);
+    expect(staffState.completedCount).toBe(3);
+    expect(staffState.readyToSubmit).toBe(true);
+  });
+
+  it('routes Supervisor through GPS, BEFORE, and AFTER photo steps after Staff check-in', () => {
+    const isTaskAwaitingSupervisor = mobileWorkflow.isTaskAwaitingSupervisor;
+    expect(isTaskAwaitingSupervisor).toBeDefined();
+
+    const handoffTask = {
+      id: 'task-sup-flow',
+      status: TaskStatus.IN_PROGRESS,
+      staffCompletedAt: '2026-10-24T08:05:00Z',
+      gpsCheck: { verified: true, distance: 3.5, lat: 10.77, lng: 106.7, timestamp: '2026-10-24T08:00:00Z' },
+      qrCheck: { verified: true, scannedCode: 'QR-T-101', timestamp: '2026-10-24T08:01:00Z' },
+      checklist: [{ id: '1', text: 'Kiểm tra gốc cây', done: true }],
+    } as Task;
+
+    expect(isTaskAwaitingSupervisor(handoffTask)).toBe(true);
+    expect(getNextProofStep(handoffTask, 'Supervisor')).toBe('GPS');
+
+    const withSupGpsAndBefore = {
+      ...handoffTask,
+      supervisorGpsCheck: { verified: true, distance: 2.1, lat: 10.77, lng: 106.7, timestamp: '2026-10-24T08:10:00Z' },
+      beforePhoto: 'file:///before.jpg',
+    } as Task;
+
+    expect(getNextProofStep(withSupGpsAndBefore, 'Supervisor')).toBe('AFTER');
+
+    const withAllSupervisorProof = {
+      ...withSupGpsAndBefore,
+      afterPhoto: 'file:///after.jpg',
+    } as Task;
+
+    expect(getNextProofStep(withAllSupervisorProof, 'Supervisor')).toBe('REVIEW');
+    const supState = getTaskProofWorkflowState(withAllSupervisorProof, 'Supervisor');
+    expect(supState.totalRequired).toBe(3);
+    expect(supState.completedCount).toBe(3);
+    expect(supState.readyToSubmit).toBe(true);
   });
 });

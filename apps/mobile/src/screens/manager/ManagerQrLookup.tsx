@@ -72,7 +72,6 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
         onBack={() => props.setActiveStep('HOME')}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.screen}>
-
         {!tree ? (
           <>
             <DeviceCameraView
@@ -177,11 +176,7 @@ export function ManagerQrLookup(props: ManagerAreaProps) {
               )}
             </View>
 
-            <Button
-              variant="primary"
-              icon="add-circle-outline"
-              onPress={() => props.setActiveStep('CREATE')}
-            >
+            <Button variant="primary" icon="add-circle-outline" onPress={() => props.setActiveStep('CREATE')}>
               Giao việc cho cây này
             </Button>
             <Button icon="leaf-outline" onPress={() => props.setActiveStep('TREES')}>

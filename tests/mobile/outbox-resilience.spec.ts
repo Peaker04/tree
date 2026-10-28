@@ -97,7 +97,9 @@ describe('OutboxResilience', () => {
         withTransactionAsync: vi.fn((fn: () => unknown) => fn()),
       };
 
-      const repo = new SqliteOutboxRepository(mockDb as unknown as Parameters<typeof SqliteOutboxRepository.prototype.constructor>[0]);
+      const repo = new SqliteOutboxRepository(
+        mockDb as unknown as Parameters<typeof SqliteOutboxRepository.prototype.constructor>[0],
+      );
       const eligible = await repo.getNextEligibleItem();
 
       expect(eligible).toBeNull();
