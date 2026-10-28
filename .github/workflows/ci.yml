@@ -187,8 +187,13 @@ jobs:
         run: npm ci
 
       - name: Generate iOS Native Project
+        env:
+          CI_STRIP_DEV_CLIENT: '1'
         run: |
           cd apps/mobile
+          # CI_STRIP_DEV_CLIENT=1 causes app.config.js to exclude expo-dev-client from plugins.
+          # expo-dev-client adds aps-environment + dev-menu entitlements that crash instantly
+          # on unsigned/sideloaded IPA (free Apple ID) — it is only needed for local dev.
           npx expo prebuild --platform ios --no-install
 
       - name: Apply Swift compatibility patches
