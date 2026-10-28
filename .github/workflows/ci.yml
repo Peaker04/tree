@@ -136,6 +136,7 @@ jobs:
           name: novyx-greenops-android-apk
           path: apps/mobile/android/app/build/outputs/apk/release/*.apk
           retention-days: 14
+        continue-on-error: true
 
   build-ios:
     name: Build iOS IPA
@@ -242,3 +243,4 @@ jobs:
           name: novyx-greenops-ios-ipa
           path: apps/mobile/ios/build/NOVYX-unsigned.ipa
           retention-days: 14
+        continue-on-error: true
