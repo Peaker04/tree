@@ -53,6 +53,7 @@ replay_pid*
 .tmp/
 .idea/
 .planning/
+!.planning/NOVYX_MOBILE_SCREEN_CONTRACTS.md
 scratch/
 /field-expo-qr.png
 .pi/
