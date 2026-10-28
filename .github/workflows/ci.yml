@@ -131,12 +131,21 @@ jobs:
           ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
 
       - name: Upload Android APK Artifact
+        id: upload-android
         uses: actions/upload-artifact@v4
         with:
           name: novyx-greenops-android-apk
           path: apps/mobile/android/app/build/outputs/apk/release/*.apk
           retention-days: 14
         continue-on-error: true
+
+      - name: Retry Upload Android APK
+        if: steps.upload-android.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: novyx-greenops-android-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          retention-days: 14
 
   build-ios:
     name: Build iOS IPA
@@ -238,9 +247,18 @@ jobs:
         shell: bash
 
       - name: Upload iOS IPA Artifact
+        id: upload-ios
         uses: actions/upload-artifact@v4
         with:
           name: novyx-greenops-ios-ipa
           path: apps/mobile/ios/build/NOVYX-unsigned.ipa
           retention-days: 14
         continue-on-error: true
+
+      - name: Retry Upload iOS IPA
+        if: steps.upload-ios.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: novyx-greenops-ios-ipa
+          path: apps/mobile/ios/build/NOVYX-unsigned.ipa
+          retention-days: 14
