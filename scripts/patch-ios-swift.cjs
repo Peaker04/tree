@@ -27,13 +27,12 @@ if (fs.existsSync(runtimePath)) {
     '_ arguments: consuming JavaScriptValuesBuffer,',
     '_ arguments: consuming JavaScriptValuesBuffer',
   );
-  // Revert any invalid <R: @unchecked Sendable> to <R: Sendable>
   content = content.replace(/<R:\s*@unchecked\s+Sendable>/g, '<R: Sendable>');
   fs.writeFileSync(runtimePath, content);
   console.log('Patched JavaScriptRuntime.swift');
 }
 
-// 3. Patch weak let -> weak var, and only class Sendable -> @unchecked Sendable
+// 3. Patch weak let -> weak var, and targeted classes -> @unchecked Sendable
 const dir = path.resolve('node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI');
 if (fs.existsSync(dir)) {
   function patchDir(d) {
@@ -68,9 +67,14 @@ if (fs.existsSync(dir)) {
           modified = true;
         }
 
-        // Only classes can have @unchecked Sendable
-        if (/class\s+([A-Za-z0-9_]+)[^{]*:\s*Sendable/.test(code)) {
-          code = code.replace(/(class\s+[A-Za-z0-9_]+[^{]*):\s*Sendable/g, '$1: @unchecked Sendable');
+        // Targeted classes with weak var runtime must be @unchecked Sendable to satisfy Swift 6
+        const targetClassesRegex =
+          /class\s+(JavaScriptPropNameID|JavaScriptError|JavaScriptValue|HostFunctionContext|UnownedThisHostFunctionContext|HostObjectContext)\s*:\s*(?!@unchecked)/g;
+        if (targetClassesRegex.test(code)) {
+          code = code.replace(
+            /class\s+(JavaScriptPropNameID|JavaScriptError|JavaScriptValue|HostFunctionContext|UnownedThisHostFunctionContext|HostObjectContext)\s*:\s*(?!@unchecked)/g,
+            'class $1: @unchecked Sendable, ',
+          );
           modified = true;
         }
 
