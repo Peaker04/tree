@@ -1,12 +1,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-// 1. Patch Package.swift
+// 1. Patch Package.swift: Swift 6.0 compatibility and strip trailing commas
 const pkgPath = path.resolve('node_modules/expo-modules-jsi/apple/Package.swift');
 if (fs.existsSync(pkgPath)) {
   let pkg = fs.readFileSync(pkgPath, 'utf8');
   pkg = pkg.replace(/swift-tools-version:\s*6\.[0-9]+/g, 'swift-tools-version: 6.0');
-  pkg = pkg.replace(/targets:\s*\["ExpoModulesJSI"\],/g, 'targets: ["ExpoModulesJSI"]');
+  // Strip trailing commas before closing paren or bracket in Package.swift
+  pkg = pkg.replace(/,\s*\)/g, ')');
+  pkg = pkg.replace(/,\s*\]/g, ']');
   if (!pkg.includes('-strict-concurrency=minimal')) {
     pkg = pkg.replace(
       '.interoperabilityMode(.Cxx),',
@@ -32,7 +34,21 @@ if (fs.existsSync(runtimePath)) {
   console.log('Patched JavaScriptRuntime.swift');
 }
 
-// 3. Patch weak let -> weak var, and exact Sendable classes -> @unchecked Sendable
+// 3. Patch Task+immediate.swift for Xcode 16 Task initializers
+const taskImmediatePath = path.resolve(
+  'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Extensions/Task+immediate.swift',
+);
+if (fs.existsSync(taskImmediatePath)) {
+  let content = fs.readFileSync(taskImmediatePath, 'utf8');
+  content = content.replace(
+    /if #available[\s\S]*?return Task\(name: name, priority: \.high, operation: operation\)\s*\}/,
+    'return Task(priority: .high, operation: operation)',
+  );
+  fs.writeFileSync(taskImmediatePath, content);
+  console.log('Patched Task+immediate.swift');
+}
+
+// 4. Patch weak let -> weak var, and exact Sendable classes -> @unchecked Sendable
 const dir = path.resolve('node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI');
 if (fs.existsSync(dir)) {
   function patchDir(d) {
