@@ -852,4 +852,50 @@ describe('NOVYX mobile UI foundation contract', () => {
     expect(primitives).toContain('Animated.createAnimatedComponent(Pressable)');
     expect(primitives).toContain("height: '100%'");
   });
+
+  it('enforces UI-057: camera zero-flicker guard, proof chain exception consistency, and role-adapted filters', () => {
+    const cameraView = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/DeviceCameraView.tsx'),
+      'utf8',
+    );
+    expect(cameraView).toContain("permissionState === 'granted'");
+    expect(cameraView).toContain("backgroundColor: '#020617'");
+
+    const taskSurfaces = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/components/presentation/TaskSurfaces.tsx'),
+      'utf8',
+    );
+    expect(taskSurfaces).toContain('hasLocationEx');
+    expect(taskSurfaces).toContain('formatActorDisplayName(task.assignedStaffName)');
+    expect(taskSurfaces).toContain('locationExReason');
+
+    const workflow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/domain/mobileWorkflow.ts'),
+      'utf8',
+    );
+    expect(workflow).toContain('createSupervisorFilterOptions');
+    expect(workflow).toContain('createStaffFilterOptions');
+    expect(workflow).toContain('awaiting_capture');
+  });
+
+  it('enforces UI-058: native image processing pipeline with dimension clamping and raw cache purge', () => {
+    const proofFlow = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/screens/staff/StaffProofFlow.tsx'),
+      'utf8',
+    );
+    expect(proofFlow).toContain("import { processEvidencePhoto } from '../../services/imageProcessingService';");
+    expect(proofFlow).toContain('await processEvidencePhoto(uri');
+    expect(proofFlow).toContain('maxDimension: 1440');
+    expect(proofFlow).toContain('quality: 0.75');
+
+    const imageService = fs.readFileSync(
+      path.resolve(process.cwd(), 'apps/mobile/src/services/imageProcessingService.ts'),
+      'utf8',
+    );
+    expect(imageService).toContain('calculateTargetResizeAction');
+    expect(imageService).toContain('processEvidencePhoto');
+    expect(imageService).toContain('DEFAULT_MAX_DIMENSION = 1440');
+    expect(imageService).toContain('DEFAULT_QUALITY = 0.75');
+    expect(imageService).toContain('safePurgeRawCache');
+  });
 });
