@@ -15,17 +15,13 @@ if (fs.existsSync(podfilePath)) {
       end
     end
 `;
-    const rnPostInstallIdx = podfile.indexOf('react_native_post_install');
-    if (rnPostInstallIdx !== -1) {
-      const closingParenIdx = podfile.indexOf(')', rnPostInstallIdx);
-      if (closingParenIdx !== -1) {
-        podfile = podfile.slice(0, closingParenIdx + 1) + '\n' + postInstallBlock + podfile.slice(closingParenIdx + 1);
-      }
-    } else if (podfile.includes('post_install do |installer|')) {
+    if (podfile.includes('post_install do |installer|')) {
       podfile = podfile.replace(
         /post_install\s+do\s+\|installer\|/,
         `post_install do |installer|\n${postInstallBlock}`,
       );
+    } else {
+      podfile += `\npost_install do |installer|\n${postInstallBlock}\nend\n`;
     }
     fs.writeFileSync(podfilePath, podfile);
     console.log('Patched Podfile post_install for code signing');
