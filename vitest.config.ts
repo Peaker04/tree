@@ -14,5 +14,10 @@ export default defineConfig({
       '**/.planning/**',
       '**/external/**',
     ],
+    server: {
+      deps: {
+        inline: ['expo-image-manipulator', 'expo-file-system'],
+      },
+    },
   },
 });
