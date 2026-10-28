@@ -267,47 +267,47 @@ function patchSwiftInterfaces(rootDir) {
 patchSwiftInterfaces(path.join(repoRoot, 'node_modules'));
 patchSwiftInterfaces(path.join(repoRoot, 'apps/mobile/ios/Pods'));
 
-// 6b. Hook trực tiếp vào các script của Pods & project.pbxproj để tự động patch ngay sau khi Switch XCFramework chạy trong lúc xcodebuild
+// 6b. Hook vào Target Support Files trong Pods (dùng ${VAR:-} để an toàn tuyệt đối với set -u)
 const snippetToInject = `
 # --- AUTO-PATCH SWIFT 6.3 INTERFACE FOR XCODE 16.4 ---
-find "\${PODS_ROOT}" "\${BUILT_PRODUCTS_DIR}" -name "*.swiftinterface" 2>/dev/null | while read -r iface; do
-  sed -i '' -E 's/:[[:space:]]*@(_Concurrency\\.)?MainActor[[:space:]]+/: /g; s/,[[:space:]]*@(_Concurrency\\.)?MainActor[[:space:]]+/, /g' "$iface" || true
-done
-find "\${PODS_ROOT}" "\${BUILT_PRODUCTS_DIR}" -path "*.xcframework/*.swiftmodule/*" -name "*.swiftmodule" -type f 2>/dev/null | while read -r binmod; do
-  rm -f "$binmod" || true
+for search_dir in "\${PODS_ROOT:-}" "\${BUILT_PRODUCTS_DIR:-}"; do
+  if [ -n "$search_dir" ] && [ -d "$search_dir" ]; then
+    find "$search_dir" -name "*.swiftinterface" 2>/dev/null | while read -r iface; do
+      sed -i '' -E 's/:[[:space:]]*@_Concurrency\\.MainActor[[:space:]]+/: /g' "$iface" || true
+    done
+    find "$search_dir" -path "*.xcframework/*.swiftmodule/*" -name "*.swiftmodule" -type f 2>/dev/null | while read -r binmod; do
+      rm -f "$binmod" || true
+    done
+  fi
 done
 # -----------------------------------------------------
 `;
 
-// Patch vào tất cả script xcframework hoặc script switch của Expo trong Pods và node_modules
-function patchExpoSwitchScripts(dir) {
+function patchPodTargetSupportScripts(dir) {
   if (!fs.existsSync(dir)) return;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      patchExpoSwitchScripts(fullPath);
-    } else if (
-      (entry.name.endsWith('.sh') && (fullPath.includes('Pods/Target Support Files') || fullPath.includes('expo'))) ||
-      entry.name === 'build-xcframework.sh'
-    ) {
+      patchPodTargetSupportScripts(fullPath);
+    } else if (entry.name.endsWith('.sh')) {
       let content = fs.readFileSync(fullPath, 'utf8');
       if (!content.includes('AUTO-PATCH SWIFT 6.3 INTERFACE')) {
         content = content + '\n' + snippetToInject;
         fs.writeFileSync(fullPath, content, 'utf8');
-        console.log('Injected swiftinterface fixer into script:', fullPath);
+        console.log('Injected swiftinterface fixer into Pod script:', fullPath);
       }
     }
   }
 }
 
-patchExpoSwitchScripts(path.join(repoRoot, 'apps/mobile/ios/Pods'));
-patchExpoSwitchScripts(path.join(repoRoot, 'node_modules'));
+// CHỈ tiêm vào thư mục Target Support Files của Pods (không tiêm vào node_modules để tránh lỗi lúc pod install)
+patchPodTargetSupportScripts(path.join(repoRoot, 'apps/mobile/ios/Pods/Target Support Files'));
 
-// Patch trực tiếp vào inline shellScript của phase "Switch ... XCFramework" trong Pods.xcodeproj/project.pbxproj
+// 6c. Patch trực tiếp vào inline shellScript của phase "Switch ... XCFramework" trong Pods.xcodeproj/project.pbxproj
 const podsPbxproj = path.join(repoRoot, 'apps/mobile/ios/Pods/Pods.xcodeproj/project.pbxproj');
 if (fs.existsSync(podsPbxproj)) {
   let pbx = fs.readFileSync(podsPbxproj, 'utf8');
-  const inlineSedCmd = `\\nfind \\"\\$PODS_ROOT\\" \\"\\$BUILT_PRODUCTS_DIR\\" -name \\"*.swiftinterface\\" 2>/dev/null -exec sed -i '' -E 's/:[[:space:]]*@(_Concurrency\\\\.)?MainActor[[:space:]]+/: /g; s/,[[:space:]]*@(_Concurrency\\\\.)?MainActor[[:space:]]+/, /g' {} + || true\\nfind \\"\\$PODS_ROOT\\" \\"\\$BUILT_PRODUCTS_DIR\\" -path \\"*.xcframework/*.swiftmodule/*\\" -name \\"*.swiftmodule\\" -type f -delete 2>/dev/null || true`;
+  const inlineSedCmd = `\\nfor d in \\"\\$\{PODS_ROOT:-}\\" \\"\\$\{BUILT_PRODUCTS_DIR:-}\\"; do if [ -n \\"\\$d\\" ] && [ -d \\"\\$d\\" ]; then find \\"\\$d\\" -name \\"*.swiftinterface\\" 2>/dev/null -exec sed -i '' -E 's/:[[:space:]]*@_Concurrency\\\\.MainActor[[:space:]]+/: /g' {} + || true; find \\"\\$d\\" -path \\"*.xcframework/*.swiftmodule/*\\" -name \\"*.swiftmodule\\" -type f -delete 2>/dev/null || true; fi; done`;
 
   // Tìm mọi phase "[Expo] Switch ... XCFramework for build configuration" và nối lệnh sed vào cuối shellScript
   const updatedPbx = pbx.replace(
