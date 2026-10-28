@@ -58,6 +58,7 @@ scratch/
 /field-expo-qr.png
 .pi/
 .stitch/
+!.stitch/DESIGN.md
 
 # device and session scratch
 .agents/*.png
