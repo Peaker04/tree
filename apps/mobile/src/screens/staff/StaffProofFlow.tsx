@@ -23,6 +23,7 @@ import { WebMapView } from '../../components/presentation/WebMapView';
 import { getDistanceMeters } from '../../domain/geo';
 import { useDevicePermissions } from '../../hooks/useDevicePermissions';
 import { openDeviceSettings, type DevicePermissionPurpose } from '../../services/devicePermissions';
+import { processEvidencePhoto } from '../../services/imageProcessingService';
 import { triggerTactileFeedback } from '../../infrastructure/tactile';
 import { colors, radius } from '../../theme/tokens';
 import { AppNotification, CareHistory, Task, TaskStatus, Tree } from '../../types';
@@ -318,7 +319,7 @@ export function StaffProofFlow(props: {
     const nextDistance = getDistanceMeters(props.userLat, props.userLng, tree.lat, tree.lng);
     const effectiveRadius = Math.max(15, locationAccuracyMeters ?? 15) + 5;
     const isVerified = nextDistance <= effectiveRadius;
-    triggerTactileFeedback(isVerified ? 'success' : 'warning');
+    triggerTactileFeedback('light');
     const gpsRecord = {
       verified: isVerified,
       distance: nextDistance,
@@ -946,16 +947,21 @@ export function StaffProofFlow(props: {
 
       let uri: string;
       try {
-        uri = (await cameraRef.current.takePictureAsync({ quality: 0.55 })).uri;
+        uri = (await cameraRef.current.takePictureAsync({ quality: 0.85 })).uri;
         setCameraRuntimeMessage('');
       } catch {
         setCameraRuntimeMessage('Lỗi thiết bị: Không thể chụp ảnh. Vui lòng thử lại.');
         return;
       }
 
+      const processed = await processEvidencePhoto(uri, {
+        maxDimension: 1440,
+        quality: 0.75,
+      });
+
       patchActiveTask({
-        ...(isBefore ? { beforePhoto: uri } : { afterPhoto: uri }),
-        evidence: upsertPhotoEvidence(props.activeTask, evidenceStage, uri),
+        ...(isBefore ? { beforePhoto: processed.uri } : { afterPhoto: processed.uri }),
+        evidence: upsertPhotoEvidence(props.activeTask, evidenceStage, processed.uri),
       });
     };
     const retakeEvidencePhoto = () => {
@@ -1145,6 +1151,7 @@ export function StaffProofFlow(props: {
           props.activeTask.checklist.some((item) => !item.done) ? 'Checklist chưa hoàn thành đủ' : null,
         ].filter((item): item is string => Boolean(item));
     const visibleNotes = props.activeTask.notes?.startsWith('Fixture ') ? '' : (props.activeTask.notes ?? '');
+    const supervisorNotes = props.activeTask.supervisorNotes ?? '';
 
     return (
       <View style={styles.flex}>
@@ -1227,10 +1234,22 @@ export function StaffProofFlow(props: {
           {/* Notes */}
           <Card style={styles.detailCard}>
             <SectionTitle icon="document-text-outline">Ghi chú nghiệm thu</SectionTitle>
+            {isSupervisor && props.activeTask.notes ? (
+              <View style={{ marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.hairlineBorder }}>
+                <Text style={styles.metricLabel}>Ghi chú nhân viên hiện trường:</Text>
+                <Text style={styles.bodyText}>{props.activeTask.notes}</Text>
+              </View>
+            ) : null}
             <Field
               label={isSupervisor ? 'Ghi chú giám sát hiện trường' : 'Ghi chú nhân viên hiện trường'}
-              value={visibleNotes}
-              onChangeText={(notes) => patchActiveTask({ notes })}
+              value={isSupervisor ? supervisorNotes : visibleNotes}
+              onChangeText={(notes) => {
+                if (isSupervisor) {
+                  patchActiveTask({ supervisorNotes: notes });
+                } else {
+                  patchActiveTask({ notes });
+                }
+              }}
               placeholder="Ghi chú thêm nếu cần"
               multiline
               style={styles.multilineInput}
