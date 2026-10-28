@@ -1,3 +1,4 @@
+/* global process, module */
 // react-native.config.js
 //
 // When CI_STRIP_DEV_CLIENT=1, exclude expo-dev-client from native autolinking
