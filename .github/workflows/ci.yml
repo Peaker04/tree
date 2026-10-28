@@ -200,9 +200,13 @@ jobs:
         run: node scripts/patch-ios-swift.cjs
 
       - name: Install CocoaPods
+        env:
+          CI_STRIP_DEV_CLIENT: '1'
         run: |
           cd apps/mobile/ios
           echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
+          # CI_STRIP_DEV_CLIENT=1 tells react-native.config.js to exclude expo-dev-client
+          # from autolinking so it is NOT added to the Podfile/native project.
           pod install
 
           # Re-run patch after pod install downloads prebuilt xcframeworks
