@@ -27,11 +27,13 @@ if (fs.existsSync(runtimePath)) {
     '_ arguments: consuming JavaScriptValuesBuffer,',
     '_ arguments: consuming JavaScriptValuesBuffer',
   );
+  // Revert any invalid <R: @unchecked Sendable> to <R: Sendable>
+  content = content.replace(/<R:\s*@unchecked\s+Sendable>/g, '<R: Sendable>');
   fs.writeFileSync(runtimePath, content);
   console.log('Patched JavaScriptRuntime.swift');
 }
 
-// 3. Patch weak let -> weak var, and Sendable -> @unchecked Sendable where needed
+// 3. Patch weak let -> weak var, and only class Sendable -> @unchecked Sendable
 const dir = path.resolve('node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI');
 if (fs.existsSync(dir)) {
   function patchDir(d) {
@@ -42,14 +44,36 @@ if (fs.existsSync(dir)) {
       } else if (p.endsWith('.swift')) {
         let code = fs.readFileSync(p, 'utf8');
         let modified = false;
+
+        // Revert invalid generic constraints and protocols
+        if (code.includes('<R: @unchecked Sendable>')) {
+          code = code.replace(/<R:\s*@unchecked\s+Sendable>/g, '<R: Sendable>');
+          modified = true;
+        }
+        if (code.includes('protocol JavaScriptRepresentable: @unchecked Sendable')) {
+          code = code.replace(
+            'protocol JavaScriptRepresentable: @unchecked Sendable',
+            'protocol JavaScriptRepresentable: Sendable',
+          );
+          modified = true;
+        }
+        if (code.includes('protocol JavaScriptType: @unchecked Sendable')) {
+          code = code.replace('protocol JavaScriptType: @unchecked Sendable', 'protocol JavaScriptType: Sendable');
+          modified = true;
+        }
+
+        // Apply weak let -> weak var
         if (code.includes('weak let')) {
           code = code.replace(/weak let/g, 'weak var');
           modified = true;
         }
-        if (code.includes(': Sendable')) {
-          code = code.replace(/: Sendable/g, ': @unchecked Sendable');
+
+        // Only classes can have @unchecked Sendable
+        if (/class\s+([A-Za-z0-9_]+)[^{]*:\s*Sendable/.test(code)) {
+          code = code.replace(/(class\s+[A-Za-z0-9_]+[^{]*):\s*Sendable/g, '$1: @unchecked Sendable');
           modified = true;
         }
+
         if (modified) {
           fs.writeFileSync(p, code);
           console.log('Patched', p);
