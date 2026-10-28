@@ -126,7 +126,6 @@ jobs:
 
       - name: Build Android Debug APK
         run: |
-          yes | sdkmanager --licenses || true
           cd apps/mobile/android
           chmod +x gradlew
           ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
@@ -165,10 +164,8 @@ jobs:
           cd apps/mobile
           npx expo prebuild --platform ios --no-install
 
-      - name: Patch Swift tools version for Xcode compatibility
-        run: |
-          node -e "const fs = require('fs'); const p = 'node_modules/expo-modules-jsi/apple/Package.swift'; if (fs.existsSync(p)) fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('swift-tools-version: 6.2', 'swift-tools-version: 6.0'));"
-          node -e "const fs = require('fs'); const dir = 'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI'; if (fs.existsSync(dir)) { function patch(d){ for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = d + '/' + f.name; if (f.isDirectory()) patch(p); else if (p.endsWith('.swift')) { const c = fs.readFileSync(p, 'utf8'); if (c.includes('weak let')) fs.writeFileSync(p, c.replace(/weak let/g, 'weak var')); } } } patch(dir); }"
+      - name: Apply Swift compatibility patch for Xcode 16
+        run: node scripts/patch-ios-swift.cjs
 
       - name: Install CocoaPods
         run: |
