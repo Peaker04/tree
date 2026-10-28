@@ -82,4 +82,26 @@ describe('OutboxResilience', () => {
       expect(dispatchedBody.locationException?.explanationPhotoUri).not.toContain('file:///');
     });
   });
+
+  describe('Head-of-Line isolation and retry threshold', () => {
+    it('skips outbox items that have reached max retry attempts (3) or DEAD_LETTER status', async () => {
+      const { SqliteOutboxRepository } = await import('../../apps/mobile/src/storage/outbox/outboxRepository');
+
+      const mockDb = {
+        getFirstAsync: vi.fn().mockImplementation((query: string) => {
+          expect(query).toContain('attempt_count < 3');
+          expect(query).toContain('DEAD_LETTER');
+          return Promise.resolve(null);
+        }),
+        runAsync: vi.fn(),
+        withTransactionAsync: vi.fn((fn: () => any) => fn()),
+      };
+
+      const repo = new SqliteOutboxRepository(mockDb as any);
+      const eligible = await repo.getNextEligibleItem();
+
+      expect(eligible).toBeNull();
+      expect(mockDb.getFirstAsync).toHaveBeenCalledTimes(1);
+    });
+  });
 });

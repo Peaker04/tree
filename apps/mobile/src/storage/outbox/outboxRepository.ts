@@ -163,8 +163,11 @@ export class SqliteOutboxRepository implements IDurableOutboxRepository {
       updated_at: string;
     }>(
       `SELECT * FROM outbox_items
-       WHERE sync_status = 'IDLE'
-          OR (sync_status = 'SYNC_FAILED' AND error_classification IN ('NETWORK', 'SERVER_5XX'))
+       WHERE sync_status != 'DEAD_LETTER'
+         AND (
+           sync_status = 'IDLE'
+           OR (sync_status = 'SYNC_FAILED' AND error_classification IN ('NETWORK', 'SERVER_5XX') AND attempt_count < 3)
+         )
        ORDER BY created_at ASC
        LIMIT 1;`,
     );

@@ -4,7 +4,7 @@ export type { CanonicalTaskStatus };
 
 export type LocalSubmissionStatus = 'IDLE' | 'SAVED_DRAFT' | 'PENDING_SYNC';
 
-export type SyncStatus = 'IDLE' | 'SYNCING' | 'SYNCED' | 'SYNC_FAILED';
+export type SyncStatus = 'IDLE' | 'SYNCING' | 'SYNCED' | 'SYNC_FAILED' | 'DEAD_LETTER';
 
 export type ErrorClassification = 'NETWORK' | 'SERVER_5XX' | 'VALIDATION' | 'CONFLICT' | 'FORBIDDEN' | 'AUTH';
 

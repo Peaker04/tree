@@ -120,9 +120,14 @@ export class OutboxCoordinator {
           await this.taskRepo.cacheTasks([response.serverTask as TaskDto]);
         }
 
+        const nextStatus: SyncStatus =
+          item.attemptCount + 1 >= 3 || classification === 'FORBIDDEN' || classification === 'VALIDATION'
+            ? 'DEAD_LETTER'
+            : 'SYNC_FAILED';
+
         await this.repository.updateItemSyncStatus(
           item.id,
-          'SYNC_FAILED',
+          nextStatus,
           response.error ?? 'Unknown dispatch failure',
           classification,
         );
@@ -141,7 +146,8 @@ export class OutboxCoordinator {
       const classification = classifyError(dispatchErr);
       const errorMessage = dispatchErr instanceof Error ? dispatchErr.message : String(dispatchErr);
 
-      await this.repository.updateItemSyncStatus(item.id, 'SYNC_FAILED', errorMessage, classification);
+      const nextStatus: SyncStatus = item.attemptCount + 1 >= 3 ? 'DEAD_LETTER' : 'SYNC_FAILED';
+      await this.repository.updateItemSyncStatus(item.id, nextStatus, errorMessage, classification);
 
       // P13W5A-N09 Invariant: Local evidence is preserved
       return {
@@ -209,8 +215,8 @@ export class OutboxCoordinator {
         break;
       }
       results.push(result);
-      // Stop the current pass on any failure to prevent infinite retry loops on the same item
-      if (!result.success) {
+      // Only stop sequential pass on true network connectivity failure to allow other tasks to proceed
+      if (!result.success && result.classification === 'NETWORK') {
         break;
       }
     }
