@@ -76,7 +76,7 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadminpassword \
-            quay.io/minio/minio server /data
+            minio/minio server /data
 
       - name: Setup test S3 bucket
         run: |
