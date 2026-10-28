@@ -179,6 +179,7 @@ jobs:
 
       - name: Build iOS App & Package Unsigned IPA
         run: |
+          export IBTOOL_NO_SIMULATOR=1
           xcodebuild -workspace apps/mobile/ios/NOVYX.xcworkspace \
             -scheme NOVYX \
             -configuration Release \
