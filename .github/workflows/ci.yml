@@ -166,7 +166,21 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd apps/mobile/ios
+          echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
           pod install
+
+          # Đảm bảo các file codegen luôn nằm đúng trong đường dẫn ReactCodegen/ mà Pods.xcodeproj yêu cầu
+          if [ -d "build/generated/ios" ] && [ ! -d "build/generated/ios/ReactCodegen/safeareacontext" ] && [ -d "build/generated/ios/safeareacontext" ]; then
+            mkdir -p build/generated/ios/ReactCodegen
+            cp -R build/generated/ios/* build/generated/ios/ReactCodegen/ 2>/dev/null || true
+          fi
+
+          # Ngăn script_phases.sh của target ReactCodegen tự động xóa/ghi đè lại build/generated/ios trong lúc xcodebuild đang CompileC
+          SCRIPT_PHASES=$(node -p "require.resolve('react-native/scripts/react_native_pods_utils/script_phases.sh')")
+          if [ -f "$SCRIPT_PHASES" ]; then
+            printf '#!/bin/sh\nexit 0\n' > "$SCRIPT_PHASES"
+            chmod +x "$SCRIPT_PHASES"
+          fi
 
       - name: Build Unsigned iOS App
         run: |
@@ -174,6 +188,9 @@ jobs:
 
           # Đảm bảo thư mục build sạch sẽ mà không xoá ios/build/generated do Codegen sinh ra
           rm -rf ios/build/derived ios/build/Payload ios/build/*.ipa
+
+          # Kiểm tra nhanh các file Codegen trước khi vào xcodebuild
+          ls -la ios/build/generated/ios/ReactCodegen || true
 
           # Chạy xcodebuild với cờ bỏ qua code signing đầy đủ cho toàn bộ pod targets
           xcodebuild \
