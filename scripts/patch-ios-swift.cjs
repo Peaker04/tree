@@ -1,6 +1,37 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+// 0. Patch Podfile post_install for disabling code signing on all pod targets
+const podfilePath = path.resolve('apps/mobile/ios/Podfile');
+if (fs.existsSync(podfilePath)) {
+  let podfile = fs.readFileSync(podfilePath, 'utf8');
+  if (!podfile.includes('EXPANDED_CODE_SIGN_IDENTITY')) {
+    const postInstallBlock = `
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ""
+        config.build_settings['CODE_SIGNING_REQUIRED'] = "NO"
+        config.build_settings['CODE_SIGNING_ALLOWED'] = "NO"
+      end
+    end
+`;
+    if (podfile.includes('post_install do |installer|')) {
+      podfile = podfile.replace(
+        /(post_install\s+do\s+\|installer\|[\s\S]*?)(react_native_post_install[^\n]*\n)/,
+        `$1$2${postInstallBlock}\n`,
+      );
+    } else {
+      podfile += `
+post_install do |installer|
+${postInstallBlock}
+end
+`;
+    }
+    fs.writeFileSync(podfilePath, podfile);
+    console.log('Patched Podfile post_install for code signing');
+  }
+}
+
 // 1. Patch Package.swift: Swift 6.0 compatibility and strip trailing commas
 const pkgPath = path.resolve('node_modules/expo-modules-jsi/apple/Package.swift');
 if (fs.existsSync(pkgPath)) {

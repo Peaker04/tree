@@ -167,27 +167,38 @@ jobs:
           cd apps/mobile/ios
           pod install
 
-      - name: Build iOS App & Package Unsigned IPA
+      - name: Build Unsigned iOS App
         run: |
-          xcodebuild -workspace apps/mobile/ios/NOVYX.xcworkspace \
+          cd apps/mobile
+
+          # Đảm bảo thư mục build sạch sẽ trước khi build Release
+          rm -rf ios/build
+
+          # Chạy xcodebuild với cờ bỏ qua code signing đầy đủ cho toàn bộ pod targets
+          xcodebuild \
+            -workspace ios/NOVYX.xcworkspace \
             -scheme NOVYX \
             -configuration Release \
-            -destination 'generic/platform=iOS' \
             -sdk iphoneos \
-            -derivedDataPath apps/mobile/ios/build/derived \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath ios/build/derived \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            ENTITLEMENTS_REQUIRED=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=NO
 
-          mkdir -p apps/mobile/ios/build/Payload
-          APP_PATH=$(find apps/mobile/ios/build/derived/Build/Products -name "*.app" -type d | head -n 1)
+          # Đóng gói thành .ipa sau khi build thành công
+          mkdir -p ios/build/Payload
+          APP_PATH=$(find ios/build/derived/Build/Products/Release-iphoneos -name "*.app" -type d | head -n 1)
           if [ -n "$APP_PATH" ]; then
-            cp -r "$APP_PATH" apps/mobile/ios/build/Payload/
-            cd apps/mobile/ios/build && zip -r -q NOVYX-unsigned.ipa Payload
+            cp -r "$APP_PATH" ios/build/Payload/
+            cd ios/build && zip -r -q NOVYX-unsigned.ipa Payload
           else
-            echo "No .app bundle found" && exit 1
+            echo "Error: No .app bundle found in Release-iphoneos" && exit 1
           fi
+        shell: bash
 
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
