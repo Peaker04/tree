@@ -169,31 +169,33 @@ jobs:
           echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
           pod install
 
-          # Đảm bảo các file codegen luôn nằm đúng trong đường dẫn ReactCodegen/ mà Pods.xcodeproj yêu cầu
+          # 1. Đảm bảo các file codegen luôn nằm đúng trong đường dẫn ReactCodegen/
           if [ -d "build/generated/ios" ] && [ ! -d "build/generated/ios/ReactCodegen/safeareacontext" ] && [ -d "build/generated/ios/safeareacontext" ]; then
             mkdir -p build/generated/ios/ReactCodegen
             cp -R build/generated/ios/* build/generated/ios/ReactCodegen/ 2>/dev/null || true
           fi
 
-          # Ngăn script_phases.sh của target ReactCodegen tự động xóa/ghi đè lại build/generated/ios trong lúc xcodebuild đang CompileC
+          # 2. Ngăn script_phases.sh của ReactCodegen xóa build/generated/ios khi đang CompileC
           SCRIPT_PHASES=$(node -p "require.resolve('react-native/scripts/react_native_pods_utils/script_phases.sh')")
           if [ -f "$SCRIPT_PHASES" ]; then
             printf '#!/bin/sh\nexit 0\n' > "$SCRIPT_PHASES"
             chmod +x "$SCRIPT_PHASES"
           fi
 
+          # 3. Tắt Code Signing trực tiếp trong Pods.xcodeproj để lệnh xcodebuild con của ExpoModulesJSI không bị lỗi Signing
+          sed -i '' 's/buildSettings = {/buildSettings = { CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; CODE_SIGN_IDENTITY = ""; EXPANDED_CODE_SIGN_IDENTITY = "";/g' Pods/Pods.xcodeproj/project.pbxproj
+
       - name: Build Unsigned iOS App
         run: |
+          set -o pipefail
           cd apps/mobile
 
           # Đảm bảo thư mục build sạch sẽ mà không xoá ios/build/generated do Codegen sinh ra
-          rm -rf ios/build/derived ios/build/Payload ios/build/*.ipa
+          rm -rf ios/build/derived ios/build/Payload ios/build/*.ipa ios/build/xcodebuild.log
+          mkdir -p ios/build
 
-          # Kiểm tra nhanh các file Codegen trước khi vào xcodebuild
-          ls -la ios/build/generated/ios/ReactCodegen || true
-
-          # Chạy xcodebuild với cờ bỏ qua code signing đầy đủ cho toàn bộ pod targets
-          xcodebuild \
+          # Chạy xcodebuild (Đã bỏ BUILD_LIBRARY_FOR_DISTRIBUTION=NO để không làm hỏng ExpoModulesJSI xcframework)
+          if ! xcodebuild \
             -workspace ios/NOVYX.xcworkspace \
             -scheme NOVYX \
             -configuration Release \
@@ -204,8 +206,13 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            ENTITLEMENTS_REQUIRED=NO \
-            BUILD_LIBRARY_FOR_DISTRIBUTION=NO
+            ENTITLEMENTS_REQUIRED=NO 2>&1 | tee ios/build/xcodebuild.log; then
+            echo "========== CHI TIẾT LỖI XCODEBUILD =========="
+            grep -E "(error:|fatal error:|Script-46EB2E0001AF50\.sh)" -B 5 -A 20 ios/build/xcodebuild.log || true
+            echo "========== NỘI DUNG SCRIPT EXPOMODULESJSI =========="
+            cat ios/build/derived/Build/Intermediates.noindex/Pods.build/Release-iphoneos/ExpoModulesJSI.build/Script-46EB2E0001AF50.sh || true
+            exit 1
+          fi
 
           # Đóng gói thành .ipa sau khi build thành công
           mkdir -p ios/build/Payload
