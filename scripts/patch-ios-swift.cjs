@@ -231,7 +231,17 @@ if (fs.existsSync(dir)) {
   patchDir(dir);
 }
 
-// 6. Patch prebuilt .swiftinterface files (ExpoModulesCore, ExpoModulesWorklets, etc.) for Swift 6.1 compatibility
+// 6. Patch prebuilt .swiftinterface files & hook into Pod XCFramework switch scripts
+function cleanSwiftInterfaceContent(content) {
+  return (
+    content
+      // Xóa @_Concurrency.MainActor hoặc @MainActor đặt ở vị trí isolated protocol conformance (Swift 6.2/6.3)
+      .replace(/(,|:)\s*@(_Concurrency\.)?MainActor\s+/g, '$1 ')
+      // Xóa các cờ upcoming feature không tương thích nếu có
+      .replace(/\/\/\s*swift-module-flags:.*$/gm, (line) => line.replace(/-enable-upcoming-feature\s+\S+/g, ''))
+  );
+}
+
 function patchSwiftInterfaces(rootDir) {
   if (!fs.existsSync(rootDir)) return;
   for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
@@ -239,26 +249,79 @@ function patchSwiftInterfaces(rootDir) {
     if (entry.isDirectory()) {
       patchSwiftInterfaces(fullPath);
     } else if (entry.name.endsWith('.swiftinterface')) {
-      let content = fs.readFileSync(fullPath, 'utf8');
-      let updated = content
-        // Xóa @_Concurrency.MainActor hoặc @MainActor đặt ở vị trí isolated protocol conformance (Swift 6.2+)
-        .replace(/(,|:)\s*@(_Concurrency\.)?MainActor\s+/g, '$1 ')
-        // Đảm bảo header swift-module-flags không chặn compiler nếu cần
-        .replace(/\/\/\s*swift-module-flags:.*$/gm, (line) => line.replace(/-enable-upcoming-feature\s+\S+/g, ''));
-
+      const content = fs.readFileSync(fullPath, 'utf8');
+      const updated = cleanSwiftInterfaceContent(content);
       if (updated !== content) {
         fs.writeFileSync(fullPath, updated, 'utf8');
         console.log('Patched swiftinterface:', fullPath);
       }
     } else if (entry.name.endsWith('.swiftmodule') && fullPath.includes('.xcframework')) {
-      // Xóa binary .swiftmodule trong xcframework để bắt buộc Swift đọc từ file text .swiftinterface đã patch
+      // Chỉ xóa file binary .swiftmodule (không xóa thư mục .swiftmodule)
       fs.rmSync(fullPath, { force: true });
       console.log('Removed binary swiftmodule:', fullPath);
     }
   }
 }
 
+// 6a. Quét và patch toàn bộ .swiftinterface hiện có trong node_modules và Pods
 patchSwiftInterfaces(path.join(repoRoot, 'node_modules'));
 patchSwiftInterfaces(path.join(repoRoot, 'apps/mobile/ios/Pods'));
+
+// 6b. Hook trực tiếp vào các script của Pods & project.pbxproj để tự động patch ngay sau khi Switch XCFramework chạy trong lúc xcodebuild
+const snippetToInject = `
+# --- AUTO-PATCH SWIFT 6.3 INTERFACE FOR XCODE 16.4 ---
+find "\${PODS_ROOT}" "\${BUILT_PRODUCTS_DIR}" -name "*.swiftinterface" 2>/dev/null | while read -r iface; do
+  sed -i '' -E 's/:[[:space:]]*@(_Concurrency\\.)?MainActor[[:space:]]+/: /g; s/,[[:space:]]*@(_Concurrency\\.)?MainActor[[:space:]]+/, /g' "$iface" || true
+done
+find "\${PODS_ROOT}" "\${BUILT_PRODUCTS_DIR}" -path "*.xcframework/*.swiftmodule/*" -name "*.swiftmodule" -type f 2>/dev/null | while read -r binmod; do
+  rm -f "$binmod" || true
+done
+# -----------------------------------------------------
+`;
+
+// Patch vào tất cả script xcframework hoặc script switch của Expo trong Pods và node_modules
+function patchExpoSwitchScripts(dir) {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      patchExpoSwitchScripts(fullPath);
+    } else if (
+      (entry.name.endsWith('.sh') && (fullPath.includes('Pods/Target Support Files') || fullPath.includes('expo'))) ||
+      entry.name === 'build-xcframework.sh'
+    ) {
+      let content = fs.readFileSync(fullPath, 'utf8');
+      if (!content.includes('AUTO-PATCH SWIFT 6.3 INTERFACE')) {
+        content = content + '\n' + snippetToInject;
+        fs.writeFileSync(fullPath, content, 'utf8');
+        console.log('Injected swiftinterface fixer into script:', fullPath);
+      }
+    }
+  }
+}
+
+patchExpoSwitchScripts(path.join(repoRoot, 'apps/mobile/ios/Pods'));
+patchExpoSwitchScripts(path.join(repoRoot, 'node_modules'));
+
+// Patch trực tiếp vào inline shellScript của phase "Switch ... XCFramework" trong Pods.xcodeproj/project.pbxproj
+const podsPbxproj = path.join(repoRoot, 'apps/mobile/ios/Pods/Pods.xcodeproj/project.pbxproj');
+if (fs.existsSync(podsPbxproj)) {
+  let pbx = fs.readFileSync(podsPbxproj, 'utf8');
+  const inlineSedCmd = `\\nfind \\"\\$PODS_ROOT\\" \\"\\$BUILT_PRODUCTS_DIR\\" -name \\"*.swiftinterface\\" 2>/dev/null -exec sed -i '' -E 's/:[[:space:]]*@(_Concurrency\\\\.)?MainActor[[:space:]]+/: /g; s/,[[:space:]]*@(_Concurrency\\\\.)?MainActor[[:space:]]+/, /g' {} + || true\\nfind \\"\\$PODS_ROOT\\" \\"\\$BUILT_PRODUCTS_DIR\\" -path \\"*.xcframework/*.swiftmodule/*\\" -name \\"*.swiftmodule\\" -type f -delete 2>/dev/null || true`;
+
+  // Tìm mọi phase "[Expo] Switch ... XCFramework for build configuration" và nối lệnh sed vào cuối shellScript
+  const updatedPbx = pbx.replace(
+    /(name = "\[CP-User\] \[Expo\] Switch [^"]+ XCFramework for build configuration";[\s\S]*?shellScript = ")([^"]*)(";)/g,
+    (match, prefix, scriptBody, suffix) => {
+      if (scriptBody.includes('_Concurrency')) return match;
+      return `${prefix}${scriptBody}${inlineSedCmd}${suffix}`;
+    },
+  );
+
+  if (updatedPbx !== pbx) {
+    fs.writeFileSync(podsPbxproj, updatedPbx, 'utf8');
+    console.log('Injected swiftinterface fixer into Pods.xcodeproj Switch XCFramework phases!');
+  }
+}
 
 console.log('Swift iOS compatibility patch completed.');
