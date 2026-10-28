@@ -204,7 +204,13 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
 
     const resolveRef = (uri?: string, stageFallback?: string): string => {
       if (!uri) return uri ?? '';
-      return uriMap.get(uri) ?? (stageFallback ? stageMap.get(stageFallback) : undefined) ?? uri;
+      const mapped = uriMap.get(uri);
+      if (mapped && !mapped.startsWith('file://')) return mapped;
+      if (stageFallback) {
+        const stageMapped = stageMap.get(stageFallback);
+        if (stageMapped && !stageMapped.startsWith('file://')) return stageMapped;
+      }
+      return uri;
     };
 
     if (cloned.proof.proofProfile === 'CHANGE_PROOF') {
@@ -221,13 +227,29 @@ export class SubmitEvidenceOutboxDispatcher implements IOutboxDispatcher {
     }
 
     if (cloned.locationException?.explanationPhotoUri) {
-      cloned.locationException.explanationPhotoUri =
-        resolveRef(cloned.locationException.explanationPhotoUri, 'EXCEPTION') ||
-        resolveRef(cloned.locationException.explanationPhotoUri, 'BEFORE');
+      const localUri = cloned.locationException.explanationPhotoUri;
+      const resolved =
+        (uriMap.get(localUri) && !uriMap.get(localUri)!.startsWith('file://') ? uriMap.get(localUri) : undefined) ??
+        stageMap.get('EXCEPTION') ??
+        stageMap.get('BEFORE') ??
+        cloned.proof.beforePhotoUri;
+
+      if (resolved && !resolved.startsWith('file://')) {
+        cloned.locationException.explanationPhotoUri = resolved;
+      }
     }
 
     if (cloned.identityException?.damagedQrPhotoUri) {
-      cloned.identityException.damagedQrPhotoUri = resolveRef(cloned.identityException.damagedQrPhotoUri, 'EXCEPTION');
+      const localUri = cloned.identityException.damagedQrPhotoUri;
+      const resolved =
+        (uriMap.get(localUri) && !uriMap.get(localUri)!.startsWith('file://') ? uriMap.get(localUri) : undefined) ??
+        stageMap.get('EXCEPTION') ??
+        stageMap.get('BEFORE') ??
+        cloned.proof.beforePhotoUri;
+
+      if (resolved && !resolved.startsWith('file://')) {
+        cloned.identityException.damagedQrPhotoUri = resolved;
+      }
     }
 
     return cloned;
