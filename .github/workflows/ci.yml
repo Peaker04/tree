@@ -116,6 +116,11 @@ jobs:
         env:
           EXPO_PUBLIC_API_BASE_URL: https://cannot-gutter-retry.ngrok-free.dev
 
+      - name: Generate Android Native Project
+        run: |
+          cd apps/mobile
+          npx expo prebuild --platform android --no-install
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
