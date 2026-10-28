@@ -111,11 +111,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Export Android Hermes Bundle
-        run: npm run mobile:export:android
-        env:
-          EXPO_PUBLIC_API_BASE_URL: https://cannot-gutter-retry.ngrok-free.dev
-
       - name: Generate Android Native Project
         run: |
           cd apps/mobile
@@ -159,11 +154,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Export iOS Hermes Bundle
-        run: npm run mobile:export:ios
-        env:
-          EXPO_PUBLIC_API_BASE_URL: https://cannot-gutter-retry.ngrok-free.dev
-
       - name: Generate iOS Native Project
         run: |
           cd apps/mobile
@@ -179,11 +169,11 @@ jobs:
 
       - name: Build iOS App & Package Unsigned IPA
         run: |
-          export IBTOOL_NO_SIMULATOR=1
           xcodebuild -workspace apps/mobile/ios/NOVYX.xcworkspace \
             -scheme NOVYX \
             -configuration Release \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'generic/platform=iOS' \
+            -sdk iphoneos \
             -derivedDataPath apps/mobile/ios/build/derived \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
