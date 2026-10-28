@@ -44,7 +44,15 @@
           "barcodeScannerEnabled": true
         }
       ],
-      "./plugins/with-android-path-check.cjs"
+      "./plugins/with-android-path-check.cjs",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

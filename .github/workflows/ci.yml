@@ -144,10 +144,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode with Device SDK
+      - name: Select Xcode matching Expo prebuilt SDK (Swift 6.3+)
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode.app || true
+          # Expo SDK 57 ships prebuilt xcframeworks built with Swift 6.3.
+          # Xcode 16.4 only has Swift 6.1 → binary module mismatch.
+          # Pick the newest Xcode 26.x available on the runner (has Swift 6.2+/6.3).
+          XCODE_PATH=""
+          for v in 26.4 26.3 26.2 26.1.1 26.1 26.0.1 26.0; do
+            candidate="/Applications/Xcode_${v}.app"
+            if [ -d "$candidate" ]; then
+              XCODE_PATH="$candidate"
+              break
+            fi
+          done
+          # Fallback to default Xcode if no 26.x found
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH="/Applications/Xcode.app"
+          fi
+          echo "Selected Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
           xcodebuild -version
+          swift --version
           xcodebuild -showsdks
 
       - name: Setup Node.js
@@ -164,7 +181,7 @@ jobs:
           cd apps/mobile
           npx expo prebuild --platform ios --no-install
 
-      - name: Apply Swift compatibility patch for Xcode 16
+      - name: Apply Swift compatibility patches
         run: node scripts/patch-ios-swift.cjs
 
       - name: Install CocoaPods
@@ -173,23 +190,10 @@ jobs:
           echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
           pod install
 
-          # Patch các file .swiftinterface trong Pods/ sau khi pod install tải prebuilt xcframework về
+          # Re-run patch after pod install downloads prebuilt xcframeworks
           node ../../../scripts/patch-ios-swift.cjs
 
-          # 1. Đảm bảo các file codegen luôn nằm đúng trong đường dẫn ReactCodegen/
-          if [ -d "build/generated/ios" ] && [ ! -d "build/generated/ios/ReactCodegen/safeareacontext" ] && [ -d "build/generated/ios/safeareacontext" ]; then
-            mkdir -p build/generated/ios/ReactCodegen
-            cp -R build/generated/ios/* build/generated/ios/ReactCodegen/ 2>/dev/null || true
-          fi
-
-          # 2. Ngăn script_phases.sh của ReactCodegen xóa build/generated/ios khi đang CompileC
-          SCRIPT_PHASES=$(node -p "require.resolve('react-native/scripts/react_native_pods_utils/script_phases.sh')")
-          if [ -f "$SCRIPT_PHASES" ]; then
-            printf '#!/bin/sh\nexit 0\n' > "$SCRIPT_PHASES"
-            chmod +x "$SCRIPT_PHASES"
-          fi
-
-          # 3. Tắt Code Signing trực tiếp trong Pods.xcodeproj để lệnh xcodebuild con của ExpoModulesJSI không bị lỗi Signing
+          # Disable Code Signing in Pods.xcodeproj for unsigned CI builds
           sed -i '' 's/buildSettings = {/buildSettings = { CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; CODE_SIGN_IDENTITY = ""; EXPANDED_CODE_SIGN_IDENTITY = "";/g' Pods/Pods.xcodeproj/project.pbxproj
 
       - name: Build Unsigned iOS App
