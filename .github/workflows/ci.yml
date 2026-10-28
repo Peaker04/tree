@@ -172,8 +172,8 @@ jobs:
         run: |
           cd apps/mobile
 
-          # Đảm bảo thư mục build sạch sẽ trước khi build Release
-          rm -rf ios/build
+          # Đảm bảo thư mục build sạch sẽ mà không xoá ios/build/generated do Codegen sinh ra
+          rm -rf ios/build/derived ios/build/Payload ios/build/*.ipa
 
           # Chạy xcodebuild với cờ bỏ qua code signing đầy đủ cho toàn bộ pod targets
           xcodebuild \
