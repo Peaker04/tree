@@ -48,7 +48,38 @@ if (fs.existsSync(pkgPath)) {
   console.log('Patched Package.swift');
 }
 
-// 2. Remove trailing comma in closure arguments in JavaScriptRuntime.swift
+// 2. Patch C++ Bridging headers for SWIFT_SHARED_REFERENCE construction
+const rsPath = path.resolve(
+  'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h',
+);
+if (fs.existsSync(rsPath)) {
+  let c = fs.readFileSync(rsPath, 'utf8');
+  if (!c.includes('createRuntimeScheduler')) {
+    c = c.replace(
+      '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);',
+      '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);\n\ninline RuntimeScheduler *createRuntimeScheduler() { return new RuntimeScheduler(); }\ninline RuntimeScheduler *createRuntimeScheduler(void *scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }',
+    );
+    fs.writeFileSync(rsPath, c);
+    console.log('Patched RuntimeScheduler.h');
+  }
+}
+
+const hfPath = path.resolve(
+  'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/HostFunctionClosure.h',
+);
+if (fs.existsSync(hfPath)) {
+  let c = fs.readFileSync(hfPath, 'utf8');
+  if (!c.includes('createHostFunctionClosure')) {
+    c = c.replace(
+      '} SWIFT_IMMORTAL_REFERENCE;',
+      '} SWIFT_IMMORTAL_REFERENCE;\n\ninline HostFunctionClosure *createHostFunctionClosure(Context context, HostFunctionClosure::Closure closure, Deallocator deallocator) { return new HostFunctionClosure(context, closure, deallocator); }',
+    );
+    fs.writeFileSync(hfPath, c);
+    console.log('Patched HostFunctionClosure.h');
+  }
+}
+
+// 3. Patch JavaScriptRuntime.swift
 const runtimePath = path.resolve(
   'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift',
 );
@@ -59,11 +90,24 @@ if (fs.existsSync(runtimePath)) {
     '_ arguments: consuming JavaScriptValuesBuffer',
   );
   content = content.replace(/<R:\s*@unchecked\s+Sendable>/g, '<R: Sendable>');
+  content = content.replace(
+    /self\.scheduler = expo\.RuntimeScheduler\(\)/g,
+    'self.scheduler = expo.createRuntimeScheduler()!',
+  );
+  content = content.replace(
+    /self\.scheduler = expo\.RuntimeScheduler\(scheduler, fn\)/g,
+    'self.scheduler = expo.createRuntimeScheduler(scheduler, fn)!',
+  );
+  content = content.replace(
+    /return expo\.HostFunctionClosure\(context, call, deallocate\)/g,
+    'return expo.createHostFunctionClosure(context, call, deallocate)!',
+  );
+  content = content.replace(/vector\.push_back\(consuming: propNameId\)/g, 'vector.push_back(propNameId)');
   fs.writeFileSync(runtimePath, content);
   console.log('Patched JavaScriptRuntime.swift');
 }
 
-// 3. Patch Task+immediate.swift for Xcode 16 Task initializers
+// 4. Patch Task+immediate.swift for Xcode 16 Task initializers
 const taskImmediatePath = path.resolve(
   'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Extensions/Task+immediate.swift',
 );
@@ -77,7 +121,7 @@ if (fs.existsSync(taskImmediatePath)) {
   console.log('Patched Task+immediate.swift');
 }
 
-// 4. Patch weak let -> weak var, and exact Sendable classes -> @unchecked Sendable
+// 5. Patch weak let -> weak var, and exact Sendable classes -> @unchecked Sendable
 const dir = path.resolve('node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI');
 if (fs.existsSync(dir)) {
   function patchDir(d) {
