@@ -175,6 +175,9 @@ jobs:
           echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
           pod install
 
+          # Patch các file .swiftinterface trong Pods/ sau khi pod install tải prebuilt xcframework về
+          node ../../../scripts/patch-ios-swift.cjs
+
           # 1. Đảm bảo các file codegen luôn nằm đúng trong đường dẫn ReactCodegen/
           if [ -d "build/generated/ios" ] && [ ! -d "build/generated/ios/ReactCodegen/safeareacontext" ] && [ -d "build/generated/ios/safeareacontext" ]; then
             mkdir -p build/generated/ios/ReactCodegen

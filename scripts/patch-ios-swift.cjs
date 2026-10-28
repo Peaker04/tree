@@ -1,8 +1,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+const repoRoot = path.resolve(__dirname, '..');
+
 // 0. Patch Podfile post_install for disabling code signing on all pod targets
-const podfilePath = path.resolve('apps/mobile/ios/Podfile');
+const podfilePath = path.join(repoRoot, 'apps/mobile/ios/Podfile');
 if (fs.existsSync(podfilePath)) {
   let podfile = fs.readFileSync(podfilePath, 'utf8');
   if (!podfile.includes('EXPANDED_CODE_SIGN_IDENTITY')) {
@@ -31,7 +33,7 @@ if (fs.existsSync(podfilePath)) {
 }
 
 // 1. Patch Package.swift: Swift 6.0 compatibility and strip trailing commas
-const pkgPath = path.resolve('node_modules/expo-modules-jsi/apple/Package.swift');
+const pkgPath = path.join(repoRoot, 'node_modules/expo-modules-jsi/apple/Package.swift');
 if (fs.existsSync(pkgPath)) {
   let pkg = fs.readFileSync(pkgPath, 'utf8');
   pkg = pkg.replace(/swift-tools-version:\s*6\.[0-9]+/g, 'swift-tools-version: 6.0');
@@ -49,7 +51,8 @@ if (fs.existsSync(pkgPath)) {
 }
 
 // 2. Patch C++ Bridging headers for SWIFT_SHARED_REFERENCE construction & move-only PropNameID vector
-const rsPath = path.resolve(
+const rsPath = path.join(
+  repoRoot,
   'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h',
 );
 if (fs.existsSync(rsPath)) {
@@ -77,7 +80,8 @@ if (fs.existsSync(rsPath)) {
   }
 }
 
-const hfPath = path.resolve(
+const hfPath = path.join(
+  repoRoot,
   'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/HostFunctionClosure.h',
 );
 if (fs.existsSync(hfPath)) {
@@ -100,7 +104,8 @@ if (fs.existsSync(hfPath)) {
 }
 
 // 3. Patch JavaScriptRuntime.swift
-const runtimePath = path.resolve(
+const runtimePath = path.join(
+  repoRoot,
   'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Runtime/JavaScriptRuntime.swift',
 );
 if (fs.existsSync(runtimePath)) {
@@ -131,7 +136,8 @@ if (fs.existsSync(runtimePath)) {
 }
 
 // 4. Patch Task+immediate.swift for Xcode 16 Task initializers
-const taskImmediatePath = path.resolve(
+const taskImmediatePath = path.join(
+  repoRoot,
   'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI/Extensions/Task+immediate.swift',
 );
 if (fs.existsSync(taskImmediatePath)) {
@@ -145,7 +151,7 @@ if (fs.existsSync(taskImmediatePath)) {
 }
 
 // 5. Patch weak let -> weak var, and exact Sendable classes -> @unchecked Sendable
-const dir = path.resolve('node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI');
+const dir = path.join(repoRoot, 'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI');
 if (fs.existsSync(dir)) {
   function patchDir(d) {
     for (const f of fs.readdirSync(d, { withFileTypes: true })) {
@@ -224,4 +230,35 @@ if (fs.existsSync(dir)) {
   }
   patchDir(dir);
 }
+
+// 6. Patch prebuilt .swiftinterface files (ExpoModulesCore, ExpoModulesWorklets, etc.) for Swift 6.1 compatibility
+function patchSwiftInterfaces(rootDir) {
+  if (!fs.existsSync(rootDir)) return;
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    const fullPath = path.join(rootDir, entry.name);
+    if (entry.isDirectory()) {
+      patchSwiftInterfaces(fullPath);
+    } else if (entry.name.endsWith('.swiftinterface')) {
+      let content = fs.readFileSync(fullPath, 'utf8');
+      let updated = content
+        // Xóa @_Concurrency.MainActor hoặc @MainActor đặt ở vị trí isolated protocol conformance (Swift 6.2+)
+        .replace(/(,|:)\s*@(_Concurrency\.)?MainActor\s+/g, '$1 ')
+        // Đảm bảo header swift-module-flags không chặn compiler nếu cần
+        .replace(/\/\/\s*swift-module-flags:.*$/gm, (line) => line.replace(/-enable-upcoming-feature\s+\S+/g, ''));
+
+      if (updated !== content) {
+        fs.writeFileSync(fullPath, updated, 'utf8');
+        console.log('Patched swiftinterface:', fullPath);
+      }
+    } else if (entry.name.endsWith('.swiftmodule') && fullPath.includes('.xcframework')) {
+      // Xóa binary .swiftmodule trong xcframework để bắt buộc Swift đọc từ file text .swiftinterface đã patch
+      fs.rmSync(fullPath, { force: true });
+      console.log('Removed binary swiftmodule:', fullPath);
+    }
+  }
+}
+
+patchSwiftInterfaces(path.join(repoRoot, 'node_modules'));
+patchSwiftInterfaces(path.join(repoRoot, 'apps/mobile/ios/Pods'));
+
 console.log('Swift iOS compatibility patch completed.');
