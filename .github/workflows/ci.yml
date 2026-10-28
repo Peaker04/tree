@@ -70,24 +70,13 @@ jobs:
       - name: Build API workspace
         run: npm run build --workspace @novyx/api
 
-      - name: Start disposable MinIO container
+      - name: Start test S3 server
         run: |
-          docker run -d --name minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadminpassword \
-            minio/minio server /data
+          node scripts/test-s3-server.cjs &
+          sleep 1
 
       - name: Setup test S3 bucket
         run: |
-          for i in {1..30}; do
-            if curl -f -s http://localhost:9000/minio/health/live; then
-              echo "MinIO is ready"
-              break
-            fi
-            echo "Waiting for MinIO... ($i/30)"
-            sleep 1
-          done
           node scripts/setup-s3-test.cjs
 
       - name: Run PostgreSQL migrations and role bootstrap
