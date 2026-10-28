@@ -48,22 +48,28 @@ if (fs.existsSync(pkgPath)) {
   console.log('Patched Package.swift');
 }
 
-// 2. Patch C++ Bridging headers for SWIFT_SHARED_REFERENCE construction
+// 2. Patch C++ Bridging headers for SWIFT_SHARED_REFERENCE construction & move-only PropNameID vector
 const rsPath = path.resolve(
   'node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h',
 );
 if (fs.existsSync(rsPath)) {
   let c = fs.readFileSync(rsPath, 'utf8');
-  if (!c.includes('_Nullable createRuntimeScheduler')) {
+  if (!c.includes('#include <jsi/jsi.h>')) {
+    c = c.replace(
+      '#include <swift/bridging>',
+      '#include <swift/bridging>\n#include <vector>\n#include <utility>\n#include <jsi/jsi.h>',
+    );
+  }
+  if (!c.includes('pushBackPropNameID')) {
     if (c.includes('createRuntimeScheduler')) {
       c = c.replace(
-        /inline RuntimeScheduler \*createRuntimeScheduler[\s\S]*?fn\); \}/,
-        'inline RuntimeScheduler * _Nullable createRuntimeScheduler() { return new RuntimeScheduler(); }\ninline RuntimeScheduler * _Nullable createRuntimeScheduler(void * _Nullable scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }',
+        /(SWIFT_RETURNS_RETAINED\s+)?inline RuntimeScheduler[\s\S]*?fn\); \}/,
+        'SWIFT_RETURNS_RETAINED inline RuntimeScheduler * _Nullable createRuntimeScheduler() { return new RuntimeScheduler(); }\nSWIFT_RETURNS_RETAINED inline RuntimeScheduler * _Nullable createRuntimeScheduler(void * _Nullable scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }\ninline void pushBackPropNameID(std::vector<facebook::jsi::PropNameID> &vector, facebook::jsi::PropNameID propNameId) { vector.push_back(std::move(propNameId)); }',
       );
     } else {
       c = c.replace(
         '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);',
-        '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);\n\ninline RuntimeScheduler * _Nullable createRuntimeScheduler() { return new RuntimeScheduler(); }\ninline RuntimeScheduler * _Nullable createRuntimeScheduler(void * _Nullable scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }',
+        '} SWIFT_SHARED_REFERENCE(retainRuntimeScheduler, releaseRuntimeScheduler);\n\nSWIFT_RETURNS_RETAINED inline RuntimeScheduler * _Nullable createRuntimeScheduler() { return new RuntimeScheduler(); }\nSWIFT_RETURNS_RETAINED inline RuntimeScheduler * _Nullable createRuntimeScheduler(void * _Nullable scheduler, RuntimeScheduler::ScheduleFn fn) { return new RuntimeScheduler(scheduler, fn); }\ninline void pushBackPropNameID(std::vector<facebook::jsi::PropNameID> &vector, facebook::jsi::PropNameID propNameId) { vector.push_back(std::move(propNameId)); }',
       );
     }
     fs.writeFileSync(rsPath, c);
@@ -79,7 +85,7 @@ if (fs.existsSync(hfPath)) {
   if (!c.includes('_Nullable createHostFunctionClosure')) {
     if (c.includes('createHostFunctionClosure')) {
       c = c.replace(
-        /inline HostFunctionClosure \*createHostFunctionClosure[\s\S]*?deallocator\); \}/,
+        /inline HostFunctionClosure \*[\s\S]*?deallocator\); \}/,
         'inline HostFunctionClosure * _Nullable createHostFunctionClosure(HostFunctionClosure::Context context, HostFunctionClosure::Closure closure, HostFunctionClosure::Deallocator deallocator) { return new HostFunctionClosure(context, closure, deallocator); }',
       );
     } else {
@@ -116,7 +122,10 @@ if (fs.existsSync(runtimePath)) {
     /return expo\.HostFunctionClosure\(context, call, deallocate\)/g,
     'return expo.createHostFunctionClosure(context, call, deallocate)!',
   );
-  content = content.replace(/vector\.push_back\(consuming: propNameId\)/g, 'vector.push_back(propNameId)');
+  content = content.replace(
+    /vector\.push_back\((consuming:\s*)?propNameId\)/g,
+    'expo.pushBackPropNameID(&vector, propNameId)',
+  );
   fs.writeFileSync(runtimePath, content);
   console.log('Patched JavaScriptRuntime.swift');
 }

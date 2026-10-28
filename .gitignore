@@ -20,6 +20,9 @@ expo-env.d.ts
 
 # Metro
 .metro-health-check*
+.server-pids.json
+tmp-*.log
+tmp-*.json
 
 # debug
 npm-debug.*
