@@ -1,5 +1,5 @@
 const http = require('node:http');
-const crypto = require('node:crypto');
+const nodeCrypto = require('node:crypto');
 
 const PORT = parseInt(process.env.PORT || '9000', 10);
 const storage = new Map(); // key -> { buffer, contentType, etag, sha256, lastModified }
@@ -65,8 +65,8 @@ const server = http.createServer((req, res) => {
     req.on('data', (chunk) => chunks.push(chunk));
     req.on('end', () => {
       const buffer = Buffer.concat(chunks);
-      const etag = `"${crypto.createHash('md5').update(buffer).digest('hex')}"`;
-      const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+      const etag = `"${nodeCrypto.createHash('md5').update(buffer).digest('hex')}"`;
+      const sha256 = nodeCrypto.createHash('sha256').update(buffer).digest('hex');
       const contentType = req.headers['content-type'] || 'application/octet-stream';
       const lastModified = new Date().toUTCString();
 
