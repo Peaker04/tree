@@ -140,9 +140,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Stable Xcode 16.1
+      - name: Select Stable Xcode 16.2 & Start Simctl
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode_16.2.app || true
+          sudo xcode-select -s /Applications/Xcode_16.2.app || true
+          xcrun simctl list runtimes
           xcodebuild -version
 
       - name: Setup Node.js
