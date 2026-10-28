@@ -34,9 +34,9 @@ describe('OutboxResilience', () => {
       };
 
       const dispatcher = new SubmitEvidenceOutboxDispatcher(
-        mockApiClient as any,
-        mockUploadClient as any,
-        mockTaskRepo as any,
+        mockApiClient as unknown as Parameters<typeof SubmitEvidenceOutboxDispatcher.prototype.constructor>[0],
+        mockUploadClient as unknown as Parameters<typeof SubmitEvidenceOutboxDispatcher.prototype.constructor>[1],
+        mockTaskRepo as unknown as Parameters<typeof SubmitEvidenceOutboxDispatcher.prototype.constructor>[2],
       );
 
       const request: SubmitEvidenceRequest = {
@@ -94,10 +94,10 @@ describe('OutboxResilience', () => {
           return Promise.resolve(null);
         }),
         runAsync: vi.fn(),
-        withTransactionAsync: vi.fn((fn: () => any) => fn()),
+        withTransactionAsync: vi.fn((fn: () => unknown) => fn()),
       };
 
-      const repo = new SqliteOutboxRepository(mockDb as any);
+      const repo = new SqliteOutboxRepository(mockDb as unknown as Parameters<typeof SqliteOutboxRepository.prototype.constructor>[0]);
       const eligible = await repo.getNextEligibleItem();
 
       expect(eligible).toBeNull();
