@@ -56,7 +56,7 @@
 - Create: `scripts/multi-staff-operational-matrix.cjs`
 - Reference: `scripts/deep-operational-e2e.cjs`
 
-- [ ] **Step 1: Write `scripts/multi-staff-operational-matrix.cjs`**
+- [x] **Step 1: Write `scripts/multi-staff-operational-matrix.cjs`**
   Implement the 18 verification checks specified in `docs/superpowers/specs/2026-10-28-multi-staff-operational-matrix-design.md`:
   - Phase 1: Multi-role authentication (Manager, Supervisor, Ngọc Diễm, Duy Hưng, Duy Phong).
   - Phase 2: Manager dispatches 3 distinct tasks to 3 workers (Single Tree, Multi-Tree, Zone).
@@ -66,10 +66,10 @@
   - Phase 6: Manager review: Approve Ngọc Diễm (`COMPLETED`), Request rework for Duy Hưng (`REWORK_REQUIRED`).
   - Phase 7: Duy Hưng uploads replacement evidence and resubmits (`WAITING_REVIEW`).
   - Phase 8: Manager approves Duy Hưng (`COMPLETED`).
-- [ ] **Step 2: Run test suite against local Fastify API**
+- [x] **Step 2: Run test suite against local Fastify API**
   Execute: `node scripts/multi-staff-operational-matrix.cjs`
   Expected: 18/18 checks PASS.
-- [ ] **Step 3: Commit Task 2 changes**
+- [x] **Step 3: Commit Task 2 changes**
   Commit message: `test(mobile): build multi-staff operational concurrency matrix suite`
 
 ---
@@ -80,19 +80,19 @@
 - Script: `scripts/field-tunnel.cjs`
 - Config: `.env` (`NGROK_AUTHTOKEN`)
 
-- [ ] **Step 1: Verify Ngrok authentication and CLI readiness**
+- [x] **Step 1: Verify Ngrok authentication and CLI readiness**
   Execute: `ngrok config check`
   Expected: Valid configuration file found.
-- [ ] **Step 2: Launch Ngrok background tunnel**
+- [x] **Step 2: Launch Ngrok background tunnel**
   Execute: `node scripts/field-tunnel.cjs` or start background ngrok process for port 3000.
   Expected: Public HTTPS URL acquired (`https://<id>.ngrok-free.dev`).
-- [ ] **Step 3: Test public tunnel connectivity**
+- [x] **Step 3: Test public tunnel connectivity**
   Execute: `curl -s -H "ngrok-skip-browser-warning: true" https://<id>.ngrok-free.dev/health`
   Expected: `{"status":"ok"}`.
-- [ ] **Step 4: Run operational matrix suite over Ngrok**
+- [x] **Step 4: Run operational matrix suite over Ngrok**
   Execute: `API_BASE_URL=https://<id>.ngrok-free.dev node scripts/multi-staff-operational-matrix.cjs`
   Expected: 18/18 checks PASS through the external Internet tunnel.
-- [ ] **Step 5: Commit Task 3 changes**
+- [x] **Step 5: Commit Task 3 changes**
   Commit message: `chore: verify operational lifecycle over public ngrok internet tunnel`
 
 ---
@@ -102,19 +102,19 @@
 **Files:**
 - Entire repository
 
-- [ ] **Step 1: Test physical Android device over Ngrok**
+- [x] **Step 1: Test physical Android device over Ngrok**
   Set `EXPO_PUBLIC_API_BASE_URL` to Ngrok URL and verify login as Ngọc Diễm on Samsung Galaxy Note 20 Ultra.
-- [ ] **Step 2: Run iOS Field Readiness Audit**
+- [x] **Step 2: Run iOS Field Readiness Audit**
   Execute: `node scripts/verify-ios-field-readiness.cjs`
   Expected: 20/20 PASS.
-- [ ] **Step 3: Run full Vitest suite**
+- [x] **Step 3: Run full Vitest suite**
   Execute: `npm run test`
   Expected: 349+ tests pass.
-- [ ] **Step 4: Run typecheck and lint**
+- [x] **Step 4: Run typecheck and lint**
   Execute: `npm run typecheck` and `npm run lint`
   Expected: 0 errors.
-- [ ] **Step 5: Verify iOS and Android Hermes Bytecode Exports**
+- [x] **Step 5: Verify iOS and Android Hermes Bytecode Exports**
   Execute: `npm run mobile:export:ios` and `npm run mobile:export:android`
   Expected: Clean 2.7MB bytecode bundles exported without errors.
-- [ ] **Step 6: Update UI/UX Memory and durable state**
+- [x] **Step 6: Update UI/UX Memory and durable state**
   Record operational audit results and device evidence in `.agents/memory/UI_UX_MEMORY.md`.
