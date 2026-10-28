@@ -90,7 +90,6 @@ jobs:
 
   build-android:
     name: Build Android APK
-    needs: quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -140,7 +139,6 @@ jobs:
 
   build-ios:
     name: Build iOS IPA
-    needs: quality
     runs-on: macos-15
     steps:
       - name: Checkout repository
