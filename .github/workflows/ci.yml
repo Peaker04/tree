@@ -189,6 +189,11 @@ jobs:
       - name: Generate iOS Native Project
         env:
           CI_STRIP_DEV_CLIENT: '1'
+          EXPO_PUBLIC_API_BASE_URL: https://cannot-gutter-retry.ngrok-free.dev
+          EXPO_PUBLIC_APP_ENV: production
+          EXPO_PUBLIC_DATA_SOURCE: rest
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY || 'AIzaSyAUZzJiwd3Ols2Dtnb_Lys4zY1YeDEpCLU' }}
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS: ${{ secrets.GOOGLE_MAPS_API_KEY_IOS || 'AIzaSyBqTgH8psaGgNsUqEQuo58Af0c-XezhbfY' }}
         run: |
           cd apps/mobile
           # CI_STRIP_DEV_CLIENT=1 causes app.config.js to exclude expo-dev-client from plugins.
@@ -216,6 +221,11 @@ jobs:
           sed -i '' 's/buildSettings = {/buildSettings = { CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; CODE_SIGN_IDENTITY = ""; EXPANDED_CODE_SIGN_IDENTITY = "";/g' Pods/Pods.xcodeproj/project.pbxproj
 
       - name: Build Unsigned iOS App
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://cannot-gutter-retry.ngrok-free.dev
+          EXPO_PUBLIC_APP_ENV: production
+          EXPO_PUBLIC_DATA_SOURCE: rest
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS: ${{ secrets.GOOGLE_MAPS_API_KEY_IOS || 'AIzaSyBqTgH8psaGgNsUqEQuo58Af0c-XezhbfY' }}
         run: |
           set -o pipefail
           cd apps/mobile
