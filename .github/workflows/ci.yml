@@ -207,6 +207,7 @@ jobs:
       - name: Install CocoaPods
         env:
           CI_STRIP_DEV_CLIENT: '1'
+          EXPO_PRECOMPILED_FLAVOR: 'release'
         run: |
           cd apps/mobile/ios
           echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
