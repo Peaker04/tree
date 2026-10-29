@@ -160,7 +160,7 @@ jobs:
           # Xcode 16.4 only has Swift 6.1 → binary module mismatch.
           # Pick the newest Xcode 26.x available on the runner (has Swift 6.2+/6.3).
           XCODE_PATH=""
-          for v in 26.4 26.3 26.2 26.1.1 26.1 26.0.1 26.0; do
+          for v in 26.5 26.4.1 26.4 26.3 26.2 26.1.1 26.1 26.0.1 26.0; do
             candidate="/Applications/Xcode_${v}.app"
             if [ -d "$candidate" ]; then
               XCODE_PATH="$candidate"

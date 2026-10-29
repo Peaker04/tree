@@ -8,7 +8,7 @@
     "@novyx/contracts": "file:../../packages/contracts",
     "@novyx/ui": "file:../../packages/ui",
     "@react-native-community/netinfo": "~12.0.1",
-    "expo": "~57.0.4",
+    "expo": "~57.0.31",
     "expo-camera": "~57.0.1",
     "expo-crypto": "~57.0.3",
     "expo-dev-client": "~57.0.5",
